@@ -83,11 +83,12 @@ export function generatePDFReport(data: ReportData): Blob {
   // Table headers
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text('Item', margin, yPosition);
-  doc.text('Location', margin + 40, yPosition);
-  doc.text('Class', margin + 90, yPosition);
-  doc.text('Result', margin + 115, yPosition);
-  doc.text('Notes', margin + 140, yPosition);
+  doc.text('Asset#', margin, yPosition);
+  doc.text('Item', margin + 25, yPosition);
+  doc.text('Location', margin + 70, yPosition);
+  doc.text('Class', margin + 110, yPosition);
+  doc.text('Result', margin + 135, yPosition);
+  doc.text('Notes', margin + 160, yPosition);
   yPosition += 7;
 
   // Table content
@@ -99,24 +100,25 @@ export function generatePDFReport(data: ReportData): Blob {
       yPosition = margin;
     }
 
-    doc.text(result.itemName, margin, yPosition);
-    doc.text(result.location, margin + 40, yPosition);
-    doc.text(result.classification.toUpperCase(), margin + 90, yPosition);
+    doc.text(result.assetNumber, margin, yPosition);
+    doc.text(result.itemName, margin + 25, yPosition);
+    doc.text(result.location, margin + 70, yPosition);
+    doc.text(result.classification.toUpperCase(), margin + 110, yPosition);
     
     // Color code the result
     if (result.result === 'pass') {
       doc.setTextColor(0, 128, 0); // Green
-      doc.text('PASS', margin + 115, yPosition);
+      doc.text('PASS', margin + 135, yPosition);
     } else {
       doc.setTextColor(255, 0, 0); // Red
-      doc.text('FAIL', margin + 115, yPosition);
+      doc.text('FAIL', margin + 135, yPosition);
     }
     doc.setTextColor(0, 0, 0); // Reset to black
 
     // Add failure details if applicable
     if (result.result === 'fail' && result.failureReason) {
       const failureText = `${result.failureReason}${result.actionTaken ? `, ${result.actionTaken}` : ''}`;
-      doc.text(failureText, margin + 140, yPosition);
+      doc.text(failureText, margin + 160, yPosition);
     }
 
     yPosition += 6;

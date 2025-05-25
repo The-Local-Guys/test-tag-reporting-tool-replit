@@ -128,7 +128,9 @@ export default function ReportPreview() {
             <div key={result.id} className="bg-white border border-gray-200 rounded-lg p-3">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <div className="font-medium text-gray-800">{result.itemName}</div>
+                  <div className="font-medium text-gray-800">
+                    #{result.assetNumber} - {result.itemName}
+                  </div>
                   <div className="text-sm text-gray-500">
                     {result.location} • {result.classification.toUpperCase()}
                   </div>
