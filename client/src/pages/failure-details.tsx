@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, AlertCircle, Save } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Save, XCircle } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
 import type { InsertTestResult } from '@shared/schema';
