@@ -105,18 +105,19 @@ export default function FailureDetails() {
             Reason for Failure
           </Label>
           <div className="space-y-2">
-            {failureReasons.map((reason) => (
+            {failureReasons.map((reason, index) => (
               <button
                 key={reason.value}
                 type="button"
                 onClick={() => setSelectedReason(reason.value)}
-                className={`w-full p-3 border-2 rounded-lg font-medium text-left transition-all touch-button ${
+                className={`w-full p-3 border-2 rounded-lg font-medium text-left transition-all touch-button slide-up ${
                   selectedReason === reason.value
-                    ? 'border-primary bg-primary text-white'
+                    ? 'border-primary bg-primary text-white wiggle'
                     : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
+                style={{animationDelay: `${index * 0.1}s`}}
               >
-                <span className="mr-2">{reason.icon}</span>
+                <span className="mr-2 float" style={{animationDelay: `${index * 0.15}s`}}>{reason.icon}</span>
                 {reason.label}
               </button>
             ))}
