@@ -139,7 +139,7 @@ export default function ItemSelection() {
       </div>
 
       {/* Fixed Bottom Actions */}
-      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 p-4">
+      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 p-4 space-y-3">
         <div className="flex gap-3">
           <Button 
             variant="outline" 
@@ -157,6 +157,14 @@ export default function ItemSelection() {
             Complete
           </Button>
         </div>
+        <Button 
+          onClick={handleNewJob}
+          variant="outline"
+          className="w-full py-3 font-medium border-2 border-primary text-primary hover:bg-primary hover:text-white"
+        >
+          <RotateCcw className="mr-2 h-4 w-4" />
+          Start New Job
+        </Button>
       </div>
 
       {/* Custom Item Modal */}
