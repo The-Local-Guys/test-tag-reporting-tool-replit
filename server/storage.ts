@@ -16,6 +16,7 @@ export interface IStorage {
   
   // Test Results
   createTestResult(result: InsertTestResult): Promise<TestResult>;
+  updateTestResult(id: number, data: Partial<InsertTestResult>): Promise<TestResult>;
   getTestResultsBySession(sessionId: number): Promise<TestResult[]>;
   getNextAssetNumber(sessionId: number): Promise<number>;
   validateAssetNumber(sessionId: number, assetNumber: string, excludeId?: number): Promise<boolean>;
@@ -96,6 +97,15 @@ export class DatabaseStorage implements IStorage {
       .sort((a, b) => b - a);
     
     return existingNumbers.length > 0 ? existingNumbers[0] + 1 : 1;
+  }
+
+  async updateTestResult(id: number, data: Partial<InsertTestResult>): Promise<TestResult> {
+    const [result] = await db
+      .update(testResults)
+      .set(data)
+      .where(eq(testResults.id, id))
+      .returning();
+    return result;
   }
 
   async validateAssetNumber(sessionId: number, assetNumber: string, excludeId?: number): Promise<boolean> {

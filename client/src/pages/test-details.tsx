@@ -64,6 +64,13 @@ export default function TestDetails() {
     }
   }, [nextAssetData, form]);
 
+  // Update location field when currentLocation changes
+  useEffect(() => {
+    if (currentLocation) {
+      form.setValue('location', currentLocation);
+    }
+  }, [currentLocation, form]);
+
   const handleTestResult = (result: 'pass' | 'fail') => {
     if (!currentItem) return;
 
