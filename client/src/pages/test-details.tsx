@@ -29,6 +29,7 @@ const frequencyOptions = [
 
 export default function TestDetails() {
   const [selectedClass, setSelectedClass] = useState('class1');
+  const [selectedFrequency, setSelectedFrequency] = useState('twelvemonthly');
   const [currentItem, setCurrentItem] = useState<{name: string, type: string} | null>(null);
   const { sessionId, currentLocation, addResult, isAddingResult } = useSession();
   const [, setLocation] = useLocation();
@@ -73,6 +74,7 @@ export default function TestDetails() {
       location: form.getValues('location') || currentLocation,
       classification: selectedClass,
       result,
+      frequency: selectedFrequency,
       failureReason: null,
       actionTaken: null,
       notes: null,
@@ -197,6 +199,29 @@ export default function TestDetails() {
                 {option.label}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Test Frequency */}
+        <div className="space-y-3">
+          <Label className="flex items-center text-sm font-medium text-gray-700">
+            <Clock className="mr-2 h-4 w-4" />
+            Test Frequency
+          </Label>
+          <Select value={selectedFrequency} onValueChange={setSelectedFrequency}>
+            <SelectTrigger className="text-base">
+              <SelectValue placeholder="Select test frequency" />
+            </SelectTrigger>
+            <SelectContent>
+              {frequencyOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="text-xs text-gray-500">
+            Determines when the next test is due
           </div>
         </div>
 

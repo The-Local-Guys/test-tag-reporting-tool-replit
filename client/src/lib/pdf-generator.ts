@@ -12,6 +12,43 @@ interface ReportData {
   };
 }
 
+function calculateNextDueDate(testDate: string, frequency: string): string {
+  const date = new Date(testDate);
+  
+  switch (frequency) {
+    case 'threemonthly':
+      date.setMonth(date.getMonth() + 3);
+      break;
+    case 'sixmonthly':
+      date.setMonth(date.getMonth() + 6);
+      break;
+    case 'twelvemonthly':
+      date.setFullYear(date.getFullYear() + 1);
+      break;
+    case 'twentyfourmonthly':
+      date.setFullYear(date.getFullYear() + 2);
+      break;
+    case 'fiveyearly':
+      date.setFullYear(date.getFullYear() + 5);
+      break;
+    default:
+      date.setFullYear(date.getFullYear() + 1);
+  }
+  
+  return date.toLocaleDateString();
+}
+
+function getFrequencyLabel(frequency: string): string {
+  switch (frequency) {
+    case 'threemonthly': return '3 Monthly';
+    case 'sixmonthly': return '6 Monthly';
+    case 'twelvemonthly': return '12 Monthly';
+    case 'twentyfourmonthly': return '24 Monthly';
+    case 'fiveyearly': return '5 Yearly';
+    default: return '12 Monthly';
+  }
+}
+
 export function generatePDFReport(data: ReportData): Blob {
   const { session, results, summary } = data;
   const doc = new jsPDF();
