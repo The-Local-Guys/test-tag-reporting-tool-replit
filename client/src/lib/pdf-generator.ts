@@ -118,14 +118,15 @@ export function generatePDFReport(data: ReportData): Blob {
   yPosition += 10;
 
   // Table headers
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.text('Asset#', margin, yPosition);
-  doc.text('Item', margin + 25, yPosition);
-  doc.text('Location', margin + 70, yPosition);
-  doc.text('Class', margin + 110, yPosition);
-  doc.text('Result', margin + 135, yPosition);
-  doc.text('Notes', margin + 160, yPosition);
+  doc.text('Item', margin + 20, yPosition);
+  doc.text('Location', margin + 55, yPosition);
+  doc.text('Class', margin + 85, yPosition);
+  doc.text('Result', margin + 105, yPosition);
+  doc.text('Frequency', margin + 125, yPosition);
+  doc.text('Next Due', margin + 155, yPosition);
   yPosition += 7;
 
   // Table content
@@ -138,25 +139,23 @@ export function generatePDFReport(data: ReportData): Blob {
     }
 
     doc.text(result.assetNumber, margin, yPosition);
-    doc.text(result.itemName, margin + 25, yPosition);
-    doc.text(result.location, margin + 70, yPosition);
-    doc.text(result.classification.toUpperCase(), margin + 110, yPosition);
+    doc.text(result.itemName, margin + 20, yPosition);
+    doc.text(result.location, margin + 55, yPosition);
+    doc.text(result.classification.toUpperCase(), margin + 85, yPosition);
     
     // Color code the result
     if (result.result === 'pass') {
       doc.setTextColor(0, 128, 0); // Green
-      doc.text('PASS', margin + 135, yPosition);
+      doc.text('PASS', margin + 105, yPosition);
     } else {
       doc.setTextColor(255, 0, 0); // Red
-      doc.text('FAIL', margin + 135, yPosition);
+      doc.text('FAIL', margin + 105, yPosition);
     }
     doc.setTextColor(0, 0, 0); // Reset to black
 
-    // Add failure details if applicable
-    if (result.result === 'fail' && result.failureReason) {
-      const failureText = `${result.failureReason}${result.actionTaken ? `, ${result.actionTaken}` : ''}`;
-      doc.text(failureText, margin + 160, yPosition);
-    }
+    // Add frequency and next due date
+    doc.text(getFrequencyLabel(result.frequency), margin + 125, yPosition);
+    doc.text(calculateNextDueDate(session.testDate, result.frequency), margin + 155, yPosition);
 
     yPosition += 6;
   });

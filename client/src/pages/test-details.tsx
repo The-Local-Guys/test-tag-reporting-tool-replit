@@ -147,19 +147,16 @@ export default function TestDetails() {
 
       {/* Form Content */}
       <div className="p-4 space-y-6 pb-24">
-        {/* Asset Number Input */}
+        {/* Asset Number Display */}
         <div className="space-y-2">
-          <Label htmlFor="assetNumber" className="flex items-center text-sm font-medium text-gray-700">
+          <Label className="flex items-center text-sm font-medium text-gray-700">
             🏷️ Asset Number
           </Label>
-          <Input
-            id="assetNumber"
-            placeholder="Enter asset number"
-            {...form.register('assetNumber')}
-            className="text-base"
-          />
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-base font-semibold text-gray-800">
+            #{nextAssetData?.nextAssetNumber || '1'}
+          </div>
           <div className="text-xs text-gray-500">
-            Must be unique for this report
+            Auto-assigned sequential number for this item
           </div>
         </div>
 
