@@ -136,17 +136,11 @@ export default function TestDetails() {
 
       {/* Item Preview */}
       <div className="bg-white border-b border-gray-200 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="text-4xl">{getItemIcon(currentItem.type)}</div>
-            <div>
-              <div className="font-semibold text-lg">{currentItem.name}</div>
-              <div className="text-gray-500 text-sm">Equipment Testing</div>
-            </div>
-          </div>
-          <div className="bg-primary text-white px-3 py-2 rounded-lg">
-            <div className="text-xs text-blue-100 text-center">Asset #</div>
-            <div className="text-xl font-bold text-center">#{nextAssetData?.nextAssetNumber || '1'}</div>
+        <div className="flex items-center space-x-4">
+          <div className="text-4xl">{getItemIcon(currentItem.type)}</div>
+          <div>
+            <div className="font-semibold text-lg">{currentItem.name}</div>
+            <div className="text-gray-500 text-sm">Equipment Testing</div>
           </div>
         </div>
       </div>

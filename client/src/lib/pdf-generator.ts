@@ -131,14 +131,15 @@ export function generatePDFReport(data: ReportData): Blob {
 
   // Table content
   doc.setFont('helvetica', 'normal');
-  results.forEach((result) => {
+  results.forEach((result, index) => {
     // Check if we need a new page
     if (yPosition > doc.internal.pageSize.height - 30) {
       doc.addPage();
       yPosition = margin;
     }
 
-    doc.text(result.assetNumber, margin, yPosition);
+    // Use index + 1 as the asset number (count)
+    doc.text((index + 1).toString(), margin, yPosition);
     doc.text(result.itemName, margin + 20, yPosition);
     doc.text(result.location, margin + 55, yPosition);
     doc.text(result.classification.toUpperCase(), margin + 85, yPosition);
