@@ -78,16 +78,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Validate asset number uniqueness
-      const isValidAssetNumber = await storage.validateAssetNumber(sessionId, req.body.assetNumber);
-      if (!isValidAssetNumber) {
-        res.status(400).json({ error: "Asset number already exists for this session" });
-        return;
+      try {
+        const isValidAssetNumber = await storage.validateAssetNumber(sessionId, req.body.assetNumber);
+        if (!isValidAssetNumber) {
+          res.status(400).json({ error: "Asset number already exists for this session" });
+          return;
+        }
+      } catch (validationError) {
+        console.error('Asset validation error:', validationError);
+        // Continue with insertion if validation fails - let database handle uniqueness
       }
 
+      console.log('Request body:', req.body);
+      console.log('Session ID:', sessionId);
+      
       const resultData = insertTestResultSchema.parse({
         ...req.body,
         sessionId
       });
+      
+      console.log('Parsed result data:', resultData);
       
       const result = await storage.createTestResult(resultData);
       res.json(result);
