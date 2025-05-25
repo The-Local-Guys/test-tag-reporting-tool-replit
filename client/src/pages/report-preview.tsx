@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Download, Mail, Share } from 'lucide-react';
+import { ArrowLeft, Download, Mail, Share, Plus } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
 import { downloadPDF } from '@/lib/pdf-generator';
@@ -43,6 +43,15 @@ export default function ReportPreview() {
     toast({
       title: "Email Feature",
       description: "Email integration would be implemented here.",
+    });
+  };
+
+  const handleNewJob = () => {
+    // Navigate to setup page to start a new job
+    setLocation('/');
+    toast({
+      title: "New Job Started",
+      description: "Ready to begin a fresh test session.",
     });
   };
 
@@ -156,7 +165,7 @@ export default function ReportPreview() {
       </div>
 
       {/* Fixed Bottom Actions */}
-      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 p-4">
+      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 p-4 space-y-3">
         <div className="flex gap-3">
           <Button 
             onClick={handleExportPDF}
@@ -174,6 +183,13 @@ export default function ReportPreview() {
             Email
           </Button>
         </div>
+        <Button 
+          onClick={handleNewJob}
+          className="w-full bg-success text-white py-3 font-medium touch-button"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Start New Job
+        </Button>
       </div>
     </div>
   );

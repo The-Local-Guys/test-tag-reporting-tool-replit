@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
-import { Edit2, FileText, CheckCircle, Plus } from 'lucide-react';
+import { Edit2, FileText, CheckCircle, Plus, RotateCcw } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
+import { useToast } from '@/hooks/use-toast';
 
 const predefinedItems = [
   { type: 'iec-lead', name: 'IEC Lead', icon: '🔌', description: 'Power Cord' },
@@ -22,6 +23,7 @@ export default function ItemSelection() {
   const [customItemName, setCustomItemName] = useState('');
   const { sessionData, currentLocation, setCurrentLocation } = useSession();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
   const handleItemSelect = (itemType: string, itemName: string) => {
     setLocation(`/test?item=${encodeURIComponent(itemName)}&type=${itemType}`);
@@ -33,6 +35,15 @@ export default function ItemSelection() {
       setCustomItemName('');
       setIsCustomModalOpen(false);
     }
+  };
+
+  const handleNewJob = () => {
+    // Navigate to setup page to start a new job
+    setLocation('/');
+    toast({
+      title: "New Job Started",
+      description: "Ready to begin a fresh test session.",
+    });
   };
 
   const summary = sessionData?.summary || {
