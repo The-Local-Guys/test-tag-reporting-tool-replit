@@ -136,30 +136,23 @@ export default function TestDetails() {
 
       {/* Item Preview */}
       <div className="bg-white border-b border-gray-200 p-4">
-        <div className="flex items-center space-x-4">
-          <div className="text-4xl">{getItemIcon(currentItem.type)}</div>
-          <div>
-            <div className="font-semibold text-lg">{currentItem.name}</div>
-            <div className="text-gray-500 text-sm">Equipment Testing</div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="text-4xl">{getItemIcon(currentItem.type)}</div>
+            <div>
+              <div className="font-semibold text-lg">{currentItem.name}</div>
+              <div className="text-gray-500 text-sm">Equipment Testing</div>
+            </div>
+          </div>
+          <div className="bg-primary text-white px-3 py-2 rounded-lg">
+            <div className="text-xs text-blue-100 text-center">Asset #</div>
+            <div className="text-xl font-bold text-center">#{nextAssetData?.nextAssetNumber || '1'}</div>
           </div>
         </div>
       </div>
 
       {/* Form Content */}
       <div className="p-4 space-y-6 pb-24">
-        {/* Asset Number Display */}
-        <div className="space-y-2">
-          <Label className="flex items-center text-sm font-medium text-gray-700">
-            🏷️ Asset Number
-          </Label>
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-base font-semibold text-gray-800">
-            #{nextAssetData?.nextAssetNumber || '1'}
-          </div>
-          <div className="text-xs text-gray-500">
-            Auto-assigned sequential number for this item
-          </div>
-        </div>
-
         {/* Location Input */}
         <div className="space-y-2">
           <Label htmlFor="location" className="flex items-center text-sm font-medium text-gray-700">
