@@ -3,7 +3,8 @@ import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowLeft, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useSession } from '@/hooks/use-session';
 import { useLocation, useSearch } from 'wouter';
@@ -16,6 +17,14 @@ const classificationOptions = [
   { value: 'class2', label: 'Class 2' },
   { value: 'epod', label: 'EPOD' },
   { value: 'rcd', label: 'RCD' },
+];
+
+const frequencyOptions = [
+  { value: 'threemonthly', label: '3 Monthly' },
+  { value: 'sixmonthly', label: '6 Monthly' },
+  { value: 'twelvemonthly', label: '12 Monthly' },
+  { value: 'twentyfourmonthly', label: '24 Monthly' },
+  { value: 'fiveyearly', label: '5 Yearly' },
 ];
 
 export default function TestDetails() {
