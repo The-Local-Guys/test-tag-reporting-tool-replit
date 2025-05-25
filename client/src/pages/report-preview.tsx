@@ -1,14 +1,25 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Download, Mail, Share, Plus } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Modal } from '@/components/ui/modal';
+import { ArrowLeft, Download, Mail, Share, Plus, Edit2 } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
 import { downloadPDF } from '@/lib/pdf-generator';
 import { useToast } from '@/hooks/use-toast';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { insertTestResultSchema, type TestResult, type InsertTestResult } from '@shared/schema';
 
 export default function ReportPreview() {
-  const { sessionData } = useSession();
+  const { sessionData, updateResult } = useSession();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [editingResult, setEditingResult] = useState<TestResult | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   if (!sessionData) {
     return (

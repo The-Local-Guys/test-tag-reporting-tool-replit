@@ -108,6 +108,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update test result
+  app.patch("/api/sessions/:id/results/:resultId", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const resultId = parseInt(req.params.resultId);
+      
+      const session = await storage.getTestSession(sessionId);
+      if (!session) {
+        res.status(404).json({ error: "Session not found" });
+        return;
+      }
+
+      const updateData = {
+        itemName: req.body.itemName,
+        location: req.body.location,
+        classification: req.body.classification,
+        result: req.body.result,
+        frequency: req.body.frequency,
+        failureReason: req.body.failureReason || null,
+        actionTaken: req.body.actionTaken || null,
+        notes: req.body.notes || null
+      };
+      
+      const result = await storage.updateTestResult(resultId, updateData);
+      res.json(result);
+    } catch (error) {
+      console.error('Error updating test result:', error);
+      res.status(500).json({ error: "Failed to update test result" });
+    }
+  });
+
   // Get all results for a session
   app.get("/api/sessions/:id/results", async (req, res) => {
     try {

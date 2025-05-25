@@ -61,6 +61,17 @@ export function useSession() {
     },
   });
 
+  const updateResultMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<InsertTestResult> }) => {
+      if (!sessionId) throw new Error('No active session');
+      const response = await apiRequest('PATCH', `/api/sessions/${sessionId}/results/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/report`] });
+    },
+  });
+
   // Save session ID to localStorage when it changes
   useEffect(() => {
     if (sessionId) {
@@ -85,8 +96,10 @@ export function useSession() {
     isLoading,
     createSession: createSessionMutation.mutate,
     addResult: addResultMutation.mutate,
+    updateResult: updateResultMutation.mutate,
     clearSession,
     isCreatingSession: createSessionMutation.isPending,
     isAddingResult: addResultMutation.isPending,
+    isUpdatingResult: updateResultMutation.isPending,
   };
 }
