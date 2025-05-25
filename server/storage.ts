@@ -48,7 +48,7 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log('Attempting to insert test result:', insertResult);
       
-      // Use raw SQL since ORM is having issues
+      // Use the pool directly for raw SQL execution  
       const query = `
         INSERT INTO test_results 
         (session_id, asset_number, item_name, item_type, location, classification, result, frequency, failure_reason, action_taken, notes)
@@ -56,7 +56,8 @@ export class DatabaseStorage implements IStorage {
         RETURNING *
       `;
       
-      const result = await db.execute(query, [
+      const { pool } = await import('./db');
+      const result = await pool.query(query, [
         insertResult.sessionId,
         insertResult.assetNumber,
         insertResult.itemName,
@@ -70,7 +71,7 @@ export class DatabaseStorage implements IStorage {
         insertResult.notes
       ]);
       
-      console.log('Successfully inserted test result:', result);
+      console.log('Successfully inserted test result:', result.rows[0]);
       return result.rows[0] as TestResult;
     } catch (error) {
       console.error('Database insert error:', error);
