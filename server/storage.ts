@@ -6,6 +6,8 @@ import {
   type TestResult,
   type InsertTestResult 
 } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // Test Sessions
@@ -23,49 +25,36 @@ export interface IStorage {
   } | undefined>;
 }
 
-export class MemStorage implements IStorage {
-  private sessions: Map<number, TestSession>;
-  private results: Map<number, TestResult>;
-  private currentSessionId: number;
-  private currentResultId: number;
-
-  constructor() {
-    this.sessions = new Map();
-    this.results = new Map();
-    this.currentSessionId = 1;
-    this.currentResultId = 1;
-  }
-
+export class DatabaseStorage implements IStorage {
   async createTestSession(insertSession: InsertTestSession): Promise<TestSession> {
-    const id = this.currentSessionId++;
-    const session: TestSession = { 
-      ...insertSession, 
-      id,
-      createdAt: new Date()
-    };
-    this.sessions.set(id, session);
+    const [session] = await db
+      .insert(testSessions)
+      .values(insertSession)
+      .returning();
     return session;
   }
 
   async getTestSession(id: number): Promise<TestSession | undefined> {
-    return this.sessions.get(id);
+    const [session] = await db
+      .select()
+      .from(testSessions)
+      .where(eq(testSessions.id, id));
+    return session || undefined;
   }
 
   async createTestResult(insertResult: InsertTestResult): Promise<TestResult> {
-    const id = this.currentResultId++;
-    const result: TestResult = { 
-      ...insertResult, 
-      id,
-      createdAt: new Date()
-    };
-    this.results.set(id, result);
+    const [result] = await db
+      .insert(testResults)
+      .values(insertResult)
+      .returning();
     return result;
   }
 
   async getTestResultsBySession(sessionId: number): Promise<TestResult[]> {
-    return Array.from(this.results.values()).filter(
-      (result) => result.sessionId === sessionId
-    );
+    return await db
+      .select()
+      .from(testResults)
+      .where(eq(testResults.sessionId, sessionId));
   }
 
   async getFullSessionData(sessionId: number): Promise<{
@@ -80,4 +69,4 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
