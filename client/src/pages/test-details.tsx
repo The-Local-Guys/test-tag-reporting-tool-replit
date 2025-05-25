@@ -68,7 +68,7 @@ export default function TestDetails() {
     if (!currentItem) return;
 
     const testData: Omit<InsertTestResult, 'sessionId'> = {
-      assetNumber: form.getValues('assetNumber'),
+      // Remove assetNumber - let backend auto-assign sequential numbers
       itemName: currentItem.name,
       itemType: currentItem.type,
       location: form.getValues('location') || currentLocation,
@@ -78,7 +78,7 @@ export default function TestDetails() {
       failureReason: null,
       actionTaken: null,
       notes: null,
-    };
+    } as any;
 
     if (result === 'pass') {
       addResult(testData);
