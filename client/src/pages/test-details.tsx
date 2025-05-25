@@ -6,6 +6,8 @@ import { Label } from '@/components/ui/label';
 import { ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useLocation, useSearch } from 'wouter';
+import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 import type { InsertTestResult } from '@shared/schema';
 
 const classificationOptions = [
@@ -18,9 +20,15 @@ const classificationOptions = [
 export default function TestDetails() {
   const [selectedClass, setSelectedClass] = useState('class1');
   const [currentItem, setCurrentItem] = useState<{name: string, type: string} | null>(null);
-  const { currentLocation, addResult, isAddingResult } = useSession();
+  const { sessionId, currentLocation, addResult, isAddingResult } = useSession();
   const [, setLocation] = useLocation();
   const search = useSearch();
+
+  // Get next asset number
+  const { data: nextAssetData } = useQuery<{nextAssetNumber: number}>({
+    queryKey: [`/api/sessions/${sessionId}/next-asset-number`],
+    enabled: !!sessionId,
+  });
 
   useEffect(() => {
     const params = new URLSearchParams(search);
@@ -31,16 +39,25 @@ export default function TestDetails() {
     }
   }, [search]);
 
-  const form = useForm({
+  const form = useForm<{location: string, assetNumber: string}>({
     defaultValues: {
       location: currentLocation,
+      assetNumber: '1',
     },
   });
+
+  // Update asset number when next asset data changes
+  useEffect(() => {
+    if (nextAssetData?.nextAssetNumber) {
+      form.setValue('assetNumber', nextAssetData.nextAssetNumber.toString());
+    }
+  }, [nextAssetData, form]);
 
   const handleTestResult = (result: 'pass' | 'fail') => {
     if (!currentItem) return;
 
     const testData: Omit<InsertTestResult, 'sessionId'> = {
+      assetNumber: form.getValues('assetNumber'),
       itemName: currentItem.name,
       itemType: currentItem.type,
       location: form.getValues('location') || currentLocation,
@@ -118,6 +135,22 @@ export default function TestDetails() {
 
       {/* Form Content */}
       <div className="p-4 space-y-6 pb-24">
+        {/* Asset Number Input */}
+        <div className="space-y-2">
+          <Label htmlFor="assetNumber" className="flex items-center text-sm font-medium text-gray-700">
+            🏷️ Asset Number
+          </Label>
+          <Input
+            id="assetNumber"
+            placeholder="Enter asset number"
+            {...form.register('assetNumber')}
+            className="text-base"
+          />
+          <div className="text-xs text-gray-500">
+            Must be unique for this report
+          </div>
+        </div>
+
         {/* Location Input */}
         <div className="space-y-2">
           <Label htmlFor="location" className="flex items-center text-sm font-medium text-gray-700">

@@ -17,6 +17,8 @@ export interface IStorage {
   // Test Results
   createTestResult(result: InsertTestResult): Promise<TestResult>;
   getTestResultsBySession(sessionId: number): Promise<TestResult[]>;
+  getNextAssetNumber(sessionId: number): Promise<number>;
+  validateAssetNumber(sessionId: number, assetNumber: string, excludeId?: number): Promise<boolean>;
   
   // Report Data
   getFullSessionData(sessionId: number): Promise<{
@@ -55,6 +57,23 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(testResults)
       .where(eq(testResults.sessionId, sessionId));
+  }
+
+  async getNextAssetNumber(sessionId: number): Promise<number> {
+    const results = await this.getTestResultsBySession(sessionId);
+    if (results.length === 0) return 1;
+    
+    const existingNumbers = results
+      .map(r => parseInt(r.assetNumber))
+      .filter(n => !isNaN(n))
+      .sort((a, b) => b - a);
+    
+    return existingNumbers.length > 0 ? existingNumbers[0] + 1 : 1;
+  }
+
+  async validateAssetNumber(sessionId: number, assetNumber: string, excludeId?: number): Promise<boolean> {
+    const results = await this.getTestResultsBySession(sessionId);
+    return !results.some(r => r.assetNumber === assetNumber && r.id !== excludeId);
   }
 
   async getFullSessionData(sessionId: number): Promise<{

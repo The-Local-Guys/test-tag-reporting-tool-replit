@@ -38,6 +38,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get next asset number for session
+  app.get("/api/sessions/:id/next-asset-number", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const nextNumber = await storage.getNextAssetNumber(sessionId);
+      res.json({ nextAssetNumber: nextNumber });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get next asset number" });
+    }
+  });
+
+  // Validate asset number for session
+  app.post("/api/sessions/:id/validate-asset-number", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const { assetNumber, excludeId } = req.body;
+      const isValid = await storage.validateAssetNumber(sessionId, assetNumber, excludeId);
+      res.json({ isValid });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to validate asset number" });
+    }
+  });
+
   // Add test result to session
   app.post("/api/sessions/:id/results", async (req, res) => {
     try {
@@ -46,6 +69,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!session) {
         res.status(404).json({ error: "Session not found" });
+        return;
+      }
+
+      // Validate asset number uniqueness
+      const isValidAssetNumber = await storage.validateAssetNumber(sessionId, req.body.assetNumber);
+      if (!isValidAssetNumber) {
+        res.status(400).json({ error: "Asset number already exists for this session" });
         return;
       }
 

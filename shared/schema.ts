@@ -16,6 +16,7 @@ export const testSessions = pgTable("test_sessions", {
 export const testResults = pgTable("test_results", {
   id: serial("id").primaryKey(),
   sessionId: integer("session_id").references(() => testSessions.id),
+  assetNumber: text("asset_number").notNull(),
   itemName: text("item_name").notNull(),
   itemType: text("item_type").notNull(),
   location: text("location").notNull(),
