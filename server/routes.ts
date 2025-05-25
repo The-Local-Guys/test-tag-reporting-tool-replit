@@ -72,6 +72,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
+      // If no asset number provided, get the next one
+      if (!req.body.assetNumber) {
+        req.body.assetNumber = (await storage.getNextAssetNumber(sessionId)).toString();
+      }
+
       // Validate asset number uniqueness
       const isValidAssetNumber = await storage.validateAssetNumber(sessionId, req.body.assetNumber);
       if (!isValidAssetNumber) {
@@ -87,10 +92,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await storage.createTestResult(resultData);
       res.json(result);
     } catch (error) {
+      console.error('Error creating test result:', error);
       if (error instanceof z.ZodError) {
         res.status(400).json({ error: "Invalid result data", details: error.errors });
       } else {
-        res.status(500).json({ error: "Failed to create test result" });
+        res.status(500).json({ error: "Failed to create test result", details: error.message });
       }
     }
   });
