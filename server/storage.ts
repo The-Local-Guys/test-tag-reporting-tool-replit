@@ -45,11 +45,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createTestResult(insertResult: InsertTestResult): Promise<TestResult> {
-    const [result] = await db
-      .insert(testResults)
-      .values(insertResult)
-      .returning();
-    return result;
+    try {
+      console.log('Attempting to insert test result:', insertResult);
+      const [result] = await db
+        .insert(testResults)
+        .values(insertResult)
+        .returning();
+      console.log('Successfully inserted test result:', result);
+      return result;
+    } catch (error) {
+      console.error('Database insert error:', error);
+      throw error;
+    }
   }
 
   async getTestResultsBySession(sessionId: number): Promise<TestResult[]> {

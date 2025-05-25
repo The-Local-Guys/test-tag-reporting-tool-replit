@@ -93,6 +93,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(result);
     } catch (error) {
       console.error('Error creating test result:', error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack available');
       if (error instanceof z.ZodError) {
         res.status(400).json({ error: "Invalid result data", details: error.errors });
       } else {
