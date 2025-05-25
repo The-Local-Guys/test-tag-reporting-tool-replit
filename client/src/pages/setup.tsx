@@ -64,7 +64,7 @@ export default function Setup() {
       {/* Form Content */}
       <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 space-y-6 pb-24">
         <div className="space-y-4">
-          <div className="space-y-2 slide-up" style={{animationDelay: '0.1s'}}>
+          <div className="space-y-2">
             <Label htmlFor="testDate">Test Date</Label>
             <Input
               id="testDate"
@@ -73,7 +73,7 @@ export default function Setup() {
               className="text-base"
             />
             {form.formState.errors.testDate && (
-              <p className="text-sm text-error wiggle">{form.formState.errors.testDate.message}</p>
+              <p className="text-sm text-error">{form.formState.errors.testDate.message}</p>
             )}
           </div>
 

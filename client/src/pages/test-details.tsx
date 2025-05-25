@@ -200,28 +200,26 @@ export default function TestDetails() {
             <Button
               type="button"
               onClick={() => handleTestResult('pass')}
-              className="bg-success text-white p-6 h-auto text-lg font-semibold flex flex-col items-center justify-center hover:bg-green-600 touch-button slide-up"
+              className="bg-success text-white p-6 h-auto text-lg font-semibold flex flex-col items-center justify-center hover:bg-green-600 touch-button"
               disabled={isAddingResult}
-              style={{animationDelay: '0.1s'}}
             >
               {isAddingResult ? (
                 <LoadingSpinner size="lg" className="mb-2 text-white" />
               ) : (
-                <CheckCircle className="h-8 w-8 mb-2 bounce-in" style={{animationDelay: '0.3s'}} />
+                <CheckCircle className="h-8 w-8 mb-2" />
               )}
               {isAddingResult ? 'Saving...' : 'PASS'}
             </Button>
             <Button
               type="button"
               onClick={() => handleTestResult('fail')}
-              className="bg-error text-white p-6 h-auto text-lg font-semibold flex flex-col items-center justify-center hover:bg-red-600 touch-button slide-up"
+              className="bg-error text-white p-6 h-auto text-lg font-semibold flex flex-col items-center justify-center hover:bg-red-600 touch-button"
               disabled={isAddingResult}
-              style={{animationDelay: '0.2s'}}
             >
               {isAddingResult ? (
                 <LoadingSpinner size="lg" className="mb-2 text-white" />
               ) : (
-                <XCircle className="h-8 w-8 mb-2 bounce-in" style={{animationDelay: '0.4s'}} />
+                <XCircle className="h-8 w-8 mb-2" />
               )}
               {isAddingResult ? 'Saving...' : 'FAIL'}
             </Button>

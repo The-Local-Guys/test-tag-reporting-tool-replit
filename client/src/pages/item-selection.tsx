@@ -61,18 +61,18 @@ export default function ItemSelection() {
       </div>
 
       {/* Quick Stats */}
-      <div className="bg-white border-b border-gray-200 p-4 fade-in">
+      <div className="bg-white border-b border-gray-200 p-4">
         <div className="grid grid-cols-3 gap-4 text-center">
-          <div className="slide-up">
-            <div className="text-2xl font-bold text-success number-pop">{summary.passedItems}</div>
+          <div>
+            <div className="text-2xl font-bold text-success">{summary.passedItems}</div>
             <div className="text-xs text-gray-500">Passed</div>
           </div>
-          <div className="slide-up" style={{animationDelay: '0.1s'}}>
-            <div className="text-2xl font-bold text-error number-pop">{summary.failedItems}</div>
+          <div>
+            <div className="text-2xl font-bold text-error">{summary.failedItems}</div>
             <div className="text-xs text-gray-500">Failed</div>
           </div>
-          <div className="slide-up" style={{animationDelay: '0.2s'}}>
-            <div className="text-2xl font-bold text-warning number-pop">{summary.passRate}%</div>
+          <div>
+            <div className="text-2xl font-bold text-warning">{summary.passRate}%</div>
             <div className="text-xs text-gray-500">Pass Rate</div>
           </div>
         </div>
@@ -102,14 +102,13 @@ export default function ItemSelection() {
       {/* Item Selection Grid */}
       <div className="p-4 pb-24">
         <div className="grid grid-cols-2 gap-3">
-          {predefinedItems.map((item, index) => (
+          {predefinedItems.map((item) => (
             <button
               key={item.type}
               onClick={() => handleItemSelect(item.type, item.name)}
-              className="bg-white border-2 border-gray-200 rounded-xl p-4 text-center hover:border-primary hover:bg-blue-50 transition-all touch-button bounce-in"
-              style={{animationDelay: `${index * 0.1}s`}}
+              className="bg-white border-2 border-gray-200 rounded-xl p-4 text-center hover:border-primary hover:bg-blue-50 transition-all touch-button"
             >
-              <div className="text-3xl mb-2 float" style={{animationDelay: `${index * 0.2}s`}}>{item.icon}</div>
+              <div className="text-3xl mb-2">{item.icon}</div>
               <div className="font-medium text-gray-800">{item.name}</div>
               <div className="text-xs text-gray-500 mt-1">{item.description}</div>
             </button>
