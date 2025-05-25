@@ -28,7 +28,7 @@ export function useSession() {
 
   // Get current session data
   const { data: sessionData, isLoading } = useQuery<SessionData>({
-    queryKey: ['/api/sessions', sessionId, 'report'],
+    queryKey: [`/api/sessions/${sessionId}/report`],
     enabled: !!sessionId,
   });
 
@@ -57,7 +57,7 @@ export function useSession() {
       setCurrentLocation(result.location);
       localStorage.setItem('currentLocation', result.location);
       
-      queryClient.invalidateQueries({ queryKey: ['/api/sessions', sessionId] });
+      queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/report`] });
     },
   });
 
