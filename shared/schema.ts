@@ -1,0 +1,50 @@
+import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+
+export const testSessions = pgTable("test_sessions", {
+  id: serial("id").primaryKey(),
+  testDate: text("test_date").notNull(),
+  technicianName: text("technician_name").notNull(),
+  clientName: text("client_name").notNull(),
+  siteContact: text("site_contact").notNull(),
+  address: text("address").notNull(),
+  country: text("country").notNull(), // 'australia' or 'newzealand'
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const testResults = pgTable("test_results", {
+  id: serial("id").primaryKey(),
+  sessionId: integer("session_id").references(() => testSessions.id),
+  itemName: text("item_name").notNull(),
+  itemType: text("item_type").notNull(),
+  location: text("location").notNull(),
+  classification: text("classification").notNull(), // 'class1', 'class2', 'epod', 'rcd'
+  result: text("result").notNull(), // 'pass' or 'fail'
+  failureReason: text("failure_reason"), // nullable for passed items
+  actionTaken: text("action_taken"), // nullable for passed items
+  notes: text("notes"), // optional additional notes
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTestSessionSchema = createInsertSchema(testSessions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTestResultSchema = createInsertSchema(testResults).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertTestSession = z.infer<typeof insertTestSessionSchema>;
+export type TestSession = typeof testSessions.$inferSelect;
+export type InsertTestResult = z.infer<typeof insertTestResultSchema>;
+export type TestResult = typeof testResults.$inferSelect;
+
+// Define enum values for validation
+export const equipmentClassifications = ['class1', 'class2', 'epod', 'rcd'] as const;
+export const testResultValues = ['pass', 'fail'] as const;
+export const failureReasons = ['vision', 'earth', 'insulation', 'polarity', 'other'] as const;
+export const actionsTaken = ['given', 'removed'] as const;
+export const countries = ['australia', 'newzealand'] as const;

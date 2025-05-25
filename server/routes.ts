@@ -1,0 +1,113 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { insertTestSessionSchema, insertTestResultSchema } from "@shared/schema";
+import { z } from "zod";
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // Create a new test session
+  app.post("/api/sessions", async (req, res) => {
+    try {
+      const sessionData = insertTestSessionSchema.parse(req.body);
+      const session = await storage.createTestSession(sessionData);
+      res.json(session);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid session data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create session" });
+      }
+    }
+  });
+
+  // Get session by ID
+  app.get("/api/sessions/:id", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const session = await storage.getTestSession(sessionId);
+      
+      if (!session) {
+        res.status(404).json({ error: "Session not found" });
+        return;
+      }
+      
+      res.json(session);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to retrieve session" });
+    }
+  });
+
+  // Add test result to session
+  app.post("/api/sessions/:id/results", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const session = await storage.getTestSession(sessionId);
+      
+      if (!session) {
+        res.status(404).json({ error: "Session not found" });
+        return;
+      }
+
+      const resultData = insertTestResultSchema.parse({
+        ...req.body,
+        sessionId
+      });
+      
+      const result = await storage.createTestResult(resultData);
+      res.json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid result data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create test result" });
+      }
+    }
+  });
+
+  // Get all results for a session
+  app.get("/api/sessions/:id/results", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const results = await storage.getTestResultsBySession(sessionId);
+      res.json(results);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to retrieve results" });
+    }
+  });
+
+  // Generate report data
+  app.get("/api/sessions/:id/report", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const sessionData = await storage.getFullSessionData(sessionId);
+      
+      if (!sessionData) {
+        res.status(404).json({ error: "Session not found" });
+        return;
+      }
+
+      const { session, results } = sessionData;
+      const totalItems = results.length;
+      const passedItems = results.filter(r => r.result === 'pass').length;
+      const failedItems = results.filter(r => r.result === 'fail').length;
+      const passRate = totalItems > 0 ? Math.round((passedItems / totalItems) * 100) : 0;
+
+      res.json({
+        session,
+        results,
+        summary: {
+          totalItems,
+          passedItems,
+          failedItems,
+          passRate
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to generate report" });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}

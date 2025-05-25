@@ -1,0 +1,179 @@
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { insertTestSessionSchema } from '@shared/schema';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Card } from '@/components/ui/card';
+import { Clipboard, ArrowRight } from 'lucide-react';
+import { useSession } from '@/hooks/use-session';
+import { useLocation } from 'wouter';
+import type { InsertTestSession } from '@shared/schema';
+
+export default function Setup() {
+  const [selectedCountry, setSelectedCountry] = useState<'australia' | 'newzealand'>('australia');
+  const { createSession, isCreatingSession } = useSession();
+  const [, setLocation] = useLocation();
+  
+  const form = useForm<InsertTestSession>({
+    resolver: zodResolver(insertTestSessionSchema),
+    defaultValues: {
+      testDate: new Date().toISOString().split('T')[0],
+      technicianName: '',
+      clientName: '',
+      siteContact: '',
+      address: '',
+      country: 'australia',
+    },
+  });
+
+  const onSubmit = (data: InsertTestSession) => {
+    createSession({
+      ...data,
+      country: selectedCountry,
+    });
+    setLocation('/items');
+  };
+
+  return (
+    <div className="mobile-container">
+      {/* Header */}
+      <div className="bg-primary text-white p-4 sticky top-0 z-10">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-semibold">New Test Session</h1>
+          <Clipboard className="h-6 w-6" />
+        </div>
+        <div className="text-blue-100 text-sm mt-1">Step 1 of 3: Client Setup</div>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="bg-white border-b border-gray-200 p-4">
+        <div className="flex items-center">
+          <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center text-sm font-medium">1</div>
+          <div className="flex-1 h-1 bg-gray-200 mx-2">
+            <div className="h-full bg-primary w-1/3"></div>
+          </div>
+          <div className="w-8 h-8 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm">2</div>
+          <div className="flex-1 h-1 bg-gray-200 mx-2"></div>
+          <div className="w-8 h-8 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm">3</div>
+        </div>
+      </div>
+
+      {/* Form Content */}
+      <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 space-y-6 pb-24">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="testDate">Test Date</Label>
+            <Input
+              id="testDate"
+              type="date"
+              {...form.register('testDate')}
+              className="text-base"
+            />
+            {form.formState.errors.testDate && (
+              <p className="text-sm text-error">{form.formState.errors.testDate.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="technicianName">Technician Name</Label>
+            <Input
+              id="technicianName"
+              placeholder="Enter your name"
+              {...form.register('technicianName')}
+              className="text-base"
+            />
+            {form.formState.errors.technicianName && (
+              <p className="text-sm text-error">{form.formState.errors.technicianName.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="clientName">Client Business Name</Label>
+            <Input
+              id="clientName"
+              placeholder="Enter business name"
+              {...form.register('clientName')}
+              className="text-base"
+            />
+            {form.formState.errors.clientName && (
+              <p className="text-sm text-error">{form.formState.errors.clientName.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="siteContact">Site Contact Name</Label>
+            <Input
+              id="siteContact"
+              placeholder="Enter contact person"
+              {...form.register('siteContact')}
+              className="text-base"
+            />
+            {form.formState.errors.siteContact && (
+              <p className="text-sm text-error">{form.formState.errors.siteContact.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="address">Address</Label>
+            <Textarea
+              id="address"
+              placeholder="Enter full address"
+              rows={3}
+              {...form.register('address')}
+              className="text-base resize-none"
+            />
+            {form.formState.errors.address && (
+              <p className="text-sm text-error">{form.formState.errors.address.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Country/Region</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setSelectedCountry('australia')}
+                className={`flex items-center justify-center p-4 border-2 rounded-lg transition-colors touch-button ${
+                  selectedCountry === 'australia'
+                    ? 'border-primary bg-primary text-white'
+                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <span className="mr-2">🇦🇺</span>
+                Australia
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedCountry('newzealand')}
+                className={`flex items-center justify-center p-4 border-2 rounded-lg transition-colors touch-button ${
+                  selectedCountry === 'newzealand'
+                    ? 'border-primary bg-primary text-white'
+                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <span className="mr-2">🇳🇿</span>
+                New Zealand
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      {/* Fixed Bottom Button */}
+      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 p-4">
+        <Button 
+          type="submit" 
+          onClick={form.handleSubmit(onSubmit)}
+          className="w-full bg-primary text-white py-4 text-lg font-semibold touch-button"
+          disabled={isCreatingSession}
+        >
+          {isCreatingSession ? 'Creating Session...' : 'Start Testing'}
+          <ArrowRight className="ml-2 h-5 w-5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
