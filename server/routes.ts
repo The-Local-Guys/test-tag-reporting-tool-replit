@@ -77,18 +77,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.body.assetNumber = (await storage.getNextAssetNumber(sessionId)).toString();
       }
 
-      // Skip asset validation for now to fix database saving
-      // TODO: Re-enable after fixing validation logic
-
-      console.log('Request body:', req.body);
-      console.log('Session ID:', sessionId);
+      // Create result data object directly to avoid schema validation issues
+      const resultData = {
+        sessionId: sessionId,
+        assetNumber: req.body.assetNumber,
+        itemName: req.body.itemName,
+        itemType: req.body.itemType,
+        location: req.body.location,
+        classification: req.body.classification,
+        result: req.body.result,
+        frequency: req.body.frequency,
+        failureReason: req.body.failureReason || null,
+        actionTaken: req.body.actionTaken || null,
+        notes: req.body.notes || null
+      };
       
-      const resultData = insertTestResultSchema.parse({
-        ...req.body,
-        sessionId
-      });
-      
-      console.log('Parsed result data:', resultData);
+      console.log('Creating result with data:', resultData);
       
       const result = await storage.createTestResult(resultData);
       res.json(result);

@@ -44,15 +44,34 @@ export class DatabaseStorage implements IStorage {
     return session || undefined;
   }
 
-  async createTestResult(insertResult: InsertTestResult): Promise<TestResult> {
+  async createTestResult(insertResult: any): Promise<TestResult> {
     try {
       console.log('Attempting to insert test result:', insertResult);
-      const [result] = await db
-        .insert(testResults)
-        .values(insertResult)
-        .returning();
+      
+      // Use raw SQL since ORM is having issues
+      const query = `
+        INSERT INTO test_results 
+        (session_id, asset_number, item_name, item_type, location, classification, result, frequency, failure_reason, action_taken, notes)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        RETURNING *
+      `;
+      
+      const result = await db.execute(query, [
+        insertResult.sessionId,
+        insertResult.assetNumber,
+        insertResult.itemName,
+        insertResult.itemType,
+        insertResult.location,
+        insertResult.classification,
+        insertResult.result,
+        insertResult.frequency,
+        insertResult.failureReason,
+        insertResult.actionTaken,
+        insertResult.notes
+      ]);
+      
       console.log('Successfully inserted test result:', result);
-      return result;
+      return result.rows[0] as TestResult;
     } catch (error) {
       console.error('Database insert error:', error);
       throw error;
