@@ -170,6 +170,7 @@ export default function TestDetails() {
       'ac-adaptor': '🔌',
       'extension-cord': '➖',
       'double-adaptor': '⚡',
+      'power-pack': '🔌',
       'custom': '⚡',
     };
     return icons[type] || '⚡';
