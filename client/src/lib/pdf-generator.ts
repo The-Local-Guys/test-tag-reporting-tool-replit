@@ -209,6 +209,59 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     { align: 'center' }
   );
 
+  // Add failed item photos section
+  const failedItemsWithPhotos = results.filter(result => result.result === 'fail' && result.photoData);
+  
+  if (failedItemsWithPhotos.length > 0) {
+    // Add new page for photos
+    doc.addPage();
+    yPosition = margin;
+    
+    // Photos section header
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Failed Items - Photo Documentation', margin, yPosition);
+    yPosition += 15;
+    
+    for (const result of failedItemsWithPhotos) {
+      // Check if we need a new page
+      if (yPosition > doc.internal.pageSize.height - 120) {
+        doc.addPage();
+        yPosition = margin;
+      }
+      
+      // Item header
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Asset #${results.indexOf(result) + 1} - ${result.itemName}`, margin, yPosition);
+      yPosition += 7;
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Location: ${result.location} | Failure: ${result.failureReason}`, margin, yPosition);
+      yPosition += 10;
+      
+      // Add photo
+      try {
+        if (result.photoData) {
+          const imgWidth = 80;
+          const imgHeight = 60;
+          doc.addImage(result.photoData, 'JPEG', margin, yPosition, imgWidth, imgHeight);
+          yPosition += imgHeight + 15;
+        }
+      } catch (error) {
+        // If photo can't be added, add placeholder text
+        doc.setFontSize(9);
+        doc.setTextColor(150, 150, 150);
+        doc.text('Photo could not be displayed in PDF', margin, yPosition);
+        yPosition += 15;
+        doc.setTextColor(0, 0, 0);
+      }
+      
+      yPosition += 5;
+    }
+  }
+
   return doc.output('blob');
 }
 
