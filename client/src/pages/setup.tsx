@@ -52,10 +52,29 @@ export default function Setup() {
       {/* Header */}
       <div className="bg-primary text-white p-4 sticky top-0 z-10">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold">New Test Session</h1>
-          <Clipboard className="h-6 w-6" />
+          <div>
+            <h1 className="text-xl font-semibold">New Test Session</h1>
+            <div className="text-blue-100 text-sm mt-1">Step 1 of 3: Client Setup</div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              onClick={() => {
+                form.reset();
+                setSelectedCountry('australia');
+                // Clear any cached session data
+                localStorage.removeItem('currentSession');
+                window.location.reload();
+              }}
+              variant="outline"
+              size="sm"
+              className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+            >
+              New Report
+            </Button>
+            <Clipboard className="h-6 w-6" />
+          </div>
         </div>
-        <div className="text-blue-100 text-sm mt-1">Step 1 of 3: Client Setup</div>
       </div>
 
       {/* Progress Bar */}
