@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, CheckCircle, XCircle, Clock, Camera, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useSession } from '@/hooks/use-session';
 import { useLocation, useSearch } from 'wouter';
@@ -269,78 +269,7 @@ export default function TestDetails() {
           </div>
         </div>
 
-        {/* Photo Capture Section */}
-        <div className="space-y-3">
-          <Label className="flex items-center text-sm font-medium text-gray-700">
-            📷 Photo Documentation
-          </Label>
-          <div className="text-xs text-gray-500 mb-3">
-            Capture photos of failed equipment for documentation
-          </div>
-          
-          {/* Captured Photos */}
-          {capturedPhotos.length > 0 && (
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              {capturedPhotos.map((photo, index) => (
-                <div key={index} className="relative">
-                  <img 
-                    src={photo} 
-                    alt={`Captured photo ${index + 1}`}
-                    className="w-full h-24 object-cover rounded-lg border"
-                  />
-                  <button
-                    onClick={() => removePhoto(index)}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 text-xs"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
 
-          {/* Camera Controls */}
-          {!showCamera ? (
-            <Button
-              type="button"
-              onClick={startCamera}
-              variant="outline"
-              className="w-full p-3 border-2 border-dashed border-gray-300 hover:border-primary"
-            >
-              <Camera className="mr-2 h-4 w-4" />
-              Take Photo
-            </Button>
-          ) : (
-            <div className="space-y-3">
-              <div className="relative bg-black rounded-lg overflow-hidden">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  className="w-full h-48 object-cover"
-                />
-              </div>
-              <div className="flex gap-3">
-                <Button
-                  type="button"
-                  onClick={capturePhoto}
-                  className="flex-1 bg-primary"
-                >
-                  <Camera className="mr-2 h-4 w-4" />
-                  Capture
-                </Button>
-                <Button
-                  type="button"
-                  onClick={stopCamera}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
 
         {/* Test Result */}
         <div className="space-y-3">
