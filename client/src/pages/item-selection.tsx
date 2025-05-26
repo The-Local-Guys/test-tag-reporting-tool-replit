@@ -16,7 +16,7 @@ const predefinedItems = [
   { type: 'ac-adaptor', name: 'AC Adaptor', icon: '🔌', description: 'Power Supply' },
   { type: 'extension-cord', name: 'Extension Cord', icon: '➖', description: 'Power Extension' },
   { type: 'double-adaptor', name: 'Double Adaptor', icon: '⚡', description: 'Dual Outlet' },
-  { type: 'power-pack', name: 'Power Pack', icon: '🔌', description: 'Portable Power' },
+  { type: 'power-pack', name: 'Power Pack', icon: '⬛', description: 'Portable Power' },
 ];
 
 export default function ItemSelection() {
