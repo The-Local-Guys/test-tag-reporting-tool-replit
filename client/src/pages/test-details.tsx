@@ -111,11 +111,11 @@ export default function TestDetails() {
     const icons: Record<string, string> = {
       'iec-lead': '🔌',
       'computer': '💻',
-      'power-board': '🔌',
-      'phone-charger': '📱',
-      'laptop-charger': '🔋',
+      'power-board': '🔋',
+      'phone-charger': '🔌',
+      'laptop-charger': '💻',
       'ac-adaptor': '🔌',
-      'extension-cord': '🔗',
+      'extension-cord': '➖',
       'double-adaptor': '🔌',
       'custom': '⚡',
     };

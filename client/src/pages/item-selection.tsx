@@ -10,11 +10,11 @@ import { useToast } from '@/hooks/use-toast';
 const predefinedItems = [
   { type: 'iec-lead', name: 'IEC Lead', icon: '🔌', description: 'Power Cord' },
   { type: 'computer', name: 'Computer', icon: '💻', description: 'Desktop/Laptop' },
-  { type: 'power-board', name: 'Power Board', icon: '🔌', description: 'Multi Outlet' },
-  { type: 'phone-charger', name: 'Phone Charger', icon: '📱', description: 'Mobile Charger' },
-  { type: 'laptop-charger', name: 'Laptop Charger', icon: '🔋', description: 'AC Adapter' },
+  { type: 'power-board', name: 'Power Board', icon: '🔋', description: 'Multi Outlet' },
+  { type: 'phone-charger', name: 'Phone Charger', icon: '🔌', description: 'Mobile Charger' },
+  { type: 'laptop-charger', name: 'Laptop Charger', icon: '💻', description: 'AC Adapter' },
   { type: 'ac-adaptor', name: 'AC Adaptor', icon: '🔌', description: 'Power Supply' },
-  { type: 'extension-cord', name: 'Extension Cord', icon: '🔗', description: 'Power Extension' },
+  { type: 'extension-cord', name: 'Extension Cord', icon: '➖', description: 'Power Extension' },
   { type: 'double-adaptor', name: 'Double Adaptor', icon: '🔌', description: 'Dual Outlet' },
 ];
 
