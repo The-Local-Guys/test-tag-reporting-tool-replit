@@ -47,9 +47,9 @@ export default function ReportPreview() {
 
   const { session, results, summary } = sessionData;
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     try {
-      downloadPDF(sessionData, `test-report-${session.clientName.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+      await downloadPDF(sessionData, `test-report-${session.clientName.replace(/\s+/g, '-').toLowerCase()}.pdf`);
       toast({
         title: "PDF Generated",
         description: "Your test report has been downloaded successfully.",

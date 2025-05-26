@@ -50,7 +50,7 @@ function getFrequencyLabel(frequency: string): string {
   }
 }
 
-export function generatePDFReport(data: ReportData): Blob {
+export async function generatePDFReport(data: ReportData): Promise<Blob> {
   const { session, results, summary } = data;
   const doc = new jsPDF();
   
@@ -65,15 +65,34 @@ export function generatePDFReport(data: ReportData): Blob {
   const margin = 20;
   let yPosition = margin;
 
-  // Add logo placeholder (company branding)
-  doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
-  doc.text('THE LOCAL GUYS', pageWidth / 2, yPosition, { align: 'center' });
-  yPosition += 8;
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'normal');
-  doc.text('TEST & TAG', pageWidth / 2, yPosition, { align: 'center' });
-  yPosition += 20;
+  // Add logo
+  try {
+    const logoResponse = await fetch(logoPath);
+    const logoBlob = await logoResponse.blob();
+    const logoDataUrl = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.readAsDataURL(logoBlob);
+    });
+    
+    // Calculate logo dimensions (maintain aspect ratio)
+    const logoWidth = 60;
+    const logoHeight = 20; // Approximate height for the logo
+    
+    // Center the logo
+    doc.addImage(logoDataUrl, 'PNG', pageWidth / 2 - logoWidth / 2, yPosition, logoWidth, logoHeight);
+    yPosition += logoHeight + 10;
+  } catch (error) {
+    // Fallback to text if logo fails to load
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('THE LOCAL GUYS', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 8;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text('TEST & TAG', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 20;
+  }
 
   // Add header
   doc.setFontSize(18);
@@ -188,8 +207,8 @@ export function generatePDFReport(data: ReportData): Blob {
   return doc.output('blob');
 }
 
-export function downloadPDF(data: ReportData, filename?: string) {
-  const blob = generatePDFReport(data);
+export async function downloadPDF(data: ReportData, filename?: string) {
+  const blob = await generatePDFReport(data);
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
