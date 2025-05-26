@@ -164,12 +164,12 @@ export default function TestDetails() {
     const icons: Record<string, string> = {
       'iec-lead': '🔌',
       'computer': '💻',
-      'power-board': '🔋',
-      'phone-charger': '🔌',
+      'power-board': '🔌',
+      'phone-charger': '🔋',
       'laptop-charger': '💻',
       'ac-adaptor': '🔌',
       'extension-cord': '➖',
-      'double-adaptor': '🔌',
+      'double-adaptor': '⚡',
       'custom': '⚡',
     };
     return icons[type] || '⚡';
