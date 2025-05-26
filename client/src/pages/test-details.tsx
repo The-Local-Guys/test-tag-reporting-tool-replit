@@ -164,7 +164,7 @@ export default function TestDetails() {
     const icons: Record<string, string> = {
       'iec-lead': '🔌',
       'computer': '💻',
-      'power-board': '🔌',
+      'power-board': '🔧',
       'phone-charger': '🔋',
       'laptop-charger': '💻',
       'ac-adaptor': '🔌',
