@@ -98,7 +98,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         photoData: req.body.photoData || null
       };
       
-      console.log('Creating result with data:', resultData);
+      console.log('Creating result with data:', {
+        ...resultData,
+        photoData: resultData.photoData ? `Photo data included (${Math.round(resultData.photoData.length / 1024)}KB)` : 'No photo data'
+      });
+      console.log('Request body photoData:', req.body.photoData ? `Photo included (${Math.round(req.body.photoData.length / 1024)}KB)` : 'No photo in request');
       
       const result = await storage.createTestResult(resultData);
       res.json(result);
