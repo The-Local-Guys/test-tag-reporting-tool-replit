@@ -11,6 +11,7 @@ import { Clipboard, ArrowRight } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
 import type { InsertTestSession } from '@shared/schema';
+import logoPath from '@assets/The Local Guys - with plug wide boarder - png seek.png';
 
 export default function Setup() {
   const [selectedCountry, setSelectedCountry] = useState<'australia' | 'newzealand'>('australia');
@@ -39,6 +40,15 @@ export default function Setup() {
 
   return (
     <div className="mobile-container">
+      {/* Logo */}
+      <div className="bg-white p-4 text-center border-b">
+        <img 
+          src={logoPath} 
+          alt="The Local Guys Test & Tag" 
+          className="h-16 mx-auto object-contain"
+        />
+      </div>
+
       {/* Header */}
       <div className="bg-primary text-white p-4 sticky top-0 z-10">
         <div className="flex items-center justify-between">

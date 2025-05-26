@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import type { TestSession, TestResult } from '@shared/schema';
+import logoPath from '@assets/The Local Guys - with plug wide boarder - png seek.png';
 
 interface ReportData {
   session: TestSession;
@@ -63,6 +64,16 @@ export function generatePDFReport(data: ReportData): Blob {
   const pageWidth = doc.internal.pageSize.width;
   const margin = 20;
   let yPosition = margin;
+
+  // Add logo placeholder (company branding)
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('THE LOCAL GUYS', pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 8;
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'normal');
+  doc.text('TEST & TAG', pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 20;
 
   // Add header
   doc.setFontSize(18);
