@@ -75,9 +75,9 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       reader.readAsDataURL(logoBlob);
     });
     
-    // Calculate logo dimensions (maintain proper aspect ratio)
-    const logoWidth = 50;
-    const logoHeight = 25; // Better proportions for the logo
+    // Calculate logo dimensions (make it more square and taller)
+    const logoWidth = 45;
+    const logoHeight = 35; // Taller to make it more square
     
     // Center the logo
     doc.addImage(logoDataUrl, 'PNG', pageWidth / 2 - logoWidth / 2, yPosition, logoWidth, logoHeight);
