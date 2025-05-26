@@ -13,8 +13,13 @@ interface ReportData {
   };
 }
 
-function calculateNextDueDate(testDate: string, frequency: string): string {
+function calculateNextDueDate(testDate: string, frequency: string, result: string): string {
   const date = new Date(testDate);
+  
+  // For failed items, next due date is the same as test date (immediate retest required)
+  if (result === 'fail') {
+    return date.toLocaleDateString();
+  }
   
   switch (frequency) {
     case 'threemonthly':
@@ -186,7 +191,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
 
     // Add frequency and next due date
     doc.text(getFrequencyLabel(result.frequency), margin + 125, yPosition);
-    doc.text(calculateNextDueDate(session.testDate, result.frequency), margin + 155, yPosition);
+    doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 155, yPosition);
 
     yPosition += 6;
   });

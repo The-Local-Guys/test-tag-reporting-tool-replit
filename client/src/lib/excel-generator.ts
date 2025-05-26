@@ -12,8 +12,13 @@ interface ReportData {
   };
 }
 
-function calculateNextDueDate(testDate: string, frequency: string): string {
+function calculateNextDueDate(testDate: string, frequency: string, result: string): string {
   const date = new Date(testDate);
+  
+  // For failed items, next due date is the same as test date (immediate retest required)
+  if (result === 'fail') {
+    return date.toLocaleDateString();
+  }
   
   switch (frequency) {
     case 'threemonthly':
@@ -89,7 +94,7 @@ export function generateExcelReport(data: ReportData): Blob {
     result.classification.toUpperCase(),
     result.result.toUpperCase(),
     getFrequencyLabel(result.frequency),
-    calculateNextDueDate(session.testDate, result.frequency),
+    calculateNextDueDate(session.testDate, result.frequency, result.result),
     result.failureReason || '',
     result.actionTaken || '',
     result.notes || ''
