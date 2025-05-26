@@ -114,7 +114,6 @@ export default function ItemSelection() {
             >
               <div className="text-3xl mb-2">{item.icon}</div>
               <div className="font-medium text-gray-800">{item.name}</div>
-              <div className="text-xs text-gray-500 mt-1">{item.description}</div>
             </button>
           ))}
 
@@ -126,7 +125,6 @@ export default function ItemSelection() {
               <Plus className="h-8 w-8 mx-auto text-gray-600" />
             </div>
             <div className="font-medium text-gray-800">Other</div>
-            <div className="text-xs text-gray-500 mt-1">Custom Item</div>
           </button>
         </div>
       </div>
