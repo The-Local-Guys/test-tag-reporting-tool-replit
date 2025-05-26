@@ -1,10 +1,15 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import express from "express";
 import { storage } from "./storage";
 import { insertTestSessionSchema, insertTestResultSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // Configure body parser for larger requests (for photo data)
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ limit: '10mb', extended: true }));
   
   // Create a new test session
   app.post("/api/sessions", async (req, res) => {
@@ -89,7 +94,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         frequency: req.body.frequency,
         failureReason: req.body.failureReason || null,
         actionTaken: req.body.actionTaken || null,
-        notes: req.body.notes || null
+        notes: req.body.notes || null,
+        photoData: req.body.photoData || null
       };
       
       console.log('Creating result with data:', resultData);

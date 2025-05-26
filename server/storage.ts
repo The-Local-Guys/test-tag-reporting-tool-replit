@@ -47,7 +47,10 @@ export class DatabaseStorage implements IStorage {
 
   async createTestResult(insertResult: any): Promise<TestResult> {
     try {
-      console.log('Attempting to insert test result:', insertResult);
+      console.log('Attempting to insert test result:', {
+        ...insertResult,
+        photoData: insertResult.photoData ? `Photo data included (${Math.round(insertResult.photoData.length / 1024)}KB)` : 'No photo data'
+      });
       
       // Use the pool directly for raw SQL execution  
       const query = `
