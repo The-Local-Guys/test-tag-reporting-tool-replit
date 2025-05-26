@@ -21,6 +21,20 @@ export default function ReportPreview() {
   const [editingResult, setEditingResult] = useState<TestResult | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+  const editForm = useForm({
+    resolver: zodResolver(insertTestResultSchema.omit({ sessionId: true, assetNumber: true })),
+    defaultValues: {
+      itemName: '',
+      location: '',
+      classification: 'class1' as const,
+      result: 'pass' as const,
+      frequency: 'twelvemonthly' as const,
+      failureReason: null,
+      actionTaken: null,
+      notes: null,
+    },
+  });
+
   if (!sessionData) {
     return (
       <div className="mobile-container flex items-center justify-center min-h-screen">
@@ -64,6 +78,41 @@ export default function ReportPreview() {
       title: "New Job Started",
       description: "Ready to begin a fresh test session.",
     });
+  };
+
+  const handleEditResult = (result: TestResult) => {
+    setEditingResult(result);
+    editForm.reset({
+      itemName: result.itemName,
+      location: result.location,
+      classification: result.classification,
+      result: result.result,
+      frequency: result.frequency,
+      failureReason: result.failureReason,
+      actionTaken: result.actionTaken,
+      notes: result.notes,
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async (data: any) => {
+    if (!editingResult) return;
+    
+    try {
+      updateResult({ id: editingResult.id, data });
+      setIsEditModalOpen(false);
+      setEditingResult(null);
+      toast({
+        title: "Item Updated",
+        description: "Test result has been successfully updated.",
+      });
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: "There was an error updating the test result.",
+        variant: "destructive",
+      });
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -162,12 +211,20 @@ export default function ReportPreview() {
                     </div>
                   )}
                 </div>
-                <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  result.result === 'pass' 
-                    ? 'bg-success text-white' 
-                    : 'bg-error text-white'
-                }`}>
-                  {result.result.toUpperCase()}
+                <div className="flex items-center gap-2">
+                  <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    result.result === 'pass' 
+                      ? 'bg-success text-white' 
+                      : 'bg-error text-white'
+                  }`}>
+                    {result.result.toUpperCase()}
+                  </div>
+                  <button
+                    onClick={() => handleEditResult(result)}
+                    className="p-1 text-gray-400 hover:text-primary transition-colors"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
             </div>
@@ -202,6 +259,152 @@ export default function ReportPreview() {
           Start New Job
         </Button>
       </div>
+
+      {/* Edit Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title="Edit Test Result"
+      >
+        <form onSubmit={editForm.handleSubmit(handleSaveEdit)} className="space-y-4">
+          <div>
+            <Label htmlFor="edit-itemName">Item Name</Label>
+            <Input
+              id="edit-itemName"
+              {...editForm.register('itemName')}
+              className="text-base"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="edit-location">Location</Label>
+            <Input
+              id="edit-location"
+              {...editForm.register('location')}
+              className="text-base"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="edit-classification">Classification</Label>
+            <Select 
+              value={editForm.watch('classification')} 
+              onValueChange={(value) => editForm.setValue('classification', value as any)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="class1">Class 1</SelectItem>
+                <SelectItem value="class2">Class 2</SelectItem>
+                <SelectItem value="epod">EPOD</SelectItem>
+                <SelectItem value="rcd">RCD</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="edit-result">Test Result</Label>
+            <Select 
+              value={editForm.watch('result')} 
+              onValueChange={(value) => editForm.setValue('result', value as any)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pass">Pass</SelectItem>
+                <SelectItem value="fail">Fail</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="edit-frequency">Test Frequency</Label>
+            <Select 
+              value={editForm.watch('frequency')} 
+              onValueChange={(value) => editForm.setValue('frequency', value as any)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="threemonthly">3 Monthly</SelectItem>
+                <SelectItem value="sixmonthly">6 Monthly</SelectItem>
+                <SelectItem value="twelvemonthly">12 Monthly</SelectItem>
+                <SelectItem value="twentyfourmonthly">24 Monthly</SelectItem>
+                <SelectItem value="fiveyearly">5 Yearly</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {editForm.watch('result') === 'fail' && (
+            <>
+              <div>
+                <Label htmlFor="edit-failureReason">Failure Reason</Label>
+                <Select 
+                  value={editForm.watch('failureReason') || ''} 
+                  onValueChange={(value) => editForm.setValue('failureReason', value || null)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select reason" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="vision">Vision</SelectItem>
+                    <SelectItem value="earth">Earth</SelectItem>
+                    <SelectItem value="insulation">Insulation</SelectItem>
+                    <SelectItem value="polarity">Polarity</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="edit-actionTaken">Action Taken</Label>
+                <Select 
+                  value={editForm.watch('actionTaken') || ''} 
+                  onValueChange={(value) => editForm.setValue('actionTaken', value || null)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select action" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="given">Given to Site Contact</SelectItem>
+                    <SelectItem value="removed">Removed from Site</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="edit-notes">Notes</Label>
+                <Textarea
+                  id="edit-notes"
+                  {...editForm.register('notes')}
+                  placeholder="Additional notes..."
+                  className="text-base"
+                />
+              </div>
+            </>
+          )}
+
+          <div className="flex gap-3 pt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setIsEditModalOpen(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              className="flex-1 bg-primary"
+            >
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
