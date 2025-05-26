@@ -49,15 +49,31 @@ export function useSession() {
   const addResultMutation = useMutation({
     mutationFn: async (data: Omit<InsertTestResult, 'sessionId'>) => {
       if (!sessionId) throw new Error('No active session');
-      const response = await apiRequest('POST', `/api/sessions/${sessionId}/results`, data);
-      return response.json();
+      console.log('Sending test result to server:', {
+        ...data,
+        photoData: data.photoData ? `Photo included (${Math.round(data.photoData.length / 1024)}KB)` : 'No photo'
+      });
+      
+      try {
+        const response = await apiRequest('POST', `/api/sessions/${sessionId}/results`, data);
+        const result = await response.json();
+        console.log('Server response:', result);
+        return result;
+      } catch (error) {
+        console.error('Error saving test result:', error);
+        throw error;
+      }
     },
     onSuccess: (result: TestResult) => {
+      console.log('Successfully saved test result:', result);
       // Update current location
       setCurrentLocation(result.location);
       localStorage.setItem('currentLocation', result.location);
       
       queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/report`] });
+    },
+    onError: (error) => {
+      console.error('Mutation error:', error);
     },
   });
 
