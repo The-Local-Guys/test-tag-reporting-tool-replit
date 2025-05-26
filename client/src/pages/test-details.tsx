@@ -17,6 +17,7 @@ const classificationOptions = [
   { value: 'class2', label: 'Class 2' },
   { value: 'epod', label: 'EPOD' },
   { value: 'rcd', label: 'RCD' },
+  { value: '3phase', label: '3 Phase' },
 ];
 
 const frequencyOptions = [

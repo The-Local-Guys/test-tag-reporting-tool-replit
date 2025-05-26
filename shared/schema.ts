@@ -45,7 +45,7 @@ export type InsertTestResult = z.infer<typeof insertTestResultSchema>;
 export type TestResult = typeof testResults.$inferSelect;
 
 // Define enum values for validation
-export const equipmentClassifications = ['class1', 'class2', 'epod', 'rcd'] as const;
+export const equipmentClassifications = ['class1', 'class2', 'epod', 'rcd', '3phase'] as const;
 export const testResultValues = ['pass', 'fail'] as const;
 export const failureReasons = ['vision', 'earth', 'insulation', 'polarity', 'other'] as const;
 export const actionsTaken = ['given', 'removed'] as const;
