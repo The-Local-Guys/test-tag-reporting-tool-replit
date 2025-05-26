@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, AlertCircle, Save, XCircle } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Save, XCircle, Camera, X } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
 import type { InsertTestResult } from '@shared/schema';
@@ -24,9 +24,11 @@ export default function FailureDetails() {
   const [selectedReason, setSelectedReason] = useState<string>('');
   const [selectedAction, setSelectedAction] = useState<string>('');
   const [notes, setNotes] = useState('');
+  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [testData, setTestData] = useState<Omit<InsertTestResult, 'sessionId'> | null>(null);
   const { addResult, isAddingResult } = useSession();
   const [, setLocation] = useLocation();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const stored = sessionStorage.getItem('pendingTestResult');
@@ -37,6 +39,29 @@ export default function FailureDetails() {
     }
   }, [setLocation]);
 
+  const handleCameraClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handlePhotoCapture = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setCapturedPhoto(result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removePhoto = () => {
+    setCapturedPhoto(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleSaveFailure = () => {
     if (!testData || !selectedReason || !selectedAction) return;
 
@@ -45,6 +70,7 @@ export default function FailureDetails() {
       failureReason: selectedReason,
       actionTaken: selectedAction,
       notes: notes.trim() || null,
+      photoData: capturedPhoto,
     };
 
     addResult(completeTestData);
@@ -145,6 +171,56 @@ export default function FailureDetails() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Photo Documentation */}
+        <div className="space-y-3">
+          <Label className="flex items-center text-sm font-medium text-gray-700">
+            📷 Photo Documentation (Optional)
+          </Label>
+          
+          {!capturedPhoto ? (
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+              <Camera className="mx-auto h-12 w-12 text-gray-400 mb-3" />
+              <p className="text-sm text-gray-600 mb-4">
+                Capture a photo of the failed item for documentation
+              </p>
+              <Button
+                type="button"
+                onClick={handleCameraClick}
+                className="bg-blue-600 hover:bg-blue-700 text-white touch-button"
+              >
+                <Camera className="mr-2 h-4 w-4" />
+                Take Photo
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handlePhotoCapture}
+                className="hidden"
+              />
+            </div>
+          ) : (
+            <div className="relative border rounded-lg overflow-hidden">
+              <img
+                src={capturedPhoto}
+                alt="Failed item documentation"
+                className="w-full h-48 object-cover"
+              />
+              <button
+                type="button"
+                onClick={removePhoto}
+                className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white rounded-full p-2 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              <div className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs">
+                Failed Item Photo
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Additional Notes */}

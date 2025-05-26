@@ -26,6 +26,7 @@ export const testResults = pgTable("test_results", {
   actionTaken: text("action_taken"), // nullable for passed items
   frequency: text("frequency").notNull(), // 'threemonthly', 'sixmonthly', 'twelvemonthly', 'twentyfourmonthly', 'fiveyearly'
   notes: text("notes"), // optional additional notes
+  photoData: text("photo_data"), // Base64 encoded photo for failed items
   createdAt: timestamp("created_at").defaultNow(),
 });
 
