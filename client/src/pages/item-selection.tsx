@@ -91,22 +91,14 @@ export default function ItemSelection() {
 
       {/* Current Location Display */}
       <div className="bg-blue-50 border-b border-blue-100 p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-sm text-gray-600">Current Location:</div>
-            <div className="font-semibold text-gray-800">
-              {currentLocation || 'No location set'}
-            </div>
+        <div className="text-center">
+          <div className="text-sm text-gray-600">Current Location:</div>
+          <div className="font-semibold text-gray-800">
+            {currentLocation || 'Set when testing items'}
           </div>
-          <button 
-            onClick={() => {
-              const newLocation = prompt('Enter new location:', currentLocation);
-              if (newLocation) setCurrentLocation(newLocation);
-            }}
-            className="text-primary hover:text-blue-600 transition-colors p-2"
-          >
-            <Edit2 className="h-5 w-5" />
-          </button>
+          <div className="text-xs text-gray-500 mt-1">
+            Location is set in the test details for each item
+          </div>
         </div>
       </div>
 
