@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Clock, Camera, X } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useSession } from '@/hooks/use-session';
 import { useLocation, useSearch } from 'wouter';
@@ -31,6 +31,11 @@ export default function TestDetails() {
   const [selectedClass, setSelectedClass] = useState('class1');
   const [selectedFrequency, setSelectedFrequency] = useState('twelvemonthly');
   const [currentItem, setCurrentItem] = useState<{name: string, type: string} | null>(null);
+  const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]);
+  const [showCamera, setShowCamera] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const { sessionId, currentLocation, addResult, isAddingResult } = useSession();
   const [, setLocation] = useLocation();
   const search = useSearch();
@@ -71,6 +76,53 @@ export default function TestDetails() {
     }
   }, [currentLocation, form]);
 
+  // Camera functions
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' } // Use back camera on mobile
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setShowCamera(true);
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      alert('Unable to access camera. Please check permissions.');
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+    }
+    setShowCamera(false);
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    if (context) {
+      context.drawImage(video, 0, 0);
+      const photoData = canvas.toDataURL('image/jpeg', 0.8);
+      setCapturedPhotos(prev => [...prev, photoData]);
+    }
+    
+    stopCamera();
+  };
+
+  const removePhoto = (index: number) => {
+    setCapturedPhotos(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleTestResult = (result: 'pass' | 'fail') => {
     if (!currentItem) return;
 
@@ -91,8 +143,9 @@ export default function TestDetails() {
       addResult(testData);
       setLocation('/items');
     } else {
-      // Store test data in session storage for failure details page
+      // Store test data and photos for failure details page
       sessionStorage.setItem('pendingTestResult', JSON.stringify(testData));
+      sessionStorage.setItem('pendingPhotos', JSON.stringify(capturedPhotos));
       setLocation('/failure');
     }
   };
@@ -216,6 +269,79 @@ export default function TestDetails() {
           </div>
         </div>
 
+        {/* Photo Capture Section */}
+        <div className="space-y-3">
+          <Label className="flex items-center text-sm font-medium text-gray-700">
+            📷 Photo Documentation
+          </Label>
+          <div className="text-xs text-gray-500 mb-3">
+            Capture photos of failed equipment for documentation
+          </div>
+          
+          {/* Captured Photos */}
+          {capturedPhotos.length > 0 && (
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              {capturedPhotos.map((photo, index) => (
+                <div key={index} className="relative">
+                  <img 
+                    src={photo} 
+                    alt={`Captured photo ${index + 1}`}
+                    className="w-full h-24 object-cover rounded-lg border"
+                  />
+                  <button
+                    onClick={() => removePhoto(index)}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 text-xs"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Camera Controls */}
+          {!showCamera ? (
+            <Button
+              type="button"
+              onClick={startCamera}
+              variant="outline"
+              className="w-full p-3 border-2 border-dashed border-gray-300 hover:border-primary"
+            >
+              <Camera className="mr-2 h-4 w-4" />
+              Take Photo
+            </Button>
+          ) : (
+            <div className="space-y-3">
+              <div className="relative bg-black rounded-lg overflow-hidden">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  className="w-full h-48 object-cover"
+                />
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  onClick={capturePhoto}
+                  className="flex-1 bg-primary"
+                >
+                  <Camera className="mr-2 h-4 w-4" />
+                  Capture
+                </Button>
+                <Button
+                  type="button"
+                  onClick={stopCamera}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Test Result */}
         <div className="space-y-3">
           <Label className="flex items-center text-sm font-medium text-gray-700">
@@ -251,6 +377,9 @@ export default function TestDetails() {
           </div>
         </div>
       </div>
+
+      {/* Hidden canvas for photo capture */}
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
     </div>
   );
 }
