@@ -137,7 +137,7 @@ export default function ReportPreview() {
   };
 
   return (
-    <div className="mobile-container">
+    <div className="mobile-container pb-32">
       {/* Header */}
       <div className="bg-success text-white p-4 sticky top-0 z-10">
         <div className="flex items-center justify-between">
