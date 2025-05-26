@@ -178,8 +178,8 @@ export function generatePDFReport(data: ReportData): Blob {
   doc.setFont('helvetica', 'italic');
   doc.text(
     isAustralia 
-      ? 'This report complies with AS/NZS 3760:2010 electrical safety standards.'
-      : 'This report complies with NZS 5262:2003 electrical safety standards.',
+      ? 'This report complies with AS/NZS 3760 electrical safety standards.'
+      : 'This report complies with NZS 5262 electrical safety standards.',
     pageWidth / 2,
     footerY,
     { align: 'center' }
