@@ -9,6 +9,7 @@ import { ArrowLeft, Download, Mail, Share, Plus, Edit2 } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
 import { downloadPDF } from '@/lib/pdf-generator';
+import { downloadExcel } from '@/lib/excel-generator';
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -58,6 +59,22 @@ export default function ReportPreview() {
       toast({
         title: "Export Failed",
         description: "There was an error generating the PDF report.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportExcel = () => {
+    try {
+      downloadExcel(sessionData, `test-report-${session.clientName.replace(/\s+/g, '-').toLowerCase()}.xlsx`);
+      toast({
+        title: "Excel Generated",
+        description: "Your test report has been downloaded successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "There was an error generating the Excel report.",
         variant: "destructive",
       });
     }
@@ -134,21 +151,29 @@ export default function ReportPreview() {
             <h1 className="text-xl font-semibold">Test Report</h1>
             <div className="text-green-100 text-sm">Ready for Export</div>
           </div>
-          <button 
-            onClick={() => {
-              if (navigator.share) {
-                navigator.share({
-                  title: 'Test & Tag Report',
-                  text: `Test report for ${session.clientName}`,
-                });
-              } else {
-                handleEmailReport();
-              }
-            }}
-            className="text-white hover:text-green-200 p-1 rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <Share className="h-6 w-6" />
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={handleExportPDF}
+              className="text-white hover:text-green-200 p-2 rounded-lg hover:bg-green-700 transition-colors"
+              title="Download PDF"
+            >
+              <Download className="h-5 w-5" />
+            </button>
+            <button 
+              onClick={handleExportExcel}
+              className="text-white hover:text-green-200 p-2 rounded-lg hover:bg-green-700 transition-colors"
+              title="Download Excel"
+            >
+              📊
+            </button>
+            <button 
+              onClick={handleEmailReport}
+              className="text-white hover:text-green-200 p-2 rounded-lg hover:bg-green-700 transition-colors"
+              title="Email Report"
+            >
+              <Mail className="h-5 w-5" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -405,6 +430,36 @@ export default function ReportPreview() {
           </div>
         </form>
       </Modal>
+
+      {/* Fixed Bottom Export Options */}
+      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 p-4">
+        <div className="text-center mb-3">
+          <div className="text-sm font-medium text-gray-700">Export Report</div>
+          <div className="text-xs text-gray-500">Choose your preferred format</div>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <Button 
+            onClick={handleExportPDF}
+            className="bg-red-600 hover:bg-red-700 text-white py-3 text-sm font-medium touch-button"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            PDF
+          </Button>
+          <Button 
+            onClick={handleExportExcel}
+            className="bg-green-600 hover:bg-green-700 text-white py-3 text-sm font-medium touch-button"
+          >
+            📊 Excel
+          </Button>
+          <Button 
+            onClick={handleEmailReport}
+            className="bg-blue-600 hover:bg-blue-700 text-white py-3 text-sm font-medium touch-button"
+          >
+            <Mail className="h-4 w-4 mr-2" />
+            Email
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
