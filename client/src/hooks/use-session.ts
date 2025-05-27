@@ -112,7 +112,7 @@ export function useSession() {
     isLoading,
     createSession: createSessionMutation.mutate,
     addResult: addResultMutation.mutate,
-    updateResult: updateResultMutation.mutate,
+    updateResult: updateResultMutation.mutateAsync,
     clearSession,
     isCreatingSession: createSessionMutation.isPending,
     isAddingResult: addResultMutation.isPending,
