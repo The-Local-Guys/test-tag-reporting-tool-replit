@@ -1,3 +1,4 @@
+import React from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -30,6 +31,16 @@ function Router() {
   if (loginMode === 'admin' && user && (user.role === 'super_admin' || user.role === 'support_center' || user.role === 'technician')) {
     return <AdminDashboard />;
   }
+
+  // For testing mode, ensure we start fresh - clear any session navigation state
+  // This ensures users always start at the setup screen when opening the reporting tool
+  React.useEffect(() => {
+    if (loginMode === 'testing' || !loginMode) {
+      // Clear any existing navigation state that might redirect away from setup
+      sessionStorage.removeItem('pendingTestResult');
+      sessionStorage.removeItem('pendingPhotos');
+    }
+  }, [loginMode]);
 
   // Regular technician interface (for testing mode or regular technicians)
   return (
