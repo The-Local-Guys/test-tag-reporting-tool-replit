@@ -99,10 +99,20 @@ export default function AdminDashboard() {
   // Create user mutation
   const createUser = useMutation({
     mutationFn: async (userData: typeof newUserData) => {
-      return await apiRequest("/api/admin/users", {
+      const response = await fetch("/api/admin/users", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(userData),
       });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to create user");
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });

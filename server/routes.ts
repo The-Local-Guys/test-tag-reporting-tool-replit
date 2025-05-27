@@ -135,6 +135,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create new user (admin only)
+  app.post("/api/admin/users", requireAdmin, async (req, res) => {
+    try {
+      const validation = insertUserSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: "Invalid user data", 
+          errors: validation.error.issues 
+        });
+      }
+
+      const user = await storage.createUser(validation.data);
+      const { password, ...userWithoutPassword } = user;
+      res.status(201).json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
   app.patch("/api/admin/users/:id/status", requireAdmin, async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
