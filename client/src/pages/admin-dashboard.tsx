@@ -26,6 +26,8 @@ export default function AdminDashboard() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
   const [isEditSessionModalOpen, setIsEditSessionModalOpen] = useState(false);
+  const [isViewReportModalOpen, setIsViewReportModalOpen] = useState(false);
+  const [viewingSession, setViewingSession] = useState<any>(null);
   const [editingSession, setEditingSession] = useState<any>(null);
   const [editSessionData, setEditSessionData] = useState({
     clientName: "",
@@ -181,6 +183,20 @@ export default function AdminDashboard() {
       });
     },
   });
+
+  const handleViewReport = async (session: any) => {
+    try {
+      const response = await apiRequest(`/api/sessions/${session.id}/full`);
+      setViewingSession(response);
+      setIsViewReportModalOpen(true);
+    } catch (error) {
+      toast({
+        title: "Error loading report",
+        description: "Failed to load the full report data",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleEditSession = (session: any) => {
     setEditingSession(session);
@@ -446,7 +462,8 @@ export default function AdminDashboard() {
                         <TableHead>Technician</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Location</TableHead>
-                        <TableHead>Country</TableHead>
+                        <TableHead>Items Tested</TableHead>
+                        <TableHead>Failed Items</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -460,12 +477,25 @@ export default function AdminDashboard() {
                           </TableCell>
                           <TableCell>{session.address}</TableCell>
                           <TableCell>
-                            <Badge variant="outline">
-                              {session.country === 'australia' ? 'AU' : 'NZ'}
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                              {session.totalItems || 0}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="bg-red-50 text-red-700">
+                              {session.failedItems || 0}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleViewReport(session)}
+                              >
+                                <FileText className="w-4 h-4 mr-1" />
+                                View
+                              </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
