@@ -146,7 +146,12 @@ export default function Login() {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => window.location.href = '/setup'}
+                onClick={() => {
+                  // Set a bypass flag for development
+                  sessionStorage.setItem('devBypass', 'true');
+                  sessionStorage.setItem('loginMode', 'testing');
+                  window.location.href = '/';
+                }}
                 className="text-xs"
               >
                 Setup Screen
@@ -155,7 +160,11 @@ export default function Login() {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => window.location.href = '/items'}
+                onClick={() => {
+                  sessionStorage.setItem('devBypass', 'true');
+                  sessionStorage.setItem('loginMode', 'testing');
+                  window.location.href = '/items';
+                }}
                 className="text-xs"
               >
                 Item Selection
@@ -164,7 +173,11 @@ export default function Login() {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => window.location.href = '/report'}
+                onClick={() => {
+                  sessionStorage.setItem('devBypass', 'true');
+                  sessionStorage.setItem('loginMode', 'testing');
+                  window.location.href = '/report';
+                }}
                 className="text-xs"
               >
                 Report Preview
@@ -173,7 +186,11 @@ export default function Login() {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => window.location.href = '/admin'}
+                onClick={() => {
+                  sessionStorage.setItem('devBypass', 'true');
+                  sessionStorage.setItem('loginMode', 'admin');
+                  window.location.href = '/admin';
+                }}
                 className="text-xs"
               >
                 Admin Dashboard

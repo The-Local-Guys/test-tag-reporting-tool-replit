@@ -18,8 +18,11 @@ import Login from "@/pages/login";
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
 
-  // Show login if not authenticated
-  if (!isAuthenticated) {
+  // Check for development bypass
+  const devBypass = sessionStorage.getItem('devBypass') === 'true';
+
+  // Show login if not authenticated (unless using dev bypass)
+  if (!isAuthenticated && !devBypass) {
     return <Login />;
   }
 
