@@ -161,7 +161,7 @@ export default function ItemSelection() {
           className="w-full py-3 font-medium border-2 border-primary text-primary hover:bg-primary hover:text-white"
         >
           <RotateCcw className="mr-2 h-4 w-4" />
-          Start New Job
+          Finish Job
         </Button>
       </div>
 
