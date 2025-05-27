@@ -254,6 +254,14 @@ export default function ReportPreview() {
                   )}
                 </div>
                 <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleEditResult(result)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Edit2 className="h-3 w-3" />
+                  </Button>
                   <div className={`px-3 py-1 rounded-full text-xs font-medium ${
                     result.result === 'pass' 
                       ? 'bg-success text-white' 
