@@ -30,9 +30,12 @@ function Router() {
   const loginMode = sessionStorage.getItem('loginMode');
   console.log('Login mode:', loginMode, 'User role:', user?.role); // Debug log
   
-  // Show admin dashboard if user selected admin mode and has admin privileges (including technicians viewing their own data)
-  if (loginMode === 'admin' && user && (user.role === 'super_admin' || user.role === 'support_center' || user.role === 'technician')) {
-    return <AdminDashboard />;
+  // Show admin dashboard if user selected admin mode
+  if (loginMode === 'admin') {
+    // In dev bypass mode, allow admin access without role check
+    if (devBypass || (user && (user.role === 'super_admin' || user.role === 'support_center' || user.role === 'technician'))) {
+      return <AdminDashboard />;
+    }
   }
 
   // For testing mode, ensure we start fresh - clear any session navigation state
