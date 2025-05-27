@@ -28,6 +28,8 @@ export default function AdminDashboard() {
   const [isEditSessionModalOpen, setIsEditSessionModalOpen] = useState(false);
   const [isViewReportModalOpen, setIsViewReportModalOpen] = useState(false);
   const [viewingSession, setViewingSession] = useState<any>(null);
+  const [isEditResultModalOpen, setIsEditResultModalOpen] = useState(false);
+  const [editingResult, setEditingResult] = useState<any>(null);
   const [editingSession, setEditingSession] = useState<any>(null);
   const [editSessionData, setEditSessionData] = useState({
     clientName: "",
@@ -43,6 +45,16 @@ export default function AdminDashboard() {
     role: "technician" as "technician" | "support_center" | "super_admin",
   });
   const [selectedTechnicianFilter, setSelectedTechnicianFilter] = useState<string>("all");
+  const [editResultData, setEditResultData] = useState({
+    itemName: "",
+    location: "",
+    classification: "class1" as any,
+    result: "pass" as any,
+    frequency: "twelvemonthly" as any,
+    failureReason: null as any,
+    actionTaken: null as any,
+    notes: null as any,
+  });
 
   // Fetch all users
   const { data: users, isLoading: usersLoading } = useQuery({
@@ -152,6 +164,42 @@ export default function AdminDashboard() {
       toast({
         title: "Error",
         description: error.message || "Failed to update report.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update test result mutation
+  const updateResultMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const res = await fetch(`/api/test-results/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('Failed to update test result');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/sessions"] });
+      if (viewingSession?.session?.id) {
+        queryClient.invalidateQueries({ queryKey: ["/api/session", viewingSession.session.id] });
+      }
+      toast({
+        title: "Success",
+        description: "Test result updated successfully",
+      });
+      setIsEditResultModalOpen(false);
+      setEditingResult(null);
+      // Refresh the viewing session data
+      if (viewingSession?.session?.id) {
+        handleViewReport(viewingSession.session.id);
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update test result",
         variant: "destructive",
       });
     },
@@ -846,8 +894,8 @@ export default function AdminDashboard() {
                             size="sm"
                             variant="outline"
                             onClick={() => {
-                              // Navigate to the report preview page for editing
-                              window.location.href = `/report-preview?session=${viewingSession.session.id}`;
+                              setEditingResult(result);
+                              setIsEditResultModalOpen(true);
                             }}
                           >
                             <Edit className="w-4 h-4 mr-1" />
