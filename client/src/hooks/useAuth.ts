@@ -55,30 +55,20 @@ export function useAuth() {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      // Check if we're in development bypass mode
-      const devBypass = sessionStorage.getItem('devBypass') === 'true';
-      
-      if (devBypass) {
-        // In dev mode, just clear local storage and reload
-        return Promise.resolve({});
-      } else {
-        const response = await fetch("/api/logout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        });
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message);
-        }
-        return response.json();
+      const response = await fetch("/api/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message);
       }
+      return response.json();
     },
     onSuccess: () => {
       queryClient.clear();
-      // Clear all session storage
+      // Clear login mode from session storage
       sessionStorage.removeItem('loginMode');
-      sessionStorage.removeItem('devBypass');
-      sessionStorage.removeItem('sessionId');
       window.location.reload();
     },
   });

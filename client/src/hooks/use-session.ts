@@ -80,53 +80,20 @@ export function useSession() {
   const updateResultMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<InsertTestResult> }) => {
       if (!sessionId) throw new Error('No active session');
-      
-      console.log('=== UPDATE MUTATION DEBUG ===');
-      console.log('Session ID:', sessionId);
-      console.log('Result ID:', id);
-      console.log('Update data:', data);
-      
-      // Use direct fetch for development bypass mode to avoid authentication issues
-      const devBypass = sessionStorage.getItem('devBypass') === 'true';
-      console.log('Dev bypass:', devBypass);
-      
-      if (devBypass) {
-        const url = `/api/sessions/${sessionId}/results/${id}`;
-        console.log('Making request to:', url);
-        
-        const response = await fetch(url, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-dev-bypass': 'true',
-          },
-          body: JSON.stringify(data),
-        });
-        
-        console.log('Response status:', response.status);
-        console.log('Response ok:', response.ok);
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Response error:', errorText);
-          throw new Error(`Failed to update test result: ${response.status} ${errorText}`);
-        }
-        const result = await response.json();
-        console.log('Response data:', result);
-        return result;
-      } else {
-        const response = await apiRequest('PATCH', `/api/sessions/${sessionId}/results/${id}`, data);
-        return response.json();
+      const response = await fetch(`/api/sessions/${sessionId}/results/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to update test result');
       }
+      return response.json();
     },
-    onSuccess: (data) => {
-      console.log('=== UPDATE SUCCESS ===');
-      console.log('Success data:', data);
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/report`] });
-    },
-    onError: (error) => {
-      console.log('=== UPDATE ERROR ===');
-      console.error('Mutation error:', error);
     },
   });
 

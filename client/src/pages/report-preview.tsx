@@ -93,8 +93,8 @@ export default function ReportPreview() {
     clearSession();
     // Clear any cached session data
     localStorage.removeItem('currentSession');
-    // Navigate to root path to start a new report
-    setLocation('/');
+    // Navigate to setup page to start a new report
+    setLocation('/setup');
     toast({
       title: "Starting new report",
       description: "Ready to create a new test session.",
@@ -129,15 +129,10 @@ export default function ReportPreview() {
     if (!editingResult) return;
     
     try {
-      console.log('=== EDIT SAVE DEBUG ===');
       console.log('Saving edit with data:', data);
       console.log('Editing result ID:', editingResult.id);
-      console.log('Dev bypass mode:', sessionStorage.getItem('devBypass'));
-      console.log('Session ID:', sessionData?.session?.id);
       
-      const result = await updateResult({ id: editingResult.id, data });
-      console.log('Update result response:', result);
-      
+      await updateResult({ id: editingResult.id, data });
       setIsEditModalOpen(false);
       setEditingResult(null);
       toast({
@@ -145,9 +140,7 @@ export default function ReportPreview() {
         description: "Test result has been successfully updated.",
       });
     } catch (error) {
-      console.error('=== EDIT SAVE ERROR ===');
       console.error('Error saving edit:', error);
-      console.error('Error details:', (error as Error)?.message || 'Unknown error');
       toast({
         title: "Update Failed",
         description: "There was an error updating the test result.",
