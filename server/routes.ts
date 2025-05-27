@@ -209,6 +209,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get full session data with results for viewing/editing
+  app.get("/api/sessions/:id/full", requireAuth, async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const fullData = await storage.getFullSessionData(sessionId);
+      
+      if (!fullData) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
+      res.json(fullData);
+    } catch (error) {
+      console.error("Error fetching full session data:", error);
+      res.status(500).json({ message: "Failed to fetch session data" });
+    }
+  });
+
   app.patch("/api/admin/sessions/:id", requireAdmin, async (req, res) => {
     try {
       const sessionId = parseInt(req.params.id);

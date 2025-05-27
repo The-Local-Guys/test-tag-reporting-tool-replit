@@ -725,6 +725,142 @@ export default function AdminDashboard() {
           </div>
         </div>
       </Modal>
+
+      {/* View Report Modal */}
+      <Modal
+        isOpen={isViewReportModalOpen}
+        onClose={() => {
+          setIsViewReportModalOpen(false);
+          setViewingSession(null);
+        }}
+        title="View & Edit Report"
+        className="max-w-6xl"
+      >
+        {viewingSession && (
+          <div className="space-y-6">
+            {/* Session Info */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-2">Test Session Details</h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium">Client:</span> {viewingSession.session.clientName}
+                </div>
+                <div>
+                  <span className="font-medium">Technician:</span> {viewingSession.session.technicianName}
+                </div>
+                <div>
+                  <span className="font-medium">Date:</span> {new Date(viewingSession.session.testDate).toLocaleDateString('en-AU')}
+                </div>
+                <div>
+                  <span className="font-medium">Location:</span> {viewingSession.session.address}
+                </div>
+              </div>
+            </div>
+
+            {/* Test Results */}
+            <div>
+              <h3 className="font-semibold mb-4">Test Results ({viewingSession.results.length} items)</h3>
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Asset #</TableHead>
+                      <TableHead>Item Type</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Classification</TableHead>
+                      <TableHead>Frequency</TableHead>
+                      <TableHead>Result</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {viewingSession.results.map((result: any) => (
+                      <TableRow key={result.id}>
+                        <TableCell className="font-mono">{result.assetNumber}</TableCell>
+                        <TableCell>{result.itemType}</TableCell>
+                        <TableCell>{result.location || '-'}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {result.classification?.replace('class', 'Class ') || '-'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {result.frequency?.replace('monthly', 'M').replace('yearly', 'Y') || '-'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={result.result === 'pass' ? 'default' : 'destructive'}>
+                            {result.result?.toUpperCase()}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              // Navigate to the report preview page for editing
+                              window.location.href = `/report-preview?session=${viewingSession.session.id}`;
+                            }}
+                          >
+                            <Edit className="w-4 h-4 mr-1" />
+                            Edit
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            {/* Summary Stats */}
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="bg-blue-50 p-3 rounded">
+                <div className="text-2xl font-bold text-blue-600">{viewingSession.results.length}</div>
+                <div className="text-sm text-blue-600">Total Items</div>
+              </div>
+              <div className="bg-green-50 p-3 rounded">
+                <div className="text-2xl font-bold text-green-600">
+                  {viewingSession.results.filter((r: any) => r.result === 'pass').length}
+                </div>
+                <div className="text-sm text-green-600">Passed</div>
+              </div>
+              <div className="bg-red-50 p-3 rounded">
+                <div className="text-2xl font-bold text-red-600">
+                  {viewingSession.results.filter((r: any) => r.result === 'fail').length}
+                </div>
+                <div className="text-sm text-red-600">Failed</div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => handleDownloadReport(viewingSession.session, 'pdf')}
+              >
+                <Download className="w-4 h-4 mr-1" />
+                Download PDF
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleDownloadReport(viewingSession.session, 'excel')}
+              >
+                <Download className="w-4 h-4 mr-1" />
+                Download Excel
+              </Button>
+              <Button
+                onClick={() => {
+                  setIsViewReportModalOpen(false);
+                  setViewingSession(null);
+                }}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
