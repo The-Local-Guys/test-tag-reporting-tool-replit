@@ -31,7 +31,10 @@ export function useAuth() {
       if (variables.loginMode) {
         sessionStorage.setItem('loginMode', variables.loginMode);
       }
+      // Force refetch user data
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      // Also force a window reload to ensure proper state
+      window.location.reload();
     },
   });
 
