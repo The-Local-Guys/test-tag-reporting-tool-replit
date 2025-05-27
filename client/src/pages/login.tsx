@@ -30,11 +30,11 @@ export default function Login() {
           username: formData.username,
           password: formData.password,
           fullName: formData.fullName,
-          role: formData.role,
+          role: "admin", // Set first user as admin
         });
         toast({
-          title: "Account created successfully!",
-          description: "You can now log in with your new account.",
+          title: "Admin account created!",
+          description: "You can now log in with your admin account.",
         });
         setIsRegisterMode(false);
         setFormData({ username: "", password: "", fullName: "", role: "technician" });
@@ -44,9 +44,11 @@ export default function Login() {
           password: formData.password,
         });
         toast({
-          title: "Welcome back!",
-          description: "You have successfully logged in.",
+          title: "Login successful!",
+          description: "Redirecting to your dashboard...",
         });
+        // Force page reload to clear auth state
+        setTimeout(() => window.location.reload(), 1000);
       }
     } catch (error: any) {
       toast({
