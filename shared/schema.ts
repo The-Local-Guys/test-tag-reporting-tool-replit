@@ -8,7 +8,8 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(), // Will be hashed
   fullName: text("full_name").notNull(),
-  role: text("role").notNull().default("technician"), // 'admin' or 'technician'
+  role: text("role").notNull().default("technician"), // 'super_admin', 'franchise_admin', or 'technician'
+  franchiseId: integer("franchise_id").references(() => users.id), // Links technicians to their franchise admin
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
