@@ -42,6 +42,7 @@ export default function AdminDashboard() {
     fullName: "",
     role: "technician" as "technician" | "support_center" | "super_admin",
   });
+  const [selectedTechnicianFilter, setSelectedTechnicianFilter] = useState<string>("all");
 
   // Fetch all users
   const { data: users, isLoading: usersLoading } = useQuery({
@@ -54,6 +55,19 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/sessions"],
     retry: false,
   });
+
+  // Filter sessions based on selected technician
+  const filteredSessions = sessions?.filter((session: any) => {
+    if (selectedTechnicianFilter === "all") return true;
+    return (session.technicianFullName || session.technicianName) === selectedTechnicianFilter;
+  }) || [];
+
+  // Get unique technician names for filter dropdown
+  const uniqueTechnicians = sessions ? 
+    [...new Set(sessions.map((session: any) => session.technicianFullName || session.technicianName))]
+      .filter(Boolean)
+      .sort() 
+    : [];
 
   // Update user status mutation
   const updateUserStatusMutation = useMutation({
@@ -450,6 +464,31 @@ export default function AdminDashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                {/* Technician Filter - Only show for super admin and support center */}
+                {(user?.role === "super_admin" || user?.role === "support_center") && (
+                  <div className="mb-4">
+                    <Label htmlFor="technicianFilter" className="text-sm font-medium">
+                      Filter by Technician
+                    </Label>
+                    <Select
+                      value={selectedTechnicianFilter}
+                      onValueChange={setSelectedTechnicianFilter}
+                    >
+                      <SelectTrigger className="w-64">
+                        <SelectValue placeholder="All Technicians" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Technicians</SelectItem>
+                        {uniqueTechnicians.map((technician) => (
+                          <SelectItem key={technician} value={technician}>
+                            {technician}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 {sessionsLoading ? (
                   <div className="flex justify-center py-8">
                     <LoadingSpinner />
@@ -468,7 +507,7 @@ export default function AdminDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sessions?.map((session: any) => (
+                      {filteredSessions.map((session: any) => (
                         <TableRow key={session.id}>
                           <TableCell className="font-medium">{session.clientName}</TableCell>
                           <TableCell>{session.technicianFullName || session.technicianName}</TableCell>
