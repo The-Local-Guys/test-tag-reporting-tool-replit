@@ -36,6 +36,7 @@ export default function AdminDashboard() {
     technicianName: "",
     testDate: "",
     address: "",
+    siteContact: "",
     country: "australia" as "australia" | "newzealand",
   });
   const [newUserData, setNewUserData] = useState({
@@ -290,13 +291,14 @@ export default function AdminDashboard() {
       technicianName: session.technicianName,
       testDate: session.testDate.split('T')[0], // Convert to YYYY-MM-DD format
       address: session.address,
+      siteContact: session.siteContact,
       country: session.country,
     });
     setIsEditSessionModalOpen(true);
   };
 
   const handleUpdateSession = () => {
-    if (!editSessionData.clientName || !editSessionData.technicianName || !editSessionData.testDate || !editSessionData.address) {
+    if (!editSessionData.clientName || !editSessionData.technicianName || !editSessionData.testDate || !editSessionData.address || !editSessionData.siteContact) {
       toast({
         title: "Missing information",
         description: "Please fill in all required fields.",
@@ -830,6 +832,18 @@ export default function AdminDashboard() {
               value={editSessionData.address}
               onChange={(e) => setEditSessionData(prev => ({ ...prev, address: e.target.value }))}
               placeholder="Enter address"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="editSiteContact">Site Contact</Label>
+            <Input
+              id="editSiteContact"
+              type="text"
+              value={editSessionData.siteContact}
+              onChange={(e) => setEditSessionData(prev => ({ ...prev, siteContact: e.target.value }))}
+              placeholder="Enter site contact"
               required
             />
           </div>
