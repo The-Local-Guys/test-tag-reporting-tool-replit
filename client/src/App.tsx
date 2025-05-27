@@ -38,12 +38,17 @@ function Router() {
   // For testing mode, ensure we start fresh - clear any session navigation state
   // This ensures users always start at the setup screen when opening the reporting tool
   React.useEffect(() => {
-    if (loginMode === 'testing' || !loginMode) {
-      // Clear any existing navigation state that might redirect away from setup
-      sessionStorage.removeItem('pendingTestResult');
-      sessionStorage.removeItem('pendingPhotos');
+    try {
+      const currentLoginMode = sessionStorage.getItem('loginMode');
+      if (currentLoginMode === 'testing' || !currentLoginMode) {
+        // Clear any existing navigation state that might redirect away from setup
+        sessionStorage.removeItem('pendingTestResult');
+        sessionStorage.removeItem('pendingPhotos');
+      }
+    } catch (error) {
+      console.error('Error in useEffect:', error);
     }
-  }, [loginMode]);
+  }, []);
 
   // Regular technician interface (for testing mode or regular technicians)
   return (

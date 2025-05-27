@@ -147,7 +147,7 @@ export default function ReportPreview() {
     } catch (error) {
       console.error('=== EDIT SAVE ERROR ===');
       console.error('Error saving edit:', error);
-      console.error('Error details:', error.message);
+      console.error('Error details:', (error as Error)?.message || 'Unknown error');
       toast({
         title: "Update Failed",
         description: "There was an error updating the test result.",
