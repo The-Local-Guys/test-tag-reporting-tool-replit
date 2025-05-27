@@ -248,9 +248,12 @@ export default function AdminDashboard() {
 
   const handleViewReport = async (session: any) => {
     console.log('Session object:', session);
-    console.log('Session ID:', session.id);
     
-    if (!session.id) {
+    // Handle both session object and direct session ID
+    const sessionId = typeof session === 'object' ? session.id : session;
+    console.log('Session ID:', sessionId);
+    
+    if (!sessionId) {
       toast({
         title: "Error loading report",
         description: "Invalid session ID",
@@ -260,7 +263,7 @@ export default function AdminDashboard() {
     }
     
     try {
-      const response = await fetch(`/api/sessions/${session.id}/full`);
+      const response = await fetch(`/api/sessions/${sessionId}/full`);
       if (!response.ok) {
         throw new Error('Failed to fetch report data');
       }
