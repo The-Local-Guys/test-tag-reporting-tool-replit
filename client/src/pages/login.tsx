@@ -136,7 +136,52 @@ export default function Login() {
             </Button>
           </form>
           
-          <div className="mt-6 text-center">
+          {/* Development Quick Access */}
+          <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-xs text-yellow-700 mb-3 text-center font-medium">
+              🚧 Development Preview Mode
+            </p>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => window.location.href = '/setup'}
+                className="text-xs"
+              >
+                Setup Screen
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => window.location.href = '/items'}
+                className="text-xs"
+              >
+                Item Selection
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => window.location.href = '/report'}
+                className="text-xs"
+              >
+                Report Preview
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => window.location.href = '/admin'}
+                className="text-xs"
+              >
+                Admin Dashboard
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-4 text-center">
             <p className="text-sm text-gray-600">
               Need an account? Contact your administrator.
             </p>
