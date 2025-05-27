@@ -213,30 +213,37 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalUsers}</div>
-            </CardContent>
-          </Card>
+        <div className={`grid gap-6 mb-8 ${user?.role === 'technician' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-4'}`}>
+          {/* Only show user stats for super admins and support center */}
+          {(user?.role === 'super_admin' || user?.role === 'support_center') && (
+            <>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.totalUsers}</div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+                  <UserCheck className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.activeUsers}</div>
+                </CardContent>
+              </Card>
+            </>
+          )}
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-              <UserCheck className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.activeUsers}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Reports</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                {user?.role === 'technician' ? 'My Reports' : 'Total Reports'}
+              </CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -256,10 +263,14 @@ export default function AdminDashboard() {
         </div>
 
         {/* Main Content */}
-        <Tabs defaultValue="users" className="space-y-4">
+        <Tabs defaultValue={user?.role === 'technician' ? 'reports' : 'users'} className="space-y-4">
           <TabsList>
-            <TabsTrigger value="users">User Management</TabsTrigger>
-            <TabsTrigger value="reports">All Reports</TabsTrigger>
+            {(user?.role === 'super_admin' || user?.role === 'support_center') && (
+              <TabsTrigger value="users">User Management</TabsTrigger>
+            )}
+            <TabsTrigger value="reports">
+              {user?.role === 'technician' ? 'My Reports' : 'All Reports'}
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="users" className="space-y-4">
