@@ -22,8 +22,8 @@ function Router() {
     return <Login />;
   }
 
-  // Show admin dashboard for admin users
-  if (user && user.role === 'admin') {
+  // Show admin dashboard for both super admins and franchise admins
+  if (user && (user.role === 'super_admin' || user.role === 'franchise_admin')) {
     return <AdminDashboard />;
   }
 

@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, UserPlus, LogIn } from "lucide-react";
+import { Eye, EyeOff, UserPlus, LogIn, Settings, Clipboard } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
 
 export default function Login() {
@@ -14,6 +15,7 @@ export default function Login() {
   
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isAdminMode, setIsAdminMode] = useState(false);
   const [formData, setFormData] = useState({
     username: "",
     password: "",
@@ -94,6 +96,31 @@ export default function Login() {
                   placeholder="Enter your full name"
                   required
                 />
+              </div>
+            )}
+
+            {!isRegisterMode && (
+              <div className="space-y-4 p-4 bg-gray-50 rounded-lg border">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <Clipboard className="h-5 w-5 text-blue-600" />
+                    <span className="text-sm font-medium">Testing Tool</span>
+                  </div>
+                  <Switch
+                    checked={isAdminMode}
+                    onCheckedChange={setIsAdminMode}
+                  />
+                  <div className="flex items-center space-x-3">
+                    <span className="text-sm font-medium">Admin Panel</span>
+                    <Settings className="h-5 w-5 text-blue-600" />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-600 text-center">
+                  {isAdminMode 
+                    ? "Access admin dashboard to manage your team and view all reports"
+                    : "Access the testing tool to conduct electrical equipment tests"
+                  }
+                </p>
               </div>
             )}
             
