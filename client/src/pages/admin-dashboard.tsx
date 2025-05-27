@@ -25,6 +25,15 @@ export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
+  const [isEditSessionModalOpen, setIsEditSessionModalOpen] = useState(false);
+  const [editingSession, setEditingSession] = useState<any>(null);
+  const [editSessionData, setEditSessionData] = useState({
+    clientName: "",
+    technicianName: "",
+    testDate: "",
+    address: "",
+    country: "australia" as "australia" | "newzealand",
+  });
   const [newUserData, setNewUserData] = useState({
     username: "",
     password: "",
@@ -96,6 +105,42 @@ export default function AdminDashboard() {
     },
   });
 
+  // Update session mutation
+  const updateSessionMutation = useMutation({
+    mutationFn: async ({ sessionId, data }: { sessionId: number; data: any }) => {
+      const response = await fetch(`/api/admin/sessions/${sessionId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to update session");
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/sessions"] });
+      setIsEditSessionModalOpen(false);
+      setEditingSession(null);
+      toast({
+        title: "Report updated successfully",
+        description: "The test session has been updated.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update report.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Create user mutation
   const createUser = useMutation({
     mutationFn: async (userData: typeof newUserData) => {
@@ -136,6 +181,33 @@ export default function AdminDashboard() {
       });
     },
   });
+
+  const handleEditSession = (session: any) => {
+    setEditingSession(session);
+    setEditSessionData({
+      clientName: session.clientName,
+      technicianName: session.technicianName,
+      testDate: session.testDate.split('T')[0], // Convert to YYYY-MM-DD format
+      address: session.address,
+      country: session.country,
+    });
+    setIsEditSessionModalOpen(true);
+  };
+
+  const handleUpdateSession = () => {
+    if (!editSessionData.clientName || !editSessionData.technicianName || !editSessionData.testDate || !editSessionData.address) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+    updateSessionMutation.mutate({
+      sessionId: editingSession.id,
+      data: editSessionData
+    });
+  };
 
   const handleCreateUser = () => {
     if (!newUserData.username || !newUserData.password || !newUserData.fullName) {
@@ -397,6 +469,14 @@ export default function AdminDashboard() {
                               <Button
                                 size="sm"
                                 variant="outline"
+                                onClick={() => handleEditSession(session)}
+                              >
+                                <Edit className="w-4 h-4 mr-1" />
+                                Edit
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
                                 onClick={() => handleDownloadReport(session, 'pdf')}
                               >
                                 <Download className="w-4 h-4 mr-1" />
@@ -515,6 +595,102 @@ export default function AdminDashboard() {
               disabled={createUser.isPending}
             >
               {createUser.isPending ? "Creating..." : "Create User"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Edit Session Modal */}
+      <Modal
+        isOpen={isEditSessionModalOpen}
+        onClose={() => {
+          setIsEditSessionModalOpen(false);
+          setEditingSession(null);
+        }}
+        title="Edit Test Session"
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="editClientName">Client Name</Label>
+            <Input
+              id="editClientName"
+              type="text"
+              value={editSessionData.clientName}
+              onChange={(e) => setEditSessionData(prev => ({ ...prev, clientName: e.target.value }))}
+              placeholder="Enter client name"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="editTechnicianName">Technician Name</Label>
+            <Input
+              id="editTechnicianName"
+              type="text"
+              value={editSessionData.technicianName}
+              onChange={(e) => setEditSessionData(prev => ({ ...prev, technicianName: e.target.value }))}
+              placeholder="Enter technician name"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="editTestDate">Test Date</Label>
+            <Input
+              id="editTestDate"
+              type="date"
+              value={editSessionData.testDate}
+              onChange={(e) => setEditSessionData(prev => ({ ...prev, testDate: e.target.value }))}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="editAddress">Address</Label>
+            <Input
+              id="editAddress"
+              type="text"
+              value={editSessionData.address}
+              onChange={(e) => setEditSessionData(prev => ({ ...prev, address: e.target.value }))}
+              placeholder="Enter address"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="editCountry">Country</Label>
+            <Select
+              value={editSessionData.country}
+              onValueChange={(value: "australia" | "newzealand") => 
+                setEditSessionData(prev => ({ ...prev, country: value }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select country" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="australia">Australia</SelectItem>
+                <SelectItem value="newzealand">New Zealand</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEditSessionModalOpen(false);
+                setEditingSession(null);
+              }}
+              disabled={updateSessionMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateSession}
+              disabled={updateSessionMutation.isPending}
+            >
+              {updateSessionMutation.isPending ? "Updating..." : "Update Session"}
             </Button>
           </div>
         </div>
