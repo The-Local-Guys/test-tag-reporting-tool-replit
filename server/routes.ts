@@ -31,7 +31,8 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
 
 // Admin middleware
 const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (!req.session.userId || req.session.user?.role !== "admin") {
+  if (!req.session.userId || !req.session.user || 
+      (req.session.user.role !== "super_admin" && req.session.user.role !== "franchise_admin")) {
     return res.status(403).json({ message: "Admin access required" });
   }
   next();
