@@ -19,10 +19,17 @@ export default function Setup() {
   const { user, logout, isLoggingOut } = useAuth();
   const [, setLocation] = useLocation();
   
+  // Get current date in Australian Central Time
+  const getAustralianDate = () => {
+    const now = new Date();
+    const australianTime = new Date(now.toLocaleString("en-US", {timeZone: "Australia/Adelaide"}));
+    return australianTime.toISOString().split('T')[0];
+  };
+
   const form = useForm<InsertTestSession>({
     resolver: zodResolver(insertTestSessionSchema),
     defaultValues: {
-      testDate: new Date().toISOString().split('T')[0],
+      testDate: getAustralianDate(),
       technicianName: user?.fullName || '',
       clientName: '',
       siteContact: '',
