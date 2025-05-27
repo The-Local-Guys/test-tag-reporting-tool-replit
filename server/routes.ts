@@ -223,7 +223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update test result
-  app.patch("/api/sessions/:id/results/:resultId", async (req, res) => {
+  app.patch("/api/sessions/:id/results/:resultId", requireAuth, async (req, res) => {
     try {
       const sessionId = parseInt(req.params.id);
       const resultId = parseInt(req.params.resultId);
@@ -254,7 +254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all results for a session
-  app.get("/api/sessions/:id/results", async (req, res) => {
+  app.get("/api/sessions/:id/results", requireAuth, async (req, res) => {
     try {
       const sessionId = parseInt(req.params.id);
       const results = await storage.getTestResultsBySession(sessionId);
