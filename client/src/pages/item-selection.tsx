@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
-import { Edit2, FileText, CheckCircle, Plus, RotateCcw } from 'lucide-react';
+import { Edit2, FileText, CheckCircle, Plus, RotateCcw, LogOut } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
+import { useAuth } from '@/hooks/useAuth';
 import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 
@@ -23,6 +24,7 @@ export default function ItemSelection() {
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [customItemName, setCustomItemName] = useState('');
   const { sessionData, currentLocation, setCurrentLocation } = useSession();
+  const { logout, isLoggingOut } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
