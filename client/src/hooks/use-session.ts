@@ -80,7 +80,16 @@ export function useSession() {
   const updateResultMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<InsertTestResult> }) => {
       if (!sessionId) throw new Error('No active session');
-      const response = await apiRequest('PATCH', `/api/sessions/${sessionId}/results/${id}`, data);
+      const response = await fetch(`/api/sessions/${sessionId}/results/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to update test result');
+      }
       return response.json();
     },
     onSuccess: () => {
