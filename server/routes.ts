@@ -226,7 +226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/sessions/:id", requireAdmin, async (req, res) => {
+  app.patch("/api/admin/sessions/:id", requireAuth, async (req, res) => {
     try {
       const sessionId = parseInt(req.params.id);
       const sessionData = insertTestSessionSchema.parse(req.body);
