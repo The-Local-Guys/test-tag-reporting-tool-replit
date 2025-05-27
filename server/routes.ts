@@ -29,11 +29,19 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   next();
 };
 
-// Admin middleware
+// Admin middleware - for super admin and support center
 const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
   if (!req.session.userId || !req.session.user || 
-      (req.session.user.role !== "super_admin" && req.session.user.role !== "franchise_admin")) {
+      (req.session.user.role !== "super_admin" && req.session.user.role !== "support_center")) {
     return res.status(403).json({ message: "Admin access required" });
+  }
+  next();
+};
+
+// Super admin only middleware
+const requireSuperAdmin = (req: Request, res: Response, next: NextFunction) => {
+  if (!req.session.userId || !req.session.user || req.session.user.role !== "super_admin") {
+    return res.status(403).json({ message: "Super admin access required" });
   }
   next();
 };
@@ -170,12 +178,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/sessions", requireAdmin, async (req, res) => {
+  app.get("/api/admin/sessions", requireAuth, async (req, res) => {
     try {
-      const sessions = await storage.getAllTestSessions();
+      const user = req.session.user!;
+      let sessions;
+      
+      // Super admin and support center can see all sessions
+      if (user.role === "super_admin" || user.role === "support_center") {
+        sessions = await storage.getAllTestSessions();
+      } else {
+        // Technicians can only see their own sessions
+        sessions = await storage.getSessionsByUser(user.id);
+      }
+      
       res.json(sessions);
     } catch (error) {
-      console.error("Error fetching all sessions:", error);
+      console.error("Error fetching sessions:", error);
       res.status(500).json({ message: "Failed to fetch sessions" });
     }
   });

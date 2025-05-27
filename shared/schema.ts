@@ -93,3 +93,4 @@ export const failureReasons = ['vision', 'earth', 'insulation', 'polarity', 'oth
 export const actionsTaken = ['given', 'removed'] as const;
 export const countries = ['australia', 'newzealand'] as const;
 export const frequencies = ['threemonthly', 'sixmonthly', 'twelvemonthly', 'twentyfourmonthly', 'fiveyearly'] as const;
+export const userRoles = ['super_admin', 'support_center', 'technician'] as const;

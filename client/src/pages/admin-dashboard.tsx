@@ -29,7 +29,7 @@ export default function AdminDashboard() {
     username: "",
     password: "",
     fullName: "",
-    role: "technician" as "technician" | "super_admin",
+    role: "technician" as "technician" | "support_center" | "super_admin",
   });
 
   // Fetch all users
@@ -464,7 +464,7 @@ export default function AdminDashboard() {
             <Label htmlFor="role">Access Level</Label>
             <Select
               value={newUserData.role}
-              onValueChange={(value: "technician" | "super_admin") => 
+              onValueChange={(value: "technician" | "support_center" | "super_admin") => 
                 setNewUserData(prev => ({ ...prev, role: value }))
               }
             >
@@ -473,13 +473,18 @@ export default function AdminDashboard() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="technician">Technician</SelectItem>
-                <SelectItem value="super_admin">Support Center Staff</SelectItem>
+                <SelectItem value="support_center">Support Center Staff</SelectItem>
+                {user?.role === "super_admin" && (
+                  <SelectItem value="super_admin">Super Admin</SelectItem>
+                )}
               </SelectContent>
             </Select>
             <p className="text-xs text-gray-600">
               {newUserData.role === "super_admin" 
-                ? "Full access to all reports and user management across all franchises"
-                : "Access to testing tools and report creation"
+                ? "Highest level access - full system control (Jarrad151 only)"
+                : newUserData.role === "support_center"
+                ? "Can view/edit all reports, manage technician users"
+                : "Can view/edit own reports only"
               }
             </p>
           </div>
