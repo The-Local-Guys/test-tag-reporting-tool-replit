@@ -1,18 +1,122 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import express from "express";
+import session from "express-session";
+import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
-import { insertTestSessionSchema, insertTestResultSchema } from "@shared/schema";
+import { 
+  insertTestSessionSchema, 
+  insertTestResultSchema,
+  insertUserSchema,
+  loginSchema,
+  type User
+} from "@shared/schema";
 import { z } from "zod";
 
+// Extend Express session interface
+declare module 'express-session' {
+  interface SessionData {
+    userId?: number;
+    user?: User;
+  }
+}
+
+// Authentication middleware
+const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  next();
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Session configuration
+  const PgSession = connectPg(session);
+  app.use(session({
+    store: new PgSession({
+      conString: process.env.DATABASE_URL,
+      createTableIfMissing: false,
+      tableName: "sessions",
+    }),
+    secret: process.env.SESSION_SECRET || "your-secret-key-change-in-production",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: false, // Set to true in production with HTTPS
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
+  }));
   
   // Configure body parser for larger requests (for photo data)
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+  // Authentication routes
+  app.post("/api/register", async (req, res) => {
+    try {
+      const userData = insertUserSchema.parse(req.body);
+      
+      // Check if username already exists
+      const existingUser = await storage.getUserByUsername(userData.username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+
+      const user = await storage.createUser(userData);
+      
+      // Remove password from response
+      const { password, ...userWithoutPassword } = user;
+      res.json({ message: "User created successfully", user: userWithoutPassword });
+    } catch (error) {
+      console.error("Registration error:", error);
+      res.status(400).json({ message: "Registration failed" });
+    }
+  });
+
+  app.post("/api/login", async (req, res) => {
+    try {
+      const { username, password } = loginSchema.parse(req.body);
+      
+      const user = await storage.validatePassword(username, password);
+      if (!user) {
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+
+      // Set session data
+      req.session.userId = user.id;
+      req.session.user = user;
+
+      // Remove password from response
+      const { password: _, ...userWithoutPassword } = user;
+      res.json({ message: "Login successful", user: userWithoutPassword });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(400).json({ message: "Login failed" });
+    }
+  });
+
+  app.post("/api/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Logout failed" });
+      }
+      res.clearCookie('connect.sid');
+      res.json({ message: "Logout successful" });
+    });
+  });
+
+  app.get("/api/auth/user", (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    const { password, ...userWithoutPassword } = req.session.user!;
+    res.json(userWithoutPassword);
+  });
   
-  // Create a new test session
-  app.post("/api/sessions", async (req, res) => {
+  // Create a new test session (protected)
+  app.post("/api/sessions", requireAuth, async (req, res) => {
     try {
       const sessionData = insertTestSessionSchema.parse(req.body);
       const session = await storage.createTestSession(sessionData);
@@ -26,8 +130,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get session by ID
-  app.get("/api/sessions/:id", async (req, res) => {
+  // Get session by ID (protected)
+  app.get("/api/sessions/:id", requireAuth, async (req, res) => {
     try {
       const sessionId = parseInt(req.params.id);
       const session = await storage.getTestSession(sessionId);
@@ -43,8 +147,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get next asset number for session
-  app.get("/api/sessions/:id/next-asset-number", async (req, res) => {
+  // Get next asset number for session (protected)
+  app.get("/api/sessions/:id/next-asset-number", requireAuth, async (req, res) => {
     try {
       const sessionId = parseInt(req.params.id);
       const nextNumber = await storage.getNextAssetNumber(sessionId);
@@ -54,8 +158,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Validate asset number for session
-  app.post("/api/sessions/:id/validate-asset-number", async (req, res) => {
+  // Validate asset number for session (protected)
+  app.post("/api/sessions/:id/validate-asset-number", requireAuth, async (req, res) => {
     try {
       const sessionId = parseInt(req.params.id);
       const { assetNumber, excludeId } = req.body;
@@ -67,7 +171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add test result to session
-  app.post("/api/sessions/:id/results", async (req, res) => {
+  app.post("/api/sessions/:id/results", requireAuth, async (req, res) => {
     try {
       const sessionId = parseInt(req.params.id);
       const session = await storage.getTestSession(sessionId);
