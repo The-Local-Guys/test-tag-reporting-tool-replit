@@ -261,12 +261,6 @@ export default function ReportPreview() {
                   }`}>
                     {result.result.toUpperCase()}
                   </div>
-                  <button
-                    onClick={() => handleEditResult(result)}
-                    className="p-1 text-gray-400 hover:text-primary transition-colors"
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </button>
                 </div>
               </div>
             </div>
