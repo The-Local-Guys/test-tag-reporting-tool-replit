@@ -292,6 +292,39 @@ export default function AdminDashboard() {
     });
   };
 
+  const handleEditResult = (result: any) => {
+    setEditingResult(result);
+    setEditResultData({
+      itemName: result.itemType || "",
+      location: result.location || "",
+      classification: result.classification || "class1",
+      result: result.result || "pass",
+      frequency: result.frequency || "twelvemonthly",
+      failureReason: result.failureReason,
+      actionTaken: result.actionTaken,
+      notes: result.notes,
+    });
+    setIsEditResultModalOpen(true);
+  };
+
+  const handleUpdateResult = () => {
+    if (!editingResult) return;
+
+    updateResultMutation.mutate({
+      id: editingResult.id,
+      data: {
+        itemType: editResultData.itemName,
+        location: editResultData.location,
+        classification: editResultData.classification,
+        result: editResultData.result,
+        frequency: editResultData.frequency,
+        failureReason: editResultData.failureReason,
+        actionTaken: editResultData.actionTaken,
+        notes: editResultData.notes,
+      },
+    });
+  };
+
   const handleCreateUser = () => {
     if (!newUserData.username || !newUserData.password || !newUserData.fullName) {
       toast({
@@ -893,10 +926,7 @@ export default function AdminDashboard() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => {
-                              setEditingResult(result);
-                              setIsEditResultModalOpen(true);
-                            }}
+                            onClick={() => handleEditResult(result)}
                           >
                             <Edit className="w-4 h-4 mr-1" />
                             Edit
@@ -951,6 +981,174 @@ export default function AdminDashboard() {
                 }}
               >
                 Close
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Edit Result Modal */}
+      <Modal
+        isOpen={isEditResultModalOpen}
+        onClose={() => {
+          setIsEditResultModalOpen(false);
+          setEditingResult(null);
+        }}
+        title="Edit Test Result"
+        className="max-w-2xl"
+      >
+        {editingResult && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="editItemName">Item Type</Label>
+                <Input
+                  id="editItemName"
+                  type="text"
+                  value={editResultData.itemName}
+                  onChange={(e) => setEditResultData(prev => ({ ...prev, itemName: e.target.value }))}
+                  placeholder="Enter item type"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="editLocation">Location</Label>
+                <Input
+                  id="editLocation"
+                  type="text"
+                  value={editResultData.location}
+                  onChange={(e) => setEditResultData(prev => ({ ...prev, location: e.target.value }))}
+                  placeholder="Enter location"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="editClassification">Classification</Label>
+                <Select
+                  value={editResultData.classification}
+                  onValueChange={(value) => setEditResultData(prev => ({ ...prev, classification: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select classification" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="class1">Class 1</SelectItem>
+                    <SelectItem value="class2">Class 2</SelectItem>
+                    <SelectItem value="epod">EPOD</SelectItem>
+                    <SelectItem value="rcd">RCD</SelectItem>
+                    <SelectItem value="3phase">3 Phase</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="editFrequency">Test Frequency</Label>
+                <Select
+                  value={editResultData.frequency}
+                  onValueChange={(value) => setEditResultData(prev => ({ ...prev, frequency: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select frequency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="threemonthly">3 Monthly</SelectItem>
+                    <SelectItem value="sixmonthly">6 Monthly</SelectItem>
+                    <SelectItem value="twelvemonthly">12 Monthly</SelectItem>
+                    <SelectItem value="twentyfourmonthly">24 Monthly</SelectItem>
+                    <SelectItem value="fiveyearly">5 Yearly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="editResult">Test Result</Label>
+              <Select
+                value={editResultData.result}
+                onValueChange={(value) => setEditResultData(prev => ({ ...prev, result: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select result" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pass">Pass</SelectItem>
+                  <SelectItem value="fail">Fail</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {editResultData.result === 'fail' && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editFailureReason">Failure Reason</Label>
+                    <Select
+                      value={editResultData.failureReason || ""}
+                      onValueChange={(value) => setEditResultData(prev => ({ ...prev, failureReason: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select failure reason" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="vision">Vision</SelectItem>
+                        <SelectItem value="earth">Earth</SelectItem>
+                        <SelectItem value="insulation">Insulation</SelectItem>
+                        <SelectItem value="polarity">Polarity</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="editActionTaken">Action Taken</Label>
+                    <Select
+                      value={editResultData.actionTaken || ""}
+                      onValueChange={(value) => setEditResultData(prev => ({ ...prev, actionTaken: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select action taken" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="given">Given to User</SelectItem>
+                        <SelectItem value="removed">Removed from Service</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="editNotes">Notes (Optional)</Label>
+                  <Input
+                    id="editNotes"
+                    type="text"
+                    value={editResultData.notes || ""}
+                    onChange={(e) => setEditResultData(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Enter any additional notes"
+                  />
+                </div>
+              </>
+            )}
+
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditResultModalOpen(false);
+                  setEditingResult(null);
+                }}
+                disabled={updateResultMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUpdateResult}
+                disabled={updateResultMutation.isPending}
+              >
+                {updateResultMutation.isPending ? "Updating..." : "Update Result"}
               </Button>
             </div>
           </div>
