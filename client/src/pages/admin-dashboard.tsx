@@ -559,13 +559,16 @@ export default function AdminDashboard() {
                                 <Download className="w-4 h-4 mr-1" />
                                 Excel
                               </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => deleteSessionMutation.mutate(session.id)}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+                              {/* Delete button - only visible for super admin and support center */}
+                              {(user?.role === "super_admin" || user?.role === "support_center") && (
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => deleteSessionMutation.mutate(session.id)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
