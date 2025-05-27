@@ -22,8 +22,14 @@ export default function Setup() {
   // Get current date in Australian Central Time
   const getAustralianDate = () => {
     const now = new Date();
-    const australianTime = new Date(now.toLocaleString("en-US", {timeZone: "Australia/Adelaide"}));
-    return australianTime.toISOString().split('T')[0];
+    // Convert to Australian Central Time (Adelaide timezone)
+    const australianTime = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Australia/Adelaide',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(now);
+    return australianTime; // Returns YYYY-MM-DD format
   };
 
   const form = useForm<InsertTestSession>({
