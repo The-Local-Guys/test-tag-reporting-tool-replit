@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
-import { Clipboard, ArrowRight } from 'lucide-react';
+import { Clipboard, ArrowRight, LogOut, User } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
+import { useAuth } from '@/hooks/useAuth';
 import { useLocation } from 'wouter';
 import type { InsertTestSession } from '@shared/schema';
 import logoPath from '@assets/The Local Guys - with plug wide boarder - png seek.png';
@@ -16,6 +17,7 @@ import logoPath from '@assets/The Local Guys - with plug wide boarder - png seek
 export default function Setup() {
   const [selectedCountry, setSelectedCountry] = useState<'australia' | 'newzealand'>('australia');
   const { createSession, isCreatingSession } = useSession();
+  const { user, logout, isLoggingOut } = useAuth();
   const [, setLocation] = useLocation();
   
   const form = useForm<InsertTestSession>({

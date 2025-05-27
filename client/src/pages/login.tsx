@@ -81,7 +81,7 @@ export default function Login() {
         
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {isRegistering && (
+            {isRegisterMode && (
               <div className="space-y-2">
                 <Label htmlFor="fullName">Full Name</Label>
                 <Input
@@ -133,12 +133,12 @@ export default function Login() {
             <Button 
               type="submit" 
               className="w-full" 
-              disabled={isLoggingIn || isRegistering}
+              disabled={isLoggingIn || isRegisteringMutation}
             >
-              {isRegistering ? (
+              {isRegisterMode ? (
                 <>
                   <UserPlus className="w-4 h-4 mr-2" />
-                  {isRegistering ? "Creating Account..." : "Create Account"}
+                  {isRegisteringMutation ? "Creating Account..." : "Create Account"}
                 </>
               ) : (
                 <>
@@ -153,12 +153,12 @@ export default function Login() {
             <Button
               variant="link"
               onClick={() => {
-                setIsRegistering(!isRegistering);
+                setIsRegisterMode(!isRegisterMode);
                 setFormData({ username: "", password: "", fullName: "", role: "technician" });
               }}
               className="text-sm"
             >
-              {isRegistering 
+              {isRegisterMode 
                 ? "Already have an account? Sign in" 
                 : "Need an account? Create one here"
               }
