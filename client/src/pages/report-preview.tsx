@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Modal } from '@/components/ui/modal';
-import { ArrowLeft, Download, Mail, Share, Plus, Edit2, FileText } from 'lucide-react';
+import { ArrowLeft, Download, Mail, Share, Plus, Edit2, FileText, RefreshCw } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
 import { downloadPDF } from '@/lib/pdf-generator';
@@ -16,7 +16,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { insertTestResultSchema, type TestResult, type InsertTestResult } from '@shared/schema';
 
 export default function ReportPreview() {
-  const { sessionData, updateResult } = useSession();
+  const { sessionData, updateResult, clearSession } = useSession();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [editingResult, setEditingResult] = useState<TestResult | null>(null);
@@ -85,6 +85,19 @@ export default function ReportPreview() {
     toast({
       title: "Email Feature",
       description: "Email integration would be implemented here.",
+    });
+  };
+
+  const handleNewReport = () => {
+    // Clear current session data
+    clearSession();
+    // Clear any cached session data
+    localStorage.removeItem('currentSession');
+    // Navigate to setup page to start a new report
+    setLocation('/setup');
+    toast({
+      title: "Starting new report",
+      description: "Ready to create a new test session.",
     });
   };
 
@@ -444,8 +457,8 @@ export default function ReportPreview() {
       </Modal>
 
       {/* Fixed Bottom Export Options */}
-      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 p-4">
-        <div className="text-center mb-3">
+      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 p-4 space-y-3">
+        <div className="text-center">
           <div className="text-sm font-medium text-gray-700">Export Report</div>
           <div className="text-xs text-gray-500">Choose your preferred format</div>
         </div>
@@ -471,6 +484,13 @@ export default function ReportPreview() {
             Email
           </Button>
         </div>
+        <Button 
+          onClick={handleNewReport}
+          className="w-full bg-primary hover:bg-primary/90 text-white py-3 text-sm font-medium touch-button"
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          New Report
+        </Button>
       </div>
     </div>
   );

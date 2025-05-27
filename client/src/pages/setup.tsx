@@ -62,21 +62,6 @@ export default function Setup() {
           </div>
           <div className="flex items-center gap-3">
             <Button
-              type="button"
-              onClick={() => {
-                form.reset();
-                setSelectedCountry('australia');
-                // Clear any cached session data
-                localStorage.removeItem('currentSession');
-                window.location.reload();
-              }}
-              variant="outline"
-              size="sm"
-              className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-            >
-              New Report
-            </Button>
-            <Button
               variant="outline"
               size="sm"
               onClick={() => logout()}
