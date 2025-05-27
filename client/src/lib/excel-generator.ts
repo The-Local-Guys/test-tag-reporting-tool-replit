@@ -70,7 +70,7 @@ export function generateExcelReport(data: ReportData): Blob {
     ['Address:', session.address],
     ['Technician:', session.technicianName],
     ['Test Date:', new Date(session.testDate).toLocaleDateString()],
-    ['Country:', session.country === 'australia' ? 'Australia' : 'New Zealand'],
+
     [''],
     ['Report Summary'],
     ['Total Items:', summary.totalItems],

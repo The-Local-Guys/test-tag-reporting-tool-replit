@@ -59,11 +59,8 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   const { session, results, summary } = data;
   const doc = new jsPDF();
   
-  // Header based on country
-  const isAustralia = session.country === 'australia';
-  const headerTitle = isAustralia 
-    ? 'Electrical Safety Testing Report - Australia' 
-    : 'Electrical Safety Testing Report - New Zealand';
+  // Header title
+  const headerTitle = 'Electrical Safety Testing Report';
   
   // Page setup
   const pageWidth = doc.internal.pageSize.width;
@@ -201,9 +198,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   doc.setFontSize(8);
   doc.setFont('helvetica', 'italic');
   doc.text(
-    isAustralia 
-      ? 'This report complies with AS/NZS 3760 electrical safety standards.'
-      : 'This report complies with NZS 5262 electrical safety standards.',
+    'This report complies with AS/NZS 3760 electrical safety standards.',
     pageWidth / 2,
     footerY,
     { align: 'center' }

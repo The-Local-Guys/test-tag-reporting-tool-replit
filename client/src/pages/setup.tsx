@@ -15,7 +15,6 @@ import type { InsertTestSession } from '@shared/schema';
 import logoPath from '@assets/The Local Guys - with plug wide boarder - png seek.png';
 
 export default function Setup() {
-  const [selectedCountry, setSelectedCountry] = useState<'australia' | 'newzealand'>('australia');
   const { createSession, isCreatingSession } = useSession();
   const { logout, isLoggingOut } = useAuth();
   const [, setLocation] = useLocation();
@@ -35,7 +34,7 @@ export default function Setup() {
   const onSubmit = (data: InsertTestSession) => {
     createSession({
       ...data,
-      country: selectedCountry,
+      country: 'australia', // Always default to Australia
     });
     setLocation('/items');
   };
@@ -171,35 +170,7 @@ export default function Setup() {
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label>Country/Region</Label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setSelectedCountry('australia')}
-                className={`flex items-center justify-center p-4 border-2 rounded-lg transition-colors touch-button ${
-                  selectedCountry === 'australia'
-                    ? 'border-primary bg-primary text-white'
-                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <span className="mr-2">🇦🇺</span>
-                Australia
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedCountry('newzealand')}
-                className={`flex items-center justify-center p-4 border-2 rounded-lg transition-colors touch-button ${
-                  selectedCountry === 'newzealand'
-                    ? 'border-primary bg-primary text-white'
-                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <span className="mr-2">🇳🇿</span>
-                New Zealand
-              </button>
-            </div>
-          </div>
+
         </div>
       </form>
 
