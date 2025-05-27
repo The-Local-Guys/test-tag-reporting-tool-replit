@@ -68,10 +68,13 @@ export default function AdminDashboard() {
     retry: false,
   });
 
-  // Filter sessions based on selected technician
+  // Filter sessions based on selected technician and sort by newest first
   const filteredSessions = sessions?.filter((session: any) => {
     if (selectedTechnicianFilter === "all") return true;
     return (session.technicianFullName || session.technicianName) === selectedTechnicianFilter;
+  }).sort((a: any, b: any) => {
+    // Sort by date descending (newest first)
+    return new Date(b.testDate).getTime() - new Date(a.testDate).getTime();
   }) || [];
 
   // Get unique technician names for filter dropdown
