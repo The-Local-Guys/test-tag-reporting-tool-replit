@@ -80,8 +80,27 @@ export function useSession() {
   const updateResultMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<InsertTestResult> }) => {
       if (!sessionId) throw new Error('No active session');
-      const response = await apiRequest('PATCH', `/api/sessions/${sessionId}/results/${id}`, data);
-      return response.json();
+      
+      // Use direct fetch for development bypass mode to avoid authentication issues
+      const devBypass = sessionStorage.getItem('devBypass') === 'true';
+      
+      if (devBypass) {
+        const response = await fetch(`/api/sessions/${sessionId}/results/${id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-dev-bypass': 'true',
+          },
+          body: JSON.stringify(data),
+        });
+        if (!response.ok) {
+          throw new Error('Failed to update test result');
+        }
+        return response.json();
+      } else {
+        const response = await apiRequest('PATCH', `/api/sessions/${sessionId}/results/${id}`, data);
+        return response.json();
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/report`] });
