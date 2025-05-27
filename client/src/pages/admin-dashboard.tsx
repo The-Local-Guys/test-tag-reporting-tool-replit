@@ -247,6 +247,18 @@ export default function AdminDashboard() {
   });
 
   const handleViewReport = async (session: any) => {
+    console.log('Session object:', session);
+    console.log('Session ID:', session.id);
+    
+    if (!session.id) {
+      toast({
+        title: "Error loading report",
+        description: "Invalid session ID",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
       const response = await fetch(`/api/sessions/${session.id}/full`);
       if (!response.ok) {
