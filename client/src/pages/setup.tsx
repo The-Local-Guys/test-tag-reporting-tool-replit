@@ -16,14 +16,14 @@ import logoPath from '@assets/The Local Guys - with plug wide boarder - png seek
 
 export default function Setup() {
   const { createSession, isCreatingSession, clearSession } = useSession();
-  const { logout, isLoggingOut } = useAuth();
+  const { user, logout, isLoggingOut } = useAuth();
   const [, setLocation] = useLocation();
   
   const form = useForm<InsertTestSession>({
     resolver: zodResolver(insertTestSessionSchema),
     defaultValues: {
       testDate: new Date().toISOString().split('T')[0],
-      technicianName: '',
+      technicianName: user?.fullName || '',
       clientName: '',
       siteContact: '',
       address: '',
