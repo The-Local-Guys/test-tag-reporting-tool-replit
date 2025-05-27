@@ -229,13 +229,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/sessions/:id", requireAuth, async (req, res) => {
     try {
       const sessionId = parseInt(req.params.id);
+      console.log("Update session request:", { sessionId, body: req.body });
+      
       const sessionData = insertTestSessionSchema.parse(req.body);
+      console.log("Parsed session data:", sessionData);
       
       const session = await storage.updateTestSession(sessionId, sessionData);
+      console.log("Updated session result:", session);
       res.json(session);
     } catch (error) {
-      console.error("Error updating session:", error);
-      res.status(500).json({ message: "Failed to update session" });
+      console.error("Error updating session - detailed:", error);
+      if (error instanceof Error) {
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+      }
+      res.status(500).json({ message: "Failed to update session", error: error instanceof Error ? error.message : String(error) });
     }
   });
 
