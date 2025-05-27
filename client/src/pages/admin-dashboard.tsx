@@ -6,10 +6,15 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Modal } from "@/components/ui/modal";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { Users, FileText, Download, Edit, Trash2, UserCheck, UserX, LogOut } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
+import { Users, FileText, Download, Edit, Trash2, UserCheck, UserX, LogOut, UserPlus } from "lucide-react";
 import { generatePDFReport, downloadPDF } from "@/lib/pdf-generator";
 import { generateExcelReport, downloadExcel } from "@/lib/excel-generator";
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
@@ -19,6 +24,13 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
+  const [newUserData, setNewUserData] = useState({
+    username: "",
+    password: "",
+    fullName: "",
+    role: "technician" as "technician" | "super_admin",
+  });
 
   // Fetch all users
   const { data: users, isLoading: usersLoading } = useQuery({
@@ -83,6 +95,49 @@ export default function AdminDashboard() {
       });
     },
   });
+
+  // Create user mutation
+  const createUser = useMutation({
+    mutationFn: async (userData: typeof newUserData) => {
+      return await apiRequest("/api/admin/users", {
+        method: "POST",
+        body: JSON.stringify(userData),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      setIsCreateUserModalOpen(false);
+      setNewUserData({
+        username: "",
+        password: "",
+        fullName: "",
+        role: "technician",
+      });
+      toast({
+        title: "User created successfully",
+        description: "The new user account has been created.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error creating user",
+        description: error.message || "Failed to create user account",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCreateUser = () => {
+    if (!newUserData.username || !newUserData.password || !newUserData.fullName) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+    createUser.mutate(newUserData);
+  };
 
   const handleDownloadReport = async (session: any, format: 'pdf' | 'excel') => {
     try {

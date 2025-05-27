@@ -75,6 +75,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
 export const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
+  loginMode: z.enum(['admin', 'testing']).optional(),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;

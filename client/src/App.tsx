@@ -22,12 +22,16 @@ function Router() {
     return <Login />;
   }
 
-  // Show admin dashboard for both super admins and franchise admins
-  if (user && (user.role === 'super_admin' || user.role === 'franchise_admin')) {
+  // Check if user chose admin mode at login
+  const loginMode = sessionStorage.getItem('loginMode');
+  const isAdminMode = loginMode === 'admin';
+
+  // Show admin dashboard if user selected admin mode and has admin privileges
+  if (isAdminMode && user && (user.role === 'super_admin' || user.role === 'franchise_admin')) {
     return <AdminDashboard />;
   }
 
-  // Regular technician interface
+  // Regular technician interface (for testing mode or regular technicians)
   return (
     <Switch>
       <Route path="/" component={Setup} />
