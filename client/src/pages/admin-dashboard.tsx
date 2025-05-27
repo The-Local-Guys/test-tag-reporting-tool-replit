@@ -171,8 +171,8 @@ export default function AdminDashboard() {
 
   // Update test result mutation
   const updateResultMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      const res = await fetch(`/api/test-results/${id}`, {
+    mutationFn: async ({ id, data, sessionId }: { id: number; data: any; sessionId: number }) => {
+      const res = await fetch(`/api/sessions/${sessionId}/results/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -308,12 +308,13 @@ export default function AdminDashboard() {
   };
 
   const handleUpdateResult = () => {
-    if (!editingResult) return;
+    if (!editingResult || !viewingSession?.session?.id) return;
 
     updateResultMutation.mutate({
       id: editingResult.id,
+      sessionId: viewingSession.session.id,
       data: {
-        itemType: editResultData.itemName,
+        itemName: editResultData.itemName,
         location: editResultData.location,
         classification: editResultData.classification,
         result: editResultData.result,
