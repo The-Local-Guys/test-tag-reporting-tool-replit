@@ -147,19 +147,11 @@ export default function ItemSelection() {
       <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 p-4 space-y-3">
         <div className="flex gap-3">
           <Button 
-            variant="outline" 
-            className="flex-1 py-3" 
+            className="flex-1 bg-success py-3 hover:bg-green-600" 
             onClick={() => setLocation('/report')}
           >
             <FileText className="mr-2 h-4 w-4" />
             View Report
-          </Button>
-          <Button 
-            className="flex-1 bg-success py-3 hover:bg-green-600" 
-            onClick={() => setLocation('/report')}
-          >
-            <CheckCircle className="mr-2 h-4 w-4" />
-            Complete
           </Button>
         </div>
         <Button 
