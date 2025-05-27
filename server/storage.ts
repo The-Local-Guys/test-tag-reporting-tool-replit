@@ -10,7 +10,7 @@ import {
   type InsertUser
 } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 export interface IStorage {
@@ -104,7 +104,8 @@ export class DatabaseStorage implements IStorage {
         technicianFullName: users.fullName,
       })
       .from(testSessions)
-      .leftJoin(users, eq(testSessions.userId, users.id));
+      .leftJoin(users, eq(testSessions.userId, users.id))
+      .orderBy(desc(testSessions.testDate));
     
     return sessions;
   }
@@ -113,7 +114,8 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(testSessions)
-      .where(eq(testSessions.userId, userId));
+      .where(eq(testSessions.userId, userId))
+      .orderBy(desc(testSessions.testDate));
   }
 
   async updateTestSession(sessionId: number, data: Partial<InsertTestSession>): Promise<TestSession> {
