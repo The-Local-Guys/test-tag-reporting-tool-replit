@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Modal } from '@/components/ui/modal';
-import { ArrowLeft, Download, Mail, Share, Plus, Edit2 } from 'lucide-react';
+import { ArrowLeft, Download, Mail, Share, Plus, Edit2, FileText } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
 import { downloadPDF } from '@/lib/pdf-generator';

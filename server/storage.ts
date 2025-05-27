@@ -129,12 +129,33 @@ export class DatabaseStorage implements IStorage {
     return sessionsWithCounts;
   }
 
-  async getSessionsByUser(userId: number): Promise<TestSession[]> {
-    return await db
+  async getSessionsByUser(userId: number): Promise<(TestSession & { totalItems?: number; failedItems?: number })[]> {
+    const sessions = await db
       .select()
       .from(testSessions)
       .where(eq(testSessions.userId, userId))
       .orderBy(desc(testSessions.testDate));
+    
+    // Add item counts for each session
+    const sessionsWithCounts = await Promise.all(
+      sessions.map(async (session) => {
+        const results = await db
+          .select()
+          .from(testResults)
+          .where(eq(testResults.sessionId, session.id));
+        
+        const totalItems = results.length;
+        const failedItems = results.filter(result => result.result === 'fail').length;
+        
+        return {
+          ...session,
+          totalItems,
+          failedItems,
+        };
+      })
+    );
+    
+    return sessionsWithCounts;
   }
 
   async updateTestSession(sessionId: number, data: Partial<InsertTestSession>): Promise<TestSession> {
