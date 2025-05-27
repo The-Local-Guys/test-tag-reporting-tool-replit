@@ -1,15 +1,24 @@
 import { 
   testSessions, 
-  testResults, 
+  testResults,
+  users,
   type TestSession, 
   type InsertTestSession,
   type TestResult,
-  type InsertTestResult 
+  type InsertTestResult,
+  type User,
+  type InsertUser
 } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 
 export interface IStorage {
+  // User operations
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  validatePassword(username: string, password: string): Promise<User | null>;
+  
   // Test Sessions
   createTestSession(session: InsertTestSession): Promise<TestSession>;
   getTestSession(id: number): Promise<TestSession | undefined>;
@@ -29,6 +38,35 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // User authentication methods
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    // Hash the password before storing
+    const hashedPassword = await bcrypt.hash(insertUser.password, 10);
+    const [user] = await db
+      .insert(users)
+      .values({
+        ...insertUser,
+        password: hashedPassword,
+      })
+      .returning();
+    return user;
+  }
+
+  async validatePassword(username: string, password: string): Promise<User | null> {
+    const user = await this.getUserByUsername(username);
+    if (!user || !user.isActive) {
+      return null;
+    }
+    
+    const isValid = await bcrypt.compare(password, user.password);
+    return isValid ? user : null;
+  }
+
   async createTestSession(insertSession: InsertTestSession): Promise<TestSession> {
     const [session] = await db
       .insert(testSessions)
