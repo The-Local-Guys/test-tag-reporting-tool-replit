@@ -200,10 +200,15 @@ export default function AdminDashboard() {
 
   const handleViewReport = async (session: any) => {
     try {
-      const response = await apiRequest(`/api/sessions/${session.id}/full`);
-      setViewingSession(response);
+      const response = await fetch(`/api/sessions/${session.id}/full`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch report data');
+      }
+      const reportData = await response.json();
+      setViewingSession(reportData);
       setIsViewReportModalOpen(true);
     } catch (error) {
+      console.error('Error loading report:', error);
       toast({
         title: "Error loading report",
         description: "Failed to load the full report data",
