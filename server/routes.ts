@@ -237,7 +237,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/sessions", requireAuth, async (req, res) => {
     try {
       const sessionData = insertTestSessionSchema.parse(req.body);
-      const session = await storage.createTestSession(sessionData);
+      // Associate the session with the logged-in user
+      const sessionWithUser = {
+        ...sessionData,
+        userId: req.session.userId, // Link session to the logged-in user
+      };
+      const session = await storage.createTestSession(sessionWithUser);
       res.json(session);
     } catch (error) {
       if (error instanceof z.ZodError) {
