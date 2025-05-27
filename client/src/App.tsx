@@ -11,11 +11,40 @@ import ItemSelection from "@/pages/item-selection";
 import TestDetails from "@/pages/test-details";
 import FailureDetails from "@/pages/failure-details";
 import ReportPreview from "@/pages/report-preview";
+import AdminDashboard from "@/pages/admin-dashboard";
 import Login from "@/pages/login";
 
 function Router() {
-  // Temporarily bypass authentication to fix routing issue
-  return <Login />;
+  const { isAuthenticated, isLoading, user } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
+  // Show admin dashboard for admin users
+  if (user?.role === 'admin') {
+    return <AdminDashboard />;
+  }
+
+  // Regular technician interface
+  return (
+    <Switch>
+      <Route path="/" component={Setup} />
+      <Route path="/items" component={ItemSelection} />
+      <Route path="/test" component={TestDetails} />
+      <Route path="/failure" component={FailureDetails} />
+      <Route path="/report" component={ReportPreview} />
+      <Route component={NotFound} />
+    </Switch>
+  );
 }
 
 function App() {

@@ -33,6 +33,7 @@ export const testSessions = pgTable("test_sessions", {
   siteContact: text("site_contact").notNull(),
   address: text("address").notNull(),
   country: text("country").notNull(), // 'australia' or 'newzealand'
+  userId: integer("user_id").references(() => users.id), // Link to technician
   createdAt: timestamp("created_at").defaultNow(),
 });
 

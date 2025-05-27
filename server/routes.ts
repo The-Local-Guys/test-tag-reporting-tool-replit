@@ -29,6 +29,14 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   next();
 };
 
+// Admin middleware
+const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
+  if (!req.session.userId || req.session.user?.role !== "admin") {
+    return res.status(403).json({ message: "Admin access required" });
+  }
+  next();
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Session configuration
   const PgSession = connectPg(session);
@@ -113,6 +121,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     const { password, ...userWithoutPassword } = req.session.user!;
     res.json(userWithoutPassword);
+  });
+
+  // Admin routes
+  app.get("/api/admin/users", requireAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      const usersWithoutPasswords = users.map(({ password, ...user }) => user);
+      res.json(usersWithoutPasswords);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.patch("/api/admin/users/:id/status", requireAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const { isActive } = req.body;
+      
+      const user = await storage.updateUserStatus(userId, isActive);
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error updating user status:", error);
+      res.status(500).json({ message: "Failed to update user status" });
+    }
+  });
+
+  app.get("/api/admin/sessions", requireAdmin, async (req, res) => {
+    try {
+      const sessions = await storage.getAllTestSessions();
+      res.json(sessions);
+    } catch (error) {
+      console.error("Error fetching all sessions:", error);
+      res.status(500).json({ message: "Failed to fetch sessions" });
+    }
+  });
+
+  app.get("/api/admin/users/:id/sessions", requireAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const sessions = await storage.getSessionsByUser(userId);
+      res.json(sessions);
+    } catch (error) {
+      console.error("Error fetching user sessions:", error);
+      res.status(500).json({ message: "Failed to fetch user sessions" });
+    }
+  });
+
+  app.patch("/api/admin/sessions/:id", requireAdmin, async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const sessionData = insertTestSessionSchema.parse(req.body);
+      
+      const session = await storage.updateTestSession(sessionId, sessionData);
+      res.json(session);
+    } catch (error) {
+      console.error("Error updating session:", error);
+      res.status(500).json({ message: "Failed to update session" });
+    }
+  });
+
+  app.delete("/api/admin/sessions/:id", requireAdmin, async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      await storage.deleteTestSession(sessionId);
+      res.json({ message: "Session deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting session:", error);
+      res.status(500).json({ message: "Failed to delete session" });
+    }
   });
   
   // Create a new test session (protected)

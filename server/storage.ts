@@ -19,6 +19,14 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   validatePassword(username: string, password: string): Promise<User | null>;
   
+  // Admin operations
+  getAllUsers(): Promise<User[]>;
+  updateUserStatus(userId: number, isActive: boolean): Promise<User>;
+  getAllTestSessions(): Promise<(TestSession & { technicianFullName?: string })[]>;
+  getSessionsByUser(userId: number): Promise<TestSession[]>;
+  updateTestSession(sessionId: number, data: Partial<InsertTestSession>): Promise<TestSession>;
+  deleteTestSession(sessionId: number): Promise<void>;
+  
   // Test Sessions
   createTestSession(session: InsertTestSession): Promise<TestSession>;
   getTestSession(id: number): Promise<TestSession | undefined>;
@@ -65,6 +73,63 @@ export class DatabaseStorage implements IStorage {
     
     const isValid = await bcrypt.compare(password, user.password);
     return isValid ? user : null;
+  }
+
+  // Admin operations
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  async updateUserStatus(userId: number, isActive: boolean): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ isActive, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async getAllTestSessions(): Promise<(TestSession & { technicianFullName?: string })[]> {
+    const sessions = await db
+      .select({
+        id: testSessions.id,
+        testDate: testSessions.testDate,
+        technicianName: testSessions.technicianName,
+        clientName: testSessions.clientName,
+        siteContact: testSessions.siteContact,
+        address: testSessions.address,
+        country: testSessions.country,
+        userId: testSessions.userId,
+        createdAt: testSessions.createdAt,
+        technicianFullName: users.fullName,
+      })
+      .from(testSessions)
+      .leftJoin(users, eq(testSessions.userId, users.id));
+    
+    return sessions;
+  }
+
+  async getSessionsByUser(userId: number): Promise<TestSession[]> {
+    return await db
+      .select()
+      .from(testSessions)
+      .where(eq(testSessions.userId, userId));
+  }
+
+  async updateTestSession(sessionId: number, data: Partial<InsertTestSession>): Promise<TestSession> {
+    const [session] = await db
+      .update(testSessions)
+      .set(data)
+      .where(eq(testSessions.id, sessionId))
+      .returning();
+    return session;
+  }
+
+  async deleteTestSession(sessionId: number): Promise<void> {
+    // First delete all related test results
+    await db.delete(testResults).where(eq(testResults.sessionId, sessionId));
+    // Then delete the session
+    await db.delete(testSessions).where(eq(testSessions.id, sessionId));
   }
 
   async createTestSession(insertSession: InsertTestSession): Promise<TestSession> {
