@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,6 +29,11 @@ const frequencyOptions = [
   { value: 'twentyfourmonthly', label: '24 Monthly' },
   { value: 'fiveyearly', label: '5 Yearly' },
 ];
+
+const testDetailsSchema = z.object({
+  location: z.string().min(1, "Location is required"),
+  assetNumber: z.string().min(1, "Asset number is required"),
+});
 
 export default function TestDetails() {
   const [selectedClass, setSelectedClass] = useState('class1');
@@ -57,6 +64,7 @@ export default function TestDetails() {
   }, [search]);
 
   const form = useForm<{location: string, assetNumber: string}>({
+    resolver: zodResolver(testDetailsSchema),
     defaultValues: {
       location: currentLocation,
       assetNumber: '1',
@@ -124,14 +132,21 @@ export default function TestDetails() {
     setCapturedPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleTestResult = (result: 'pass' | 'fail') => {
+  const handleTestResult = async (result: 'pass' | 'fail') => {
     if (!currentItem) return;
 
+    // Validate the form first
+    const isValid = await form.trigger();
+    if (!isValid) {
+      return; // Don't proceed if validation fails
+    }
+
+    const formValues = form.getValues();
     const testData: Omit<InsertTestResult, 'sessionId'> = {
       // Remove assetNumber - let backend auto-assign sequential numbers
       itemName: currentItem.name,
       itemType: currentItem.type,
-      location: form.getValues('location') || currentLocation,
+      location: formValues.location,
       classification: selectedClass,
       result,
       frequency: selectedFrequency,
@@ -212,14 +227,19 @@ export default function TestDetails() {
         {/* Location Input */}
         <div className="space-y-2">
           <Label htmlFor="location" className="flex items-center text-sm font-medium text-gray-700">
-            📍 Location
+            📍 Location <span className="text-red-500 ml-1">*</span>
           </Label>
           <Input
             id="location"
             placeholder="Enter location (e.g., Office - Ground Floor)"
             {...form.register('location')}
-            className="text-base"
+            className={`text-base ${form.formState.errors.location ? 'border-red-500' : ''}`}
           />
+          {form.formState.errors.location && (
+            <div className="text-red-500 text-xs">
+              {form.formState.errors.location.message}
+            </div>
+          )}
           <div className="text-xs text-gray-500">
             This will be remembered for the next item
           </div>
