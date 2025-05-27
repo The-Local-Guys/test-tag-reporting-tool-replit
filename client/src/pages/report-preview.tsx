@@ -489,7 +489,7 @@ export default function ReportPreview() {
           className="w-full bg-primary hover:bg-primary/90 text-white py-3 text-sm font-medium touch-button"
         >
           <RefreshCw className="h-4 w-4 mr-2" />
-          New Report
+          Finish Report / Start New Report
         </Button>
       </div>
     </div>
