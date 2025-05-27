@@ -74,6 +74,16 @@ export default function Setup() {
             >
               New Report
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => logout()}
+              disabled={isLoggingOut}
+              className="bg-white/10 border-white/20 text-white hover:bg-white/20 flex items-center gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              {isLoggingOut ? "Signing out..." : "Sign out"}
+            </Button>
             <Clipboard className="h-6 w-6" />
           </div>
         </div>
