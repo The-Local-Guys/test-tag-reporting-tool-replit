@@ -375,14 +375,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }, async (req, res) => {
     try {
+      console.log('=== SERVER UPDATE DEBUG ===');
+      console.log('Headers:', req.headers);
+      console.log('Params:', req.params);
+      console.log('Body:', req.body);
+      
       const sessionId = parseInt(req.params.id);
       const resultId = parseInt(req.params.resultId);
       
+      console.log('Parsed sessionId:', sessionId);
+      console.log('Parsed resultId:', resultId);
+      
       const session = await storage.getTestSession(sessionId);
       if (!session) {
+        console.log('Session not found for ID:', sessionId);
         res.status(404).json({ error: "Session not found" });
         return;
       }
+
+      console.log('Found session:', session);
 
       const updateData = {
         itemName: req.body.itemName,
@@ -395,9 +406,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         notes: req.body.notes || null
       };
       
+      console.log('Update data prepared:', updateData);
+      
       const result = await storage.updateTestResult(resultId, updateData);
+      console.log('Update result:', result);
       res.json(result);
     } catch (error) {
+      console.error('=== SERVER UPDATE ERROR ===');
       console.error('Error updating test result:', error);
       res.status(500).json({ error: "Failed to update test result" });
     }

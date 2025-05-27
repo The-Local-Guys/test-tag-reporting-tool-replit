@@ -129,10 +129,15 @@ export default function ReportPreview() {
     if (!editingResult) return;
     
     try {
+      console.log('=== EDIT SAVE DEBUG ===');
       console.log('Saving edit with data:', data);
       console.log('Editing result ID:', editingResult.id);
+      console.log('Dev bypass mode:', sessionStorage.getItem('devBypass'));
+      console.log('Session ID:', sessionData?.session?.id);
       
-      await updateResult({ id: editingResult.id, data });
+      const result = await updateResult({ id: editingResult.id, data });
+      console.log('Update result response:', result);
+      
       setIsEditModalOpen(false);
       setEditingResult(null);
       toast({
@@ -140,7 +145,9 @@ export default function ReportPreview() {
         description: "Test result has been successfully updated.",
       });
     } catch (error) {
+      console.error('=== EDIT SAVE ERROR ===');
       console.error('Error saving edit:', error);
+      console.error('Error details:', error.message);
       toast({
         title: "Update Failed",
         description: "There was an error updating the test result.",
