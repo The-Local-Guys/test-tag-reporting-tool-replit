@@ -94,7 +94,7 @@ export default function ReportPreview() {
     // Clear any cached session data
     localStorage.removeItem('currentSession');
     // Navigate to setup page to start a new report
-    setLocation('/setup');
+    setLocation('/');
     toast({
       title: "Starting new report",
       description: "Ready to create a new test session.",
