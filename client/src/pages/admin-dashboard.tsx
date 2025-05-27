@@ -255,10 +255,21 @@ export default function AdminDashboard() {
           <TabsContent value="users" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Technicians</CardTitle>
-                <CardDescription>
-                  Manage user accounts and permissions
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Technicians</CardTitle>
+                    <CardDescription>
+                      Manage user accounts and permissions
+                    </CardDescription>
+                  </div>
+                  <Button
+                    onClick={() => setIsCreateUserModalOpen(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Add User
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {usersLoading ? (
@@ -395,6 +406,91 @@ export default function AdminDashboard() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Create User Modal */}
+      <Modal
+        isOpen={isCreateUserModalOpen}
+        onClose={() => setIsCreateUserModalOpen(false)}
+        title="Create New User Account"
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="fullName">Full Name</Label>
+            <Input
+              id="fullName"
+              type="text"
+              value={newUserData.fullName}
+              onChange={(e) => setNewUserData(prev => ({ ...prev, fullName: e.target.value }))}
+              placeholder="Enter full name"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="username">Username</Label>
+            <Input
+              id="username"
+              type="text"
+              value={newUserData.username}
+              onChange={(e) => setNewUserData(prev => ({ ...prev, username: e.target.value }))}
+              placeholder="Enter username"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              value={newUserData.password}
+              onChange={(e) => setNewUserData(prev => ({ ...prev, password: e.target.value }))}
+              placeholder="Enter password"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="role">Access Level</Label>
+            <Select
+              value={newUserData.role}
+              onValueChange={(value: "technician" | "super_admin") => 
+                setNewUserData(prev => ({ ...prev, role: value }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select access level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="technician">Technician</SelectItem>
+                <SelectItem value="super_admin">Support Center Staff</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-600">
+              {newUserData.role === "super_admin" 
+                ? "Full access to all reports and user management across all franchises"
+                : "Access to testing tools and report creation"
+              }
+            </p>
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsCreateUserModalOpen(false)}
+              disabled={createUser.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateUser}
+              disabled={createUser.isPending}
+            >
+              {createUser.isPending ? "Creating..." : "Create User"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
