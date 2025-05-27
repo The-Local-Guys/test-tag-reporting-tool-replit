@@ -15,7 +15,7 @@ import type { InsertTestSession } from '@shared/schema';
 import logoPath from '@assets/The Local Guys - with plug wide boarder - png seek.png';
 
 export default function Setup() {
-  const { createSession, isCreatingSession } = useSession();
+  const { createSession, isCreatingSession, clearSession } = useSession();
   const { logout, isLoggingOut } = useAuth();
   const [, setLocation] = useLocation();
   
@@ -32,6 +32,9 @@ export default function Setup() {
   });
 
   const onSubmit = (data: InsertTestSession) => {
+    // Clear any existing session data first
+    clearSession();
+    
     createSession({
       ...data,
       country: 'australia', // Always default to Australia

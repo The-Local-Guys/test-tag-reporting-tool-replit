@@ -23,7 +23,7 @@ const predefinedItems = [
 export default function ItemSelection() {
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [customItemName, setCustomItemName] = useState('');
-  const { sessionData, currentLocation, setCurrentLocation } = useSession();
+  const { sessionData, currentLocation, setCurrentLocation, clearSession } = useSession();
   const { logout, isLoggingOut } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -41,7 +41,8 @@ export default function ItemSelection() {
   };
 
   const handleNewJob = () => {
-    // Navigate to setup page to start a new job
+    // Clear any existing session data and navigate to setup page
+    clearSession();
     setLocation('/');
     toast({
       title: "New Job Started",
