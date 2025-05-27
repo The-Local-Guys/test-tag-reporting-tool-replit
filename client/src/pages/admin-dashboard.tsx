@@ -372,7 +372,9 @@ export default function AdminDashboard() {
                         <TableRow key={session.id}>
                           <TableCell className="font-medium">{session.clientName}</TableCell>
                           <TableCell>{session.technicianFullName || session.technicianName}</TableCell>
-                          <TableCell>{session.testDate}</TableCell>
+                          <TableCell>
+                            {new Date(session.testDate).toLocaleDateString('en-AU')}
+                          </TableCell>
                           <TableCell>{session.address}</TableCell>
                           <TableCell>
                             <Badge variant="outline">
