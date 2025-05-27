@@ -26,7 +26,11 @@ export function useAuth() {
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (response, variables) => {
+      // Store login mode in session storage when login succeeds
+      if (variables.loginMode) {
+        sessionStorage.setItem('loginMode', variables.loginMode);
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     },
   });
@@ -60,6 +64,8 @@ export function useAuth() {
     },
     onSuccess: () => {
       queryClient.clear();
+      // Clear login mode from session storage
+      sessionStorage.removeItem('loginMode');
       window.location.reload();
     },
   });

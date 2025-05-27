@@ -24,10 +24,10 @@ function Router() {
 
   // Check if user chose admin mode at login
   const loginMode = sessionStorage.getItem('loginMode');
-  const isAdminMode = loginMode === 'admin';
-
+  console.log('Login mode:', loginMode, 'User role:', user?.role); // Debug log
+  
   // Show admin dashboard if user selected admin mode and has admin privileges
-  if (isAdminMode && user && (user.role === 'super_admin' || user.role === 'franchise_admin')) {
+  if (loginMode === 'admin' && user && (user.role === 'super_admin' || user.role === 'franchise_admin')) {
     return <AdminDashboard />;
   }
 
