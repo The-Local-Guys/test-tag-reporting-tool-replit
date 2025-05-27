@@ -18,7 +18,7 @@ function calculateNextDueDate(testDate: string, frequency: string, result: strin
   
   // For failed items, next due date is the same as test date (immediate retest required)
   if (result === 'fail') {
-    return date.toLocaleDateString();
+    return date.toLocaleDateString('en-AU');
   }
   
   switch (frequency) {
@@ -41,7 +41,7 @@ function calculateNextDueDate(testDate: string, frequency: string, result: strin
       date.setFullYear(date.getFullYear() + 1);
   }
   
-  return date.toLocaleDateString();
+  return date.toLocaleDateString('en-AU');
 }
 
 function getFrequencyLabel(frequency: string): string {
@@ -105,8 +105,8 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   // Add test date and reference
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Test Date: ${new Date(session.testDate).toLocaleDateString()}`, margin, yPosition);
-  doc.text(`Report Generated: ${new Date().toLocaleDateString()}`, pageWidth - margin, yPosition, { align: 'right' });
+  doc.text(`Test Date: ${new Date(session.testDate).toLocaleDateString('en-AU')}`, margin, yPosition);
+  doc.text(`Report Generated: ${new Date().toLocaleDateString('en-AU')}`, pageWidth - margin, yPosition, { align: 'right' });
   yPosition += 15;
 
   // Client information section

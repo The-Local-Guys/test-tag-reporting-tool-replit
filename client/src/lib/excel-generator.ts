@@ -17,7 +17,7 @@ function calculateNextDueDate(testDate: string, frequency: string, result: strin
   
   // For failed items, next due date is the same as test date (immediate retest required)
   if (result === 'fail') {
-    return date.toLocaleDateString();
+    return date.toLocaleDateString('en-AU');
   }
   
   switch (frequency) {
@@ -40,7 +40,7 @@ function calculateNextDueDate(testDate: string, frequency: string, result: strin
       date.setFullYear(date.getFullYear() + 1);
   }
   
-  return date.toLocaleDateString();
+  return date.toLocaleDateString('en-AU');
 }
 
 function getFrequencyLabel(frequency: string): string {
@@ -69,7 +69,7 @@ export function generateExcelReport(data: ReportData): Blob {
     ['Site Contact:', session.siteContact],
     ['Address:', session.address],
     ['Technician:', session.technicianName],
-    ['Test Date:', new Date(session.testDate).toLocaleDateString()],
+    ['Test Date:', new Date(session.testDate).toLocaleDateString('en-AU')],
 
     [''],
     ['Report Summary'],
