@@ -200,8 +200,8 @@ export class DatabaseStorage implements IStorage {
       // Use the pool directly for raw SQL execution  
       const query = `
         INSERT INTO test_results 
-        (session_id, asset_number, item_name, item_type, location, classification, result, frequency, failure_reason, action_taken, notes, photo_data)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        (session_id, asset_number, item_name, item_type, location, classification, result, frequency, failure_reason, action_taken, notes, photo_data, vision_inspection, electrical_test)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         RETURNING *
       `;
       
@@ -218,7 +218,9 @@ export class DatabaseStorage implements IStorage {
         insertResult.failureReason,
         insertResult.actionTaken,
         insertResult.notes,
-        insertResult.photoData
+        insertResult.photoData,
+        insertResult.visionInspection !== undefined ? insertResult.visionInspection : true,
+        insertResult.electricalTest !== undefined ? insertResult.electricalTest : true
       ]);
       
       console.log('Successfully inserted test result:', result.rows[0]);

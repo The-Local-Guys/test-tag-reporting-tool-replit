@@ -347,7 +347,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         failureReason: req.body.failureReason || null,
         actionTaken: req.body.actionTaken || null,
         notes: req.body.notes || null,
-        photoData: req.body.photoData || null
+        photoData: req.body.photoData || null,
+        visionInspection: req.body.visionInspection !== undefined ? req.body.visionInspection : true,
+        electricalTest: req.body.electricalTest !== undefined ? req.body.electricalTest : true
       };
       
       console.log('Creating result with data:', {
