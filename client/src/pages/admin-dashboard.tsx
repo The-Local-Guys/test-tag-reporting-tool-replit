@@ -223,6 +223,46 @@ export default function AdminDashboard() {
     },
   });
 
+  // Add item mutation
+  const addItemMutation = useMutation({
+    mutationFn: async ({ sessionId, data }: { sessionId: number; data: any }) => {
+      const response = await fetch(`/api/results`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ...data, sessionId }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to add item");
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/sessions"] });
+      if (viewingSession?.session?.id) {
+        queryClient.invalidateQueries({ queryKey: ["/api/session", viewingSession.session.id] });
+        handleViewReport(viewingSession.session.id);
+      }
+      toast({
+        title: "Success",
+        description: "New item added successfully",
+      });
+      setIsAddItemModalOpen(false);
+      setAddingToSession(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to add new item",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Create user mutation
   const createUser = useMutation({
     mutationFn: async (userData: typeof newUserData) => {
@@ -375,6 +415,37 @@ export default function AdminDashboard() {
       electricalTest: true,
     });
     setIsAddItemModalOpen(true);
+  };
+
+  const handleSaveNewItem = () => {
+    if (!newItemData.itemName || !newItemData.location || !addingToSession) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const itemData = {
+      itemType: newItemData.itemName,
+      location: newItemData.location,
+      assetNumber: newItemData.assetNumber || `${addingToSession.id}-${Date.now()}`,
+      classification: newItemData.classification,
+      result: newItemData.result,
+      frequency: newItemData.frequency,
+      failureReason: newItemData.result === "fail" ? newItemData.failureReason : null,
+      actionTaken: newItemData.result === "fail" ? newItemData.actionTaken : null,
+      visualInspection: newItemData.visualInspection,
+      electricalTest: newItemData.electricalTest,
+      notes: null,
+      photoData: null,
+    };
+
+    addItemMutation.mutate({
+      sessionId: addingToSession.id,
+      data: itemData,
+    });
   };
 
   const handleCreateUser = () => {
@@ -1224,6 +1295,203 @@ export default function AdminDashboard() {
                 disabled={updateResultMutation.isPending}
               >
                 {updateResultMutation.isPending ? "Updating..." : "Update Result"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Add Item Modal */}
+      <Modal
+        isOpen={isAddItemModalOpen}
+        onClose={() => {
+          setIsAddItemModalOpen(false);
+          setAddingToSession(null);
+        }}
+        title="Add New Item"
+        className="max-w-2xl"
+      >
+        {addingToSession && (
+          <div className="space-y-4">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-2">Adding item to:</h3>
+              <div className="text-sm">
+                <span className="font-medium">Client:</span> {addingToSession.clientName} | 
+                <span className="font-medium"> Date:</span> {new Date(addingToSession.testDate).toLocaleDateString('en-AU')}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="newItemName">Item Type *</Label>
+                <Input
+                  id="newItemName"
+                  type="text"
+                  value={newItemData.itemName}
+                  onChange={(e) => setNewItemData(prev => ({ ...prev, itemName: e.target.value }))}
+                  placeholder="Enter item type"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="newLocation">Location *</Label>
+                <Input
+                  id="newLocation"
+                  type="text"
+                  value={newItemData.location}
+                  onChange={(e) => setNewItemData(prev => ({ ...prev, location: e.target.value }))}
+                  placeholder="Enter location"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="newAssetNumber">Asset Number</Label>
+                <Input
+                  id="newAssetNumber"
+                  type="text"
+                  value={newItemData.assetNumber}
+                  onChange={(e) => setNewItemData(prev => ({ ...prev, assetNumber: e.target.value }))}
+                  placeholder="Auto-generated if empty"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="newClassification">Classification</Label>
+                <Select
+                  value={newItemData.classification}
+                  onValueChange={(value) => setNewItemData(prev => ({ ...prev, classification: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="class1">Class 1</SelectItem>
+                    <SelectItem value="class2">Class 2</SelectItem>
+                    <SelectItem value="epod">EPOD</SelectItem>
+                    <SelectItem value="rcd">RCD</SelectItem>
+                    <SelectItem value="3phase">3 Phase</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="newResult">Test Result</Label>
+                <Select
+                  value={newItemData.result}
+                  onValueChange={(value) => setNewItemData(prev => ({ ...prev, result: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pass">Pass</SelectItem>
+                    <SelectItem value="fail">Fail</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="newFrequency">Test Frequency</Label>
+                <Select
+                  value={newItemData.frequency}
+                  onValueChange={(value) => setNewItemData(prev => ({ ...prev, frequency: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="threemonthly">3 Monthly</SelectItem>
+                    <SelectItem value="sixmonthly">6 Monthly</SelectItem>
+                    <SelectItem value="twelvemonthly">12 Monthly</SelectItem>
+                    <SelectItem value="twentyfourmonthly">24 Monthly</SelectItem>
+                    <SelectItem value="fiveyearly">5 Yearly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Visual Inspection and Electrical Test Checkboxes */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="newVisualInspection"
+                  checked={newItemData.visualInspection}
+                  onChange={(e) => setNewItemData(prev => ({ ...prev, visualInspection: e.target.checked }))}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                />
+                <Label htmlFor="newVisualInspection" className="text-sm">Visual Inspection</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="newElectricalTest"
+                  checked={newItemData.electricalTest}
+                  onChange={(e) => setNewItemData(prev => ({ ...prev, electricalTest: e.target.checked }))}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                />
+                <Label htmlFor="newElectricalTest" className="text-sm">Electrical Test</Label>
+              </div>
+            </div>
+
+            {/* Failure Details (only show if result is fail) */}
+            {newItemData.result === "fail" && (
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                <div className="space-y-2">
+                  <Label htmlFor="newFailureReason">Failure Reason</Label>
+                  <Select
+                    value={newItemData.failureReason || ""}
+                    onValueChange={(value) => setNewItemData(prev => ({ ...prev, failureReason: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select failure reason" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="vision">Visual</SelectItem>
+                      <SelectItem value="earth">Earth</SelectItem>
+                      <SelectItem value="insulation">Insulation</SelectItem>
+                      <SelectItem value="polarity">Polarity</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="newActionTaken">Action Taken</Label>
+                  <Select
+                    value={newItemData.actionTaken || ""}
+                    onValueChange={(value) => setNewItemData(prev => ({ ...prev, actionTaken: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select action taken" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="given">Given to User</SelectItem>
+                      <SelectItem value="removed">Removed from Service</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsAddItemModalOpen(false);
+                  setAddingToSession(null);
+                }}
+                disabled={addItemMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveNewItem}
+                disabled={addItemMutation.isPending}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {addItemMutation.isPending ? "Adding..." : "Add Item"}
               </Button>
             </div>
           </div>
