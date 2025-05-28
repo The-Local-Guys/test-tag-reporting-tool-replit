@@ -83,7 +83,7 @@ export function generateExcelReport(data: ReportData): Blob {
   
   // Test results header
   const resultsHeader = [
-    'Asset #', 'Item Name', 'Location', 'Classification', 'Result', 'Frequency', 'Next Due Date', 'Failure Reason', 'Action Taken', 'Notes'
+    'Asset #', 'Item Name', 'Location', 'Classification', 'Result', 'Vision Inspection', 'Electrical Test', 'Frequency', 'Next Due Date', 'Failure Reason', 'Action Taken', 'Notes'
   ];
   
   // Test results data
@@ -93,6 +93,8 @@ export function generateExcelReport(data: ReportData): Blob {
     result.location,
     result.classification.toUpperCase(),
     result.result.toUpperCase(),
+    result.visionInspection ? 'Yes' : 'No',
+    result.electricalTest ? 'Yes' : 'No',
     getFrequencyLabel(result.frequency),
     calculateNextDueDate(session.testDate, result.frequency, result.result),
     result.failureReason || '',
