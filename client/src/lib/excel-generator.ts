@@ -87,20 +87,40 @@ export function generateExcelReport(data: ReportData): Blob {
   ];
   
   // Test results data
-  const resultsData = results.map((result, index) => [
-    index + 1, // Asset number
-    result.itemName,
-    result.location,
-    result.classification.toUpperCase(),
-    result.result.toUpperCase(),
-    result.visionInspection ? 'Yes' : 'No',
-    result.electricalTest ? 'Yes' : 'No',
-    getFrequencyLabel(result.frequency),
-    calculateNextDueDate(session.testDate, result.frequency, result.result),
-    result.failureReason || '',
-    result.actionTaken || '',
-    result.notes || ''
-  ]);
+  const resultsData = results.map((result, index) => {
+    // Format failure reason for display
+    let displayFailureReason = result.failureReason || '';
+    if (displayFailureReason === 'vision') {
+      displayFailureReason = 'Visual Inspection';
+    } else if (displayFailureReason && displayFailureReason !== '') {
+      displayFailureReason = displayFailureReason.charAt(0).toUpperCase() + displayFailureReason.slice(1);
+    }
+
+    // Format action taken for display
+    let displayActionTaken = result.actionTaken || '';
+    if (displayActionTaken === 'given') {
+      displayActionTaken = 'Given to Site Contact';
+    } else if (displayActionTaken === 'removed') {
+      displayActionTaken = 'Removed from Site';
+    } else if (displayActionTaken && displayActionTaken !== '') {
+      displayActionTaken = displayActionTaken.charAt(0).toUpperCase() + displayActionTaken.slice(1);
+    }
+
+    return [
+      index + 1, // Asset number
+      result.itemName,
+      result.location,
+      result.classification.toUpperCase(),
+      result.result.toUpperCase(),
+      result.visionInspection ? 'Yes' : 'No',
+      result.electricalTest ? 'Yes' : 'No',
+      getFrequencyLabel(result.frequency),
+      calculateNextDueDate(session.testDate, result.frequency, result.result),
+      displayFailureReason,
+      displayActionTaken,
+      result.notes || ''
+    ];
+  });
   
   // Combine all data
   const worksheetData = [
