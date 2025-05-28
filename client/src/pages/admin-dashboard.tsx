@@ -1028,7 +1028,6 @@ export default function AdminDashboard() {
                 <Button
                   variant="outline"
                   onClick={() => handleAddItem(viewingSession.session)}
-                  className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
                   size="sm"
                 >
                   <Plus className="w-4 h-4 mr-1" />
