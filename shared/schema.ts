@@ -52,6 +52,8 @@ export const testResults = pgTable("test_results", {
   frequency: text("frequency").notNull(), // 'threemonthly', 'sixmonthly', 'twelvemonthly', 'twentyfourmonthly', 'fiveyearly'
   notes: text("notes"), // optional additional notes
   photoData: text("photo_data"), // Base64 encoded photo for failed items
+  visionInspection: boolean("vision_inspection").default(true), // Vision inspection completed
+  electricalTest: boolean("electrical_test").default(true), // Electrical test completed
   createdAt: timestamp("created_at").defaultNow(),
 });
 

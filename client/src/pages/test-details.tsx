@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
@@ -41,6 +42,8 @@ export default function TestDetails() {
   const [currentItem, setCurrentItem] = useState<{name: string, type: string} | null>(null);
   const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]);
   const [showCamera, setShowCamera] = useState(false);
+  const [visionInspection, setVisionInspection] = useState(true);
+  const [electricalTest, setElectricalTest] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -153,6 +156,8 @@ export default function TestDetails() {
       failureReason: null,
       actionTaken: null,
       notes: null,
+      visionInspection,
+      electricalTest,
     } as any;
 
     if (result === 'pass') {
@@ -292,6 +297,41 @@ export default function TestDetails() {
         </div>
 
 
+
+        {/* Vision Inspection & Electrical Test */}
+        <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+          <Label className="flex items-center text-sm font-medium text-gray-700">
+            🔍 Testing Completed
+          </Label>
+          <div className="space-y-3">
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="vision-inspection"
+                checked={visionInspection}
+                onCheckedChange={(checked) => setVisionInspection(checked === true)}
+              />
+              <Label 
+                htmlFor="vision-inspection" 
+                className="text-sm font-medium text-gray-700 cursor-pointer"
+              >
+                Vision Inspection Completed
+              </Label>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="electrical-test"
+                checked={electricalTest}
+                onCheckedChange={(checked) => setElectricalTest(checked === true)}
+              />
+              <Label 
+                htmlFor="electrical-test" 
+                className="text-sm font-medium text-gray-700 cursor-pointer"
+              >
+                Electrical Test Completed
+              </Label>
+            </div>
+          </div>
+        </div>
 
         {/* Test Result */}
         <div className="space-y-3">
