@@ -150,22 +150,23 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   yPosition += 10;
 
   // Table headers
-  doc.setFontSize(7);
+  doc.setFontSize(6);
   doc.setFont('helvetica', 'bold');
   doc.text('Asset#', margin, yPosition);
-  doc.text('Item', margin + 15, yPosition);
-  doc.text('Location', margin + 40, yPosition);
-  doc.text('Class', margin + 65, yPosition);
-  doc.text('Result', margin + 80, yPosition);
-  doc.text('Visual', margin + 95, yPosition);
-  doc.text('Electrical', margin + 105, yPosition);
-  doc.text('Frequency', margin + 120, yPosition);
-  doc.text('Next Due', margin + 145, yPosition);
-  doc.text('Failure Reason', margin + 170, yPosition);
-  doc.text('Action Taken', margin + 190, yPosition);
+  doc.text('Item', margin + 12, yPosition);
+  doc.text('Location', margin + 30, yPosition);
+  doc.text('Class', margin + 50, yPosition);
+  doc.text('Result', margin + 65, yPosition);
+  doc.text('Visual', margin + 80, yPosition);
+  doc.text('Electrical', margin + 92, yPosition);
+  doc.text('Frequency', margin + 108, yPosition);
+  doc.text('Next Due', margin + 130, yPosition);
+  doc.text('Failure Reason', margin + 150, yPosition);
+  doc.text('Action Taken', margin + 175, yPosition);
   yPosition += 7;
 
   // Table content
+  doc.setFontSize(6);
   doc.setFont('helvetica', 'normal');
   results.forEach((result, index) => {
     // Check if we need a new page
@@ -176,32 +177,30 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
 
     // Use index + 1 as the asset number (count)
     doc.text((index + 1).toString(), margin, yPosition);
-    doc.text(result.itemName, margin + 15, yPosition);
-    doc.text(result.location, margin + 40, yPosition);
-    doc.text(result.classification.toUpperCase(), margin + 65, yPosition);
+    doc.text(result.itemName, margin + 12, yPosition);
+    doc.text(result.location, margin + 30, yPosition);
+    doc.text(result.classification.toUpperCase(), margin + 50, yPosition);
     
     // Color code the result
     if (result.result === 'pass') {
       doc.setTextColor(0, 128, 0); // Green
-      doc.text('PASS', margin + 80, yPosition);
+      doc.text('PASS', margin + 65, yPosition);
     } else {
       doc.setTextColor(255, 0, 0); // Red
-      doc.text('FAIL', margin + 80, yPosition);
+      doc.text('FAIL', margin + 65, yPosition);
     }
     doc.setTextColor(0, 0, 0); // Reset to black
 
-    // Add vision inspection and electrical test status
-    doc.text(result.visionInspection !== false ? '✓' : '✗', margin + 95, yPosition);
-    doc.text(result.electricalTest !== false ? '✓' : '✗', margin + 105, yPosition);
+    // Add vision inspection and electrical test status with proper tick/cross marks
+    doc.text(result.visionInspection !== false ? 'Y' : 'N', margin + 80, yPosition);
+    doc.text(result.electricalTest !== false ? 'Y' : 'N', margin + 92, yPosition);
 
     // Add frequency and next due date
-    doc.text(getFrequencyLabel(result.frequency), margin + 120, yPosition);
-    doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 145, yPosition);
+    doc.text(getFrequencyLabel(result.frequency), margin + 108, yPosition);
+    doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 130, yPosition);
 
     // Add failure reason and action taken (only for failed items)
     if (result.result === 'fail') {
-      console.log('Failed item data:', result); // Debug log
-      
       const failureReason = result.failureReason || 'Not specified';
       const actionTaken = result.actionTaken || 'Not specified';
       
@@ -222,13 +221,11 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         displayActionTaken = actionTaken.charAt(0).toUpperCase() + actionTaken.slice(1);
       }
       
-      console.log('Display values:', { displayFailureReason, displayActionTaken }); // Debug log
-      
-      doc.text(displayFailureReason, margin + 170, yPosition);
-      doc.text(displayActionTaken, margin + 190, yPosition);
+      doc.text(displayFailureReason, margin + 150, yPosition);
+      doc.text(displayActionTaken, margin + 175, yPosition);
     } else {
-      doc.text('-', margin + 170, yPosition);
-      doc.text('-', margin + 190, yPosition);
+      doc.text('-', margin + 150, yPosition);
+      doc.text('-', margin + 175, yPosition);
     }
 
     yPosition += 6;
