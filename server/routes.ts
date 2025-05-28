@@ -352,11 +352,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         electricalTest: req.body.electricalTest !== undefined ? req.body.electricalTest : true
       };
       
+      console.log('Request body received:', {
+        ...req.body,
+        photoData: req.body.photoData ? `Photo included (${Math.round(req.body.photoData.length / 1024)}KB)` : 'No photo in request'
+      });
       console.log('Creating result with data:', {
         ...resultData,
         photoData: resultData.photoData ? `Photo data included (${Math.round(resultData.photoData.length / 1024)}KB)` : 'No photo data'
       });
-      console.log('Request body photoData:', req.body.photoData ? `Photo included (${Math.round(req.body.photoData.length / 1024)}KB)` : 'No photo in request');
       
       const result = await storage.createTestResult(resultData);
       res.json(result);
