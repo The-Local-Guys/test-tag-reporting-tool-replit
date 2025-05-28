@@ -104,7 +104,7 @@ export default function FailureDetails() {
       ...testData,
       failureReason: selectedReason,
       actionTaken: selectedAction,
-      notes: notes.trim() || null,
+      notes: null,
       photoData: capturedPhoto,
     };
 
@@ -263,20 +263,7 @@ export default function FailureDetails() {
           )}
         </div>
 
-        {/* Additional Notes */}
-        <div className="space-y-2">
-          <Label htmlFor="notes" className="flex items-center text-sm font-medium text-gray-700">
-            📝 Additional Notes (Optional)
-          </Label>
-          <Textarea
-            id="notes"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Enter any additional details about the failure..."
-            rows={3}
-            className="text-base resize-none"
-          />
-        </div>
+
       </div>
 
       {/* Fixed Bottom Button */}
