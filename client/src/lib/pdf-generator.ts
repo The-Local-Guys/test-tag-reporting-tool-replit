@@ -191,8 +191,8 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     doc.setTextColor(0, 0, 0); // Reset to black
 
     // Add vision inspection and electrical test status
-    doc.text(result.visionInspection ? '✓' : '✗', margin + 95, yPosition);
-    doc.text(result.electricalTest ? '✓' : '✗', margin + 105, yPosition);
+    doc.text(result.visionInspection !== false ? '✓' : '✗', margin + 95, yPosition);
+    doc.text(result.electricalTest !== false ? '✓' : '✗', margin + 105, yPosition);
 
     // Add frequency and next due date
     doc.text(getFrequencyLabel(result.frequency), margin + 120, yPosition);
@@ -200,9 +200,10 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
 
     // Add failure reason and action taken (only for failed items)
     if (result.result === 'fail') {
-      // Handle both camelCase and snake_case field names
-      const failureReason = result.failureReason || result.failure_reason || 'Not specified';
-      const actionTaken = result.actionTaken || result.action_taken || 'Not specified';
+      console.log('Failed item data:', result); // Debug log
+      
+      const failureReason = result.failureReason || 'Not specified';
+      const actionTaken = result.actionTaken || 'Not specified';
       
       // Convert 'vision' to 'Visual Inspection' for display
       let displayFailureReason = failureReason;
@@ -220,6 +221,8 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       } else if (actionTaken !== 'Not specified') {
         displayActionTaken = actionTaken.charAt(0).toUpperCase() + actionTaken.slice(1);
       }
+      
+      console.log('Display values:', { displayFailureReason, displayActionTaken }); // Debug log
       
       doc.text(displayFailureReason, margin + 170, yPosition);
       doc.text(displayActionTaken, margin + 190, yPosition);
