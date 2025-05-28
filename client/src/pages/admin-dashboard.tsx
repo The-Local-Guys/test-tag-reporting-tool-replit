@@ -1023,7 +1023,18 @@ export default function AdminDashboard() {
 
             {/* Test Results */}
             <div>
-              <h3 className="font-semibold mb-4">Test Results ({viewingSession.results.length} items)</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold">Test Results ({viewingSession.results.length} items)</h3>
+                <Button
+                  variant="outline"
+                  onClick={() => handleAddItem(viewingSession.session)}
+                  className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                  size="sm"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Item
+                </Button>
+              </div>
               <div className="border rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader>
@@ -1095,40 +1106,29 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="flex justify-between items-center pt-4">
+            <div className="flex justify-end space-x-2 pt-4">
               <Button
                 variant="outline"
-                onClick={() => handleAddItem(viewingSession.session)}
-                className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                onClick={() => handleDownloadReport(viewingSession.session, 'pdf')}
               >
-                <Plus className="w-4 h-4 mr-1" />
-                Add Item
+                <Download className="w-4 h-4 mr-1" />
+                Download PDF
               </Button>
-              
-              <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  onClick={() => handleDownloadReport(viewingSession.session, 'pdf')}
-                >
-                  <Download className="w-4 h-4 mr-1" />
-                  Download PDF
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleDownloadReport(viewingSession.session, 'excel')}
-                >
-                  <Download className="w-4 h-4 mr-1" />
-                  Download Excel
-                </Button>
-                <Button
-                  onClick={() => {
-                    setIsViewReportModalOpen(false);
-                    setViewingSession(null);
-                  }}
-                >
-                  Close
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                onClick={() => handleDownloadReport(viewingSession.session, 'excel')}
+              >
+                <Download className="w-4 h-4 mr-1" />
+                Download Excel
+              </Button>
+              <Button
+                onClick={() => {
+                  setIsViewReportModalOpen(false);
+                  setViewingSession(null);
+                }}
+              >
+                Close
+              </Button>
             </div>
           </div>
         )}
