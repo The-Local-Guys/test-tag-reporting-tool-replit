@@ -226,12 +226,12 @@ export default function AdminDashboard() {
   // Add item mutation
   const addItemMutation = useMutation({
     mutationFn: async ({ sessionId, data }: { sessionId: number; data: any }) => {
-      const response = await fetch(`/api/results`, {
+      const response = await fetch(`/api/sessions/${sessionId}/results`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ ...data, sessionId }),
+        body: JSON.stringify(data),
       });
       
       if (!response.ok) {
@@ -428,6 +428,7 @@ export default function AdminDashboard() {
     }
 
     const itemData = {
+      itemName: newItemData.itemName,
       itemType: newItemData.itemName,
       location: newItemData.location,
       assetNumber: newItemData.assetNumber || `${addingToSession.id}-${Date.now()}`,
