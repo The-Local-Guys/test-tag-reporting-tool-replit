@@ -80,13 +80,7 @@ export default function ReportPreview() {
     }
   };
 
-  const handleEmailReport = () => {
-    // This would integrate with email service
-    toast({
-      title: "Email Feature",
-      description: "Email integration would be implemented here.",
-    });
-  };
+
 
   const handleNewReport = () => {
     // Clear current session data
@@ -182,13 +176,6 @@ export default function ReportPreview() {
               title="Download Excel"
             >
               📊
-            </button>
-            <button 
-              onClick={handleEmailReport}
-              className="text-white hover:text-green-200 p-2 rounded-lg hover:bg-green-700 transition-colors"
-              title="Email Report"
-            >
-              <Mail className="h-5 w-5" />
             </button>
           </div>
         </div>
@@ -456,7 +443,7 @@ export default function ReportPreview() {
           <div className="text-sm font-medium text-gray-700">Export Report</div>
           <div className="text-xs text-gray-500">Choose your preferred format</div>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <Button 
             onClick={handleExportPDF}
             className="bg-red-600 hover:bg-red-700 text-white py-3 text-sm font-medium touch-button"
@@ -469,13 +456,6 @@ export default function ReportPreview() {
             className="bg-green-600 hover:bg-green-700 text-white py-3 text-sm font-medium touch-button"
           >
             📊 Excel
-          </Button>
-          <Button 
-            onClick={handleEmailReport}
-            className="bg-blue-600 hover:bg-blue-700 text-white py-3 text-sm font-medium touch-button"
-          >
-            <Mail className="h-4 w-4 mr-2" />
-            Email
           </Button>
         </div>
         <Button 
