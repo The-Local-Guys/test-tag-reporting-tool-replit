@@ -299,12 +299,9 @@ export default function TestDetails() {
 
 
         {/* Vision Inspection & Electrical Test */}
-        <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
-          <Label className="flex items-center text-sm font-medium text-gray-700">
-            🔍 Testing Completed
-          </Label>
-          <div className="space-y-3">
-            <div className="flex items-center space-x-3">
+        <div className="bg-gray-50 p-3 rounded-lg">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center space-x-2">
               <Checkbox
                 id="vision-inspection"
                 checked={visionInspection}
@@ -314,10 +311,10 @@ export default function TestDetails() {
                 htmlFor="vision-inspection" 
                 className="text-sm font-medium text-gray-700 cursor-pointer"
               >
-                Vision Inspection Completed
+                Visual Inspection
               </Label>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
               <Checkbox
                 id="electrical-test"
                 checked={electricalTest}
@@ -327,7 +324,7 @@ export default function TestDetails() {
                 htmlFor="electrical-test" 
                 className="text-sm font-medium text-gray-700 cursor-pointer"
               >
-                Electrical Test Completed
+                Electrical Test
               </Label>
             </div>
           </div>
