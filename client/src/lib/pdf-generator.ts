@@ -155,14 +155,14 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   doc.text('Asset#', margin, yPosition);
   doc.text('Item', margin + 12, yPosition);
   doc.text('Location', margin + 30, yPosition);
-  doc.text('Class', margin + 50, yPosition);
-  doc.text('Result', margin + 65, yPosition);
-  doc.text('Visual', margin + 80, yPosition);
-  doc.text('Electrical', margin + 92, yPosition);
-  doc.text('Frequency', margin + 108, yPosition);
-  doc.text('Next Due', margin + 130, yPosition);
-  doc.text('Failure Reason', margin + 150, yPosition);
-  doc.text('Action Taken', margin + 175, yPosition);
+  doc.text('Class', margin + 48, yPosition);
+  doc.text('Result', margin + 62, yPosition);
+  doc.text('V', margin + 78, yPosition);
+  doc.text('E', margin + 85, yPosition);
+  doc.text('Frequency', margin + 92, yPosition);
+  doc.text('Due Date', margin + 115, yPosition);
+  doc.text('Failure Reason', margin + 135, yPosition);
+  doc.text('Action Taken', margin + 158, yPosition);
   yPosition += 7;
 
   // Table content
@@ -179,25 +179,25 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     doc.text((index + 1).toString(), margin, yPosition);
     doc.text(result.itemName, margin + 12, yPosition);
     doc.text(result.location, margin + 30, yPosition);
-    doc.text(result.classification.toUpperCase(), margin + 50, yPosition);
+    doc.text(result.classification.toUpperCase(), margin + 48, yPosition);
     
     // Color code the result
     if (result.result === 'pass') {
       doc.setTextColor(0, 128, 0); // Green
-      doc.text('PASS', margin + 65, yPosition);
+      doc.text('PASS', margin + 62, yPosition);
     } else {
       doc.setTextColor(255, 0, 0); // Red
-      doc.text('FAIL', margin + 65, yPosition);
+      doc.text('FAIL', margin + 62, yPosition);
     }
     doc.setTextColor(0, 0, 0); // Reset to black
 
     // Add vision inspection and electrical test status with proper tick/cross marks
-    doc.text(result.visionInspection !== false ? 'Y' : 'N', margin + 80, yPosition);
-    doc.text(result.electricalTest !== false ? 'Y' : 'N', margin + 92, yPosition);
+    doc.text(result.visionInspection !== false ? 'Y' : 'N', margin + 78, yPosition);
+    doc.text(result.electricalTest !== false ? 'Y' : 'N', margin + 85, yPosition);
 
     // Add frequency and next due date
-    doc.text(getFrequencyLabel(result.frequency), margin + 108, yPosition);
-    doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 130, yPosition);
+    doc.text(getFrequencyLabel(result.frequency), margin + 92, yPosition);
+    doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 115, yPosition);
 
     // Add failure reason and action taken (only for failed items)
     if (result.result === 'fail') {
@@ -221,11 +221,11 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         displayActionTaken = actionTaken.charAt(0).toUpperCase() + actionTaken.slice(1);
       }
       
-      doc.text(displayFailureReason, margin + 150, yPosition);
-      doc.text(displayActionTaken, margin + 175, yPosition);
+      doc.text(displayFailureReason, margin + 135, yPosition);
+      doc.text(displayActionTaken, margin + 158, yPosition);
     } else {
-      doc.text('-', margin + 150, yPosition);
-      doc.text('-', margin + 175, yPosition);
+      doc.text('-', margin + 135, yPosition);
+      doc.text('-', margin + 158, yPosition);
     }
 
     yPosition += 6;
