@@ -200,10 +200,29 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
 
     // Add failure reason and action taken (only for failed items)
     if (result.result === 'fail') {
-      const failureReason = result.failureReason || 'Not specified';
-      const actionTaken = result.actionTaken || 'Not specified';
-      doc.text(failureReason.charAt(0).toUpperCase() + failureReason.slice(1), margin + 170, yPosition);
-      doc.text(actionTaken.charAt(0).toUpperCase() + actionTaken.slice(1), margin + 190, yPosition);
+      // Handle both camelCase and snake_case field names
+      const failureReason = result.failureReason || result.failure_reason || 'Not specified';
+      const actionTaken = result.actionTaken || result.action_taken || 'Not specified';
+      
+      // Convert 'vision' to 'Visual Inspection' for display
+      let displayFailureReason = failureReason;
+      if (failureReason === 'vision') {
+        displayFailureReason = 'Visual Inspection';
+      } else if (failureReason !== 'Not specified') {
+        displayFailureReason = failureReason.charAt(0).toUpperCase() + failureReason.slice(1);
+      }
+      
+      let displayActionTaken = actionTaken;
+      if (actionTaken === 'given') {
+        displayActionTaken = 'Given to Site Contact';
+      } else if (actionTaken === 'removed') {
+        displayActionTaken = 'Removed from Site';
+      } else if (actionTaken !== 'Not specified') {
+        displayActionTaken = actionTaken.charAt(0).toUpperCase() + actionTaken.slice(1);
+      }
+      
+      doc.text(displayFailureReason, margin + 170, yPosition);
+      doc.text(displayActionTaken, margin + 190, yPosition);
     } else {
       doc.text('-', margin + 170, yPosition);
       doc.text('-', margin + 190, yPosition);
