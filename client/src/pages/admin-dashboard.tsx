@@ -14,7 +14,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
-import { Users, FileText, Download, Edit, Trash2, UserCheck, UserX, LogOut, UserPlus } from "lucide-react";
+import { Users, FileText, Download, Edit, Trash2, UserCheck, UserX, LogOut, UserPlus, Plus } from "lucide-react";
 import { generatePDFReport, downloadPDF } from "@/lib/pdf-generator";
 import { generateExcelReport, downloadExcel } from "@/lib/excel-generator";
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
@@ -30,6 +30,8 @@ export default function AdminDashboard() {
   const [viewingSession, setViewingSession] = useState<any>(null);
   const [isEditResultModalOpen, setIsEditResultModalOpen] = useState(false);
   const [editingResult, setEditingResult] = useState<any>(null);
+  const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
+  const [addingToSession, setAddingToSession] = useState<any>(null);
   const [editingSession, setEditingSession] = useState<any>(null);
   const [editSessionData, setEditSessionData] = useState({
     clientName: "",
@@ -55,6 +57,18 @@ export default function AdminDashboard() {
     failureReason: null as any,
     actionTaken: null as any,
     notes: null as any,
+  });
+  const [newItemData, setNewItemData] = useState({
+    itemName: "",
+    location: "",
+    assetNumber: "",
+    classification: "class1" as any,
+    result: "pass" as any,
+    frequency: "twelvemonthly" as any,
+    failureReason: null as any,
+    actionTaken: null as any,
+    visualInspection: true,
+    electricalTest: true,
   });
 
   // Fetch all users
@@ -344,6 +358,23 @@ export default function AdminDashboard() {
         notes: editResultData.notes,
       },
     });
+  };
+
+  const handleAddItem = (session: any) => {
+    setAddingToSession(session);
+    setNewItemData({
+      itemName: "",
+      location: "",
+      assetNumber: "",
+      classification: "class1",
+      result: "pass",
+      frequency: "twelvemonthly",
+      failureReason: null,
+      actionTaken: null,
+      visualInspection: true,
+      electricalTest: true,
+    });
+    setIsAddItemModalOpen(true);
   };
 
   const handleCreateUser = () => {
@@ -992,29 +1023,40 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="flex justify-end space-x-2 pt-4">
+            <div className="flex justify-between items-center pt-4">
               <Button
                 variant="outline"
-                onClick={() => handleDownloadReport(viewingSession.session, 'pdf')}
+                onClick={() => handleAddItem(viewingSession.session)}
+                className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
               >
-                <Download className="w-4 h-4 mr-1" />
-                Download PDF
+                <Plus className="w-4 h-4 mr-1" />
+                Add Item
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => handleDownloadReport(viewingSession.session, 'excel')}
-              >
-                <Download className="w-4 h-4 mr-1" />
-                Download Excel
-              </Button>
-              <Button
-                onClick={() => {
-                  setIsViewReportModalOpen(false);
-                  setViewingSession(null);
-                }}
-              >
-                Close
-              </Button>
+              
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => handleDownloadReport(viewingSession.session, 'pdf')}
+                >
+                  <Download className="w-4 h-4 mr-1" />
+                  Download PDF
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleDownloadReport(viewingSession.session, 'excel')}
+                >
+                  <Download className="w-4 h-4 mr-1" />
+                  Download Excel
+                </Button>
+                <Button
+                  onClick={() => {
+                    setIsViewReportModalOpen(false);
+                    setViewingSession(null);
+                  }}
+                >
+                  Close
+                </Button>
+              </div>
             </div>
           </div>
         )}
