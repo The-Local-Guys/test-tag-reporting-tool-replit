@@ -1127,7 +1127,7 @@ export default function AdminDashboard() {
                         <SelectValue placeholder="Select failure reason" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="vision">Vision</SelectItem>
+                        <SelectItem value="vision">Visual Inspection</SelectItem>
                         <SelectItem value="earth">Earth</SelectItem>
                         <SelectItem value="insulation">Insulation</SelectItem>
                         <SelectItem value="polarity">Polarity</SelectItem>

@@ -8,7 +8,7 @@ import { useLocation } from 'wouter';
 import type { InsertTestResult } from '@shared/schema';
 
 const failureReasons = [
-  { value: 'vision', label: 'Vision Inspection', icon: '👁️' },
+  { value: 'vision', label: 'Visual Inspection', icon: '👁️' },
   { value: 'earth', label: 'Earth Continuity', icon: '🔌' },
   { value: 'insulation', label: 'Insulation Resistance', icon: '🛡️' },
   { value: 'polarity', label: 'Polarity', icon: '🔄' },
