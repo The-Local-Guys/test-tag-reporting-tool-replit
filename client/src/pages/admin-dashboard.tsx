@@ -417,7 +417,7 @@ export default function AdminDashboard() {
     setIsAddItemModalOpen(true);
   };
 
-  const handleSaveNewItem = () => {
+  const handleSaveNewItem = async () => {
     if (!newItemData.itemName || !newItemData.location || !addingToSession) {
       toast({
         title: "Missing information",
@@ -427,11 +427,27 @@ export default function AdminDashboard() {
       return;
     }
 
+    // Get the next asset number if not provided
+    let assetNumber = newItemData.assetNumber;
+    if (!assetNumber) {
+      try {
+        const response = await fetch(`/api/sessions/${addingToSession.id}/next-asset-number`);
+        if (response.ok) {
+          const data = await response.json();
+          assetNumber = data.nextAssetNumber.toString();
+        } else {
+          assetNumber = "1"; // fallback
+        }
+      } catch (error) {
+        assetNumber = "1"; // fallback
+      }
+    }
+
     const itemData = {
       itemName: newItemData.itemName,
       itemType: newItemData.itemName,
       location: newItemData.location,
-      assetNumber: newItemData.assetNumber || `${addingToSession.id}-${Date.now()}`,
+      assetNumber: assetNumber,
       classification: newItemData.classification,
       result: newItemData.result,
       frequency: newItemData.frequency,
