@@ -157,12 +157,12 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   doc.text('Location', margin + 40, yPosition);
   doc.text('Class', margin + 65, yPosition);
   doc.text('Result', margin + 80, yPosition);
-  doc.text('Visual Inspection', margin + 95, yPosition);
-  doc.text('Electrical Test', margin + 125, yPosition);
-  doc.text('Frequency', margin + 150, yPosition);
-  doc.text('Next Due', margin + 175, yPosition);
-  doc.text('Failure Reason', margin + 200, yPosition);
-  doc.text('Action Taken', margin + 225, yPosition);
+  doc.text('Visual', margin + 95, yPosition);
+  doc.text('Electrical', margin + 105, yPosition);
+  doc.text('Frequency', margin + 120, yPosition);
+  doc.text('Next Due', margin + 145, yPosition);
+  doc.text('Failure Reason', margin + 170, yPosition);
+  doc.text('Action Taken', margin + 190, yPosition);
   yPosition += 7;
 
   // Table content
@@ -192,21 +192,21 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
 
     // Add vision inspection and electrical test status
     doc.text(result.visionInspection ? '✓' : '✗', margin + 95, yPosition);
-    doc.text(result.electricalTest ? '✓' : '✗', margin + 125, yPosition);
+    doc.text(result.electricalTest ? '✓' : '✗', margin + 105, yPosition);
 
     // Add frequency and next due date
-    doc.text(getFrequencyLabel(result.frequency), margin + 150, yPosition);
-    doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 175, yPosition);
+    doc.text(getFrequencyLabel(result.frequency), margin + 120, yPosition);
+    doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 145, yPosition);
 
     // Add failure reason and action taken (only for failed items)
     if (result.result === 'fail') {
       const failureReason = result.failureReason || 'Not specified';
       const actionTaken = result.actionTaken || 'Not specified';
-      doc.text(failureReason.charAt(0).toUpperCase() + failureReason.slice(1), margin + 200, yPosition);
-      doc.text(actionTaken.charAt(0).toUpperCase() + actionTaken.slice(1), margin + 225, yPosition);
+      doc.text(failureReason.charAt(0).toUpperCase() + failureReason.slice(1), margin + 170, yPosition);
+      doc.text(actionTaken.charAt(0).toUpperCase() + actionTaken.slice(1), margin + 190, yPosition);
     } else {
-      doc.text('-', margin + 200, yPosition);
-      doc.text('-', margin + 225, yPosition);
+      doc.text('-', margin + 170, yPosition);
+      doc.text('-', margin + 190, yPosition);
     }
 
     yPosition += 6;
