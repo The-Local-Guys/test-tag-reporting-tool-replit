@@ -150,15 +150,17 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   yPosition += 10;
 
   // Table headers
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
   doc.text('Asset#', margin, yPosition);
-  doc.text('Item', margin + 20, yPosition);
-  doc.text('Location', margin + 55, yPosition);
-  doc.text('Class', margin + 85, yPosition);
-  doc.text('Result', margin + 105, yPosition);
-  doc.text('Frequency', margin + 125, yPosition);
-  doc.text('Next Due', margin + 155, yPosition);
+  doc.text('Item', margin + 15, yPosition);
+  doc.text('Location', margin + 40, yPosition);
+  doc.text('Class', margin + 65, yPosition);
+  doc.text('Result', margin + 80, yPosition);
+  doc.text('Frequency', margin + 100, yPosition);
+  doc.text('Next Due', margin + 125, yPosition);
+  doc.text('Failure Reason', margin + 150, yPosition);
+  doc.text('Action Taken', margin + 175, yPosition);
   yPosition += 7;
 
   // Table content
@@ -172,23 +174,34 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
 
     // Use index + 1 as the asset number (count)
     doc.text((index + 1).toString(), margin, yPosition);
-    doc.text(result.itemName, margin + 20, yPosition);
-    doc.text(result.location, margin + 55, yPosition);
-    doc.text(result.classification.toUpperCase(), margin + 85, yPosition);
+    doc.text(result.itemName, margin + 15, yPosition);
+    doc.text(result.location, margin + 40, yPosition);
+    doc.text(result.classification.toUpperCase(), margin + 65, yPosition);
     
     // Color code the result
     if (result.result === 'pass') {
       doc.setTextColor(0, 128, 0); // Green
-      doc.text('PASS', margin + 105, yPosition);
+      doc.text('PASS', margin + 80, yPosition);
     } else {
       doc.setTextColor(255, 0, 0); // Red
-      doc.text('FAIL', margin + 105, yPosition);
+      doc.text('FAIL', margin + 80, yPosition);
     }
     doc.setTextColor(0, 0, 0); // Reset to black
 
     // Add frequency and next due date
-    doc.text(getFrequencyLabel(result.frequency), margin + 125, yPosition);
-    doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 155, yPosition);
+    doc.text(getFrequencyLabel(result.frequency), margin + 100, yPosition);
+    doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 125, yPosition);
+
+    // Add failure reason and action taken (only for failed items)
+    if (result.result === 'fail') {
+      const failureReason = result.failureReason || 'Not specified';
+      const actionTaken = result.actionTaken || 'Not specified';
+      doc.text(failureReason.charAt(0).toUpperCase() + failureReason.slice(1), margin + 150, yPosition);
+      doc.text(actionTaken.charAt(0).toUpperCase() + actionTaken.slice(1), margin + 175, yPosition);
+    } else {
+      doc.text('-', margin + 150, yPosition);
+      doc.text('-', margin + 175, yPosition);
+    }
 
     yPosition += 6;
   });
