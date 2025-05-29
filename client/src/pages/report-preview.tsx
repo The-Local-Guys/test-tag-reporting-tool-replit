@@ -257,7 +257,7 @@ export default function ReportPreview() {
 
       {/* Fixed Bottom Actions */}
       <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 p-4 space-y-3">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <Button 
             onClick={handleExportPDF}
             className="bg-primary text-white py-3 font-medium touch-button"
@@ -272,14 +272,6 @@ export default function ReportPreview() {
           >
             <FileText className="mr-1 h-4 w-4" />
             Excel
-          </Button>
-          <Button 
-            variant="outline"
-            onClick={handleEmailReport}
-            className="py-3 font-medium touch-button"
-          >
-            <Mail className="mr-1 h-4 w-4" />
-            Email
           </Button>
         </div>
         <Button 
