@@ -33,6 +33,12 @@ export default function AdminDashboard() {
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
   const [addingToSession, setAddingToSession] = useState<any>(null);
   const [editingSession, setEditingSession] = useState<any>(null);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
   const [editSessionData, setEditSessionData] = useState({
     clientName: "",
     technicianName: "",
@@ -218,6 +224,45 @@ export default function AdminDashboard() {
       toast({
         title: "Error",
         description: "Failed to update test result",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Change password mutation
+  const changePasswordMutation = useMutation({
+    mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
+      const response = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to change password");
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Password updated successfully",
+      });
+      setIsChangePasswordModalOpen(false);
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to change password",
         variant: "destructive",
       });
     },
@@ -528,16 +573,27 @@ export default function AdminDashboard() {
               <p className="text-gray-600">Welcome, {user?.fullName}</p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => logout()}
-            disabled={isLoggingOut}
-            className="flex items-center space-x-2"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>{isLoggingOut ? "Signing out..." : "Sign out"}</span>
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsChangePasswordModalOpen(true)}
+              className="flex items-center space-x-2"
+            >
+              <UserCheck className="w-4 h-4" />
+              <span>Change Password</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => logout()}
+              disabled={isLoggingOut}
+              className="flex items-center space-x-2"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>{isLoggingOut ? "Signing out..." : "Sign out"}</span>
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -1508,6 +1564,107 @@ export default function AdminDashboard() {
                 className="bg-green-600 hover:bg-green-700"
               >
                 {addItemMutation.isPending ? "Adding..." : "Add Item"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Change Password Modal */}
+      <Modal
+        isOpen={isChangePasswordModalOpen}
+        onClose={() => {
+          setIsChangePasswordModalOpen(false);
+          setPasswordData({
+            currentPassword: "",
+            newPassword: "",
+            confirmPassword: "",
+          });
+        }}
+        title="Change Password"
+        className="max-w-md"
+      >
+        {changePasswordMutation.isPending ? (
+          <div className="flex justify-center py-8">
+            <LoadingSpinner />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="currentPassword">Current Password *</Label>
+              <Input
+                id="currentPassword"
+                type="password"
+                value={passwordData.currentPassword}
+                onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                placeholder="Enter current password"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">New Password *</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                value={passwordData.newPassword}
+                onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                placeholder="Enter new password"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm New Password *</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={passwordData.confirmPassword}
+                onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                placeholder="Confirm new password"
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsChangePasswordModalOpen(false);
+                  setPasswordData({
+                    currentPassword: "",
+                    newPassword: "",
+                    confirmPassword: "",
+                  });
+                }}
+                disabled={changePasswordMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (passwordData.newPassword !== passwordData.confirmPassword) {
+                    toast({
+                      title: "Error",
+                      description: "New passwords do not match",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  if (passwordData.newPassword.length < 6) {
+                    toast({
+                      title: "Error",
+                      description: "Password must be at least 6 characters long",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  changePasswordMutation.mutate({
+                    currentPassword: passwordData.currentPassword,
+                    newPassword: passwordData.newPassword,
+                  });
+                }}
+                disabled={changePasswordMutation.isPending || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {changePasswordMutation.isPending ? "Changing..." : "Change Password"}
               </Button>
             </div>
           </div>
