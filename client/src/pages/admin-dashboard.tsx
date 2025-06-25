@@ -34,8 +34,17 @@ export default function AdminDashboard() {
   const [addingToSession, setAddingToSession] = useState<any>(null);
   const [editingSession, setEditingSession] = useState<any>(null);
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
+  const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [editUserData, setEditUserData] = useState({
+    username: "",
+    fullName: "",
+    role: "technician" as "technician" | "support_center" | "super_admin",
     newPassword: "",
     confirmPassword: "",
   });
@@ -224,6 +233,47 @@ export default function AdminDashboard() {
       toast({
         title: "Error",
         description: "Failed to update test result",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Edit user mutation
+  const editUserMutation = useMutation({
+    mutationFn: async ({ userId, data }: { userId: number; data: any }) => {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to update user");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "Success",
+        description: "User updated successfully",
+      });
+      setIsEditUserModalOpen(false);
+      setEditingUser(null);
+      setEditUserData({
+        username: "",
+        fullName: "",
+        role: "technician",
+        newPassword: "",
+        confirmPassword: "",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update user",
         variant: "destructive",
       });
     },
@@ -442,6 +492,68 @@ export default function AdminDashboard() {
         actionTaken: editResultData.actionTaken,
         notes: editResultData.notes,
       },
+    });
+  };
+
+  const handleEditUser = (user: any) => {
+    setEditingUser(user);
+    setEditUserData({
+      username: user.username,
+      fullName: user.fullName,
+      role: user.role,
+      newPassword: "",
+      confirmPassword: "",
+    });
+    setIsEditUserModalOpen(true);
+  };
+
+  const handleUpdateUser = () => {
+    if (!editingUser) return;
+
+    // Validate required fields
+    if (!editUserData.username || !editUserData.fullName) {
+      toast({
+        title: "Error",
+        description: "Username and Full Name are required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate password if provided
+    if (editUserData.newPassword || editUserData.confirmPassword) {
+      if (editUserData.newPassword !== editUserData.confirmPassword) {
+        toast({
+          title: "Error",
+          description: "Passwords do not match",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (editUserData.newPassword.length < 6) {
+        toast({
+          title: "Error",
+          description: "Password must be at least 6 characters long",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    const updateData: any = {
+      username: editUserData.username,
+      fullName: editUserData.fullName,
+      role: editUserData.role,
+    };
+
+    // Include password only if provided
+    if (editUserData.newPassword) {
+      updateData.password = editUserData.newPassword;
+    }
+
+    editUserMutation.mutate({
+      userId: editingUser.id,
+      data: updateData,
     });
   };
 
@@ -713,6 +825,15 @@ export default function AdminDashboard() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEditUser(user)}
+                                className="flex items-center space-x-1"
+                              >
+                                <Edit className="w-4 h-4" />
+                                <span>Edit</span>
+                              </Button>
                               <Switch
                                 checked={user.isActive}
                                 onCheckedChange={(checked) =>
@@ -1665,6 +1786,123 @@ export default function AdminDashboard() {
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 {changePasswordMutation.isPending ? "Changing..." : "Change Password"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Edit User Modal */}
+      <Modal
+        isOpen={isEditUserModalOpen}
+        onClose={() => {
+          setIsEditUserModalOpen(false);
+          setEditingUser(null);
+          setEditUserData({
+            username: "",
+            fullName: "",
+            role: "technician",
+            newPassword: "",
+            confirmPassword: "",
+          });
+        }}
+        title="Edit User"
+        className="max-w-md"
+      >
+        {editUserMutation.isPending ? (
+          <div className="flex justify-center py-8">
+            <LoadingSpinner />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="editUsername">Username *</Label>
+              <Input
+                id="editUsername"
+                type="text"
+                value={editUserData.username}
+                onChange={(e) => setEditUserData(prev => ({ ...prev, username: e.target.value }))}
+                placeholder="Enter username"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="editFullName">Full Name *</Label>
+              <Input
+                id="editFullName"
+                type="text"
+                value={editUserData.fullName}
+                onChange={(e) => setEditUserData(prev => ({ ...prev, fullName: e.target.value }))}
+                placeholder="Enter full name"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="editRole">Role *</Label>
+              <Select
+                value={editUserData.role}
+                onValueChange={(value: "technician" | "support_center" | "super_admin") => 
+                  setEditUserData(prev => ({ ...prev, role: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="technician">Technician</SelectItem>
+                  <SelectItem value="support_center">Support Center</SelectItem>
+                  <SelectItem value="super_admin">Super Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="editNewPassword">New Password (optional)</Label>
+              <Input
+                id="editNewPassword"
+                type="password"
+                value={editUserData.newPassword}
+                onChange={(e) => setEditUserData(prev => ({ ...prev, newPassword: e.target.value }))}
+                placeholder="Leave blank to keep current password"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="editConfirmPassword">Confirm New Password</Label>
+              <Input
+                id="editConfirmPassword"
+                type="password"
+                value={editUserData.confirmPassword}
+                onChange={(e) => setEditUserData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                placeholder="Confirm new password"
+                disabled={!editUserData.newPassword}
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditUserModalOpen(false);
+                  setEditingUser(null);
+                  setEditUserData({
+                    username: "",
+                    fullName: "",
+                    role: "technician",
+                    newPassword: "",
+                    confirmPassword: "",
+                  });
+                }}
+                disabled={editUserMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUpdateUser}
+                disabled={editUserMutation.isPending || !editUserData.username || !editUserData.fullName}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {editUserMutation.isPending ? "Updating..." : "Update User"}
               </Button>
             </div>
           </div>

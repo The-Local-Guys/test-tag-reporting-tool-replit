@@ -23,6 +23,7 @@ export interface IStorage {
   // Admin operations
   getAllUsers(): Promise<User[]>;
   updateUserStatus(userId: number, isActive: boolean): Promise<User>;
+  updateUser(userId: number, data: Partial<InsertUser>): Promise<User>;
   getAllTestSessions(): Promise<(TestSession & { technicianFullName?: string })[]>;
   getSessionsByUser(userId: number): Promise<TestSession[]>;
   updateTestSession(sessionId: number, data: Partial<InsertTestSession>): Promise<TestSession>;
@@ -93,6 +94,25 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(users)
       .set({ isActive, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async updateUser(userId: number, data: Partial<InsertUser>): Promise<User> {
+    const updateData: any = { 
+      ...data, 
+      updatedAt: new Date() 
+    };
+    
+    // Hash password if provided
+    if (data.password) {
+      updateData.password = await bcrypt.hash(data.password, 10);
+    }
+    
+    const [user] = await db
+      .update(users)
+      .set(updateData)
       .where(eq(users.id, userId))
       .returning();
     return user;

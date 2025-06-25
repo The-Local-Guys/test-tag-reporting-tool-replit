@@ -174,6 +174,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update user (admin only)
+  app.patch("/api/admin/users/:id", requireAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      // Validate request body
+      const { username, fullName, role, password } = req.body;
+      
+      if (!username || !fullName) {
+        return res.status(400).json({ message: "Username and full name are required" });
+      }
+
+      if (password && password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters long" });
+      }
+
+      // Check if username is already taken by another user
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser && existingUser.id !== userId) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+
+      const updateData: any = {
+        username,
+        fullName,
+        role,
+      };
+
+      if (password) {
+        updateData.password = password;
+      }
+
+      const updatedUser = await storage.updateUser(userId, updateData);
+      const { password: _, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Update user error:", error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
   // Create new user (admin only)
   app.post("/api/admin/users", requireAdmin, async (req, res) => {
     try {
