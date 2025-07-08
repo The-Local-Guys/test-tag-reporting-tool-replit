@@ -71,6 +71,8 @@ export function useSession() {
       localStorage.setItem('currentLocation', result.location);
       
       queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/report`] });
+      // Also invalidate the next asset number query to get the updated count
+      queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/next-asset-number`] });
     },
     onError: (error) => {
       console.error('Mutation error:', error);
