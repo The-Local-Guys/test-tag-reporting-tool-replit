@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Edit2, FileText, CheckCircle, Plus, RotateCcw, LogOut } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useAuth } from '@/hooks/useAuth';
@@ -34,6 +35,7 @@ const emergencyItems = [
 export default function ItemSelection() {
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [customItemName, setCustomItemName] = useState('');
+  const [showNewReportConfirm, setShowNewReportConfirm] = useState(false);
   const { sessionData, currentLocation, setCurrentLocation, clearSession } = useSession();
   const { logout, isLoggingOut } = useAuth();
   const [, setLocation] = useLocation();
@@ -58,6 +60,10 @@ export default function ItemSelection() {
   };
 
   const handleNewJob = () => {
+    setShowNewReportConfirm(true);
+  };
+
+  const confirmNewReport = () => {
     // Clear any existing session data and navigate to setup page
     clearSession();
     setLocation('/');
@@ -65,6 +71,7 @@ export default function ItemSelection() {
       title: "New Job Started",
       description: "Ready to begin a fresh test session.",
     });
+    setShowNewReportConfirm(false);
   };
 
   const summary = sessionData?.summary || {
@@ -213,6 +220,24 @@ export default function ItemSelection() {
           </Button>
         </div>
       </Modal>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showNewReportConfirm} onOpenChange={setShowNewReportConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Start New Report?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will finish the current report and start a new test session. You can still access this report later from the admin dashboard.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmNewReport}>
+              Yes, Start New Report
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

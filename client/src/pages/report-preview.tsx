@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Modal } from '@/components/ui/modal';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ArrowLeft, Download, Mail, Share, Plus, Edit2, FileText, RefreshCw } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
@@ -21,6 +22,7 @@ export default function ReportPreview() {
   const { toast } = useToast();
   const [editingResult, setEditingResult] = useState<TestResult | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [showNewReportConfirm, setShowNewReportConfirm] = useState(false);
 
   const editForm = useForm({
     resolver: zodResolver(insertTestResultSchema.omit({ sessionId: true, assetNumber: true })),
@@ -83,6 +85,10 @@ export default function ReportPreview() {
 
 
   const handleNewReport = () => {
+    setShowNewReportConfirm(true);
+  };
+
+  const confirmNewReport = () => {
     // Clear current session data
     clearSession();
     // Clear any cached session data
@@ -93,6 +99,7 @@ export default function ReportPreview() {
       title: "Starting new report",
       description: "Ready to create a new test session.",
     });
+    setShowNewReportConfirm(false);
   };
 
   const handleNewJob = () => {
@@ -458,6 +465,24 @@ export default function ReportPreview() {
           Finish Report / Start New Report
         </Button>
       </div>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showNewReportConfirm} onOpenChange={setShowNewReportConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Start New Report?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will finish the current report and start a new test session. You can still access this report later from the admin dashboard.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmNewReport}>
+              Yes, Start New Report
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
