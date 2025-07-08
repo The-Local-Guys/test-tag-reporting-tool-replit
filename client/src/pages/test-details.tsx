@@ -257,9 +257,10 @@ export default function TestDetails() {
           </Label>
           <Input
             id="assetNumber"
-            placeholder="Auto-generated asset number"
+            placeholder="1"
             {...form.register('assetNumber')}
             className={`text-base ${form.formState.errors.assetNumber ? 'border-red-500' : ''}`}
+            type="text"
           />
           {form.formState.errors.assetNumber && (
             <div className="text-red-500 text-xs">
@@ -267,7 +268,7 @@ export default function TestDetails() {
             </div>
           )}
           <div className="text-xs text-gray-500">
-            Asset number for tracking and identification
+            Asset number for tracking and identification (editable)
           </div>
         </div>
 

@@ -52,7 +52,7 @@ export default function EmergencyTestDetails() {
     resolver: zodResolver(emergencyTestSchema),
     defaultValues: {
       location: '',
-      assetNumber: '',
+      assetNumber: '1',
       classification: 'exit_sign',
       result: 'pass',
       frequency: 'sixmonthly',
@@ -241,13 +241,19 @@ export default function EmergencyTestDetails() {
               <Input
                 id="assetNumber"
                 {...form.register('assetNumber')}
-                placeholder={isLoadingAssetNumber ? "Loading..." : "Auto-generated"}
-                className="text-base bg-gray-50 dark:bg-gray-800"
-                readOnly
+                placeholder={isLoadingAssetNumber ? "Loading..." : "1"}
+                className="text-base"
+                type="text"
               />
               {assetNumberError && (
                 <p className="text-red-500 text-sm mt-1">Error loading asset number</p>
               )}
+              {form.formState.errors.assetNumber && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.assetNumber.message}</p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">
+                Asset number for tracking and identification (editable)
+              </p>
             </div>
 
             <div>
