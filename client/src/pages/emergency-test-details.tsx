@@ -38,7 +38,7 @@ type EmergencyTestForm = z.infer<typeof emergencyTestSchema>;
 export default function EmergencyTestDetails() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { sessionData, addTestResult, getNextAssetNumber } = useSession();
+  const { sessionData, addTestResult } = useSession();
   const [photoData, setPhotoData] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
 
@@ -73,10 +73,10 @@ export default function EmergencyTestDetails() {
   // Auto-generate asset number when component mounts
   useEffect(() => {
     if (sessionData?.session?.id) {
-      const nextAssetNumber = getNextAssetNumber();
+      const nextAssetNumber = sessionData.results.length + 1;
       form.setValue('assetNumber', nextAssetNumber.toString());
     }
-  }, [sessionData?.session?.id, getNextAssetNumber, form]);
+  }, [sessionData?.session?.id, sessionData?.results, form]);
 
   const onSubmit = async (data: EmergencyTestForm) => {
     if (!sessionData?.session?.id) {
@@ -100,7 +100,6 @@ export default function EmergencyTestDetails() {
 
     try {
       await addTestResult({
-        sessionId: sessionData.session.id,
         assetNumber: data.assetNumber,
         itemName: itemName,
         itemType: itemType,
