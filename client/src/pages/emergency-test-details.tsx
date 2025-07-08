@@ -57,8 +57,7 @@ export default function EmergencyTestDetails() {
       frequency: 'sixmonthly',
       manufacturerInfo: '',
       installationDate: '',
-      batteryVoltage: '',
-      luxLevel: '',
+      maintenanceType: 'maintained',
       visualInspection: true,
       dischargeTest: false,
       switchingTest: false,
@@ -71,7 +70,7 @@ export default function EmergencyTestDetails() {
   const watchClassification = form.watch('classification');
 
   // Get next asset number from API
-  const { data: nextAssetData } = useQuery<{nextAssetNumber: number}>({
+  const { data: nextAssetData, isLoading: isLoadingAssetNumber, error: assetNumberError } = useQuery<{nextAssetNumber: number}>({
     queryKey: [`/api/sessions/${sessionData?.session?.id}/next-asset-number`],
     enabled: !!sessionData?.session?.id,
   });
@@ -238,9 +237,13 @@ export default function EmergencyTestDetails() {
               <Input
                 id="assetNumber"
                 {...form.register('assetNumber')}
-                placeholder="Auto-generated"
-                className="text-base"
+                placeholder={isLoadingAssetNumber ? "Loading..." : "Auto-generated"}
+                className="text-base bg-gray-50 dark:bg-gray-800"
+                readOnly
               />
+              {assetNumberError && (
+                <p className="text-red-500 text-sm mt-1">Error loading asset number</p>
+              )}
             </div>
 
             <div>
