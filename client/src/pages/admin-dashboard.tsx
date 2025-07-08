@@ -902,6 +902,7 @@ export default function AdminDashboard() {
                       <TableRow>
                         <TableHead>Client</TableHead>
                         <TableHead>Technician</TableHead>
+                        <TableHead>Service Type</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Location</TableHead>
                         <TableHead>Items Tested</TableHead>
@@ -914,6 +915,11 @@ export default function AdminDashboard() {
                         <TableRow key={session.id}>
                           <TableCell className="font-medium">{session.clientName}</TableCell>
                           <TableCell>{session.technicianFullName || session.technicianName}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={session.serviceType === 'emergency_exit_light' ? 'bg-red-50 text-red-700' : 'bg-blue-50 text-blue-700'}>
+                              {session.serviceType === 'emergency_exit_light' ? 'Emergency Exit Light' : 'Electrical Test & Tag'}
+                            </Badge>
+                          </TableCell>
                           <TableCell>
                             {new Date(session.testDate).toLocaleDateString('en-AU')}
                           </TableCell>
