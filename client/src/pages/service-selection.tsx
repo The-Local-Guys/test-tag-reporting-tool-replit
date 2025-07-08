@@ -79,7 +79,7 @@ export default function ServiceSelection() {
               </div>
               <CardTitle className="text-xl">Emergency Exit Light Testing</CardTitle>
               <CardDescription className="text-base">
-                Emergency lighting and exit sign testing compliant with AS/NZS 2293.2:2019
+                Emergency lighting and exit sign testing compliant with AS 2293.2:2019
               </CardDescription>
             </CardHeader>
             <CardContent>

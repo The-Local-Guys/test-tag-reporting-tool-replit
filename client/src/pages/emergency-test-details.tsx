@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { emergencyClassifications, emergencyFailureReasons, emergencyFrequencies } from '@shared/schema';
 
-// Emergency Exit Light Test Schema following AS/NZS 2293.2:2019
+// Emergency Exit Light Test Schema following AS 2293.2:2019
 const emergencyTestSchema = z.object({
   location: z.string().min(1, 'Location is required'),
   assetNumber: z.string().min(1, 'Asset number is required'),
@@ -288,7 +288,7 @@ export default function EmergencyTestDetails() {
         {/* Testing Requirements (AS/NZS 2293.2:2019) */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">AS/NZS 2293.2:2019 Testing</CardTitle>
+            <CardTitle className="text-lg">AS 2293.2:2019 Testing</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3">

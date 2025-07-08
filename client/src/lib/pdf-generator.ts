@@ -284,7 +284,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     // Test criteria section header
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('Test Criteria Summary (AS/NZS 2293.2:2019)', margin, yPosition);
+    doc.text('Test Criteria Summary (AS 2293.2:2019)', margin, yPosition);
     yPosition += 12;
     
     doc.setFontSize(10);
@@ -336,7 +336,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   doc.setFontSize(8);
   doc.setFont('helvetica', 'italic');
   const footerText = session.serviceType === 'emergency_exit_light' 
-    ? 'This report complies with AS/NZS 2293.2:2019 emergency lighting standards.'
+    ? 'This report complies with AS 2293.2:2019 emergency lighting standards.'
     : 'This report complies with AS/NZS 3760 electrical safety standards.';
   doc.text(
     footerText,

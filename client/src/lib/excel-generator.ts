@@ -169,7 +169,7 @@ export function generateExcelReport(data: ReportData): Blob {
     [''],
     ['Report Generated:', new Date().toLocaleDateString()],
     ['Compliance:', session.serviceType === 'emergency_exit_light' 
-      ? 'This report complies with AS/NZS 2293.2:2019 emergency lighting standards.'
+      ? 'This report complies with AS 2293.2:2019 emergency lighting standards.'
       : (session.country === 'australia' 
         ? 'This report complies with AS/NZS 3760 electrical safety standards.'
         : 'This report complies with NZS 5262 electrical safety standards.')]
