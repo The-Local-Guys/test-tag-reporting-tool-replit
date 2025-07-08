@@ -59,8 +59,10 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   const { session, results, summary } = data;
   const doc = new jsPDF();
   
-  // Header title
-  const headerTitle = 'Electrical Safety Testing Report';
+  // Header title - different for emergency exit light testing
+  const headerTitle = session.serviceType === 'emergency_exit_light' 
+    ? 'Emergency Exit Light Testing Report'
+    : 'Electrical Safety Testing Report';
   
   // Page setup
   const pageWidth = doc.internal.pageSize.width;
@@ -149,7 +151,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   doc.text('Test Results', margin, yPosition);
   yPosition += 10;
 
-  // Table headers
+  // Table headers - different for emergency exit light testing
   doc.setFontSize(6);
   doc.setFont('helvetica', 'bold');
   doc.text('Asset#', margin, yPosition);
@@ -157,12 +159,21 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   doc.text('Location', margin + 30, yPosition);
   doc.text('Class', margin + 48, yPosition);
   doc.text('Result', margin + 62, yPosition);
-  doc.text('V', margin + 78, yPosition);
-  doc.text('E', margin + 85, yPosition);
-  doc.text('Frequency', margin + 92, yPosition);
-  doc.text('Due Date', margin + 115, yPosition);
-  doc.text('Failure Reason', margin + 135, yPosition);
-  doc.text('Action Taken', margin + 158, yPosition);
+  
+  if (session.serviceType === 'emergency_exit_light') {
+    doc.text('Manufacturer', margin + 78, yPosition);
+    doc.text('Install Date', margin + 100, yPosition);
+    doc.text('Frequency', margin + 122, yPosition);
+    doc.text('Due Date', margin + 140, yPosition);
+    doc.text('Failure Reason', margin + 158, yPosition);
+  } else {
+    doc.text('V', margin + 78, yPosition);
+    doc.text('E', margin + 85, yPosition);
+    doc.text('Frequency', margin + 92, yPosition);
+    doc.text('Due Date', margin + 115, yPosition);
+    doc.text('Failure Reason', margin + 135, yPosition);
+    doc.text('Action Taken', margin + 158, yPosition);
+  }
   yPosition += 7;
 
   // Table content
@@ -191,52 +202,144 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     }
     doc.setTextColor(0, 0, 0); // Reset to black
 
-    // Add vision inspection and electrical test status with proper tick/cross marks
-    doc.text(result.visionInspection !== false ? 'Y' : 'N', margin + 78, yPosition);
-    doc.text(result.electricalTest !== false ? 'Y' : 'N', margin + 85, yPosition);
+    if (session.serviceType === 'emergency_exit_light') {
+      // Show manufacturer and installation date for emergency exit light testing
+      doc.text(result.manufacturerInfo || 'N/A', margin + 78, yPosition);
+      doc.text(result.installationDate || 'N/A', margin + 100, yPosition);
+      doc.text(getFrequencyLabel(result.frequency), margin + 122, yPosition);
+      doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 140, yPosition);
+    } else {
+      // Add vision inspection and electrical test status with proper tick/cross marks
+      doc.text(result.visionInspection !== false ? 'Y' : 'N', margin + 78, yPosition);
+      doc.text(result.electricalTest !== false ? 'Y' : 'N', margin + 85, yPosition);
+      
+      // Add frequency and next due date
+      doc.text(getFrequencyLabel(result.frequency), margin + 92, yPosition);
+      doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 115, yPosition);
+    }
 
-    // Add frequency and next due date
-    doc.text(getFrequencyLabel(result.frequency), margin + 92, yPosition);
-    doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 115, yPosition);
-
-    // Add failure reason and action taken (only for failed items)
+    // Add failure reason (positioning differs by service type)
     if (result.result === 'fail') {
       const failureReason = result.failureReason || 'Not specified';
-      const actionTaken = result.actionTaken || 'Not specified';
       
-      // Convert 'vision' to 'Visual Inspection' for display
+      // Convert failure reason for display
       let displayFailureReason = failureReason;
-      if (failureReason === 'vision') {
-        displayFailureReason = 'Visual Inspection';
-      } else if (failureReason !== 'Not specified') {
-        displayFailureReason = failureReason.charAt(0).toUpperCase() + failureReason.slice(1);
+      if (session.serviceType === 'emergency_exit_light') {
+        // Emergency exit light failure reasons
+        if (failureReason === 'physical_damage') {
+          displayFailureReason = 'Physical Damage';
+        } else if (failureReason === 'battery_failure') {
+          displayFailureReason = 'Battery Failure';
+        } else if (failureReason === 'lamp_failure') {
+          displayFailureReason = 'Lamp Failure';
+        } else if (failureReason === 'insufficient_illumination') {
+          displayFailureReason = 'Insufficient Illumination';
+        } else if (failureReason !== 'Not specified') {
+          displayFailureReason = failureReason.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+        doc.text(displayFailureReason, margin + 158, yPosition);
+      } else {
+        // Standard electrical testing failure reasons
+        if (failureReason === 'vision') {
+          displayFailureReason = 'Visual Inspection';
+        } else if (failureReason !== 'Not specified') {
+          displayFailureReason = failureReason.charAt(0).toUpperCase() + failureReason.slice(1);
+        }
+        
+        const actionTaken = result.actionTaken || 'Not specified';
+        let displayActionTaken = actionTaken;
+        if (actionTaken === 'given') {
+          displayActionTaken = 'Given to Site Contact';
+        } else if (actionTaken === 'removed') {
+          displayActionTaken = 'Removed from Site';
+        } else if (actionTaken !== 'Not specified') {
+          displayActionTaken = actionTaken.charAt(0).toUpperCase() + actionTaken.slice(1);
+        }
+        
+        doc.text(displayFailureReason, margin + 135, yPosition);
+        doc.text(displayActionTaken, margin + 158, yPosition);
       }
-      
-      let displayActionTaken = actionTaken;
-      if (actionTaken === 'given') {
-        displayActionTaken = 'Given to Site Contact';
-      } else if (actionTaken === 'removed') {
-        displayActionTaken = 'Removed from Site';
-      } else if (actionTaken !== 'Not specified') {
-        displayActionTaken = actionTaken.charAt(0).toUpperCase() + actionTaken.slice(1);
-      }
-      
-      doc.text(displayFailureReason, margin + 135, yPosition);
-      doc.text(displayActionTaken, margin + 158, yPosition);
     } else {
-      doc.text('-', margin + 135, yPosition);
-      doc.text('-', margin + 158, yPosition);
+      if (session.serviceType === 'emergency_exit_light') {
+        doc.text('-', margin + 158, yPosition);
+      } else {
+        doc.text('-', margin + 135, yPosition);
+        doc.text('-', margin + 158, yPosition);
+      }
     }
 
     yPosition += 6;
   });
 
+  // Add emergency exit light test criteria details (AS/NZS 2293.2:2019)
+  if (session.serviceType === 'emergency_exit_light') {
+    yPosition += 10;
+    
+    // Check if we need a new page
+    if (yPosition > doc.internal.pageSize.height - 100) {
+      doc.addPage();
+      yPosition = margin;
+    }
+    
+    // Test criteria section header
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Test Criteria Summary (AS/NZS 2293.2:2019)', margin, yPosition);
+    yPosition += 12;
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    
+    // Group results by item and show test details
+    results.forEach((result, index) => {
+      if (yPosition > doc.internal.pageSize.height - 50) {
+        doc.addPage();
+        yPosition = margin;
+      }
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Asset #${index + 1} - ${result.itemName} (${result.location})`, margin, yPosition);
+      yPosition += 8;
+      
+      doc.setFont('helvetica', 'normal');
+      doc.text(`• Visual Inspection (Physical condition, mounting, damage): ${result.visionInspection ? 'PASS' : 'FAIL'}`, margin + 5, yPosition);
+      yPosition += 6;
+      doc.text(`• 90-Minute Discharge Test (Battery backup duration): ${result.dischargeTest ? 'PASS' : 'FAIL'}`, margin + 5, yPosition);
+      yPosition += 6;
+      doc.text(`• Automatic Switching Test (Power failure simulation): ${result.switchingTest ? 'PASS' : 'FAIL'}`, margin + 5, yPosition);
+      yPosition += 6;
+      doc.text(`• Charging Circuit Test (Battery charging verification): ${result.chargingTest ? 'PASS' : 'FAIL'}`, margin + 5, yPosition);
+      yPosition += 6;
+      
+      // Show battery voltage and lux level if available
+      if (result.batteryVoltage) {
+        doc.text(`• Battery Voltage: ${result.batteryVoltage}V`, margin + 5, yPosition);
+        yPosition += 6;
+      }
+      if (result.luxLevel) {
+        doc.text(`• Lux Level: ${result.luxLevel} lux`, margin + 5, yPosition);
+        yPosition += 6;
+      }
+      
+      // Show notes if any
+      if (result.notes) {
+        doc.text(`• Additional Notes: ${result.notes}`, margin + 5, yPosition);
+        yPosition += 6;
+      }
+      
+      yPosition += 6; // Space between items
+    });
+  }
+
   // Add footer
   const footerY = doc.internal.pageSize.height - 20;
   doc.setFontSize(8);
   doc.setFont('helvetica', 'italic');
+  const footerText = session.serviceType === 'emergency_exit_light' 
+    ? 'This report complies with AS/NZS 2293.2:2019 emergency lighting standards.'
+    : 'This report complies with AS/NZS 3760 electrical safety standards.';
   doc.text(
-    'This report complies with AS/NZS 3760 electrical safety standards.',
+    footerText,
     pageWidth / 2,
     footerY,
     { align: 'center' }
