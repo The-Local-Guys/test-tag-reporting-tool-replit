@@ -67,8 +67,9 @@ export function useAuth() {
     },
     onSuccess: () => {
       queryClient.clear();
-      // Clear login mode from session storage
+      // Clear login mode and selected service from session storage
       sessionStorage.removeItem('loginMode');
+      sessionStorage.removeItem('selectedService');
       window.location.reload();
     },
   });
