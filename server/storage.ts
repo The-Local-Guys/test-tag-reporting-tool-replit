@@ -229,8 +229,8 @@ export class DatabaseStorage implements IStorage {
       // Use the pool directly for raw SQL execution with all fields including emergency-specific ones
       const query = `
         INSERT INTO test_results 
-        (session_id, asset_number, item_name, item_type, location, classification, result, frequency, failure_reason, action_taken, notes, photo_data, vision_inspection, electrical_test, maintenance_type, discharge_test, switching_test, charging_test, manufacturer_info, installation_date)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+        (session_id, asset_number, item_name, item_type, location, classification, result, frequency, failure_reason, action_taken, notes, photo_data, vision_inspection, electrical_test, maintenance_type, globe_type, discharge_test, switching_test, charging_test, manufacturer_info, installation_date)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
         RETURNING *
       `;
       
@@ -252,6 +252,7 @@ export class DatabaseStorage implements IStorage {
         insertResult.electricalTest !== undefined ? insertResult.electricalTest : true,
         // Emergency exit light specific fields
         insertResult.maintenanceType,
+        insertResult.globeType,
         insertResult.dischargeTest !== undefined ? insertResult.dischargeTest : false,
         insertResult.switchingTest !== undefined ? insertResult.switchingTest : false,
         insertResult.chargingTest !== undefined ? insertResult.chargingTest : false,

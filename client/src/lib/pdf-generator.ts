@@ -317,6 +317,11 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         doc.text(`• Maintenance Type: ${maintenanceTypeDisplay}`, margin + 5, yPosition);
         yPosition += 6;
       }
+      if (result.globeType) {
+        const globeTypeDisplay = result.globeType === 'led' ? 'LED' : 'Halogen';
+        doc.text(`• Globe Type: ${globeTypeDisplay}`, margin + 5, yPosition);
+        yPosition += 6;
+      }
       
       // Show notes if any
       if (result.notes) {

@@ -13,7 +13,7 @@ import { ArrowLeft, CheckCircle, XCircle, Camera, Save } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
-import { emergencyClassifications, emergencyFailureReasons, emergencyFrequencies, maintenanceTypes } from '@shared/schema';
+import { emergencyClassifications, emergencyFailureReasons, emergencyFrequencies, maintenanceTypes, globeTypes } from '@shared/schema';
 
 // Emergency Exit Light Test Schema following AS 2293.2:2019
 const emergencyTestSchema = z.object({
@@ -25,6 +25,7 @@ const emergencyTestSchema = z.object({
   manufacturerInfo: z.string().optional(),
   installationDate: z.string().optional(),
   maintenanceType: z.enum(['maintained', 'non_maintained']).optional(),
+  globeType: z.enum(['led', 'halogen']).optional(),
   visualInspection: z.boolean().default(true),
   dischargeTest: z.boolean().default(false),
   switchingTest: z.boolean().default(false),
@@ -58,6 +59,7 @@ export default function EmergencyTestDetails() {
       manufacturerInfo: '',
       installationDate: '',
       maintenanceType: 'maintained',
+      globeType: 'led',
       visualInspection: true,
       dischargeTest: false,
       switchingTest: false,
@@ -119,6 +121,7 @@ export default function EmergencyTestDetails() {
         electricalTest: data.dischargeTest,
         // Emergency specific fields
         maintenanceType: data.maintenanceType || null,
+        globeType: data.globeType || null,
         dischargeTest: data.dischargeTest,
         switchingTest: data.switchingTest,
         chargingTest: data.chargingTest,
@@ -142,6 +145,7 @@ export default function EmergencyTestDetails() {
         electricalTest: data.dischargeTest, // Using electricalTest field for discharge test
         // Emergency specific fields
         maintenanceType: data.maintenanceType || null,
+        globeType: data.globeType || null,
         dischargeTest: data.dischargeTest,
         switchingTest: data.switchingTest,
         chargingTest: data.chargingTest,
@@ -349,6 +353,22 @@ export default function EmergencyTestDetails() {
                 <SelectContent>
                   <SelectItem value="maintained">Maintained</SelectItem>
                   <SelectItem value="non_maintained">Non-Maintained</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="globeType">Globe Type</Label>
+              <Select 
+                value={form.watch('globeType') || ''} 
+                onValueChange={(value) => form.setValue('globeType', value as 'led' | 'halogen')}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select globe type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="led">LED</SelectItem>
+                  <SelectItem value="halogen">Halogen</SelectItem>
                 </SelectContent>
               </Select>
             </div>
