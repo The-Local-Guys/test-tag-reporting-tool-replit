@@ -146,7 +146,7 @@ export default function TestDetails() {
 
     const formValues = form.getValues();
     const testData: Omit<InsertTestResult, 'sessionId'> = {
-      // Remove assetNumber - let backend auto-assign sequential numbers
+      assetNumber: formValues.assetNumber,
       itemName: currentItem.name,
       itemType: currentItem.type,
       location: formValues.location,
@@ -247,6 +247,27 @@ export default function TestDetails() {
           )}
           <div className="text-xs text-gray-500">
             This will be remembered for the next item
+          </div>
+        </div>
+
+        {/* Asset Number Input */}
+        <div className="space-y-2">
+          <Label htmlFor="assetNumber" className="flex items-center text-sm font-medium text-gray-700">
+            🏷️ Asset Number <span className="text-red-500 ml-1">*</span>
+          </Label>
+          <Input
+            id="assetNumber"
+            placeholder="Auto-generated asset number"
+            {...form.register('assetNumber')}
+            className={`text-base ${form.formState.errors.assetNumber ? 'border-red-500' : ''}`}
+          />
+          {form.formState.errors.assetNumber && (
+            <div className="text-red-500 text-xs">
+              {form.formState.errors.assetNumber.message}
+            </div>
+          )}
+          <div className="text-xs text-gray-500">
+            Asset number for tracking and identification
           </div>
         </div>
 
