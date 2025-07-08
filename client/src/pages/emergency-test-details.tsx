@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, CheckCircle, XCircle, Camera, Save } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
 import { emergencyClassifications, emergencyFailureReasons, emergencyFrequencies } from '@shared/schema';
 
 // Emergency Exit Light Test Schema following AS/NZS 2293.2:2019
@@ -70,13 +71,18 @@ export default function EmergencyTestDetails() {
   const watchResult = form.watch('result');
   const watchClassification = form.watch('classification');
 
-  // Auto-generate asset number when component mounts
+  // Get next asset number from API
+  const { data: nextAssetData } = useQuery<{nextAssetNumber: number}>({
+    queryKey: [`/api/sessions/${sessionData?.session?.id}/next-asset-number`],
+    enabled: !!sessionData?.session?.id,
+  });
+
+  // Auto-generate asset number when next asset data changes
   useEffect(() => {
-    if (sessionData?.session?.id) {
-      const nextAssetNumber = sessionData.results.length + 1;
-      form.setValue('assetNumber', nextAssetNumber.toString());
+    if (nextAssetData?.nextAssetNumber) {
+      form.setValue('assetNumber', nextAssetData.nextAssetNumber.toString());
     }
-  }, [sessionData?.session?.id, sessionData?.results, form]);
+  }, [nextAssetData, form]);
 
   const onSubmit = async (data: EmergencyTestForm) => {
     if (!sessionData?.session?.id) {
@@ -237,7 +243,6 @@ export default function EmergencyTestDetails() {
                 {...form.register('assetNumber')}
                 placeholder="Auto-generated"
                 className="text-base"
-                readOnly
               />
             </div>
 
