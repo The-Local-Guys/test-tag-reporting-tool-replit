@@ -39,7 +39,7 @@ type EmergencyTestForm = z.infer<typeof emergencyTestSchema>;
 export default function EmergencyTestDetails() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { sessionData, addTestResult } = useSession();
+  const { sessionData, addResult } = useSession();
   const [photoData, setPhotoData] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
 
@@ -129,7 +129,7 @@ export default function EmergencyTestDetails() {
         installationDate: data.installationDate || null,
       });
 
-      await addTestResult({
+      await addResult({
         assetNumber: data.assetNumber,
         itemName: itemName,
         itemType: itemType,
