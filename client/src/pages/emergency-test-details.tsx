@@ -198,7 +198,7 @@ export default function EmergencyTestDetails() {
             </Button>
             <div>
               <h1 className="text-xl font-semibold">Emergency Exit Light Test</h1>
-              <div className="text-red-100 text-sm mt-1">AS/NZS 2293.2:2019 Compliance</div>
+              <div className="text-red-100 text-sm mt-1">AS 2293.2:2019 Compliance</div>
             </div>
           </div>
         </div>
@@ -285,7 +285,7 @@ export default function EmergencyTestDetails() {
           </CardContent>
         </Card>
 
-        {/* Testing Requirements (AS/NZS 2293.2:2019) */}
+        {/* Testing Requirements (AS 2293.2:2019) */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">AS 2293.2:2019 Testing</CardTitle>
