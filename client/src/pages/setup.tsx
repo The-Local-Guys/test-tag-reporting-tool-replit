@@ -48,8 +48,12 @@ export default function Setup() {
     // Clear any existing session data first
     clearSession();
     
+    // Get the selected service type from session storage
+    const selectedService = sessionStorage.getItem('selectedService') || 'electrical';
+    
     createSession({
       ...data,
+      serviceType: selectedService as 'electrical' | 'emergency_exit_light',
       country: 'australia', // Always default to Australia
     });
     setLocation('/items');
@@ -70,7 +74,12 @@ export default function Setup() {
       <div className="bg-primary text-white p-4 sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold">New Test Session</h1>
+            <h1 className="text-xl font-semibold">
+              {sessionStorage.getItem('selectedService') === 'emergency_exit_light' 
+                ? 'Emergency Exit Light Testing' 
+                : 'Electrical Test & Tag'
+              }
+            </h1>
             <div className="text-blue-100 text-sm mt-1">Step 1 of 3: Client Setup</div>
           </div>
           <div className="flex items-center gap-3">

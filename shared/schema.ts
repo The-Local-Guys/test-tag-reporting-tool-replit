@@ -28,6 +28,7 @@ export const sessions = pgTable(
 
 export const testSessions = pgTable("test_sessions", {
   id: serial("id").primaryKey(),
+  serviceType: text("service_type").notNull().default("electrical"), // 'electrical' or 'emergency_exit_light'
   testDate: text("test_date").notNull(),
   technicianName: text("technician_name").notNull(),
   clientName: text("client_name").notNull(),
@@ -45,15 +46,23 @@ export const testResults = pgTable("test_results", {
   itemName: text("item_name").notNull(),
   itemType: text("item_type").notNull(),
   location: text("location").notNull(),
-  classification: text("classification").notNull(), // 'class1', 'class2', 'epod', 'rcd'
+  classification: text("classification").notNull(), // For electrical: 'class1', 'class2', 'epod', 'rcd' | For emergency: 'exit_sign', 'emergency_light', 'combination_unit'
   result: text("result").notNull(), // 'pass' or 'fail'
   failureReason: text("failure_reason"), // nullable for passed items
   actionTaken: text("action_taken"), // nullable for passed items
-  frequency: text("frequency").notNull(), // 'threemonthly', 'sixmonthly', 'twelvemonthly', 'twentyfourmonthly', 'fiveyearly'
+  frequency: text("frequency").notNull(), // For electrical: 'threemonthly', 'sixmonthly', 'twelvemonthly', 'twentyfourmonthly', 'fiveyearly' | For emergency: 'sixmonthly', 'annually'
   notes: text("notes"), // optional additional notes
   photoData: text("photo_data"), // Base64 encoded photo for failed items
   visionInspection: boolean("vision_inspection").default(true), // Vision inspection completed
   electricalTest: boolean("electrical_test").default(true), // Electrical test completed
+  // Emergency exit light specific fields (AS/NZS 2293.2:2019)
+  batteryVoltage: text("battery_voltage"), // Battery voltage reading
+  dischargeTest: boolean("discharge_test"), // 90-minute discharge test passed
+  luxLevel: text("lux_level"), // Lux level measurement
+  switchingTest: boolean("switching_test"), // Automatic switching test
+  chargingTest: boolean("charging_test"), // Charging circuit test
+  manufacturerInfo: text("manufacturer_info"), // Manufacturer and model details
+  installationDate: text("installation_date"), // Installation/last replacement date
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -89,10 +98,14 @@ export type InsertTestResult = z.infer<typeof insertTestResultSchema>;
 export type TestResult = typeof testResults.$inferSelect;
 
 // Define enum values for validation
+export const serviceTypes = ['electrical', 'emergency_exit_light'] as const;
 export const equipmentClassifications = ['class1', 'class2', 'epod', 'rcd', '3phase'] as const;
+export const emergencyClassifications = ['exit_sign', 'emergency_light', 'combination_unit'] as const;
 export const testResultValues = ['pass', 'fail'] as const;
 export const failureReasons = ['vision', 'earth', 'insulation', 'polarity', 'other'] as const;
+export const emergencyFailureReasons = ['physical_damage', 'battery_failure', 'lamp_failure', 'wiring_fault', 'charging_fault', 'insufficient_illumination', 'mounting_issue', 'other'] as const;
 export const actionsTaken = ['given', 'removed'] as const;
 export const countries = ['australia', 'newzealand'] as const;
 export const frequencies = ['threemonthly', 'sixmonthly', 'twelvemonthly', 'twentyfourmonthly', 'fiveyearly'] as const;
+export const emergencyFrequencies = ['sixmonthly', 'annually'] as const;
 export const userRoles = ['super_admin', 'support_center', 'technician'] as const;

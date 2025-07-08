@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 
-const predefinedItems = [
+const electricalItems = [
   { type: 'iec-lead', name: 'IEC Lead', icon: '🔌', description: 'Power Cord' },
   { type: 'computer', name: 'Computer', icon: '💻', description: 'Desktop/Laptop' },
   { type: 'power-board', name: 'Power Board', icon: '▬', description: 'Multi Outlet' },
@@ -20,6 +20,17 @@ const predefinedItems = [
   { type: 'power-pack', name: 'Power Pack', icon: '⬛', description: 'Portable Power' },
 ];
 
+const emergencyItems = [
+  { type: 'exit-sign', name: 'Exit Sign', icon: '🚪', description: 'Emergency Exit Sign' },
+  { type: 'emergency-light', name: 'Emergency Light', icon: '🔦', description: 'Emergency Lighting' },
+  { type: 'combination-unit', name: 'Combination Unit', icon: '🔸', description: 'Exit Sign + Light' },
+  { type: 'emergency-spotlight', name: 'Emergency Spotlight', icon: '💡', description: 'Spot Light' },
+  { type: 'emergency-downlight', name: 'Emergency Downlight', icon: '⬇️', description: 'Down Light' },
+  { type: 'emergency-bulkhead', name: 'Emergency Bulkhead', icon: '⬛', description: 'Bulkhead Light' },
+  { type: 'floor-path-light', name: 'Floor Path Light', icon: '🟦', description: 'Path Marking' },
+  { type: 'backup-battery', name: 'Backup Battery Unit', icon: '🔋', description: 'Battery Backup' },
+];
+
 export default function ItemSelection() {
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [customItemName, setCustomItemName] = useState('');
@@ -28,8 +39,14 @@ export default function ItemSelection() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
+  // Get the selected service type
+  const selectedService = sessionData?.session?.serviceType || sessionStorage.getItem('selectedService') || 'electrical';
+  const predefinedItems = selectedService === 'emergency_exit_light' ? emergencyItems : electricalItems;
+
   const handleItemSelect = (itemType: string, itemName: string) => {
-    setLocation(`/test?item=${encodeURIComponent(itemName)}&type=${itemType}`);
+    // Route to different test pages based on service type
+    const testRoute = selectedService === 'emergency_exit_light' ? '/emergency-test' : '/test';
+    setLocation(`${testRoute}?item=${encodeURIComponent(itemName)}&type=${itemType}`);
   };
 
   const handleCustomItemAdd = () => {
@@ -63,7 +80,9 @@ export default function ItemSelection() {
       <div className="bg-primary text-white p-4 sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold">Select Item to Test</h1>
+            <h1 className="text-xl font-semibold">
+              {selectedService === 'emergency_exit_light' ? 'Emergency Equipment Selection' : 'Select Item to Test'}
+            </h1>
             <div className="text-blue-100 text-sm">
               {sessionData?.session?.clientName || 'Loading...'}
             </div>

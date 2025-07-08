@@ -339,6 +339,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Associate the session with the logged-in user
       const sessionWithUser = {
         ...sessionData,
+        serviceType: sessionData.serviceType || 'electrical', // Default to electrical if not specified
         userId: req.session.userId, // Link session to the logged-in user
       };
       const session = await storage.createTestSession(sessionWithUser);
@@ -423,7 +424,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         notes: req.body.notes || null,
         photoData: req.body.photoData || null,
         visionInspection: req.body.visionInspection !== undefined ? req.body.visionInspection : true,
-        electricalTest: req.body.electricalTest !== undefined ? req.body.electricalTest : true
+        electricalTest: req.body.electricalTest !== undefined ? req.body.electricalTest : true,
+        // Emergency exit light specific fields (AS/NZS 2293.2:2019)
+        batteryVoltage: req.body.batteryVoltage || null,
+        dischargeTest: req.body.dischargeTest !== undefined ? req.body.dischargeTest : false,
+        luxLevel: req.body.luxLevel || null,
+        switchingTest: req.body.switchingTest !== undefined ? req.body.switchingTest : false,
+        chargingTest: req.body.chargingTest !== undefined ? req.body.chargingTest : false,
+        manufacturerInfo: req.body.manufacturerInfo || null,
+        installationDate: req.body.installationDate || null
       };
       
       console.log('Request body received:', {
