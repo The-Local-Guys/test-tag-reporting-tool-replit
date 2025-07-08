@@ -56,9 +56,9 @@ export const testResults = pgTable("test_results", {
   visionInspection: boolean("vision_inspection").default(true), // Vision inspection completed
   electricalTest: boolean("electrical_test").default(true), // Electrical test completed
   // Emergency exit light specific fields (AS/NZS 2293.2:2019)
-  batteryVoltage: text("battery_voltage"), // Battery voltage reading
+  maintenanceType: text("maintenance_type"), // 'maintained' or 'non_maintained'
   dischargeTest: boolean("discharge_test"), // 90-minute discharge test passed
-  luxLevel: text("lux_level"), // Lux level measurement
+
   switchingTest: boolean("switching_test"), // Automatic switching test
   chargingTest: boolean("charging_test"), // Charging circuit test
   manufacturerInfo: text("manufacturer_info"), // Manufacturer and model details
@@ -108,4 +108,5 @@ export const actionsTaken = ['given', 'removed'] as const;
 export const countries = ['australia', 'newzealand'] as const;
 export const frequencies = ['threemonthly', 'sixmonthly', 'twelvemonthly', 'twentyfourmonthly', 'fiveyearly'] as const;
 export const emergencyFrequencies = ['sixmonthly', 'annually'] as const;
+export const maintenanceTypes = ['maintained', 'non_maintained'] as const;
 export const userRoles = ['super_admin', 'support_center', 'technician'] as const;

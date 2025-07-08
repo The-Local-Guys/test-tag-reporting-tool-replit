@@ -311,13 +311,10 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       doc.text(`• Charging Circuit Test (Battery charging verification): ${result.chargingTest ? 'PASS' : 'FAIL'}`, margin + 5, yPosition);
       yPosition += 6;
       
-      // Show battery voltage and lux level if available
-      if (result.batteryVoltage) {
-        doc.text(`• Battery Voltage: ${result.batteryVoltage}V`, margin + 5, yPosition);
-        yPosition += 6;
-      }
-      if (result.luxLevel) {
-        doc.text(`• Lux Level: ${result.luxLevel} lux`, margin + 5, yPosition);
+      // Show maintenance type if available
+      if (result.maintenanceType) {
+        const maintenanceTypeDisplay = result.maintenanceType === 'maintained' ? 'Maintained' : 'Non-Maintained';
+        doc.text(`• Maintenance Type: ${maintenanceTypeDisplay}`, margin + 5, yPosition);
         yPosition += 6;
       }
       

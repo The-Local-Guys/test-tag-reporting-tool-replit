@@ -426,9 +426,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         visionInspection: req.body.visionInspection !== undefined ? req.body.visionInspection : true,
         electricalTest: req.body.electricalTest !== undefined ? req.body.electricalTest : true,
         // Emergency exit light specific fields (AS 2293.2:2019)
-        batteryVoltage: req.body.batteryVoltage || null,
+        maintenanceType: req.body.maintenanceType || null,
         dischargeTest: req.body.dischargeTest !== undefined ? req.body.dischargeTest : false,
-        luxLevel: req.body.luxLevel || null,
         switchingTest: req.body.switchingTest !== undefined ? req.body.switchingTest : false,
         chargingTest: req.body.chargingTest !== undefined ? req.body.chargingTest : false,
         manufacturerInfo: req.body.manufacturerInfo || null,

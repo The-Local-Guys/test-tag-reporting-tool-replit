@@ -13,7 +13,7 @@ import { ArrowLeft, CheckCircle, XCircle, Camera, Save } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
-import { emergencyClassifications, emergencyFailureReasons, emergencyFrequencies } from '@shared/schema';
+import { emergencyClassifications, emergencyFailureReasons, emergencyFrequencies, maintenanceTypes } from '@shared/schema';
 
 // Emergency Exit Light Test Schema following AS 2293.2:2019
 const emergencyTestSchema = z.object({
@@ -24,8 +24,7 @@ const emergencyTestSchema = z.object({
   frequency: z.enum(['sixmonthly', 'annually']),
   manufacturerInfo: z.string().optional(),
   installationDate: z.string().optional(),
-  batteryVoltage: z.string().optional(),
-  luxLevel: z.string().optional(),
+  maintenanceType: z.enum(['maintained', 'non_maintained']).optional(),
   visualInspection: z.boolean().default(true),
   dischargeTest: z.boolean().default(false),
   switchingTest: z.boolean().default(false),
@@ -120,9 +119,8 @@ export default function EmergencyTestDetails() {
         visionInspection: data.visualInspection,
         electricalTest: data.dischargeTest,
         // Emergency specific fields
-        batteryVoltage: data.batteryVoltage || null,
+        maintenanceType: data.maintenanceType || null,
         dischargeTest: data.dischargeTest,
-        luxLevel: data.luxLevel || null,
         switchingTest: data.switchingTest,
         chargingTest: data.chargingTest,
         manufacturerInfo: data.manufacturerInfo || null,
@@ -144,9 +142,8 @@ export default function EmergencyTestDetails() {
         visionInspection: data.visualInspection,
         electricalTest: data.dischargeTest, // Using electricalTest field for discharge test
         // Emergency specific fields
-        batteryVoltage: data.batteryVoltage || null,
+        maintenanceType: data.maintenanceType || null,
         dischargeTest: data.dischargeTest,
-        luxLevel: data.luxLevel || null,
         switchingTest: data.switchingTest,
         chargingTest: data.chargingTest,
         manufacturerInfo: data.manufacturerInfo || null,
@@ -337,26 +334,20 @@ export default function EmergencyTestDetails() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="batteryVoltage">Battery Voltage (V)</Label>
-                <Input
-                  id="batteryVoltage"
-                  {...form.register('batteryVoltage')}
-                  placeholder="e.g., 12.5"
-                  className="text-base"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="luxLevel">Lux Level Reading</Label>
-                <Input
-                  id="luxLevel"
-                  {...form.register('luxLevel')}
-                  placeholder="e.g., 1.5 lux"
-                  className="text-base"
-                />
-              </div>
+            <div>
+              <Label htmlFor="maintenanceType">Maintenance Type</Label>
+              <Select 
+                value={form.watch('maintenanceType') || ''} 
+                onValueChange={(value) => form.setValue('maintenanceType', value as 'maintained' | 'non_maintained')}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select maintenance type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="maintained">Maintained</SelectItem>
+                  <SelectItem value="non_maintained">Non-Maintained</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
