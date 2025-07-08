@@ -87,7 +87,7 @@ export default function ServiceSelection() {
                 <li>• 90-minute discharge testing</li>
                 <li>• Physical inspection</li>
                 <li>• Battery condition assessment</li>
-                <li>• Lux level measurements</li>
+
                 <li>• Switching mechanism testing</li>
                 <li>• Compliance certification</li>
               </ul>
