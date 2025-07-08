@@ -99,6 +99,30 @@ export default function EmergencyTestDetails() {
     }
 
     try {
+      console.log('Submitting emergency test result:', {
+        assetNumber: data.assetNumber,
+        itemName: itemName,
+        itemType: itemType,
+        location: data.location,
+        classification: data.classification,
+        result: data.result,
+        frequency: data.frequency,
+        failureReason: data.failureReason || null,
+        actionTaken: data.result === 'fail' ? 'removed' : null,
+        notes: data.notes || null,
+        photoData: data.result === 'fail' ? photoData : null,
+        visionInspection: data.visualInspection,
+        electricalTest: data.dischargeTest,
+        // Emergency specific fields
+        batteryVoltage: data.batteryVoltage || null,
+        dischargeTest: data.dischargeTest,
+        luxLevel: data.luxLevel || null,
+        switchingTest: data.switchingTest,
+        chargingTest: data.chargingTest,
+        manufacturerInfo: data.manufacturerInfo || null,
+        installationDate: data.installationDate || null,
+      });
+
       await addTestResult({
         assetNumber: data.assetNumber,
         itemName: itemName,
@@ -130,9 +154,10 @@ export default function EmergencyTestDetails() {
 
       setLocation('/items');
     } catch (error) {
+      console.error('Error submitting emergency test result:', error);
       toast({
         title: 'Error',
-        description: 'Failed to save test result',
+        description: `Failed to save test result: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: 'destructive',
       });
     }
