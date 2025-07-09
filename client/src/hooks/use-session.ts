@@ -112,6 +112,7 @@ export function useSession() {
     setCurrentLocation('');
     localStorage.removeItem('currentSessionId');
     localStorage.removeItem('currentLocation');
+    localStorage.removeItem('lastSelectedFrequency'); // Clear frequency persistence for new session
     queryClient.clear();
   };
 

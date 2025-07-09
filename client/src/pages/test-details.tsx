@@ -38,7 +38,10 @@ const testDetailsSchema = z.object({
 
 export default function TestDetails() {
   const [selectedClass, setSelectedClass] = useState('class1');
-  const [selectedFrequency, setSelectedFrequency] = useState('twelvemonthly');
+  const [selectedFrequency, setSelectedFrequency] = useState(() => {
+    // Get the last selected frequency from localStorage, default to 'twelvemonthly'
+    return localStorage.getItem('lastSelectedFrequency') || 'twelvemonthly';
+  });
   const [currentItem, setCurrentItem] = useState<{name: string, type: string} | null>(null);
   const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]);
   const [showCamera, setShowCamera] = useState(false);
@@ -160,6 +163,9 @@ export default function TestDetails() {
       electricalTest,
     } as any;
 
+    // Save the selected frequency to localStorage for next item
+    localStorage.setItem('lastSelectedFrequency', selectedFrequency);
+    
     if (result === 'pass') {
       addResult(testData);
       setLocation('/items');
@@ -301,7 +307,11 @@ export default function TestDetails() {
             <Clock className="mr-2 h-4 w-4" />
             Test Frequency
           </Label>
-          <Select value={selectedFrequency} onValueChange={setSelectedFrequency}>
+          <Select value={selectedFrequency} onValueChange={(value) => {
+            setSelectedFrequency(value);
+            // Save the selected frequency to localStorage for next item
+            localStorage.setItem('lastSelectedFrequency', value);
+          }}>
             <SelectTrigger className="text-base">
               <SelectValue placeholder="Select test frequency" />
             </SelectTrigger>
