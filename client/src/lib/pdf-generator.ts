@@ -347,21 +347,23 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     { align: 'center' }
   );
 
-  // Add failed item photos section
-  const failedItemsWithPhotos = results.filter(result => result.result === 'fail' && result.photoData);
+  // Add failed items details section
+  const failedItemsWithDetails = results.filter(result => 
+    result.result === 'fail' && (result.notes || result.photoData)
+  );
   
-  if (failedItemsWithPhotos.length > 0) {
-    // Add new page for photos
+  if (failedItemsWithDetails.length > 0) {
+    // Add new page for failed items details
     doc.addPage();
     yPosition = margin;
     
-    // Photos section header
+    // Failed items section header
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('Failed Items - Photo Documentation', margin, yPosition);
+    doc.text('Failed Items - Additional Details', margin, yPosition);
     yPosition += 15;
     
-    for (const result of failedItemsWithPhotos) {
+    for (const result of failedItemsWithDetails) {
       // Check if we need a new page
       if (yPosition > doc.internal.pageSize.height - 120) {
         doc.addPage();
@@ -379,30 +381,38 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       doc.text(`Location: ${result.location} | Failure: ${result.failureReason}`, margin, yPosition);
       yPosition += 7;
       
+      // Add action taken
+      if (result.actionTaken) {
+        const actionDisplay = result.actionTaken === 'given' ? 'Given to Site Contact' : 'Removed from Site';
+        doc.text(`Action Taken: ${actionDisplay}`, margin, yPosition);
+        yPosition += 7;
+      }
+      
       // Add notes if available
       if (result.notes) {
         doc.text(`Comments: ${result.notes}`, margin, yPosition);
         yPosition += 7;
       }
       
-      // Add photo
-      try {
-        if (result.photoData) {
+      // Add photo if available
+      if (result.photoData) {
+        yPosition += 3; // Extra space before photo
+        try {
           const imgWidth = 80;
           const imgHeight = 60;
           doc.addImage(result.photoData, 'JPEG', margin, yPosition, imgWidth, imgHeight);
-          yPosition += imgHeight + 15;
+          yPosition += imgHeight + 10;
+        } catch (error) {
+          // If photo can't be added, add placeholder text
+          doc.setFontSize(9);
+          doc.setTextColor(150, 150, 150);
+          doc.text('Photo could not be displayed in PDF', margin, yPosition);
+          yPosition += 10;
+          doc.setTextColor(0, 0, 0);
         }
-      } catch (error) {
-        // If photo can't be added, add placeholder text
-        doc.setFontSize(9);
-        doc.setTextColor(150, 150, 150);
-        doc.text('Photo could not be displayed in PDF', margin, yPosition);
-        yPosition += 15;
-        doc.setTextColor(0, 0, 0);
       }
       
-      yPosition += 5;
+      yPosition += 10; // Space between items
     }
   }
 
