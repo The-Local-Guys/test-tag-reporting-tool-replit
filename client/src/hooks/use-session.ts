@@ -101,6 +101,22 @@ export function useSession() {
     },
   });
 
+  const deleteResultMutation = useMutation({
+    mutationFn: async (resultId: number) => {
+      if (!sessionId) throw new Error('No active session');
+      const response = await fetch(`/api/sessions/${sessionId}/results/${resultId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete test result');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/report`] });
+    },
+  });
+
   // Save session ID to localStorage when it changes
   useEffect(() => {
     if (sessionId) {
@@ -127,9 +143,11 @@ export function useSession() {
     createSession: createSessionMutation.mutate,
     addResult: addResultMutation.mutate,
     updateResult: updateResultMutation.mutateAsync,
+    deleteResult: deleteResultMutation.mutateAsync,
     clearSession,
     isCreatingSession: createSessionMutation.isPending,
     isAddingResult: addResultMutation.isPending,
     isUpdatingResult: updateResultMutation.isPending,
+    isDeletingResult: deleteResultMutation.isPending,
   };
 }

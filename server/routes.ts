@@ -510,6 +510,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete test result
+  app.delete("/api/sessions/:id/results/:resultId", requireAuth, async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const resultId = parseInt(req.params.resultId);
+      
+      const session = await storage.getTestSession(sessionId);
+      if (!session) {
+        res.status(404).json({ error: "Session not found" });
+        return;
+      }
+
+      await storage.deleteTestResult(resultId);
+      res.json({ message: "Test result deleted successfully" });
+    } catch (error) {
+      console.error('Error deleting test result:', error);
+      res.status(500).json({ error: "Failed to delete test result" });
+    }
+  });
+
   // Get all results for a session
   app.get("/api/sessions/:id/results", requireAuth, async (req, res) => {
     try {

@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Modal } from '@/components/ui/modal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Download, Mail, Share, Plus, Edit2, FileText, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Download, Mail, Share, Plus, Edit2, FileText, RefreshCw, Trash2 } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
 import { downloadPDF } from '@/lib/pdf-generator';
@@ -17,12 +17,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { insertTestResultSchema, type TestResult, type InsertTestResult } from '@shared/schema';
 
 export default function ReportPreview() {
-  const { sessionData, updateResult, clearSession } = useSession();
+  const { sessionData, updateResult, deleteResult, clearSession } = useSession();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [editingResult, setEditingResult] = useState<TestResult | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showNewReportConfirm, setShowNewReportConfirm] = useState(false);
+  const [deletingResult, setDeletingResult] = useState<TestResult | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const editForm = useForm({
     resolver: zodResolver(insertTestResultSchema.omit({ sessionId: true, assetNumber: true })),
@@ -150,6 +152,32 @@ export default function ReportPreview() {
     }
   };
 
+  const handleDeleteResult = (result: TestResult) => {
+    setDeletingResult(result);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingResult) return;
+    
+    try {
+      await deleteResult(deletingResult.id);
+      setShowDeleteConfirm(false);
+      setDeletingResult(null);
+      toast({
+        title: "Item Deleted",
+        description: "Test result has been successfully deleted.",
+      });
+    } catch (error) {
+      console.error('Error deleting result:', error);
+      toast({
+        title: "Delete Failed",
+        description: "There was an error deleting the test result.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
   };
@@ -248,6 +276,20 @@ export default function ReportPreview() {
                   )}
                 </div>
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleEditResult(result)}
+                    className="text-gray-400 hover:text-blue-600 p-1 rounded transition-colors"
+                    title="Edit item"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteResult(result)}
+                    className="text-gray-400 hover:text-red-600 p-1 rounded transition-colors"
+                    title="Delete item"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                   <div className={`px-3 py-1 rounded-full text-xs font-medium ${
                     result.result === 'pass' 
                       ? 'bg-success text-white' 
@@ -466,7 +508,7 @@ export default function ReportPreview() {
         </Button>
       </div>
 
-      {/* Confirmation Dialog */}
+      {/* New Report Confirmation Dialog */}
       <AlertDialog open={showNewReportConfirm} onOpenChange={setShowNewReportConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -479,6 +521,29 @@ export default function ReportPreview() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmNewReport}>
               Yes, Start New Report
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Item Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Test Item?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deletingResult && (
+                <>
+                  Are you sure you want to delete <strong>#{deletingResult.assetNumber} - {deletingResult.itemName}</strong>? 
+                  This action cannot be undone.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+              Yes, Delete Item
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

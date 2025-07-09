@@ -36,6 +36,7 @@ export interface IStorage {
   // Test Results
   createTestResult(result: InsertTestResult): Promise<TestResult>;
   updateTestResult(id: number, data: Partial<InsertTestResult>): Promise<TestResult>;
+  deleteTestResult(id: number): Promise<void>;
   getTestResultsBySession(sessionId: number): Promise<TestResult[]>;
   getNextAssetNumber(sessionId: number): Promise<number>;
   getNextMonthlyAssetNumber(sessionId: number): Promise<number>;
@@ -333,6 +334,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(testResults.id, id))
       .returning();
     return result;
+  }
+
+  async deleteTestResult(id: number): Promise<void> {
+    await db.delete(testResults).where(eq(testResults.id, id));
   }
 
   async validateAssetNumber(sessionId: number, assetNumber: string, excludeId?: number): Promise<boolean> {
