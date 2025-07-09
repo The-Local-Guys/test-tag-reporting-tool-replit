@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 const electricalItems = [
   { type: 'iec-lead', name: 'IEC Lead', icon: '🔌', description: 'Power Cord' },
   { type: 'computer', name: 'Computer', icon: '💻', description: 'Desktop/Laptop' },
+  { type: 'monitor', name: 'Monitor', icon: '🖥️', description: 'Display Screen' },
   { type: 'power-board', name: 'Power Board', icon: '▬', description: 'Multi Outlet' },
   { type: 'phone-charger', name: 'Phone Charger', icon: '🔋', description: 'Mobile Charger' },
   { type: 'laptop-charger', name: 'Laptop Charger', icon: '💻', description: 'AC Adapter' },
