@@ -381,6 +381,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get next monthly asset number for session (protected)
+  app.get("/api/sessions/:id/next-monthly-asset-number", requireAuth, async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const nextNumber = await storage.getNextMonthlyAssetNumber(sessionId);
+      res.json({ nextAssetNumber: nextNumber });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get next monthly asset number" });
+    }
+  });
+
+  // Get next five yearly asset number for session (protected)
+  app.get("/api/sessions/:id/next-five-yearly-asset-number", requireAuth, async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const nextNumber = await storage.getNextFiveYearlyAssetNumber(sessionId);
+      res.json({ nextAssetNumber: nextNumber });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get next five yearly asset number" });
+    }
+  });
+
   // Validate asset number for session (protected)
   app.post("/api/sessions/:id/validate-asset-number", requireAuth, async (req, res) => {
     try {

@@ -38,6 +38,8 @@ export interface IStorage {
   updateTestResult(id: number, data: Partial<InsertTestResult>): Promise<TestResult>;
   getTestResultsBySession(sessionId: number): Promise<TestResult[]>;
   getNextAssetNumber(sessionId: number): Promise<number>;
+  getNextMonthlyAssetNumber(sessionId: number): Promise<number>;
+  getNextFiveYearlyAssetNumber(sessionId: number): Promise<number>;
   validateAssetNumber(sessionId: number, assetNumber: string, excludeId?: number): Promise<boolean>;
   
   // Report Data
@@ -285,6 +287,43 @@ export class DatabaseStorage implements IStorage {
       .sort((a, b) => b - a);
     
     return existingNumbers.length > 0 ? existingNumbers[0] + 1 : 1;
+  }
+
+  async getNextMonthlyAssetNumber(sessionId: number): Promise<number> {
+    const results = await this.getTestResultsBySession(sessionId);
+    
+    // Filter for monthly frequencies (3, 6, 12, 24 monthly)
+    const monthlyResults = results.filter(r => 
+      r.frequency === 'threemonthly' || 
+      r.frequency === 'sixmonthly' || 
+      r.frequency === 'twelvemonthly' || 
+      r.frequency === 'twentyfourmonthly'
+    );
+    
+    if (monthlyResults.length === 0) return 1;
+    
+    const existingNumbers = monthlyResults
+      .map(r => parseInt(r.assetNumber))
+      .filter(n => !isNaN(n))
+      .sort((a, b) => b - a);
+    
+    return existingNumbers.length > 0 ? existingNumbers[0] + 1 : 1;
+  }
+
+  async getNextFiveYearlyAssetNumber(sessionId: number): Promise<number> {
+    const results = await this.getTestResultsBySession(sessionId);
+    
+    // Filter for 5 yearly frequency
+    const fiveYearlyResults = results.filter(r => r.frequency === 'fiveyearly');
+    
+    if (fiveYearlyResults.length === 0) return 5001;
+    
+    const existingNumbers = fiveYearlyResults
+      .map(r => parseInt(r.assetNumber))
+      .filter(n => !isNaN(n))
+      .sort((a, b) => b - a);
+    
+    return existingNumbers.length > 0 ? existingNumbers[0] + 1 : 5001;
   }
 
   async updateTestResult(id: number, data: Partial<InsertTestResult>): Promise<TestResult> {

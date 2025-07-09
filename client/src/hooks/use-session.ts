@@ -71,8 +71,10 @@ export function useSession() {
       localStorage.setItem('currentLocation', result.location);
       
       queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/report`] });
-      // Also invalidate the next asset number query to get the updated count
+      // Also invalidate the asset number queries to get the updated counts
       queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/next-asset-number`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/next-monthly-asset-number`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/next-five-yearly-asset-number`] });
     },
     onError: (error) => {
       console.error('Mutation error:', error);
