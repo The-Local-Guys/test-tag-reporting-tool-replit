@@ -115,7 +115,7 @@ export function generateExcelReport(data: ReportData): Blob {
 
     if (session.serviceType === 'emergency_exit_light') {
       return [
-        index + 1, // Asset number
+        result.assetNumber, // Asset number
         result.itemName,
         result.location,
         result.classification.toUpperCase(),
@@ -145,7 +145,7 @@ export function generateExcelReport(data: ReportData): Blob {
       }
 
       return [
-        index + 1, // Asset number
+        result.assetNumber, // Asset number
         result.itemName,
         result.location,
         result.classification.toUpperCase(),

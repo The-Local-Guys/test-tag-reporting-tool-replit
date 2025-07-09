@@ -186,8 +186,8 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       yPosition = margin;
     }
 
-    // Use index + 1 as the asset number (count)
-    doc.text((index + 1).toString(), margin, yPosition);
+    // Use the actual asset number from the database
+    doc.text(result.assetNumber.toString(), margin, yPosition);
     doc.text(result.itemName, margin + 12, yPosition);
     doc.text(result.location, margin + 30, yPosition);
     doc.text(result.classification.toUpperCase(), margin + 48, yPosition);
@@ -298,7 +298,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       }
       
       doc.setFont('helvetica', 'bold');
-      doc.text(`Asset #${index + 1} - ${result.itemName} (${result.location})`, margin, yPosition);
+      doc.text(`Asset #${result.assetNumber} - ${result.itemName} (${result.location})`, margin, yPosition);
       yPosition += 8;
       
       doc.setFont('helvetica', 'normal');
@@ -371,7 +371,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       // Item header
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text(`Asset #${results.indexOf(result) + 1} - ${result.itemName}`, margin, yPosition);
+      doc.text(`Asset #${result.assetNumber} - ${result.itemName}`, margin, yPosition);
       yPosition += 7;
       
       doc.setFontSize(10);
