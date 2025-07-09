@@ -377,7 +377,13 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       doc.text(`Location: ${result.location} | Failure: ${result.failureReason}`, margin, yPosition);
-      yPosition += 10;
+      yPosition += 7;
+      
+      // Add notes if available
+      if (result.notes) {
+        doc.text(`Comments: ${result.notes}`, margin, yPosition);
+        yPosition += 7;
+      }
       
       // Add photo
       try {
