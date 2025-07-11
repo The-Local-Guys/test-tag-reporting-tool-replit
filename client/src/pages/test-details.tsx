@@ -54,6 +54,20 @@ export default function TestDetails() {
   const { sessionId, currentLocation, addResult, isAddingResult } = useSession();
   const [, setLocation] = useLocation();
   const search = useSearch();
+  
+  // Prevent navigation during critical operations
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isAddingResult) {
+        e.preventDefault();
+        e.returnValue = 'Test result is being saved. Are you sure you want to leave?';
+        return 'Test result is being saved. Are you sure you want to leave?';
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isAddingResult]);
 
   // Get next asset numbers
   const { data: nextMonthlyAssetData } = useQuery<{nextAssetNumber: number}>({

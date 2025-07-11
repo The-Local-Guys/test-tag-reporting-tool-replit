@@ -29,6 +29,20 @@ export default function FailureDetails() {
   const { addResult, isAddingResult } = useSession();
   const [, setLocation] = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Prevent navigation during critical operations
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isAddingResult) {
+        e.preventDefault();
+        e.returnValue = 'Test result is being saved. Are you sure you want to leave?';
+        return 'Test result is being saved. Are you sure you want to leave?';
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isAddingResult]);
 
   useEffect(() => {
     const stored = sessionStorage.getItem('pendingTestResult');

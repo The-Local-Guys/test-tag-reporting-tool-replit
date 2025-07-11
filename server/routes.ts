@@ -417,12 +417,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Add test result to session
   app.post("/api/sessions/:id/results", requireAuth, async (req, res) => {
+    const startTime = Date.now();
+    const requestId = Math.random().toString(36).substring(7);
+    
     try {
+      console.log(`[${requestId}] Starting test result creation at ${new Date().toISOString()}`);
+      
       const sessionId = parseInt(req.params.id);
       const session = await storage.getTestSession(sessionId);
       
       if (!session) {
+        console.log(`[${requestId}] Session ${sessionId} not found`);
         res.status(404).json({ error: "Session not found" });
+        return;
+      }
+
+      // Validate required fields
+      if (!req.body.itemName || !req.body.location || !req.body.classification) {
+        console.log(`[${requestId}] Missing required fields:`, {
+          itemName: !!req.body.itemName,
+          location: !!req.body.location,
+          classification: !!req.body.classification
+        });
+        res.status(400).json({ error: "Missing required fields: itemName, location, classification" });
         return;
       }
 
@@ -456,25 +473,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         installationDate: req.body.installationDate || null
       };
       
-      console.log('Request body received:', {
+      console.log(`[${requestId}] Request body received:`, {
         ...req.body,
         photoData: req.body.photoData ? `Photo included (${Math.round(req.body.photoData.length / 1024)}KB)` : 'No photo in request'
       });
-      console.log('Creating result with data:', {
+      console.log(`[${requestId}] Creating result with data:`, {
         ...resultData,
         photoData: resultData.photoData ? `Photo data included (${Math.round(resultData.photoData.length / 1024)}KB)` : 'No photo data'
       });
       
       const result = await storage.createTestResult(resultData);
+      
+      // Verify the result was created successfully
+      if (!result || !result.id) {
+        console.error(`[${requestId}] Failed to create test result - no ID returned`);
+        throw new Error('Failed to create test result - no ID returned');
+      }
+      
+      const processingTime = Date.now() - startTime;
+      console.log(`[${requestId}] Successfully created test result in ${processingTime}ms:`, {
+        id: result.id,
+        assetNumber: result.assetNumber,
+        itemName: result.itemName
+      });
+      
       res.json(result);
     } catch (error) {
-      console.error('Error creating test result:', error);
-      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack available');
+      const processingTime = Date.now() - startTime;
+      console.error(`[${requestId}] Error creating test result after ${processingTime}ms:`, error);
+      console.error(`[${requestId}] Error stack:`, error instanceof Error ? error.stack : 'No stack available');
+      
       if (error instanceof z.ZodError) {
-        console.error('Zod validation errors:', error.errors);
-        res.status(400).json({ error: "Invalid result data", details: error.errors });
+        console.error(`[${requestId}] Zod validation errors:`, error.errors);
+        res.status(400).json({ error: "Invalid result data", details: error.errors, requestId });
       } else {
-        res.status(500).json({ error: "Failed to create test result", details: String(error) });
+        res.status(500).json({ error: "Failed to create test result", details: String(error), requestId });
       }
     }
   });

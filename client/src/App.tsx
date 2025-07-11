@@ -14,6 +14,7 @@ import EmergencyTestDetails from "@/pages/emergency-test-details";
 import FailureDetails from "@/pages/failure-details";
 import ReportPreview from "@/pages/report-preview";
 import AdminDashboard from "@/pages/admin-dashboard";
+import DiagnosticTool from "@/pages/diagnostic-tool";
 import Login from "@/pages/login";
 
 function Router() {
@@ -43,6 +44,7 @@ function Router() {
       <Route path="/emergency-test" component={EmergencyTestDetails} />
       <Route path="/failure" component={FailureDetails} />
       <Route path="/report" component={ReportPreview} />
+      <Route path="/diagnostic" component={DiagnosticTool} />
       <Route component={NotFound} />
     </Switch>
   );
