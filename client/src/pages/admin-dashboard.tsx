@@ -14,7 +14,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
-import { Users, FileText, Download, Edit, Trash2, UserCheck, UserX, LogOut, UserPlus, Plus } from "lucide-react";
+import { Users, FileText, Download, Edit, Trash2, UserCheck, UserX, LogOut, UserPlus, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { generatePDFReport, downloadPDF } from "@/lib/pdf-generator";
 import { generateExcelReport, downloadExcel } from "@/lib/excel-generator";
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
@@ -63,6 +63,10 @@ export default function AdminDashboard() {
     role: "technician" as "technician" | "support_center" | "super_admin",
   });
   const [selectedTechnicianFilter, setSelectedTechnicianFilter] = useState<string>("all");
+  
+  // Pagination states
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
   const [editResultData, setEditResultData] = useState({
     itemName: "",
     location: "",
@@ -422,6 +426,7 @@ export default function AdminDashboard() {
       }
       const reportData = await response.json();
       setViewingSession(reportData);
+      setCurrentPage(1); // Reset to first page when opening report
       setIsViewReportModalOpen(true);
     } catch (error) {
       console.error('Error loading report:', error);
@@ -1224,14 +1229,34 @@ export default function AdminDashboard() {
             <div>
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-semibold">Test Results ({viewingSession.results.length} items)</h3>
-                <Button
-                  variant="outline"
-                  onClick={() => handleAddItem(viewingSession.session)}
-                  size="sm"
-                >
-                  <Plus className="w-4 h-4 mr-1" />
-                  Add Item
-                </Button>
+                <div className="flex items-center space-x-2">
+                  {/* Items per page selector */}
+                  <Label htmlFor="itemsPerPage" className="text-sm">Items per page:</Label>
+                  <Select
+                    value={itemsPerPage.toString()}
+                    onValueChange={(value) => {
+                      setItemsPerPage(parseInt(value));
+                      setCurrentPage(1); // Reset to first page
+                    }}
+                  >
+                    <SelectTrigger className="w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleAddItem(viewingSession.session)}
+                    size="sm"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Item
+                  </Button>
+                </div>
               </div>
               <div className="border rounded-lg overflow-hidden">
                 <Table>
@@ -1247,41 +1272,116 @@ export default function AdminDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {viewingSession.results.map((result: any) => (
-                      <TableRow key={result.id}>
-                        <TableCell className="font-mono">{result.assetNumber}</TableCell>
-                        <TableCell>{result.itemType}</TableCell>
-                        <TableCell>{result.location || '-'}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {result.classification?.replace('class', 'Class ') || '-'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {result.frequency?.replace('monthly', 'M').replace('yearly', 'Y') || '-'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={result.result === 'pass' ? 'default' : 'destructive'}>
-                            {result.result?.toUpperCase()}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleEditResult(result)}
-                          >
-                            <Edit className="w-4 h-4 mr-1" />
-                            Edit
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {(() => {
+                      const totalItems = viewingSession.results.length;
+                      const startIndex = (currentPage - 1) * itemsPerPage;
+                      const endIndex = startIndex + itemsPerPage;
+                      const paginatedResults = viewingSession.results.slice(startIndex, endIndex);
+                      
+                      return paginatedResults.map((result: any) => (
+                        <TableRow key={result.id}>
+                          <TableCell className="font-mono">{result.assetNumber}</TableCell>
+                          <TableCell>{result.itemType}</TableCell>
+                          <TableCell>{result.location || '-'}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {result.classification?.replace('class', 'Class ') || '-'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {result.frequency?.replace('monthly', 'M').replace('yearly', 'Y') || '-'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={result.result === 'pass' ? 'default' : 'destructive'}>
+                              {result.result?.toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEditResult(result)}
+                            >
+                              <Edit className="w-4 h-4 mr-1" />
+                              Edit
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ));
+                    })()}
                   </TableBody>
                 </Table>
               </div>
+              
+              {/* Pagination Controls */}
+              {(() => {
+                const totalItems = viewingSession.results.length;
+                const totalPages = Math.ceil(totalItems / itemsPerPage);
+                const startIndex = (currentPage - 1) * itemsPerPage;
+                const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+                
+                if (totalPages <= 1) return null;
+                
+                return (
+                  <div className="flex items-center justify-between mt-4">
+                    <div className="text-sm text-gray-500">
+                      Showing {startIndex + 1} to {endIndex} of {totalItems} items
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        <ChevronLeft className="w-4 h-4 mr-1" />
+                        Previous
+                      </Button>
+                      
+                      {/* Page numbers */}
+                      <div className="flex items-center space-x-1">
+                        {Array.from({ length: totalPages }, (_, i) => {
+                          const pageNum = i + 1;
+                          const isCurrentPage = pageNum === currentPage;
+                          const shouldShow = pageNum === 1 || pageNum === totalPages || 
+                                           (pageNum >= currentPage - 1 && pageNum <= currentPage + 1);
+                          
+                          if (!shouldShow) {
+                            if (pageNum === currentPage - 2 || pageNum === currentPage + 2) {
+                              return <span key={pageNum} className="px-2 text-gray-400">...</span>;
+                            }
+                            return null;
+                          }
+                          
+                          return (
+                            <Button
+                              key={pageNum}
+                              variant={isCurrentPage ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setCurrentPage(pageNum)}
+                              className="w-8 h-8 p-0"
+                            >
+                              {pageNum}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        Next
+                        <ChevronRight className="w-4 h-4 ml-1" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Summary Stats */}
