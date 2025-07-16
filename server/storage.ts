@@ -361,7 +361,7 @@ export class DatabaseStorage implements IStorage {
     
     const existingNumbers = fiveYearlyResults
       .map(r => parseInt(r.assetNumber))
-      .filter(n => !isNaN(n))
+      .filter(n => !isNaN(n) && n >= 10001) // Only consider numbers in the new 10001+ range
       .sort((a, b) => b - a);
     
     console.log('Existing 5-yearly asset numbers:', existingNumbers);
