@@ -303,10 +303,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTestResultsBySession(sessionId: number): Promise<TestResult[]> {
-    return await db
+    const results = await db
       .select()
       .from(testResults)
       .where(eq(testResults.sessionId, sessionId));
+    
+    // Sort by asset number (numerical order) - handle both monthly (1-999) and 5-yearly (10001+) sequences
+    return results.sort((a, b) => {
+      const aNum = parseInt(a.assetNumber);
+      const bNum = parseInt(b.assetNumber);
+      
+      // If both are numbers, sort numerically
+      if (!isNaN(aNum) && !isNaN(bNum)) {
+        return aNum - bNum;
+      }
+      
+      // If one is a number and one isn't, number comes first
+      if (!isNaN(aNum) && isNaN(bNum)) return -1;
+      if (isNaN(aNum) && !isNaN(bNum)) return 1;
+      
+      // If both are non-numbers, sort alphabetically
+      return a.assetNumber.localeCompare(b.assetNumber);
+    });
   }
 
   async getNextAssetNumber(sessionId: number): Promise<number> {

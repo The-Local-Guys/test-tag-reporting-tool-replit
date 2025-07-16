@@ -128,3 +128,4 @@ Changelog:
   - Fixed 5-yearly asset numbering bug ensuring proper sequence separation
   - Updated 5-yearly asset numbers to start from 10001 instead of 5001
   - Fixed all existing 5-yearly items to use new 10001+ numbering system
+  - Added numerical sorting to reports so items display in asset number order (1, 2, 3, 10001, 10002, etc.)
