@@ -123,3 +123,6 @@ Changelog:
   - Updated both electrical and emergency test interfaces to use server-side generation
   - Enhanced UI to show auto-generation status instead of manual input fields
   - Fixed modal scrolling issues in admin interface with proper scroll containment
+  - Added real-time asset number progress display to testing interface
+  - Shows next asset number and count of tested items for each frequency type
+  - Fixed 5-yearly asset numbering bug ensuring proper 5001+ sequence separation

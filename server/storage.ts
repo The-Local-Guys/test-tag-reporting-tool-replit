@@ -237,20 +237,28 @@ export class DatabaseStorage implements IStorage {
         photoData: insertResult.photoData ? `Photo data included (${Math.round(insertResult.photoData.length / 1024)}KB)` : 'No photo data'
       });
       
-      // Auto-generate asset number based on frequency if not provided or if provided number already exists
-      let assetNumber = insertResult.assetNumber;
+      // Always auto-generate asset number based on frequency (ignore any provided asset number)
+      let assetNumber: string;
       
-      if (!assetNumber || await this.isDuplicateAssetNumber(insertResult.sessionId, assetNumber)) {
-        console.log('Auto-generating asset number for frequency:', insertResult.frequency);
-        
-        if (insertResult.frequency === 'fiveyearly') {
-          assetNumber = (await this.getNextFiveYearlyAssetNumber(insertResult.sessionId)).toString();
-        } else {
-          assetNumber = (await this.getNextMonthlyAssetNumber(insertResult.sessionId)).toString();
-        }
-        
-        console.log('Generated asset number:', assetNumber);
+      console.log('Auto-generating asset number for frequency:', insertResult.frequency);
+      
+      if (insertResult.frequency === 'fiveyearly') {
+        assetNumber = (await this.getNextFiveYearlyAssetNumber(insertResult.sessionId)).toString();
+      } else {
+        assetNumber = (await this.getNextMonthlyAssetNumber(insertResult.sessionId)).toString();
       }
+      
+      console.log('Generated asset number:', assetNumber);
+      
+      // Ensure no duplicate asset numbers
+      let finalAssetNumber = assetNumber;
+      while (await this.isDuplicateAssetNumber(insertResult.sessionId, finalAssetNumber)) {
+        const currentNumber = parseInt(finalAssetNumber);
+        finalAssetNumber = (currentNumber + 1).toString();
+        console.log('Duplicate detected, trying next number:', finalAssetNumber);
+      }
+      
+      assetNumber = finalAssetNumber;
       
       // Use the pool directly for raw SQL execution with all fields including emergency-specific ones
       const query = `
