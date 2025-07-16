@@ -250,9 +250,9 @@ export class DatabaseStorage implements IStorage {
       
       console.log('Generated asset number:', assetNumber);
       
-      // Ensure no duplicate asset numbers
+      // Only check for duplicates within the same frequency group
       let finalAssetNumber = assetNumber;
-      while (await this.isDuplicateAssetNumber(insertResult.sessionId, finalAssetNumber)) {
+      while (await this.isDuplicateAssetNumberForFrequency(insertResult.sessionId, finalAssetNumber, insertResult.frequency)) {
         const currentNumber = parseInt(finalAssetNumber);
         finalAssetNumber = (currentNumber + 1).toString();
         console.log('Duplicate detected, trying next number:', finalAssetNumber);
@@ -348,14 +348,28 @@ export class DatabaseStorage implements IStorage {
     // Filter for 5 yearly frequency
     const fiveYearlyResults = results.filter(r => r.frequency === 'fiveyearly');
     
-    if (fiveYearlyResults.length === 0) return 5001;
+    console.log(`Found ${fiveYearlyResults.length} existing 5-yearly items:`, fiveYearlyResults.map(r => ({
+      id: r.id,
+      assetNumber: r.assetNumber,
+      itemName: r.itemName
+    })));
+    
+    if (fiveYearlyResults.length === 0) {
+      console.log('No existing 5-yearly items found, returning 5001');
+      return 5001;
+    }
     
     const existingNumbers = fiveYearlyResults
       .map(r => parseInt(r.assetNumber))
       .filter(n => !isNaN(n))
       .sort((a, b) => b - a);
     
-    return existingNumbers.length > 0 ? existingNumbers[0] + 1 : 5001;
+    console.log('Existing 5-yearly asset numbers:', existingNumbers);
+    
+    const nextNumber = existingNumbers.length > 0 ? existingNumbers[0] + 1 : 5001;
+    console.log('Next 5-yearly asset number:', nextNumber);
+    
+    return nextNumber;
   }
 
   async updateTestResult(id: number, data: Partial<InsertTestResult>): Promise<TestResult> {
@@ -378,7 +392,30 @@ export class DatabaseStorage implements IStorage {
 
   async isDuplicateAssetNumber(sessionId: number, assetNumber: string): Promise<boolean> {
     const results = await this.getTestResultsBySession(sessionId);
-    return results.some(r => r.assetNumber === assetNumber);
+    const isDuplicate = results.some(r => r.assetNumber === assetNumber);
+    console.log(`Checking duplicate for asset number ${assetNumber}:`, isDuplicate);
+    return isDuplicate;
+  }
+
+  async isDuplicateAssetNumberForFrequency(sessionId: number, assetNumber: string, frequency: string): Promise<boolean> {
+    const results = await this.getTestResultsBySession(sessionId);
+    
+    // Filter results by frequency group
+    const sameFrequencyResults = results.filter(r => {
+      if (frequency === 'fiveyearly') {
+        return r.frequency === 'fiveyearly';
+      } else {
+        // Monthly frequencies
+        return r.frequency === 'threemonthly' || 
+               r.frequency === 'sixmonthly' || 
+               r.frequency === 'twelvemonthly' || 
+               r.frequency === 'twentyfourmonthly';
+      }
+    });
+    
+    const isDuplicate = sameFrequencyResults.some(r => r.assetNumber === assetNumber);
+    console.log(`Checking duplicate for asset number ${assetNumber} in frequency group ${frequency}:`, isDuplicate);
+    return isDuplicate;
   }
 
   async getAssetProgress(sessionId: number): Promise<{
