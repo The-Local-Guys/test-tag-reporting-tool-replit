@@ -355,8 +355,8 @@ export class DatabaseStorage implements IStorage {
     })));
     
     if (fiveYearlyResults.length === 0) {
-      console.log('No existing 5-yearly items found, returning 5001');
-      return 5001;
+      console.log('No existing 5-yearly items found, returning 10001');
+      return 10001;
     }
     
     const existingNumbers = fiveYearlyResults
@@ -366,7 +366,7 @@ export class DatabaseStorage implements IStorage {
     
     console.log('Existing 5-yearly asset numbers:', existingNumbers);
     
-    const nextNumber = existingNumbers.length > 0 ? existingNumbers[0] + 1 : 5001;
+    const nextNumber = existingNumbers.length > 0 ? existingNumbers[0] + 1 : 10001;
     console.log('Next 5-yearly asset number:', nextNumber);
     
     return nextNumber;

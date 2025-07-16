@@ -125,4 +125,6 @@ Changelog:
   - Fixed modal scrolling issues in admin interface with proper scroll containment
   - Added real-time asset number progress display to testing interface
   - Shows next asset number and count of tested items for each frequency type
-  - Fixed 5-yearly asset numbering bug ensuring proper 5001+ sequence separation
+  - Fixed 5-yearly asset numbering bug ensuring proper sequence separation
+  - Updated 5-yearly asset numbers to start from 10001 instead of 5001
+  - Fixed all existing 5-yearly items to use new 10001+ numbering system
