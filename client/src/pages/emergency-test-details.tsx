@@ -18,7 +18,6 @@ import { emergencyClassifications, emergencyFailureReasons, emergencyFrequencies
 // Emergency Exit Light Test Schema following AS 2293.2:2019
 const emergencyTestSchema = z.object({
   location: z.string().min(1, 'Location is required'),
-  assetNumber: z.string().min(1, 'Asset number is required'),
   classification: z.enum(['exit_sign', 'emergency_light', 'combination_unit']),
   result: z.enum(['pass', 'fail']),
   frequency: z.enum(['sixmonthly', 'annually']),
@@ -52,7 +51,6 @@ export default function EmergencyTestDetails() {
     resolver: zodResolver(emergencyTestSchema),
     defaultValues: {
       location: '',
-      assetNumber: '1',
       classification: 'exit_sign',
       result: 'pass',
       frequency: 'sixmonthly',
@@ -71,18 +69,7 @@ export default function EmergencyTestDetails() {
   const watchResult = form.watch('result');
   const watchClassification = form.watch('classification');
 
-  // Get next asset number from API
-  const { data: nextAssetData, isLoading: isLoadingAssetNumber, error: assetNumberError } = useQuery<{nextAssetNumber: number}>({
-    queryKey: [`/api/sessions/${sessionData?.session?.id}/next-asset-number`],
-    enabled: !!sessionData?.session?.id,
-  });
-
-  // Auto-generate asset number when next asset data changes
-  useEffect(() => {
-    if (nextAssetData?.nextAssetNumber) {
-      form.setValue('assetNumber', nextAssetData.nextAssetNumber.toString());
-    }
-  }, [nextAssetData, form]);
+  // Asset numbers are now auto-generated on server side
 
   const onSubmit = async (data: EmergencyTestForm) => {
     if (!sessionData?.session?.id) {
@@ -106,7 +93,7 @@ export default function EmergencyTestDetails() {
 
     try {
       console.log('Submitting emergency test result:', {
-        assetNumber: data.assetNumber,
+        assetNumber: 'Auto-generated',
         itemName: itemName,
         itemType: itemType,
         location: data.location,
@@ -130,7 +117,7 @@ export default function EmergencyTestDetails() {
       });
 
       await addResult({
-        assetNumber: data.assetNumber,
+        assetNumber: '', // Will be auto-generated on server side
         itemName: itemName,
         itemType: itemType,
         location: data.location,
@@ -237,23 +224,15 @@ export default function EmergencyTestDetails() {
             </div>
 
             <div>
-              <Label htmlFor="assetNumber">Asset Number *</Label>
-              <Input
-                id="assetNumber"
-                {...form.register('assetNumber')}
-                placeholder={isLoadingAssetNumber ? "Loading..." : "1"}
-                className="text-base"
-                type="text"
-              />
-              {assetNumberError && (
-                <p className="text-red-500 text-sm mt-1">Error loading asset number</p>
-              )}
-              {form.formState.errors.assetNumber && (
-                <p className="text-red-500 text-sm mt-1">{form.formState.errors.assetNumber.message}</p>
-              )}
-              <p className="text-xs text-gray-500 mt-1">
-                Asset number for tracking and identification (editable)
-              </p>
+              <Label>Asset Number</Label>
+              <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                <div className="text-sm text-green-800">
+                  <div className="font-medium">Auto-generated sequentially</div>
+                  <div className="text-green-600 mt-1">
+                    Emergency equipment: Starting from 1
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div>

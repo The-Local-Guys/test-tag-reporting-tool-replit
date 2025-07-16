@@ -33,8 +33,6 @@ const frequencyOptions = [
 
 const testDetailsSchema = z.object({
   location: z.string().min(1, "Location is required"),
-  monthlyAssetNumber: z.string().min(1, "Monthly asset number is required"),
-  fiveYearlyAssetNumber: z.string().min(1, "Five yearly asset number is required"),
 });
 
 export default function TestDetails() {
@@ -69,16 +67,7 @@ export default function TestDetails() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isAddingResult]);
 
-  // Get next asset numbers
-  const { data: nextMonthlyAssetData } = useQuery<{nextAssetNumber: number}>({
-    queryKey: [`/api/sessions/${sessionId}/next-monthly-asset-number`],
-    enabled: !!sessionId,
-  });
-
-  const { data: nextFiveYearlyAssetData } = useQuery<{nextAssetNumber: number}>({
-    queryKey: [`/api/sessions/${sessionId}/next-five-yearly-asset-number`],
-    enabled: !!sessionId,
-  });
+  // Asset numbers are now auto-generated on server side
 
   useEffect(() => {
     const params = new URLSearchParams(search);
@@ -89,27 +78,14 @@ export default function TestDetails() {
     }
   }, [search]);
 
-  const form = useForm<{location: string, monthlyAssetNumber: string, fiveYearlyAssetNumber: string}>({
+  const form = useForm<{location: string}>({
     resolver: zodResolver(testDetailsSchema),
     defaultValues: {
       location: currentLocation,
-      monthlyAssetNumber: '1',
-      fiveYearlyAssetNumber: '5001',
     },
   });
 
-  // Update asset numbers when next asset data changes
-  useEffect(() => {
-    if (nextMonthlyAssetData?.nextAssetNumber) {
-      form.setValue('monthlyAssetNumber', nextMonthlyAssetData.nextAssetNumber.toString());
-    }
-  }, [nextMonthlyAssetData, form]);
-
-  useEffect(() => {
-    if (nextFiveYearlyAssetData?.nextAssetNumber) {
-      form.setValue('fiveYearlyAssetNumber', nextFiveYearlyAssetData.nextAssetNumber.toString());
-    }
-  }, [nextFiveYearlyAssetData, form]);
+  // Asset numbers are now auto-generated on server side
 
   // Update location field when currentLocation changes
   useEffect(() => {
@@ -176,13 +152,8 @@ export default function TestDetails() {
 
     const formValues = form.getValues();
     
-    // Determine which asset number to use based on frequency
-    const assetNumber = selectedFrequency === 'fiveyearly' 
-      ? formValues.fiveYearlyAssetNumber 
-      : formValues.monthlyAssetNumber;
-    
     const testData: Omit<InsertTestResult, 'sessionId'> = {
-      assetNumber: assetNumber,
+      assetNumber: '', // Will be auto-generated on server side
       itemName: currentItem.name,
       itemType: currentItem.type,
       location: formValues.location,
@@ -289,53 +260,20 @@ export default function TestDetails() {
           </div>
         </div>
 
-        {/* Asset Number Inputs */}
-        <div className="space-y-4">
+        {/* Asset Number Info */}
+        <div className="space-y-2">
           <Label className="flex items-center text-sm font-medium text-gray-700">
-            🏷️ Asset Numbers <span className="text-red-500 ml-1">*</span>
+            🏷️ Asset Number
           </Label>
-          
-          {/* Monthly Asset Number */}
-          <div className="space-y-2">
-            <Label htmlFor="monthlyAssetNumber" className="text-sm font-medium text-gray-600">
-              3, 6, 12, 24 Monthly Asset Number
-            </Label>
-            <Input
-              id="monthlyAssetNumber"
-              placeholder="1"
-              {...form.register('monthlyAssetNumber')}
-              className={`text-base ${form.formState.errors.monthlyAssetNumber ? 'border-red-500' : ''}`}
-              type="text"
-            />
-            {form.formState.errors.monthlyAssetNumber && (
-              <div className="text-red-500 text-xs">
-                {form.formState.errors.monthlyAssetNumber.message}
+          <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+            <div className="text-sm text-blue-800">
+              <div className="font-medium">Auto-generated based on frequency:</div>
+              <div className="text-blue-600 mt-1">
+                {selectedFrequency === 'fiveyearly' ? 
+                  '5 Yearly items: Start from 5001' : 
+                  'Monthly items: Start from 1'
+                }
               </div>
-            )}
-            <div className="text-xs text-gray-500">
-              Starting from 1 (editable)
-            </div>
-          </div>
-
-          {/* Five Yearly Asset Number */}
-          <div className="space-y-2">
-            <Label htmlFor="fiveYearlyAssetNumber" className="text-sm font-medium text-gray-600">
-              5 Yearly Asset Number
-            </Label>
-            <Input
-              id="fiveYearlyAssetNumber"
-              placeholder="5001"
-              {...form.register('fiveYearlyAssetNumber')}
-              className={`text-base ${form.formState.errors.fiveYearlyAssetNumber ? 'border-red-500' : ''}`}
-              type="text"
-            />
-            {form.formState.errors.fiveYearlyAssetNumber && (
-              <div className="text-red-500 text-xs">
-                {form.formState.errors.fiveYearlyAssetNumber.message}
-              </div>
-            )}
-            <div className="text-xs text-gray-500">
-              Starting from 5001 (editable)
             </div>
           </div>
         </div>

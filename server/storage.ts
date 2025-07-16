@@ -229,6 +229,21 @@ export class DatabaseStorage implements IStorage {
         photoData: insertResult.photoData ? `Photo data included (${Math.round(insertResult.photoData.length / 1024)}KB)` : 'No photo data'
       });
       
+      // Auto-generate asset number based on frequency if not provided or if provided number already exists
+      let assetNumber = insertResult.assetNumber;
+      
+      if (!assetNumber || await this.isDuplicateAssetNumber(insertResult.sessionId, assetNumber)) {
+        console.log('Auto-generating asset number for frequency:', insertResult.frequency);
+        
+        if (insertResult.frequency === 'fiveyearly') {
+          assetNumber = (await this.getNextFiveYearlyAssetNumber(insertResult.sessionId)).toString();
+        } else {
+          assetNumber = (await this.getNextMonthlyAssetNumber(insertResult.sessionId)).toString();
+        }
+        
+        console.log('Generated asset number:', assetNumber);
+      }
+      
       // Use the pool directly for raw SQL execution with all fields including emergency-specific ones
       const query = `
         INSERT INTO test_results 
@@ -240,7 +255,7 @@ export class DatabaseStorage implements IStorage {
       const { pool } = await import('./db');
       const result = await pool.query(query, [
         insertResult.sessionId,
-        insertResult.assetNumber,
+        assetNumber,
         insertResult.itemName,
         insertResult.itemType,
         insertResult.location,
@@ -343,6 +358,11 @@ export class DatabaseStorage implements IStorage {
   async validateAssetNumber(sessionId: number, assetNumber: string, excludeId?: number): Promise<boolean> {
     const results = await this.getTestResultsBySession(sessionId);
     return !results.some(r => r.assetNumber === assetNumber && r.id !== excludeId);
+  }
+
+  async isDuplicateAssetNumber(sessionId: number, assetNumber: string): Promise<boolean> {
+    const results = await this.getTestResultsBySession(sessionId);
+    return results.some(r => r.assetNumber === assetNumber);
   }
 
   async getFullSessionData(sessionId: number): Promise<{

@@ -116,3 +116,10 @@ Changelog:
   - Added comprehensive validation and verification of test result saves
   - Improved comment system integration for both PDF and Excel reports
   - Added pagination system to admin report viewing with 10/50/100 items per page options
+- July 16, 2025. Fixed critical asset numbering system bug:
+  - Resolved race condition causing random asset numbers instead of sequential numbering
+  - Moved asset number generation from frontend to server-side for atomic operations
+  - Implemented automatic duplicate detection and correction during test result creation
+  - Updated both electrical and emergency test interfaces to use server-side generation
+  - Enhanced UI to show auto-generation status instead of manual input fields
+  - Fixed modal scrolling issues in admin interface with proper scroll containment
