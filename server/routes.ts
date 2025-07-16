@@ -403,6 +403,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get asset progress for session (protected)
+  app.get("/api/sessions/:id/asset-progress", requireAuth, async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const progress = await storage.getAssetProgress(sessionId);
+      res.json(progress);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get asset progress" });
+    }
+  });
+
   // Validate asset number for session (protected)
   app.post("/api/sessions/:id/validate-asset-number", requireAuth, async (req, res) => {
     try {

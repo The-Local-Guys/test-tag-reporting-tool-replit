@@ -32,6 +32,17 @@ export function useSession() {
     enabled: !!sessionId,
   });
 
+  // Get asset progress
+  const { data: assetProgress } = useQuery<{
+    nextMonthly: number;
+    nextFiveYearly: number;
+    monthlyCount: number;
+    fiveYearlyCount: number;
+  }>({
+    queryKey: [`/api/sessions/${sessionId}/asset-progress`],
+    enabled: !!sessionId,
+  });
+
   // Create new session
   const createSessionMutation = useMutation({
     mutationFn: async (data: InsertTestSession) => {
@@ -111,6 +122,7 @@ export function useSession() {
       queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/next-asset-number`] });
       queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/next-monthly-asset-number`] });
       queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/next-five-yearly-asset-number`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/asset-progress`] });
     },
     onError: (error) => {
       const timestamp = new Date().toISOString();
@@ -140,6 +152,7 @@ export function useSession() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/report`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/asset-progress`] });
     },
   });
 
@@ -156,6 +169,7 @@ export function useSession() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/report`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/asset-progress`] });
     },
   });
 
@@ -209,6 +223,7 @@ export function useSession() {
   return {
     sessionId,
     sessionData,
+    assetProgress,
     currentLocation,
     setCurrentLocation,
     isLoading,

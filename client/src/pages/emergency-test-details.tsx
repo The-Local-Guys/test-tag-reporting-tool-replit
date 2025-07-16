@@ -38,7 +38,7 @@ type EmergencyTestForm = z.infer<typeof emergencyTestSchema>;
 export default function EmergencyTestDetails() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { sessionData, addResult } = useSession();
+  const { sessionData, addResult, assetProgress } = useSession();
   const [photoData, setPhotoData] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
 
@@ -227,9 +227,24 @@ export default function EmergencyTestDetails() {
               <Label>Asset Number</Label>
               <div className="bg-green-50 p-3 rounded-lg border border-green-200">
                 <div className="text-sm text-green-800">
-                  <div className="font-medium">Auto-generated sequentially</div>
-                  <div className="text-green-600 mt-1">
-                    Emergency equipment: Starting from 1
+                  <div className="font-medium">Next asset number will be:</div>
+                  <div className="text-green-600 mt-1 text-lg font-semibold">
+                    {assetProgress ? (
+                      form.watch('frequency') === 'annually' ? 
+                        `#${assetProgress.nextFiveYearly}` : 
+                        `#${assetProgress.nextMonthly}`
+                    ) : (
+                      'Loading...'
+                    )}
+                  </div>
+                  <div className="text-xs text-green-600 mt-1">
+                    {assetProgress ? (
+                      form.watch('frequency') === 'annually' ? 
+                        `Annual items: ${assetProgress.fiveYearlyCount} tested` : 
+                        `6-monthly items: ${assetProgress.monthlyCount} tested`
+                    ) : (
+                      'Loading progress...'
+                    )}
                   </div>
                 </div>
               </div>

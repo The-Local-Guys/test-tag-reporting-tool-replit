@@ -49,7 +49,7 @@ export default function TestDetails() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const { sessionId, currentLocation, addResult, isAddingResult } = useSession();
+  const { sessionId, currentLocation, addResult, isAddingResult, assetProgress } = useSession();
   const [, setLocation] = useLocation();
   const search = useSearch();
   
@@ -267,12 +267,24 @@ export default function TestDetails() {
           </Label>
           <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
             <div className="text-sm text-blue-800">
-              <div className="font-medium">Auto-generated based on frequency:</div>
-              <div className="text-blue-600 mt-1">
-                {selectedFrequency === 'fiveyearly' ? 
-                  '5 Yearly items: Start from 5001' : 
-                  'Monthly items: Start from 1'
-                }
+              <div className="font-medium">Next asset number will be:</div>
+              <div className="text-blue-600 mt-1 text-lg font-semibold">
+                {assetProgress ? (
+                  selectedFrequency === 'fiveyearly' ? 
+                    `#${assetProgress.nextFiveYearly}` : 
+                    `#${assetProgress.nextMonthly}`
+                ) : (
+                  'Loading...'
+                )}
+              </div>
+              <div className="text-xs text-blue-600 mt-1">
+                {assetProgress ? (
+                  selectedFrequency === 'fiveyearly' ? 
+                    `5-yearly items: ${assetProgress.fiveYearlyCount} tested` : 
+                    `Monthly items: ${assetProgress.monthlyCount} tested`
+                ) : (
+                  'Loading progress...'
+                )}
               </div>
             </div>
           </div>

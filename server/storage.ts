@@ -43,6 +43,14 @@ export interface IStorage {
   getNextFiveYearlyAssetNumber(sessionId: number): Promise<number>;
   validateAssetNumber(sessionId: number, assetNumber: string, excludeId?: number): Promise<boolean>;
   
+  // Asset Progress
+  getAssetProgress(sessionId: number): Promise<{
+    nextMonthly: number;
+    nextFiveYearly: number;
+    monthlyCount: number;
+    fiveYearlyCount: number;
+  }>;
+  
   // Report Data
   getFullSessionData(sessionId: number): Promise<{
     session: TestSession;
@@ -363,6 +371,37 @@ export class DatabaseStorage implements IStorage {
   async isDuplicateAssetNumber(sessionId: number, assetNumber: string): Promise<boolean> {
     const results = await this.getTestResultsBySession(sessionId);
     return results.some(r => r.assetNumber === assetNumber);
+  }
+
+  async getAssetProgress(sessionId: number): Promise<{
+    nextMonthly: number;
+    nextFiveYearly: number;
+    monthlyCount: number;
+    fiveYearlyCount: number;
+  }> {
+    const results = await this.getTestResultsBySession(sessionId);
+    
+    // Count monthly items
+    const monthlyResults = results.filter(r => 
+      r.frequency === 'threemonthly' || 
+      r.frequency === 'sixmonthly' || 
+      r.frequency === 'twelvemonthly' || 
+      r.frequency === 'twentyfourmonthly'
+    );
+    
+    // Count 5-yearly items
+    const fiveYearlyResults = results.filter(r => r.frequency === 'fiveyearly');
+    
+    // Get next asset numbers
+    const nextMonthly = await this.getNextMonthlyAssetNumber(sessionId);
+    const nextFiveYearly = await this.getNextFiveYearlyAssetNumber(sessionId);
+    
+    return {
+      nextMonthly,
+      nextFiveYearly,
+      monthlyCount: monthlyResults.length,
+      fiveYearlyCount: fiveYearlyResults.length,
+    };
   }
 
   async getFullSessionData(sessionId: number): Promise<{
