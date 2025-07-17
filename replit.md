@@ -129,3 +129,11 @@ Changelog:
   - Updated 5-yearly asset numbers to start from 10001 instead of 5001
   - Fixed all existing 5-yearly items to use new 10001+ numbering system
   - Added numerical sorting to reports so items display in asset number order (1, 2, 3, 10001, 10002, etc.)
+- July 17, 2025. Fixed critical duplicate test result bug:
+  - Implemented comprehensive duplicate prevention system to prevent users testing 1 item but getting multiple duplicates
+  - Added client-side deduplication with unique request IDs and duplicate detection
+  - Removed retry logic that was causing duplicate submissions
+  - Added server-side recent duplicate detection (10-second window)
+  - Implemented button debouncing to prevent rapid multiple clicks
+  - Added request-in-progress tracking to prevent concurrent submissions
+  - Enhanced logging to track duplicate detection and prevention

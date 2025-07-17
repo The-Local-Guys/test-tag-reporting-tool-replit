@@ -144,6 +144,12 @@ export default function TestDetails() {
   const handleTestResult = async (result: 'pass' | 'fail') => {
     if (!currentItem) return;
 
+    // Prevent multiple rapid submissions
+    if (isAddingResult) {
+      console.log('Test result already being processed, ignoring duplicate click');
+      return;
+    }
+
     // Validate the form first
     const isValid = await form.trigger();
     if (!isValid) {

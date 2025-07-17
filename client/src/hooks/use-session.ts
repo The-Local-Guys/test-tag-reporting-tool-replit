@@ -56,50 +56,45 @@ export function useSession() {
     },
   });
 
-  // Add test result with retry logic
+  // Add test result with deduplication and retry logic
   const addResultMutation = useMutation({
     mutationFn: async (data: Omit<InsertTestResult, 'sessionId'>) => {
       if (!sessionId) throw new Error('No active session');
       
-      // Add timestamp to track when the request was made
-      const timestamp = new Date().toISOString();
-      console.log(`[${timestamp}] Sending test result to server:`, {
-        ...data,
-        photoData: data.photoData ? `Photo included (${Math.round(data.photoData.length / 1024)}KB)` : 'No photo'
-      });
+      // Generate a unique request ID to prevent duplicate processing
+      const requestId = `${sessionId}-${data.itemName}-${data.itemType}-${data.location}-${Date.now()}`;
       
-      // Retry logic with exponential backoff
-      const maxRetries = 3;
-      let retryCount = 0;
+      // Check if this exact request is already in progress
+      const inProgressKey = `request-${requestId}`;
+      if (localStorage.getItem(inProgressKey)) {
+        throw new Error('Duplicate request detected - already processing');
+      }
       
-      while (retryCount < maxRetries) {
-        try {
-          const response = await apiRequest('POST', `/api/sessions/${sessionId}/results`, data);
-          const result = await response.json();
-          console.log(`[${timestamp}] Server response (attempt ${retryCount + 1}):`, result);
-          
-          // Verify the result was properly saved by checking if it has an ID
-          if (!result.id) {
-            throw new Error('Server returned invalid result - no ID');
-          }
-          
-          return result;
-        } catch (error) {
-          retryCount++;
-          console.error(`[${timestamp}] Error saving test result (attempt ${retryCount}/${maxRetries}):`, error);
-          
-          if (retryCount >= maxRetries) {
-            // Store failed result locally for recovery
-            const failedResults = JSON.parse(localStorage.getItem('failedResults') || '[]');
-            failedResults.push({ data, timestamp, sessionId, error: String(error) });
-            localStorage.setItem('failedResults', JSON.stringify(failedResults));
-            
-            throw new Error(`Failed to save test result after ${maxRetries} attempts: ${error}`);
-          }
-          
-          // Wait before retrying (exponential backoff)
-          await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+      // Mark request as in progress
+      localStorage.setItem(inProgressKey, 'true');
+      
+      try {
+        // Add timestamp to track when the request was made
+        const timestamp = new Date().toISOString();
+        console.log(`[${timestamp}] Sending test result to server (ID: ${requestId}):`, {
+          ...data,
+          photoData: data.photoData ? `Photo included (${Math.round(data.photoData.length / 1024)}KB)` : 'No photo'
+        });
+        
+        // Single attempt only - no retries to prevent duplicates
+        const response = await apiRequest('POST', `/api/sessions/${sessionId}/results`, data);
+        const result = await response.json();
+        console.log(`[${timestamp}] Server response (ID: ${requestId}):`, result);
+        
+        // Verify the result was properly saved by checking if it has an ID
+        if (!result.id) {
+          throw new Error('Server returned invalid result - no ID');
         }
+        
+        return result;
+      } finally {
+        // Always clean up the in-progress marker
+        localStorage.removeItem(inProgressKey);
       }
     },
     onSuccess: (result: TestResult) => {
@@ -128,11 +123,19 @@ export function useSession() {
       const timestamp = new Date().toISOString();
       console.error(`[${timestamp}] Final mutation error:`, error);
       
-      // Alert user about the failure
-      alert(`Failed to save test result: ${error}. Please try again or contact support if this continues.`);
+      // Only show alert if it's not a duplicate request
+      if (!error.message.includes('Duplicate request detected')) {
+        // Store failed result locally for recovery
+        const failedResults = JSON.parse(localStorage.getItem('failedResults') || '[]');
+        failedResults.push({ data: null, timestamp, sessionId, error: String(error) });
+        localStorage.setItem('failedResults', JSON.stringify(failedResults));
+        
+        // Alert user about the failure
+        alert(`Failed to save test result: ${error}. Please try again or contact support if this continues.`);
+      }
     },
     // Configure retry behavior
-    retry: false, // We handle retries manually
+    retry: false, // No retries to prevent duplicates
   });
 
   const updateResultMutation = useMutation({

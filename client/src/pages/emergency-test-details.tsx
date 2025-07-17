@@ -38,7 +38,7 @@ type EmergencyTestForm = z.infer<typeof emergencyTestSchema>;
 export default function EmergencyTestDetails() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { sessionData, addResult, assetProgress } = useSession();
+  const { sessionData, addResult, assetProgress, isAddingResult } = useSession();
   const [photoData, setPhotoData] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
 
@@ -78,6 +78,12 @@ export default function EmergencyTestDetails() {
         description: 'No active session found',
         variant: 'destructive',
       });
+      return;
+    }
+
+    // Prevent multiple rapid submissions
+    if (isAddingResult) {
+      console.log('Emergency test result already being processed, ignoring duplicate submission');
       return;
     }
 

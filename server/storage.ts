@@ -10,7 +10,7 @@ import {
   type InsertUser
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, gte } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 export interface IStorage {
@@ -237,6 +237,13 @@ export class DatabaseStorage implements IStorage {
         photoData: insertResult.photoData ? `Photo data included (${Math.round(insertResult.photoData.length / 1024)}KB)` : 'No photo data'
       });
       
+      // Check for recent duplicate submissions (within 10 seconds)
+      const recentDuplicates = await this.checkForRecentDuplicates(insertResult);
+      if (recentDuplicates.length > 0) {
+        console.log('Recent duplicate detected, returning existing result:', recentDuplicates[0]);
+        return recentDuplicates[0];
+      }
+      
       // Always auto-generate asset number based on frequency (ignore any provided asset number)
       let assetNumber: string;
       
@@ -434,6 +441,27 @@ export class DatabaseStorage implements IStorage {
     const isDuplicate = sameFrequencyResults.some(r => r.assetNumber === assetNumber);
     console.log(`Checking duplicate for asset number ${assetNumber} in frequency group ${frequency}:`, isDuplicate);
     return isDuplicate;
+  }
+
+  async checkForRecentDuplicates(insertResult: any): Promise<TestResult[]> {
+    const tenSecondsAgo = new Date(Date.now() - 10000); // 10 seconds ago
+    
+    const results = await db
+      .select()
+      .from(testResults)
+      .where(
+        and(
+          eq(testResults.sessionId, insertResult.sessionId),
+          eq(testResults.itemName, insertResult.itemName),
+          eq(testResults.itemType, insertResult.itemType),
+          eq(testResults.location, insertResult.location),
+          eq(testResults.frequency, insertResult.frequency),
+          gte(testResults.createdAt, tenSecondsAgo)
+        )
+      );
+    
+    console.log(`Found ${results.length} recent duplicates for item: ${insertResult.itemName}`);
+    return results;
   }
 
   async getAssetProgress(sessionId: number): Promise<{

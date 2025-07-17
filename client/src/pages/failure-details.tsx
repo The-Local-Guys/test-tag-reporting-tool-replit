@@ -114,6 +114,12 @@ export default function FailureDetails() {
   const handleSaveFailure = () => {
     if (!testData || !selectedReason || !selectedAction) return;
 
+    // Prevent multiple rapid submissions
+    if (isAddingResult) {
+      console.log('Test result already being processed, ignoring duplicate click');
+      return;
+    }
+
     const completeTestData: Omit<InsertTestResult, 'sessionId'> = {
       ...testData,
       failureReason: selectedReason,
