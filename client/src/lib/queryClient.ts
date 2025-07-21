@@ -7,6 +7,14 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+/**
+ * Makes authenticated API requests to the backend server
+ * Automatically includes credentials and handles JSON serialization
+ * @param method - HTTP method (GET, POST, PATCH, DELETE)
+ * @param url - API endpoint URL
+ * @param data - Optional request body data (will be JSON stringified)
+ * @returns Promise resolving to the Response object
+ */
 export async function apiRequest(
   method: string,
   url: string,

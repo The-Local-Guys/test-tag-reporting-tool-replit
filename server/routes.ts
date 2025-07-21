@@ -22,6 +22,10 @@ declare module 'express-session' {
 }
 
 // Authentication middleware
+/**
+ * Middleware to ensure user is logged in before accessing protected routes
+ * Checks for valid session and userId to verify authentication status
+ */
 const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   if (!req.session.userId) {
     return res.status(401).json({ message: "Authentication required" });
@@ -30,6 +34,10 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
 };
 
 // Admin middleware - for super admin and support center
+/**
+ * Middleware to restrict access to administrative functions
+ * Allows super_admin and support_center roles to access admin-only endpoints
+ */
 const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
   if (!req.session.userId || !req.session.user || 
       (req.session.user.role !== "super_admin" && req.session.user.role !== "support_center")) {
@@ -39,6 +47,10 @@ const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
 };
 
 // Super admin only middleware
+/**
+ * Middleware to restrict access to super admin functions only
+ * Used for highest-level administrative operations like user management
+ */
 const requireSuperAdmin = (req: Request, res: Response, next: NextFunction) => {
   if (!req.session.userId || !req.session.user || req.session.user.role !== "super_admin") {
     return res.status(403).json({ message: "Super admin access required" });

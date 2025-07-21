@@ -60,11 +60,25 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   // User authentication methods
+  
+  /**
+   * Retrieves a user by their username from the database
+   * Used during login authentication to find user accounts
+   * @param username - The username to search for
+   * @returns User object if found, undefined if not found
+   */
   async getUserByUsername(username: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.username, username));
     return user;
   }
 
+  /**
+   * Creates a new user account with encrypted password
+   * Automatically hashes the password using bcrypt for security
+   * Used by admins to create new technician and support center accounts
+   * @param insertUser - User data including plaintext password
+   * @returns Newly created user object with encrypted password
+   */
   async createUser(insertUser: InsertUser): Promise<User> {
     // Hash the password before storing
     const hashedPassword = await bcrypt.hash(insertUser.password, 10);
@@ -78,6 +92,13 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  /**
+   * Validates user credentials during login process
+   * Checks if user exists, is active, and password matches
+   * @param username - Username to authenticate
+   * @param password - Plaintext password to verify
+   * @returns User object if credentials are valid, null if invalid or user inactive
+   */
   async validatePassword(username: string, password: string): Promise<User | null> {
     const user = await this.getUserByUsername(username);
     if (!user || !user.isActive) {
@@ -88,6 +109,12 @@ export class DatabaseStorage implements IStorage {
     return isValid ? user : null;
   }
 
+  /**
+   * Updates a user's password with proper encryption
+   * Used by admins to reset passwords or by users to change their own password
+   * @param userId - ID of the user whose password to update
+   * @param newPassword - New plaintext password to set
+   */
   async updateUserPassword(userId: number, newPassword: string): Promise<void> {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await db
@@ -97,10 +124,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Admin operations
+  
+  /**
+   * Retrieves all users from the database for admin management
+   * Used in admin dashboard to display user list with roles and status
+   * @returns Array of all user objects in the system
+   */
   async getAllUsers(): Promise<User[]> {
     return await db.select().from(users);
   }
 
+  /**
+   * Activates or deactivates a user account
+   * Used by admins to disable access without deleting user records
+   * @param userId - ID of the user to update
+   * @param isActive - New active status (true = active, false = disabled)
+   * @returns Updated user object
+   */
   async updateUserStatus(userId: number, isActive: boolean): Promise<User> {
     const [user] = await db
       .update(users)
@@ -110,6 +150,13 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  /**
+   * Updates user information with automatic password hashing
+   * Used by admins to modify user details, roles, or reset passwords
+   * @param userId - ID of the user to update
+   * @param data - Partial user data to update (password will be hashed if provided)
+   * @returns Updated user object
+   */
   async updateUser(userId: number, data: Partial<InsertUser>): Promise<User> {
     const updateData: any = { 
       ...data, 
@@ -129,10 +176,16 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  /**
+   * Retrieves all test sessions with additional metadata for admin dashboard
+   * Includes technician names, item counts, and failure statistics
+   * @returns Array of test sessions with enriched data for management overview
+   */
   async getAllTestSessions(): Promise<(TestSession & { technicianFullName?: string; totalItems?: number; failedItems?: number })[]> {
     const sessions = await db
       .select({
         id: testSessions.id,
+        serviceType: testSessions.serviceType,
         testDate: testSessions.testDate,
         technicianName: testSessions.technicianName,
         clientName: testSessions.clientName,
@@ -169,6 +222,12 @@ export class DatabaseStorage implements IStorage {
     return sessionsWithCounts;
   }
 
+  /**
+   * Retrieves all test sessions created by a specific user
+   * Used to show technicians their testing history and session management
+   * @param userId - ID of the user/technician whose sessions to retrieve
+   * @returns Array of test sessions with item count statistics
+   */
   async getSessionsByUser(userId: number): Promise<(TestSession & { totalItems?: number; failedItems?: number })[]> {
     const sessions = await db
       .select()
@@ -198,6 +257,13 @@ export class DatabaseStorage implements IStorage {
     return sessionsWithCounts;
   }
 
+  /**
+   * Updates test session information (client details, dates, etc.)
+   * Used by admins to correct session information after creation
+   * @param sessionId - ID of the session to update
+   * @param data - Partial session data to update
+   * @returns Updated test session object
+   */
   async updateTestSession(sessionId: number, data: Partial<InsertTestSession>): Promise<TestSession> {
     const [session] = await db
       .update(testSessions)
@@ -207,6 +273,11 @@ export class DatabaseStorage implements IStorage {
     return session;
   }
 
+  /**
+   * Permanently deletes a test session and all associated test results
+   * Cascades delete to maintain database consistency
+   * @param sessionId - ID of the session to delete completely
+   */
   async deleteTestSession(sessionId: number): Promise<void> {
     // First delete all related test results
     await db.delete(testResults).where(eq(testResults.sessionId, sessionId));
@@ -214,6 +285,12 @@ export class DatabaseStorage implements IStorage {
     await db.delete(testSessions).where(eq(testSessions.id, sessionId));
   }
 
+  /**
+   * Creates a new test session to group related test results
+   * Sets up testing context with client details and service type
+   * @param insertSession - Session data (client, address, technician info)
+   * @returns Newly created test session object
+   */
   async createTestSession(insertSession: InsertTestSession): Promise<TestSession> {
     const [session] = await db
       .insert(testSessions)
@@ -222,6 +299,12 @@ export class DatabaseStorage implements IStorage {
     return session;
   }
 
+  /**
+   * Retrieves a specific test session by its ID
+   * Used to load session context for testing and reporting
+   * @param id - ID of the test session to retrieve
+   * @returns Test session object if found, undefined if not found
+   */
   async getTestSession(id: number): Promise<TestSession | undefined> {
     const [session] = await db
       .select()
@@ -230,6 +313,13 @@ export class DatabaseStorage implements IStorage {
     return session || undefined;
   }
 
+  /**
+   * Creates a new test result with automatic asset numbering and duplicate prevention
+   * This is the core function for recording electrical and emergency exit light test data
+   * Features duplicate prevention, automatic asset number generation, and photo handling
+   * @param insertResult - Test result data including item details, test outcomes, and optional photo
+   * @returns Newly created test result with auto-generated asset number
+   */
   async createTestResult(insertResult: any): Promise<TestResult> {
     try {
       console.log('Attempting to insert test result:', {
@@ -346,6 +436,12 @@ export class DatabaseStorage implements IStorage {
     return existingNumbers.length > 0 ? existingNumbers[0] + 1 : 1;
   }
 
+  /**
+   * Generates the next sequential asset number for monthly frequency testing (1, 2, 3...)
+   * Covers 3, 6, 12, and 24 monthly testing frequencies
+   * @param sessionId - ID of the session to generate asset number for
+   * @returns Next available asset number starting from 1
+   */
   async getNextMonthlyAssetNumber(sessionId: number): Promise<number> {
     const results = await this.getTestResultsBySession(sessionId);
     
@@ -367,6 +463,12 @@ export class DatabaseStorage implements IStorage {
     return existingNumbers.length > 0 ? existingNumbers[0] + 1 : 1;
   }
 
+  /**
+   * Generates the next sequential asset number for 5-yearly testing (10001, 10002, 10003...)
+   * Uses separate numbering sequence to distinguish from monthly frequency items
+   * @param sessionId - ID of the session to generate asset number for
+   * @returns Next available 5-yearly asset number starting from 10001
+   */
   async getNextFiveYearlyAssetNumber(sessionId: number): Promise<number> {
     const results = await this.getTestResultsBySession(sessionId);
     
@@ -443,6 +545,12 @@ export class DatabaseStorage implements IStorage {
     return isDuplicate;
   }
 
+  /**
+   * Checks for recent duplicate test results to prevent multiple submissions
+   * Searches for identical items tested within the last 10 seconds
+   * @param insertResult - Test result data to check for duplicates
+   * @returns Array of recent duplicate test results (empty if no duplicates found)
+   */
   async checkForRecentDuplicates(insertResult: any): Promise<TestResult[]> {
     const tenSecondsAgo = new Date(Date.now() - 10000); // 10 seconds ago
     
@@ -464,6 +572,12 @@ export class DatabaseStorage implements IStorage {
     return results;
   }
 
+  /**
+   * Retrieves asset numbering progress and counts for testing interface
+   * Shows technicians what asset numbers will be assigned next and current counts
+   * @param sessionId - ID of the session to get progress for
+   * @returns Object with next asset numbers and item counts by frequency type
+   */
   async getAssetProgress(sessionId: number): Promise<{
     nextMonthly: number;
     nextFiveYearly: number;
@@ -495,6 +609,12 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
+  /**
+   * Retrieves complete session data including all test results for reporting
+   * Used for PDF and Excel report generation
+   * @param sessionId - ID of the session to get complete data for
+   * @returns Session details with all associated test results, or undefined if session not found
+   */
   async getFullSessionData(sessionId: number): Promise<{
     session: TestSession;
     results: TestResult[];

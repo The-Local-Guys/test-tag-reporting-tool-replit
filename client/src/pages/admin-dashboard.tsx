@@ -19,6 +19,11 @@ import { generatePDFReport, downloadPDF } from "@/lib/pdf-generator";
 import { generateExcelReport, downloadExcel } from "@/lib/excel-generator";
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
 
+/**
+ * Administrative dashboard for managing users, sessions, and system oversight
+ * Provides user management, session editing, data export, and system monitoring
+ * Restricted to super_admin and support_center roles
+ */
 export default function AdminDashboard() {
   const { user, logout, isLoggingOut } = useAuth();
   const { toast } = useToast();

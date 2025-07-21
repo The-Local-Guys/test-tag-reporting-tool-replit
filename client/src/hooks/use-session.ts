@@ -14,6 +14,12 @@ export interface SessionData {
   };
 }
 
+/**
+ * Main hook for managing test sessions and results
+ * Handles session creation, test result submission, and data synchronization
+ * Includes duplicate prevention and error recovery mechanisms
+ * @returns Object with session data, mutations, and state management functions
+ */
 export function useSession() {
   const [sessionId, setSessionId] = useState<number | null>(() => {
     const stored = localStorage.getItem('currentSessionId');
@@ -43,7 +49,10 @@ export function useSession() {
     enabled: !!sessionId,
   });
 
-  // Create new session
+  /**
+   * Creates a new testing session with client and technician details
+   * Sets up the testing context for recording test results
+   */
   const createSessionMutation = useMutation({
     mutationFn: async (data: InsertTestSession) => {
       const response = await apiRequest('POST', '/api/sessions', data);
@@ -56,7 +65,11 @@ export function useSession() {
     },
   });
 
-  // Add test result with deduplication and retry logic
+  /**
+   * Submits test results with comprehensive duplicate prevention
+   * Features unique request IDs, in-progress tracking, and error recovery
+   * Prevents users from accidentally creating multiple results for the same item
+   */
   const addResultMutation = useMutation({
     mutationFn: async (data: Omit<InsertTestResult, 'sessionId'>) => {
       if (!sessionId) throw new Error('No active session');

@@ -54,6 +54,12 @@ function getFrequencyLabel(frequency: string): string {
   }
 }
 
+/**
+ * Generates an Excel spreadsheet report with test results and compliance data
+ * Creates downloadable .xlsx files with formatted data, calculations, and summaries
+ * @param data - Complete session data including test results and summary statistics
+ * @returns Blob object containing the Excel file for download
+ */
 export function generateExcelReport(data: ReportData): Blob {
   const { session, results, summary } = data;
   

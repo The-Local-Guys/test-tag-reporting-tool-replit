@@ -35,6 +35,11 @@ const testDetailsSchema = z.object({
   location: z.string().min(1, "Location is required"),
 });
 
+/**
+ * Main testing interface for electrical equipment testing
+ * Handles item-specific test data entry, photo capture, and result submission
+ * Features automatic asset number generation and duplicate prevention
+ */
 export default function TestDetails() {
   const [selectedClass, setSelectedClass] = useState('class1');
   const [selectedFrequency, setSelectedFrequency] = useState(() => {

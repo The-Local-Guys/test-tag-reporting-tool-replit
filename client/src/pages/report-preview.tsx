@@ -16,6 +16,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { insertTestResultSchema, type TestResult, type InsertTestResult } from '@shared/schema';
 
+/**
+ * Report preview and generation interface
+ * Displays test session summary and provides PDF/Excel export functionality
+ * Shows pass/fail statistics and enables report customization options
+ */
 export default function ReportPreview() {
   const { sessionData, updateResult, deleteResult, clearSession } = useSession();
   const [, setLocation] = useLocation();

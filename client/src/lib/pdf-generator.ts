@@ -55,6 +55,12 @@ function getFrequencyLabel(frequency: string): string {
   }
 }
 
+/**
+ * Generates a professionally formatted PDF report for electrical and emergency testing
+ * Creates multi-page reports with company branding, test results, and compliance formatting
+ * @param data - Complete session data including test results and client information
+ * @returns Promise resolving to Blob object containing the PDF file for download
+ */
 export async function generatePDFReport(data: ReportData): Promise<Blob> {
   const { session, results, summary } = data;
   const doc = new jsPDF();

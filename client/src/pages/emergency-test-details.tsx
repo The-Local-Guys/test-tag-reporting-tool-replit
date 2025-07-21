@@ -35,6 +35,11 @@ const emergencyTestSchema = z.object({
 
 type EmergencyTestForm = z.infer<typeof emergencyTestSchema>;
 
+/**
+ * Emergency exit light testing interface for AS 2293.2:2019 compliance
+ * Handles emergency-specific test parameters, maintenance types, and globe classifications
+ * Features comprehensive test recording with photo documentation for failures
+ */
 export default function EmergencyTestDetails() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();

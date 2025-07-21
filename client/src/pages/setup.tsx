@@ -14,6 +14,11 @@ import { useLocation } from 'wouter';
 import type { InsertTestSession } from '@shared/schema';
 import logoPath from '@assets/The Local Guys - with plug wide boarder - png seek.png';
 
+/**
+ * Initial setup page for creating new testing sessions
+ * Collects client information, technician details, and service type selection
+ * Creates the testing context for either electrical or emergency exit light testing
+ */
 export default function Setup() {
   const { createSession, isCreatingSession, clearSession } = useSession();
   const { user, logout, isLoggingOut } = useAuth();
