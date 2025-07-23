@@ -162,3 +162,5 @@ Changelog:
   - Sequential asset numbering is now maintained across all testing sessions with proper state management
   - Asset numbers are assigned immediately when items are added to batch, eliminating server-side conflicts
   - Added sorting function to display items in proper order: monthly frequencies first (1, 2, 3...), then 5-yearly (10001, 10002, 10003...)
+  - Removed server-side duplicate checking and asset number generation to prevent conflicts with client-side batching
+  - Batch submission now uses client-provided asset numbers ensuring all items are saved to database correctly

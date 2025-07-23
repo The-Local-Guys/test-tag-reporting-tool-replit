@@ -458,10 +458,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const batchedResult = results[i];
         
         try {
-          // Convert batched result to database format
+          // Convert batched result to database format using client-provided asset number
           const resultData = {
             sessionId,
-            assetNumber: '', // Will be auto-generated
+            assetNumber: batchedResult.assetNumber || '1', // Use client-provided asset number
             itemName: batchedResult.itemName,
             itemType: batchedResult.itemType,
             location: batchedResult.location,
@@ -483,14 +483,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             installationDate: null,
           };
           
-          // Get next asset number based on frequency
-          if (batchedResult.frequency === 'fiveyearly') {
-            resultData.assetNumber = (await storage.getNextFiveYearlyAssetNumber(sessionId)).toString();
-          } else {
-            resultData.assetNumber = (await storage.getNextMonthlyAssetNumber(sessionId)).toString();
-          }
-          
-          // Create the result
+          // Create the result directly without checking for duplicates
           const savedResult = await storage.createTestResult(resultData);
           savedResults.push(savedResult);
           

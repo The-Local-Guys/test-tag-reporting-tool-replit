@@ -314,11 +314,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   /**
-   * Creates a new test result with automatic asset numbering and duplicate prevention
-   * This is the core function for recording electrical and emergency exit light test data
-   * Features duplicate prevention, automatic asset number generation, and photo handling
-   * @param insertResult - Test result data including item details, test outcomes, and optional photo
-   * @returns Newly created test result with auto-generated asset number
+   * Creates a new test result using client-provided data including asset number
+   * This function now relies on client-side asset numbering and batching
+   * @param insertResult - Test result data including item details, test outcomes, and asset number
+   * @returns Newly created test result
    */
   async createTestResult(insertResult: any): Promise<TestResult> {
     try {
@@ -327,35 +326,8 @@ export class DatabaseStorage implements IStorage {
         photoData: insertResult.photoData ? `Photo data included (${Math.round(insertResult.photoData.length / 1024)}KB)` : 'No photo data'
       });
       
-      // Check for recent duplicate submissions (within 10 seconds)
-      const recentDuplicates = await this.checkForRecentDuplicates(insertResult);
-      if (recentDuplicates.length > 0) {
-        console.log('Recent duplicate detected, returning existing result:', recentDuplicates[0]);
-        return recentDuplicates[0];
-      }
-      
-      // Always auto-generate asset number based on frequency (ignore any provided asset number)
-      let assetNumber: string;
-      
-      console.log('Auto-generating asset number for frequency:', insertResult.frequency);
-      
-      if (insertResult.frequency === 'fiveyearly') {
-        assetNumber = (await this.getNextFiveYearlyAssetNumber(insertResult.sessionId)).toString();
-      } else {
-        assetNumber = (await this.getNextMonthlyAssetNumber(insertResult.sessionId)).toString();
-      }
-      
-      console.log('Generated asset number:', assetNumber);
-      
-      // Only check for duplicates within the same frequency group
-      let finalAssetNumber = assetNumber;
-      while (await this.isDuplicateAssetNumberForFrequency(insertResult.sessionId, finalAssetNumber, insertResult.frequency)) {
-        const currentNumber = parseInt(finalAssetNumber);
-        finalAssetNumber = (currentNumber + 1).toString();
-        console.log('Duplicate detected, trying next number:', finalAssetNumber);
-      }
-      
-      assetNumber = finalAssetNumber;
+      // Use the asset number provided by the client (from batched results)
+      const assetNumber = insertResult.assetNumber || '1';
       
       // Use the pool directly for raw SQL execution with all fields including emergency-specific ones
       const query = `
