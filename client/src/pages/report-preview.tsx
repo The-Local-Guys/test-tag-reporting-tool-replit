@@ -57,8 +57,26 @@ export default function ReportPreview() {
 
   const { session, summary } = sessionData;
   
-  // Use batched results directly - they already have asset numbers assigned
-  const results = batchedResults;
+  // Sort batched results by frequency type and asset number
+  const sortResultsByAssetNumber = (results: BatchedTestResult[]): BatchedTestResult[] => {
+    return [...results].sort((a, b) => {
+      const aAssetNum = parseInt(a.assetNumber || '0');
+      const bAssetNum = parseInt(b.assetNumber || '0');
+      
+      // Monthly frequencies (1-9999) come first, then 5-yearly (10000+)
+      const aIsMonthly = aAssetNum < 10000;
+      const bIsMonthly = bAssetNum < 10000;
+      
+      if (aIsMonthly && !bIsMonthly) return -1; // Monthly before 5-yearly
+      if (!aIsMonthly && bIsMonthly) return 1;  // 5-yearly after monthly
+      
+      // Within same category, sort by asset number (ascending)
+      return aAssetNum - bAssetNum;
+    });
+  };
+
+  // Use sorted batched results
+  const results = sortResultsByAssetNumber(batchedResults);
 
   const handleExportPDF = async () => {
     try {

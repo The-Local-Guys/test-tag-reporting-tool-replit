@@ -161,3 +161,4 @@ Changelog:
   - Asset counters start at 0 for monthly frequencies (3, 6, 12, 24 monthly) and 10000 for 5-yearly frequency
   - Sequential asset numbering is now maintained across all testing sessions with proper state management
   - Asset numbers are assigned immediately when items are added to batch, eliminating server-side conflicts
+  - Added sorting function to display items in proper order: monthly frequencies first (1, 2, 3...), then 5-yearly (10001, 10002, 10003...)
