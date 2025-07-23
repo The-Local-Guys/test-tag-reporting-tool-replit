@@ -291,10 +291,10 @@ export default function FailureDetails() {
         <Button 
           onClick={handleSaveFailure}
           className="w-full bg-primary text-white py-4 text-lg font-semibold touch-button"
-          disabled={!selectedReason || !selectedAction || isAddingResult}
+          disabled={!selectedReason || !selectedAction}
         >
           <Save className="mr-2 h-5 w-5" />
-          {isAddingResult ? 'Saving...' : 'Save & Continue'}
+          Save & Continue
         </Button>
       </div>
     </div>
