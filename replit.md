@@ -157,3 +157,7 @@ Changelog:
   - Fixed critical isAddingResult errors by removing all legacy references from test pages
   - Simplified Pass/Fail buttons to work seamlessly with local storage batching system
   - Removed diagnostic tool code and all related components to clean up codebase
+  - Implemented client-side asset number tracking using useState counters to prevent jumbled asset numbers
+  - Asset counters start at 0 for monthly frequencies (3, 6, 12, 24 monthly) and 10000 for 5-yearly frequency
+  - Sequential asset numbering is now maintained across all testing sessions with proper state management
+  - Asset numbers are assigned immediately when items are added to batch, eliminating server-side conflicts

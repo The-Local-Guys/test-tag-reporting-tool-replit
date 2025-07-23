@@ -57,23 +57,8 @@ export default function ReportPreview() {
 
   const { session, summary } = sessionData;
   
-  // Generate preview asset numbers for batched results
-  const generatePreviewAssetNumbers = () => {
-    if (!assetProgress) return batchedResults;
-    
-    let monthlyCounter = assetProgress.nextMonthly;
-    let fiveYearlyCounter = assetProgress.nextFiveYearly;
-    
-    return batchedResults.map(result => ({
-      ...result,
-      assetNumber: result.frequency === 'fiveyearly' ? 
-        String(fiveYearlyCounter++) : 
-        String(monthlyCounter++)
-    }));
-  };
-
-  // Use batched results with preview asset numbers
-  const results = generatePreviewAssetNumbers();
+  // Use batched results directly - they already have asset numbers assigned
+  const results = batchedResults;
 
   const handleExportPDF = async () => {
     try {
@@ -81,7 +66,7 @@ export default function ReportPreview() {
       const convertedResults = results.map((result) => ({
         id: parseInt(result.id.replace('temp_', '')),
         sessionId: sessionData?.session?.id || 0,
-        assetNumber: result.assetNumber, // Use preview asset numbers
+        assetNumber: result.assetNumber || '1', // Use stored asset numbers
         itemName: result.itemName,
         itemType: result.itemType,
         location: result.location,
@@ -135,7 +120,7 @@ export default function ReportPreview() {
       const convertedResults = results.map((result) => ({
         id: parseInt(result.id.replace('temp_', '')),
         sessionId: sessionData?.session?.id || 0,
-        assetNumber: result.assetNumber, // Use preview asset numbers
+        assetNumber: result.assetNumber || '1', // Use stored asset numbers
         itemName: result.itemName,
         itemType: result.itemType,
         location: result.location,

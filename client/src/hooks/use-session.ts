@@ -48,6 +48,19 @@ export function useSession() {
     return localStorage.getItem('currentLocation') || '';
   });
 
+  // Asset number counters - start fresh for each session
+  const [monthlyAssetCounter, setMonthlyAssetCounter] = useState<number>(() => {
+    if (!sessionId) return 0;
+    const stored = localStorage.getItem(`monthlyCounter_${sessionId}`);
+    return stored ? parseInt(stored) : 0;
+  });
+
+  const [fiveYearlyAssetCounter, setFiveYearlyAssetCounter] = useState<number>(() => {
+    if (!sessionId) return 10000;
+    const stored = localStorage.getItem(`fiveYearlyCounter_${sessionId}`);
+    return stored ? parseInt(stored) : 10000;
+  });
+
   // Batched results stored in local storage
   const [batchedResults, setBatchedResults] = useState<BatchedTestResult[]>(() => {
     if (!sessionId) return [];
@@ -63,22 +76,13 @@ export function useSession() {
     enabled: !!sessionId,
   });
 
-  // Calculate local asset progress from batched results
+  // Calculate local asset progress from current counters
   const getLocalAssetProgress = () => {
-    const monthlyResults = batchedResults.filter(r => 
-      r.frequency === 'threemonthly' || 
-      r.frequency === 'sixmonthly' || 
-      r.frequency === 'twelvemonthly' || 
-      r.frequency === 'twentyfourmonthly'
-    );
-    
-    const fiveYearlyResults = batchedResults.filter(r => r.frequency === 'fiveyearly');
-    
     return {
-      nextMonthly: monthlyResults.length + 1,
-      nextFiveYearly: fiveYearlyResults.length > 0 ? 10001 + fiveYearlyResults.length : 10001,
-      monthlyCount: monthlyResults.length,
-      fiveYearlyCount: fiveYearlyResults.length,
+      nextMonthly: monthlyAssetCounter + 1,
+      nextFiveYearly: fiveYearlyAssetCounter + 1,
+      monthlyCount: monthlyAssetCounter,
+      fiveYearlyCount: fiveYearlyAssetCounter - 10000,
     };
   };
 
@@ -110,16 +114,41 @@ export function useSession() {
       // Clear any existing batched results for this session
       setBatchedResults([]);
       localStorage.removeItem(`batchedResults_${session.id}`);
+      // Reset asset counters for new session
+      setMonthlyAssetCounter(0);
+      setFiveYearlyAssetCounter(10000);
+      localStorage.setItem(`monthlyCounter_${session.id}`, '0');
+      localStorage.setItem(`fiveYearlyCounter_${session.id}`, '10000');
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
     },
   });
 
   /**
-   * Adds test result to local batch storage (no immediate server request)
+   * Adds test result to local batch storage with proper asset numbering
    * Results are stored locally until final report submission
    */
   const addToBatch = (data: Omit<InsertTestResult, 'sessionId' | 'assetNumber'>) => {
     if (!sessionId) throw new Error('No active session');
+    
+    // Determine if this is a 5-yearly frequency
+    const isFiveYearly = data.frequency === 'fiveyearly';
+    
+    // Generate asset number and update counters
+    let assetNumber: string;
+    let newMonthlyCounter = monthlyAssetCounter;
+    let newFiveYearlyCounter = fiveYearlyAssetCounter;
+    
+    if (isFiveYearly) {
+      newFiveYearlyCounter = fiveYearlyAssetCounter + 1;
+      assetNumber = newFiveYearlyCounter.toString();
+      setFiveYearlyAssetCounter(newFiveYearlyCounter);
+      localStorage.setItem(`fiveYearlyCounter_${sessionId}`, newFiveYearlyCounter.toString());
+    } else {
+      newMonthlyCounter = monthlyAssetCounter + 1;
+      assetNumber = newMonthlyCounter.toString();
+      setMonthlyAssetCounter(newMonthlyCounter);
+      localStorage.setItem(`monthlyCounter_${sessionId}`, newMonthlyCounter.toString());
+    }
     
     const newResult: BatchedTestResult = {
       id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -129,6 +158,7 @@ export function useSession() {
       classification: data.classification,
       result: data.result as 'pass' | 'fail',
       frequency: data.frequency,
+      assetNumber,
       failureReason: data.failureReason || undefined,
       actionTaken: data.actionTaken || undefined,
       notes: data.notes || undefined,
@@ -149,7 +179,7 @@ export function useSession() {
     setCurrentLocation(data.location);
     localStorage.setItem('currentLocation', data.location);
     
-    console.log(`Added result to batch: ${data.itemName} at ${data.location}`);
+    console.log(`Added result to batch: ${data.itemName} at ${data.location} -> Asset #${assetNumber}`);
     return newResult;
   };
 
@@ -177,6 +207,13 @@ export function useSession() {
       // Clear batched results after successful submission
       setBatchedResults([]);
       localStorage.removeItem(`batchedResults_${sessionId}`);
+      // Reset asset counters for next session
+      setMonthlyAssetCounter(0);
+      setFiveYearlyAssetCounter(10000);
+      if (sessionId) {
+        localStorage.removeItem(`monthlyCounter_${sessionId}`);
+        localStorage.removeItem(`fiveYearlyCounter_${sessionId}`);
+      }
       
       // Refresh session data
       queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}`] });
@@ -261,15 +298,19 @@ export function useSession() {
 
   // Clear session
   const clearSession = () => {
+    if (sessionId) {
+      localStorage.removeItem(`batchedResults_${sessionId}`);
+      localStorage.removeItem(`monthlyCounter_${sessionId}`);
+      localStorage.removeItem(`fiveYearlyCounter_${sessionId}`);
+    }
     setSessionId(null);
     setCurrentLocation('');
     setBatchedResults([]);
+    setMonthlyAssetCounter(0);
+    setFiveYearlyAssetCounter(10000);
     localStorage.removeItem('currentSessionId');
     localStorage.removeItem('currentLocation');
     localStorage.removeItem('lastSelectedFrequency');
-    if (sessionId) {
-      localStorage.removeItem(`batchedResults_${sessionId}`);
-    }
     queryClient.clear();
   };
 
