@@ -22,7 +22,7 @@ import { insertTestResultSchema, type TestResult, type InsertTestResult } from '
  * Shows pass/fail statistics and enables report customization options
  */
 export default function ReportPreview() {
-  const { sessionData, batchedResults, submitBatch, isSubmittingBatch, updateBatchedResult, removeBatchedResult, clearSession } = useSession();
+  const { sessionData, batchedResults, submitBatch, isSubmittingBatch, updateBatchedResult, removeBatchedResult, clearSession, assetProgress } = useSession();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [editingResult, setEditingResult] = useState<TestResult | null>(null);
@@ -57,16 +57,31 @@ export default function ReportPreview() {
 
   const { session, summary } = sessionData;
   
-  // Use batched results instead of server results
-  const results = batchedResults;
+  // Generate preview asset numbers for batched results
+  const generatePreviewAssetNumbers = () => {
+    if (!assetProgress) return batchedResults;
+    
+    let monthlyCounter = assetProgress.nextMonthly;
+    let fiveYearlyCounter = assetProgress.nextFiveYearly;
+    
+    return batchedResults.map(result => ({
+      ...result,
+      assetNumber: result.frequency === 'fiveyearly' ? 
+        String(fiveYearlyCounter++) : 
+        String(monthlyCounter++)
+    }));
+  };
+
+  // Use batched results with preview asset numbers
+  const results = generatePreviewAssetNumbers();
 
   const handleExportPDF = async () => {
     try {
       // Convert batched results to TestResult format for PDF generation
-      const convertedResults = batchedResults.map((result, index) => ({
+      const convertedResults = results.map((result) => ({
         id: parseInt(result.id.replace('temp_', '')),
         sessionId: sessionData?.session?.id || 0,
-        assetNumber: index + 1, // Temporary asset numbers for preview
+        assetNumber: result.assetNumber, // Use preview asset numbers
         itemName: result.itemName,
         itemType: result.itemType,
         location: result.location,
@@ -90,8 +105,13 @@ export default function ReportPreview() {
         globeType: null,
       }));
       
+      if (!sessionData?.session) {
+        throw new Error('Session data is not available');
+      }
+      
       const previewData = {
         ...sessionData,
+        session: sessionData.session,
         results: convertedResults,
       };
       
@@ -112,10 +132,10 @@ export default function ReportPreview() {
   const handleExportExcel = () => {
     try {
       // Convert batched results to TestResult format for Excel generation
-      const convertedResults = batchedResults.map((result, index) => ({
+      const convertedResults = results.map((result) => ({
         id: parseInt(result.id.replace('temp_', '')),
         sessionId: sessionData?.session?.id || 0,
-        assetNumber: index + 1, // Temporary asset numbers for preview
+        assetNumber: result.assetNumber, // Use preview asset numbers
         itemName: result.itemName,
         itemType: result.itemType,
         location: result.location,
@@ -139,8 +159,13 @@ export default function ReportPreview() {
         globeType: null,
       }));
       
+      if (!sessionData?.session) {
+        throw new Error('Session data is not available');
+      }
+      
       const previewData = {
         ...sessionData,
+        session: sessionData.session,
         results: convertedResults,
       };
       
@@ -187,17 +212,45 @@ export default function ReportPreview() {
     });
   };
 
-  const handleEditResult = (result: TestResult) => {
-    setEditingResult(result);
+  const handleEditResult = (result: BatchedTestResult) => {
+    // Convert BatchedTestResult to TestResult for editing
+    const testResult: TestResult = {
+      id: parseInt(result.id.replace('temp_', '')),
+      sessionId: sessionData?.session?.id || 0,
+      assetNumber: result.assetNumber || '1',
+      itemName: result.itemName,
+      itemType: result.itemType,
+      location: result.location,
+      classification: result.classification as any,
+      result: result.result as any,
+      frequency: result.frequency as any,
+      failureReason: result.failureReason || null,
+      actionTaken: result.actionTaken || null,
+      notes: result.notes || null,
+      photoData: result.photoData || null,
+      visionInspection: result.visionInspection,
+      electricalTest: result.electricalTest,
+      createdAt: new Date(result.timestamp),
+      updatedAt: new Date(result.timestamp),
+      maintenanceType: null,
+      dischargeTest: false,
+      switchingTest: false,
+      chargingTest: false,
+      manufacturerInfo: null,
+      installationDate: null,
+      globeType: null,
+    };
+    
+    setEditingResult(testResult);
     editForm.reset({
       itemName: result.itemName,
       location: result.location,
-      classification: result.classification,
-      result: result.result,
-      frequency: result.frequency,
-      failureReason: result.failureReason,
-      actionTaken: result.actionTaken,
-      notes: result.notes,
+      classification: result.classification as any,
+      result: result.result as any,
+      frequency: result.frequency as any,
+      failureReason: result.failureReason || null,
+      actionTaken: result.actionTaken || null,
+      notes: result.notes || null,
     });
     setIsEditModalOpen(true);
   };
@@ -209,7 +262,7 @@ export default function ReportPreview() {
       console.log('Saving edit with data:', data);
       console.log('Editing result ID:', editingResult.id);
       
-      await updateResult({ id: editingResult.id, data });
+      await updateBatchedResult(editingResult.id.toString(), data);
       setIsEditModalOpen(false);
       setEditingResult(null);
       toast({
@@ -226,8 +279,36 @@ export default function ReportPreview() {
     }
   };
 
-  const handleDeleteResult = (result: TestResult) => {
-    setDeletingResult(result);
+  const handleDeleteResult = (result: BatchedTestResult) => {
+    // Convert BatchedTestResult to TestResult for deletion
+    const testResult: TestResult = {
+      id: parseInt(result.id.replace('temp_', '')),
+      sessionId: sessionData?.session?.id || 0,
+      assetNumber: result.assetNumber || '1',
+      itemName: result.itemName,
+      itemType: result.itemType,
+      location: result.location,
+      classification: result.classification as any,
+      result: result.result as any,
+      frequency: result.frequency as any,
+      failureReason: result.failureReason || null,
+      actionTaken: result.actionTaken || null,
+      notes: result.notes || null,
+      photoData: result.photoData || null,
+      visionInspection: result.visionInspection,
+      electricalTest: result.electricalTest,
+      createdAt: new Date(result.timestamp),
+      updatedAt: new Date(result.timestamp),
+      maintenanceType: null,
+      dischargeTest: false,
+      switchingTest: false,
+      chargingTest: false,
+      manufacturerInfo: null,
+      installationDate: null,
+      globeType: null,
+    };
+    
+    setDeletingResult(testResult);
     setShowDeleteConfirm(true);
   };
 
@@ -235,7 +316,7 @@ export default function ReportPreview() {
     if (!deletingResult) return;
     
     try {
-      await deleteResult(deletingResult.id);
+      await removeBatchedResult(deletingResult.id.toString());
       setShowDeleteConfirm(false);
       setDeletingResult(null);
       toast({
@@ -316,13 +397,13 @@ export default function ReportPreview() {
       <div className="bg-gray-50 p-4 border-b border-gray-200">
         <div className="text-sm text-gray-600 mb-2">Client Information</div>
         <div className="space-y-1">
-          <div className="font-semibold">{session.clientName}</div>
-          <div className="text-gray-600">{session.address}</div>
-          <div className="text-gray-600">Contact: {session.siteContact}</div>
-          <div className="text-gray-600">Technician: {session.technicianName}</div>
-          <div className="text-gray-600">Date: {formatDate(session.testDate)}</div>
+          <div className="font-semibold">{sessionData?.session?.clientName}</div>
+          <div className="text-gray-600">{sessionData?.session?.address}</div>
+          <div className="text-gray-600">Contact: {sessionData?.session?.siteContact}</div>
+          <div className="text-gray-600">Technician: {sessionData?.session?.technicianName}</div>
+          <div className="text-gray-600">Date: {formatDate(sessionData?.session?.testDate || '')}</div>
           <div className="text-gray-600">
-            Country: {session.country === 'australia' ? 'Australia' : 'New Zealand'}
+            Country: {sessionData?.session?.country === 'australia' ? 'Australia' : 'New Zealand'}
           </div>
         </div>
       </div>
@@ -336,14 +417,14 @@ export default function ReportPreview() {
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="font-medium text-gray-800">
-                    #{result.assetNumber} - {result.itemName}
+                    #{result.assetNumber || 'TBD'} - {result.itemName}
                   </div>
                   <div className="text-sm text-gray-500">
                     {result.location} • {result.classification.toUpperCase()}
                   </div>
-                  {result.result === 'fail' && result.failureReason && (
+                  {result.result === 'fail' && (
                     <div className="text-xs text-red-600 mt-1">
-                      {result.failureReason}
+                      {result.failureReason || 'Failed'}
                       {result.actionTaken && ` • ${result.actionTaken === 'given' ? 'Given to Site Contact' : 'Removed from Site'}`}
                       {result.notes && ` • ${result.notes}`}
                     </div>
@@ -557,7 +638,15 @@ export default function ReportPreview() {
         {/* Submit Results Button - Only show if there are batched results */}
         {batchedResults.length > 0 && (
           <Button 
-            onClick={() => submitBatch()}
+            onClick={async () => {
+              await submitBatch();
+              // After successful submission, redirect to service selection
+              setLocation('/');
+              toast({
+                title: "Report Submitted Successfully",
+                description: "Ready to start a new test session.",
+              });
+            }}
             disabled={isSubmittingBatch}
             className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-sm font-medium touch-button"
           >

@@ -29,6 +29,7 @@ export interface BatchedTestResult {
   visionInspection: boolean;
   electricalTest: boolean;
   timestamp: string;
+  assetNumber?: string; // Added for preview display
 }
 
 /**
