@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Modal } from '@/components/ui/modal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ArrowLeft, Download, Mail, Share, Plus, Edit2, FileText, RefreshCw, Trash2 } from 'lucide-react';
-import { useSession } from '@/hooks/use-session';
+import { useSession, type BatchedTestResult } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
 import { downloadPDF } from '@/lib/pdf-generator';
 import { downloadExcel } from '@/lib/excel-generator';
@@ -216,7 +216,7 @@ export default function ReportPreview() {
   };
 
   const handleEditResult = (result: BatchedTestResult) => {
-    // Convert BatchedTestResult to TestResult for editing
+    // Store the original batched result ID for proper updating
     const testResult: TestResult = {
       id: parseInt(result.id.replace('temp_', '')),
       sessionId: sessionData?.session?.id || 0,
@@ -244,7 +244,8 @@ export default function ReportPreview() {
       globeType: null,
     };
     
-    setEditingResult(testResult);
+    // Store the original batched result for updating
+    setEditingResult({ ...testResult, originalBatchedId: result.id } as any);
     editForm.reset({
       itemName: result.itemName,
       location: result.location,
@@ -265,7 +266,9 @@ export default function ReportPreview() {
       console.log('Saving edit with data:', data);
       console.log('Editing result ID:', editingResult.id);
       
-      await updateBatchedResult(editingResult.id.toString(), data);
+      // Use the original batched ID for updating local storage
+      const batchedId = (editingResult as any).originalBatchedId || `temp_${editingResult.id}`;
+      await updateBatchedResult(batchedId, data);
       setIsEditModalOpen(false);
       setEditingResult(null);
       toast({
@@ -283,7 +286,7 @@ export default function ReportPreview() {
   };
 
   const handleDeleteResult = (result: BatchedTestResult) => {
-    // Convert BatchedTestResult to TestResult for deletion
+    // Store the original batched result for deletion
     const testResult: TestResult = {
       id: parseInt(result.id.replace('temp_', '')),
       sessionId: sessionData?.session?.id || 0,
@@ -311,7 +314,8 @@ export default function ReportPreview() {
       globeType: null,
     };
     
-    setDeletingResult(testResult);
+    // Store the original batched result ID for deletion
+    setDeletingResult({ ...testResult, originalBatchedId: result.id } as any);
     setShowDeleteConfirm(true);
   };
 
@@ -319,7 +323,9 @@ export default function ReportPreview() {
     if (!deletingResult) return;
     
     try {
-      await removeBatchedResult(deletingResult.id.toString());
+      // Use the original batched ID for deletion from local storage
+      const batchedId = (deletingResult as any).originalBatchedId || `temp_${deletingResult.id}`;
+      await removeBatchedResult(batchedId);
       setShowDeleteConfirm(false);
       setDeletingResult(null);
       toast({

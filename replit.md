@@ -164,3 +164,4 @@ Changelog:
   - Added sorting function to display items in proper order: monthly frequencies first (1, 2, 3...), then 5-yearly (10001, 10002, 10003...)
   - Removed server-side duplicate checking and asset number generation to prevent conflicts with client-side batching
   - Batch submission now uses client-provided asset numbers ensuring all items are saved to database correctly
+  - Fixed update and delete functions in report preview to correctly handle batched local storage items using proper temporary IDs
