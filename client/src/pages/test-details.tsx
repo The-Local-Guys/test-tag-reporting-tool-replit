@@ -137,11 +137,7 @@ export default function TestDetails() {
   const handleTestResult = async (result: 'pass' | 'fail') => {
     if (!currentItem) return;
 
-    // Prevent multiple rapid submissions
-    if (isAddingResult) {
-      console.log('Test result already being processed, ignoring duplicate click');
-      return;
-    }
+    // No need to prevent rapid submissions since using local storage
 
     // Validate the form first
     const isValid = await form.trigger();
@@ -383,27 +379,17 @@ export default function TestDetails() {
               type="button"
               onClick={() => handleTestResult('pass')}
               className="bg-success text-white p-6 h-auto text-lg font-semibold flex flex-col items-center justify-center hover:bg-green-600 touch-button"
-              disabled={isAddingResult}
             >
-              {isAddingResult ? (
-                <LoadingSpinner size="lg" className="mb-2 text-white" />
-              ) : (
-                <CheckCircle className="h-8 w-8 mb-2" />
-              )}
-              {isAddingResult ? 'Saving...' : 'PASS'}
+              <CheckCircle className="h-8 w-8 mb-2" />
+              PASS
             </Button>
             <Button
               type="button"
               onClick={() => handleTestResult('fail')}
               className="bg-error text-white p-6 h-auto text-lg font-semibold flex flex-col items-center justify-center hover:bg-red-600 touch-button"
-              disabled={isAddingResult}
             >
-              {isAddingResult ? (
-                <LoadingSpinner size="lg" className="mb-2 text-white" />
-              ) : (
-                <XCircle className="h-8 w-8 mb-2" />
-              )}
-              {isAddingResult ? 'Saving...' : 'FAIL'}
+              <XCircle className="h-8 w-8 mb-2" />
+              FAIL
             </Button>
           </div>
         </div>
