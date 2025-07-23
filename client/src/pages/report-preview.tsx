@@ -245,6 +245,7 @@ export default function ReportPreview() {
     };
     
     // Store the original batched result for updating
+    console.log('Setting editing result with batched ID:', result.id);
     setEditingResult({ ...testResult, originalBatchedId: result.id } as any);
     editForm.reset({
       itemName: result.itemName,
@@ -260,26 +261,42 @@ export default function ReportPreview() {
   };
 
   const handleSaveEdit = async (data: any) => {
-    if (!editingResult) return;
+    if (!editingResult) {
+      console.error('No editing result available');
+      return;
+    }
     
     try {
-      console.log('Saving edit with data:', data);
-      console.log('Editing result ID:', editingResult.id);
+      console.log('=== Starting handleSaveEdit ===');
+      console.log('Form data to save:', data);
+      console.log('Editing result:', editingResult);
+      console.log('Original batched ID:', (editingResult as any).originalBatchedId);
       
       // Use the original batched ID for updating local storage
       const batchedId = (editingResult as any).originalBatchedId || `temp_${editingResult.id}`;
-      await updateBatchedResult(batchedId, data);
+      console.log('Using batched ID for update:', batchedId);
+      
+      console.log('Calling updateBatchedResult...');
+      updateBatchedResult(batchedId, data);
+      console.log('updateBatchedResult completed');
+      
       setIsEditModalOpen(false);
       setEditingResult(null);
+      
       toast({
         title: "Item Updated",
         description: "Test result has been successfully updated.",
       });
+      
+      console.log('=== handleSaveEdit completed successfully ===');
     } catch (error) {
-      console.error('Error saving edit:', error);
+      console.error('=== Error in handleSaveEdit ===');
+      console.error('Error details:', error);
+      console.error('Error stack:', (error as Error).stack);
+      
       toast({
         title: "Update Failed",
-        description: "There was an error updating the test result.",
+        description: `Error updating test result: ${(error as Error).message}`,
         variant: "destructive",
       });
     }

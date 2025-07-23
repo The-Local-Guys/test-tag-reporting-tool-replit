@@ -229,12 +229,35 @@ export function useSession() {
    * Updates a batched result locally (before server submission)
    */
   const updateBatchedResult = (id: string, updatedData: Partial<BatchedTestResult>) => {
-    const updatedResults = batchedResults.map(result => 
-      result.id === id ? { ...result, ...updatedData } : result
-    );
-    setBatchedResults(updatedResults);
-    if (sessionId) {
-      localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(updatedResults));
+    try {
+      console.log('updateBatchedResult called with:', { id, updatedData });
+      console.log('Current batchedResults:', batchedResults);
+      
+      const foundResult = batchedResults.find(result => result.id === id);
+      if (!foundResult) {
+        console.error(`No batched result found with ID: ${id}`);
+        console.log('Available IDs:', batchedResults.map(r => r.id));
+        throw new Error(`No batched result found with ID: ${id}`);
+      }
+      
+      console.log('Found result to update:', foundResult);
+      
+      const updatedResults = batchedResults.map(result => 
+        result.id === id ? { ...result, ...updatedData } : result
+      );
+      
+      console.log('Updated results:', updatedResults);
+      
+      setBatchedResults(updatedResults);
+      if (sessionId) {
+        localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(updatedResults));
+        console.log('Saved updated results to localStorage');
+      }
+      
+      console.log('updateBatchedResult completed successfully');
+    } catch (error) {
+      console.error('Error in updateBatchedResult:', error);
+      throw error;
     }
   };
 
