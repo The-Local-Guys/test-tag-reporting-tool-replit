@@ -54,23 +54,11 @@ export default function TestDetails() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const { sessionId, currentLocation, addResult, isAddingResult, assetProgress } = useSession();
+  const { sessionId, currentLocation, addToBatch, assetProgress } = useSession();
   const [, setLocation] = useLocation();
   const search = useSearch();
   
-  // Prevent navigation during critical operations
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isAddingResult) {
-        e.preventDefault();
-        e.returnValue = 'Test result is being saved. Are you sure you want to leave?';
-        return 'Test result is being saved. Are you sure you want to leave?';
-      }
-    };
-    
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isAddingResult]);
+  // No need to prevent navigation since we're using local storage batching
 
   // Asset numbers are now auto-generated on server side
 
@@ -182,7 +170,7 @@ export default function TestDetails() {
     localStorage.setItem('lastSelectedFrequency', selectedFrequency);
     
     if (result === 'pass') {
-      addResult(testData);
+      addToBatch(testData);
       setLocation('/items');
     } else {
       // Store test data and photos for failure details page

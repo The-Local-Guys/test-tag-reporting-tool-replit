@@ -43,7 +43,7 @@ type EmergencyTestForm = z.infer<typeof emergencyTestSchema>;
 export default function EmergencyTestDetails() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { sessionData, addResult, assetProgress, isAddingResult } = useSession();
+  const { sessionData, addToBatch, assetProgress } = useSession();
   const [photoData, setPhotoData] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
 
@@ -86,11 +86,7 @@ export default function EmergencyTestDetails() {
       return;
     }
 
-    // Prevent multiple rapid submissions
-    if (isAddingResult) {
-      console.log('Emergency test result already being processed, ignoring duplicate submission');
-      return;
-    }
+    // No need to check for in-progress since using local storage
 
     // Validate required fields for failed items
     if (data.result === 'fail' && !data.failureReason) {
@@ -127,8 +123,7 @@ export default function EmergencyTestDetails() {
         installationDate: data.installationDate || null,
       });
 
-      await addResult({
-        assetNumber: '', // Will be auto-generated on server side
+      addToBatch({
         itemName: itemName,
         itemType: itemType,
         location: data.location,
@@ -140,15 +135,7 @@ export default function EmergencyTestDetails() {
         notes: data.notes || null,
         photoData: data.result === 'fail' ? photoData : null,
         visionInspection: data.visualInspection,
-        electricalTest: data.dischargeTest, // Using electricalTest field for discharge test
-        // Emergency specific fields
-        maintenanceType: data.maintenanceType || null,
-        globeType: data.globeType || null,
-        dischargeTest: data.dischargeTest,
-        switchingTest: data.switchingTest,
-        chargingTest: data.chargingTest,
-        manufacturerInfo: data.manufacturerInfo || null,
-        installationDate: data.installationDate || null,
+        electricalTest: data.dischargeTest, // Using electricalTest field for discharge test 
       });
 
       toast({

@@ -144,3 +144,13 @@ Changelog:
   - Documented client-side hooks, mutations, and component functions
   - Added descriptions for PDF and Excel generation functions
   - Enhanced code readability and maintainability for future development
+- July 23, 2025. Implemented major architecture refactor to batched local storage system:
+  - Completely refactored from individual server requests per item to batched local storage system
+  - Created new batch submission endpoint (/api/sessions/:id/batch-results) for single report submission
+  - Updated useSession hook to manage local storage batching with addToBatch() function
+  - Modified all test pages (test-details.tsx, failure-details.tsx, emergency-test-details.tsx) to use batching
+  - Enhanced report-preview.tsx to display batched results and submit entire reports at once
+  - Improved performance by eliminating network requests during testing workflow
+  - Added comprehensive batch processing with error handling and progress tracking
+  - Maintained asset number auto-generation and duplicate prevention on server side
+  - Preserved all existing functionality while improving user experience and reducing server load

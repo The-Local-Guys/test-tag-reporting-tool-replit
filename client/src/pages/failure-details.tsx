@@ -26,23 +26,11 @@ export default function FailureDetails() {
   const [notes, setNotes] = useState('');
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [testData, setTestData] = useState<Omit<InsertTestResult, 'sessionId'> | null>(null);
-  const { addResult, isAddingResult } = useSession();
+  const { addToBatch } = useSession();
   const [, setLocation] = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Prevent navigation during critical operations
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isAddingResult) {
-        e.preventDefault();
-        e.returnValue = 'Test result is being saved. Are you sure you want to leave?';
-        return 'Test result is being saved. Are you sure you want to leave?';
-      }
-    };
-    
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isAddingResult]);
+  // No need to prevent navigation since we're using local storage batching
 
   useEffect(() => {
     const stored = sessionStorage.getItem('pendingTestResult');
@@ -114,11 +102,7 @@ export default function FailureDetails() {
   const handleSaveFailure = () => {
     if (!testData || !selectedReason || !selectedAction) return;
 
-    // Prevent multiple rapid submissions
-    if (isAddingResult) {
-      console.log('Test result already being processed, ignoring duplicate click');
-      return;
-    }
+    // No need to check for in-progress since using local storage
 
     const completeTestData: Omit<InsertTestResult, 'sessionId'> = {
       ...testData,
@@ -133,7 +117,7 @@ export default function FailureDetails() {
       photoData: capturedPhoto ? `Photo included (${Math.round(capturedPhoto.length / 1024)}KB)` : 'No photo'
     });
 
-    addResult(completeTestData);
+    addToBatch(completeTestData);
     sessionStorage.removeItem('pendingTestResult');
     setLocation('/items');
   };

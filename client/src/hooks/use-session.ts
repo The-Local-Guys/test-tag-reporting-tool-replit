@@ -14,11 +14,28 @@ export interface SessionData {
   };
 }
 
+export interface BatchedTestResult {
+  id: string; // Temporary local ID
+  itemName: string;
+  itemType: string;
+  location: string;
+  classification: string;
+  result: 'pass' | 'fail';
+  frequency: string;
+  failureReason?: string;
+  actionTaken?: string;
+  notes?: string;
+  photoData?: string;
+  visionInspection: boolean;
+  electricalTest: boolean;
+  timestamp: string;
+}
+
 /**
- * Main hook for managing test sessions and results
- * Handles session creation, test result submission, and data synchronization
- * Includes duplicate prevention and error recovery mechanisms
- * @returns Object with session data, mutations, and state management functions
+ * Main hook for managing test sessions and results with batched submission
+ * Stores results locally until final report submission to reduce server requests
+ * Features automatic asset numbering and comprehensive duplicate prevention
+ * @returns Object with session data, batched results, mutations, and state management functions
  */
 export function useSession() {
   const [sessionId, setSessionId] = useState<number | null>(() => {
@@ -30,28 +47,56 @@ export function useSession() {
     return localStorage.getItem('currentLocation') || '';
   });
 
+  // Batched results stored in local storage
+  const [batchedResults, setBatchedResults] = useState<BatchedTestResult[]>(() => {
+    if (!sessionId) return [];
+    const stored = localStorage.getItem(`batchedResults_${sessionId}`);
+    return stored ? JSON.parse(stored) : [];
+  });
+
   const queryClient = useQueryClient();
 
-  // Get current session data
-  const { data: sessionData, isLoading } = useQuery<SessionData>({
-    queryKey: [`/api/sessions/${sessionId}/report`],
+  // Get current session basic info (not results - those are batched locally)
+  const { data: session, isLoading } = useQuery<TestSession>({
+    queryKey: [`/api/sessions/${sessionId}`],
     enabled: !!sessionId,
   });
 
-  // Get asset progress
-  const { data: assetProgress } = useQuery<{
-    nextMonthly: number;
-    nextFiveYearly: number;
-    monthlyCount: number;
-    fiveYearlyCount: number;
-  }>({
-    queryKey: [`/api/sessions/${sessionId}/asset-progress`],
-    enabled: !!sessionId,
-  });
+  // Calculate local asset progress from batched results
+  const getLocalAssetProgress = () => {
+    const monthlyResults = batchedResults.filter(r => 
+      r.frequency === 'threemonthly' || 
+      r.frequency === 'sixmonthly' || 
+      r.frequency === 'twelvemonthly' || 
+      r.frequency === 'twentyfourmonthly'
+    );
+    
+    const fiveYearlyResults = batchedResults.filter(r => r.frequency === 'fiveyearly');
+    
+    return {
+      nextMonthly: monthlyResults.length + 1,
+      nextFiveYearly: fiveYearlyResults.length > 0 ? 10001 + fiveYearlyResults.length : 10001,
+      monthlyCount: monthlyResults.length,
+      fiveYearlyCount: fiveYearlyResults.length,
+    };
+  };
+
+  // Create session data from local batched results
+  const sessionData: SessionData | undefined = session ? {
+    session,
+    results: [], // Empty since we're using batched results
+    summary: {
+      totalItems: batchedResults.length,
+      passedItems: batchedResults.filter(r => r.result === 'pass').length,
+      failedItems: batchedResults.filter(r => r.result === 'fail').length,
+      passRate: batchedResults.length > 0 ? 
+        Math.round((batchedResults.filter(r => r.result === 'pass').length / batchedResults.length) * 100) : 0,
+    }
+  } : undefined;
 
   /**
    * Creates a new testing session with client and technician details
-   * Sets up the testing context for recording test results
+   * Sets up the testing context for recording test results locally
    */
   const createSessionMutation = useMutation({
     mutationFn: async (data: InsertTestSession) => {
@@ -61,95 +106,110 @@ export function useSession() {
     onSuccess: (session: TestSession) => {
       setSessionId(session.id);
       localStorage.setItem('currentSessionId', session.id.toString());
+      // Clear any existing batched results for this session
+      setBatchedResults([]);
+      localStorage.removeItem(`batchedResults_${session.id}`);
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
     },
   });
 
   /**
-   * Submits test results with comprehensive duplicate prevention
-   * Features unique request IDs, in-progress tracking, and error recovery
-   * Prevents users from accidentally creating multiple results for the same item
+   * Adds test result to local batch storage (no immediate server request)
+   * Results are stored locally until final report submission
    */
-  const addResultMutation = useMutation({
-    mutationFn: async (data: Omit<InsertTestResult, 'sessionId'>) => {
-      if (!sessionId) throw new Error('No active session');
-      
-      // Generate a unique request ID to prevent duplicate processing
-      const requestId = `${sessionId}-${data.itemName}-${data.itemType}-${data.location}-${Date.now()}`;
-      
-      // Check if this exact request is already in progress
-      const inProgressKey = `request-${requestId}`;
-      if (localStorage.getItem(inProgressKey)) {
-        throw new Error('Duplicate request detected - already processing');
+  const addToBatch = (data: Omit<InsertTestResult, 'sessionId' | 'assetNumber'>) => {
+    if (!sessionId) throw new Error('No active session');
+    
+    const newResult: BatchedTestResult = {
+      id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      itemName: data.itemName,
+      itemType: data.itemType,
+      location: data.location,
+      classification: data.classification,
+      result: data.result,
+      frequency: data.frequency,
+      failureReason: data.failureReason || undefined,
+      actionTaken: data.actionTaken || undefined,
+      notes: data.notes || undefined,
+      photoData: data.photoData || undefined,
+      visionInspection: data.visionInspection,
+      electricalTest: data.electricalTest,
+      timestamp: new Date().toISOString(),
+    };
+    
+    // Add to batched results
+    const updatedResults = [...batchedResults, newResult];
+    setBatchedResults(updatedResults);
+    
+    // Save to localStorage
+    localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(updatedResults));
+    
+    // Update current location
+    setCurrentLocation(data.location);
+    localStorage.setItem('currentLocation', data.location);
+    
+    console.log(`Added result to batch: ${data.itemName} at ${data.location}`);
+    return newResult;
+  };
+
+  /**
+   * Submits all batched results to the server in a single request
+   * This replaces individual result submissions and improves performance
+   */
+  const submitBatchMutation = useMutation({
+    mutationFn: async () => {
+      if (!sessionId || batchedResults.length === 0) {
+        throw new Error('No active session or no results to submit');
       }
       
-      // Mark request as in progress
-      localStorage.setItem(inProgressKey, 'true');
+      console.log(`Submitting batch of ${batchedResults.length} results to server`);
       
-      try {
-        // Add timestamp to track when the request was made
-        const timestamp = new Date().toISOString();
-        console.log(`[${timestamp}] Sending test result to server (ID: ${requestId}):`, {
-          ...data,
-          photoData: data.photoData ? `Photo included (${Math.round(data.photoData.length / 1024)}KB)` : 'No photo'
-        });
-        
-        // Single attempt only - no retries to prevent duplicates
-        const response = await apiRequest('POST', `/api/sessions/${sessionId}/results`, data);
-        const result = await response.json();
-        console.log(`[${timestamp}] Server response (ID: ${requestId}):`, result);
-        
-        // Verify the result was properly saved by checking if it has an ID
-        if (!result.id) {
-          throw new Error('Server returned invalid result - no ID');
-        }
-        
-        return result;
-      } finally {
-        // Always clean up the in-progress marker
-        localStorage.removeItem(inProgressKey);
-      }
+      const response = await apiRequest('POST', `/api/sessions/${sessionId}/batch-results`, {
+        results: batchedResults
+      });
+      
+      return response.json();
     },
-    onSuccess: (result: TestResult) => {
-      const timestamp = new Date().toISOString();
-      console.log(`[${timestamp}] Successfully saved test result:`, result);
+    onSuccess: (submittedResults: TestResult[]) => {
+      console.log(`Successfully submitted ${submittedResults.length} results to server`);
       
-      // Update current location
-      setCurrentLocation(result.location);
-      localStorage.setItem('currentLocation', result.location);
+      // Clear batched results after successful submission
+      setBatchedResults([]);
+      localStorage.removeItem(`batchedResults_${sessionId}`);
       
-      // Clear any matching failed results from localStorage
-      const failedResults = JSON.parse(localStorage.getItem('failedResults') || '[]');
-      const updatedFailedResults = failedResults.filter((failed: any) => 
-        failed.data.assetNumber !== result.assetNumber || failed.sessionId !== sessionId
-      );
-      localStorage.setItem('failedResults', JSON.stringify(updatedFailedResults));
-      
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/report`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/next-asset-number`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/next-monthly-asset-number`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/next-five-yearly-asset-number`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/asset-progress`] });
+      // Refresh session data
+      queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
     },
     onError: (error) => {
-      const timestamp = new Date().toISOString();
-      console.error(`[${timestamp}] Final mutation error:`, error);
-      
-      // Only show alert if it's not a duplicate request
-      if (!error.message.includes('Duplicate request detected')) {
-        // Store failed result locally for recovery
-        const failedResults = JSON.parse(localStorage.getItem('failedResults') || '[]');
-        failedResults.push({ data: null, timestamp, sessionId, error: String(error) });
-        localStorage.setItem('failedResults', JSON.stringify(failedResults));
-        
-        // Alert user about the failure
-        alert(`Failed to save test result: ${error}. Please try again or contact support if this continues.`);
-      }
+      console.error('Failed to submit batch results:', error);
+      alert(`Failed to submit test results: ${error}. Please try again or contact support.`);
     },
-    // Configure retry behavior
-    retry: false, // No retries to prevent duplicates
   });
+
+  /**
+   * Updates a batched result locally (before server submission)
+   */
+  const updateBatchedResult = (id: string, updatedData: Partial<BatchedTestResult>) => {
+    const updatedResults = batchedResults.map(result => 
+      result.id === id ? { ...result, ...updatedData } : result
+    );
+    setBatchedResults(updatedResults);
+    if (sessionId) {
+      localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(updatedResults));
+    }
+  };
+
+  /**
+   * Removes a result from the local batch
+   */
+  const removeBatchedResult = (id: string) => {
+    const updatedResults = batchedResults.filter(result => result.id !== id);
+    setBatchedResults(updatedResults);
+    if (sessionId) {
+      localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(updatedResults));
+    }
+  };
 
   const updateResultMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<InsertTestResult> }) => {
@@ -196,7 +256,7 @@ export function useSession() {
     }
   }, [sessionId]);
 
-  // Recovery function to retry failed results
+  // Recovery function to retry failed results (legacy - not used with batching)
   const retryFailedResults = async () => {
     const failedResults = JSON.parse(localStorage.getItem('failedResults') || '[]');
     
@@ -204,14 +264,8 @@ export function useSession() {
     
     console.log(`Found ${failedResults.length} failed results to retry`);
     
-    for (const failed of failedResults) {
-      try {
-        await addResultMutation.mutateAsync(failed.data);
-        console.log('Successfully retried failed result:', failed.data.assetNumber);
-      } catch (error) {
-        console.error('Failed to retry result:', failed.data.assetNumber, error);
-      }
-    }
+    // Clear failed results as they're handled by batching now
+    localStorage.removeItem('failedResults');
   };
   
   // Check for failed results when session loads
@@ -230,28 +284,47 @@ export function useSession() {
   const clearSession = () => {
     setSessionId(null);
     setCurrentLocation('');
+    setBatchedResults([]);
     localStorage.removeItem('currentSessionId');
     localStorage.removeItem('currentLocation');
-    localStorage.removeItem('lastSelectedFrequency'); // Clear frequency persistence for new session
+    localStorage.removeItem('lastSelectedFrequency');
+    if (sessionId) {
+      localStorage.removeItem(`batchedResults_${sessionId}`);
+    }
     queryClient.clear();
   };
 
   return {
+    // Session management
     sessionId,
     sessionData,
-    assetProgress,
     currentLocation,
     setCurrentLocation,
     isLoading,
+    
+    // Batched results
+    batchedResults,
+    addToBatch,
+    updateBatchedResult,
+    removeBatchedResult,
+    submitBatch: submitBatchMutation.mutate,
+    isSubmittingBatch: submitBatchMutation.isPending,
+    
+    // Local asset progress
+    assetProgress: getLocalAssetProgress(),
+    
+    // Session operations
     createSession: createSessionMutation.mutate,
-    addResult: addResultMutation.mutate,
-    updateResult: updateResultMutation.mutateAsync,
-    deleteResult: deleteResultMutation.mutateAsync,
-    clearSession,
-    retryFailedResults,
     isCreatingSession: createSessionMutation.isPending,
-    isAddingResult: addResultMutation.isPending,
+    clearSession,
+    
+    // Legacy operations (for admin use)
+    updateResult: updateResultMutation.mutate,
+    deleteResult: deleteResultMutation.mutate,
     isUpdatingResult: updateResultMutation.isPending,
     isDeletingResult: deleteResultMutation.isPending,
+    
+    // Utility functions
+    retryFailedResults,
   };
 }

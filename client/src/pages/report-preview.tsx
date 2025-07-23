@@ -22,7 +22,7 @@ import { insertTestResultSchema, type TestResult, type InsertTestResult } from '
  * Shows pass/fail statistics and enables report customization options
  */
 export default function ReportPreview() {
-  const { sessionData, updateResult, deleteResult, clearSession } = useSession();
+  const { sessionData, batchedResults, submitBatch, isSubmittingBatch, updateBatchedResult, removeBatchedResult, clearSession } = useSession();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [editingResult, setEditingResult] = useState<TestResult | null>(null);
@@ -55,11 +55,47 @@ export default function ReportPreview() {
     );
   }
 
-  const { session, results, summary } = sessionData;
+  const { session, summary } = sessionData;
+  
+  // Use batched results instead of server results
+  const results = batchedResults;
 
   const handleExportPDF = async () => {
     try {
-      await downloadPDF(sessionData, `test-report-${session.clientName.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+      // Convert batched results to TestResult format for PDF generation
+      const convertedResults = batchedResults.map((result, index) => ({
+        id: parseInt(result.id.replace('temp_', '')),
+        sessionId: sessionData?.session?.id || 0,
+        assetNumber: index + 1, // Temporary asset numbers for preview
+        itemName: result.itemName,
+        itemType: result.itemType,
+        location: result.location,
+        classification: result.classification,
+        result: result.result,
+        frequency: result.frequency,
+        failureReason: result.failureReason || null,
+        actionTaken: result.actionTaken || null,
+        notes: result.notes || null,
+        photoData: result.photoData || null,
+        visionInspection: result.visionInspection,
+        electricalTest: result.electricalTest,
+        createdAt: new Date(result.timestamp),
+        updatedAt: new Date(result.timestamp),
+        maintenanceType: null,
+        dischargeTest: false,
+        switchingTest: false,
+        chargingTest: false,
+        manufacturerInfo: null,
+        installationDate: null,
+        globeType: null,
+      }));
+      
+      const previewData = {
+        ...sessionData,
+        results: convertedResults,
+      };
+      
+      await downloadPDF(previewData, `test-report-${session.clientName.replace(/\s+/g, '-').toLowerCase()}.pdf`);
       toast({
         title: "PDF Generated",
         description: "Your test report has been downloaded successfully.",
@@ -75,7 +111,40 @@ export default function ReportPreview() {
 
   const handleExportExcel = () => {
     try {
-      downloadExcel(sessionData, `test-report-${session.clientName.replace(/\s+/g, '-').toLowerCase()}.xlsx`);
+      // Convert batched results to TestResult format for Excel generation
+      const convertedResults = batchedResults.map((result, index) => ({
+        id: parseInt(result.id.replace('temp_', '')),
+        sessionId: sessionData?.session?.id || 0,
+        assetNumber: index + 1, // Temporary asset numbers for preview
+        itemName: result.itemName,
+        itemType: result.itemType,
+        location: result.location,
+        classification: result.classification,
+        result: result.result,
+        frequency: result.frequency,
+        failureReason: result.failureReason || null,
+        actionTaken: result.actionTaken || null,
+        notes: result.notes || null,
+        photoData: result.photoData || null,
+        visionInspection: result.visionInspection,
+        electricalTest: result.electricalTest,
+        createdAt: new Date(result.timestamp),
+        updatedAt: new Date(result.timestamp),
+        maintenanceType: null,
+        dischargeTest: false,
+        switchingTest: false,
+        chargingTest: false,
+        manufacturerInfo: null,
+        installationDate: null,
+        globeType: null,
+      }));
+      
+      const previewData = {
+        ...sessionData,
+        results: convertedResults,
+      };
+      
+      downloadExcel(previewData, `test-report-${session.clientName.replace(/\s+/g, '-').toLowerCase()}.xlsx`);
       toast({
         title: "Excel Generated",
         description: "Your test report has been downloaded successfully.",
@@ -485,6 +554,27 @@ export default function ReportPreview() {
 
       {/* Fixed Bottom Export Options */}
       <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 p-4 space-y-3">
+        {/* Submit Results Button - Only show if there are batched results */}
+        {batchedResults.length > 0 && (
+          <Button 
+            onClick={() => submitBatch()}
+            disabled={isSubmittingBatch}
+            className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-sm font-medium touch-button"
+          >
+            {isSubmittingBatch ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Submitting Report...
+              </>
+            ) : (
+              <>
+                <FileText className="h-4 w-4 mr-2" />
+                Submit Report ({batchedResults.length} items)
+              </>
+            )}
+          </Button>
+        )}
+        
         <div className="text-center">
           <div className="text-sm font-medium text-gray-700">Export Report</div>
           <div className="text-xs text-gray-500">Choose your preferred format</div>
@@ -495,18 +585,19 @@ export default function ReportPreview() {
             className="bg-red-600 hover:bg-red-700 text-white py-3 text-sm font-medium touch-button"
           >
             <Download className="h-4 w-4 mr-2" />
-            PDF
+            PDF Preview
           </Button>
           <Button 
             onClick={handleExportExcel}
-            className="bg-green-600 hover:bg-green-700 text-white py-3 text-sm font-medium touch-button"
+            className="bg-blue-600 hover:bg-blue-700 text-white py-3 text-sm font-medium touch-button"
           >
-            📊 Excel
+            📊 Excel Preview
           </Button>
         </div>
         <Button 
           onClick={handleNewReport}
-          className="w-full bg-primary hover:bg-primary/90 text-white py-3 text-sm font-medium touch-button"
+          variant="outline"
+          className="w-full py-3 text-sm font-medium touch-button"
         >
           <RefreshCw className="h-4 w-4 mr-2" />
           Finish Report / Start New Report

@@ -438,7 +438,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Add test result to session
+  // Create batch test results (NEW BATCHED ENDPOINT)
+  app.post("/api/sessions/:id/batch-results", requireAuth, async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const { results } = req.body;
+      
+      if (!Array.isArray(results) || results.length === 0) {
+        return res.status(400).json({ error: "No results provided" });
+      }
+      
+      console.log(`Processing batch of ${results.length} results for session ${sessionId}`);
+      
+      const savedResults: any[] = [];
+      const errors: string[] = [];
+      
+      // Process each result in the batch
+      for (let i = 0; i < results.length; i++) {
+        const batchedResult = results[i];
+        
+        try {
+          // Convert batched result to database format
+          const resultData = {
+            sessionId,
+            assetNumber: '', // Will be auto-generated
+            itemName: batchedResult.itemName,
+            itemType: batchedResult.itemType,
+            location: batchedResult.location,
+            classification: batchedResult.classification,
+            result: batchedResult.result,
+            frequency: batchedResult.frequency,
+            failureReason: batchedResult.failureReason || null,
+            actionTaken: batchedResult.actionTaken || null,
+            notes: batchedResult.notes || null,
+            photoData: batchedResult.photoData || null,
+            visionInspection: batchedResult.visionInspection,
+            electricalTest: batchedResult.electricalTest,
+            // Set other fields to defaults for emergency/electrical tests
+            maintenanceType: null,
+            dischargeTest: false,
+            switchingTest: false,
+            chargingTest: false,
+            manufacturerInfo: null,
+            installationDate: null,
+          };
+          
+          // Get next asset number based on frequency
+          if (batchedResult.frequency === 'fiveyearly') {
+            resultData.assetNumber = (await storage.getNextFiveYearlyAssetNumber(sessionId)).toString();
+          } else {
+            resultData.assetNumber = (await storage.getNextMonthlyAssetNumber(sessionId)).toString();
+          }
+          
+          // Create the result
+          const savedResult = await storage.createTestResult(resultData);
+          savedResults.push(savedResult);
+          
+          console.log(`Saved result ${i + 1}/${results.length}: ${batchedResult.itemName} -> Asset #${savedResult.assetNumber}`);
+          
+        } catch (error) {
+          const errorMsg = `Failed to save result ${i + 1} (${batchedResult.itemName}): ${error}`;
+          console.error(errorMsg);
+          errors.push(errorMsg);
+        }
+      }
+      
+      // Return results with any errors
+      const response = {
+        savedResults,
+        totalProcessed: results.length,
+        successCount: savedResults.length,
+        errorCount: errors.length,
+        errors: errors.length > 0 ? errors : undefined,
+      };
+      
+      console.log(`Batch processing complete: ${savedResults.length}/${results.length} saved successfully`);
+      
+      if (errors.length > 0) {
+        res.status(207).json(response); // 207 Multi-Status for partial success
+      } else {
+        res.json(response);
+      }
+      
+    } catch (error) {
+      console.error("Error processing batch results:", error);
+      res.status(500).json({ error: "Failed to process batch results" });
+    }
+  });
+
+  // Add test result to session (LEGACY SINGLE ENDPOINT)
   app.post("/api/sessions/:id/results", requireAuth, async (req, res) => {
     const startTime = Date.now();
     const requestId = Math.random().toString(36).substring(7);
