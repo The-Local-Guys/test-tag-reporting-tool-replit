@@ -14,7 +14,7 @@ import EmergencyTestDetails from "@/pages/emergency-test-details";
 import FailureDetails from "@/pages/failure-details";
 import ReportPreview from "@/pages/report-preview";
 import AdminDashboard from "@/pages/admin-dashboard";
-import DiagnosticTool from "@/pages/diagnostic-tool";
+
 import Login from "@/pages/login";
 
 function Router() {
@@ -27,10 +27,10 @@ function Router() {
 
   // Check if user chose admin mode at login
   const loginMode = sessionStorage.getItem('loginMode');
-  console.log('Login mode:', loginMode, 'User role:', user?.role); // Debug log
+  console.log('Login mode:', loginMode, 'User role:', (user as any)?.role); // Debug log
   
   // Show admin dashboard if user selected admin mode and has admin privileges (including technicians viewing their own data)
-  if (loginMode === 'admin' && user && (user.role === 'super_admin' || user.role === 'support_center' || user.role === 'technician')) {
+  if (loginMode === 'admin' && user && (user as any).role && ((user as any).role === 'super_admin' || (user as any).role === 'support_center' || (user as any).role === 'technician')) {
     return <AdminDashboard />;
   }
 
@@ -44,7 +44,7 @@ function Router() {
       <Route path="/emergency-test" component={EmergencyTestDetails} />
       <Route path="/failure" component={FailureDetails} />
       <Route path="/report" component={ReportPreview} />
-      <Route path="/diagnostic" component={DiagnosticTool} />
+
       <Route component={NotFound} />
     </Switch>
   );

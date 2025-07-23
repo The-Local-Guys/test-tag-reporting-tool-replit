@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AppHeader } from "@/components/ui/app-header";
-import { Zap, ShieldAlert, ArrowRight, AlertTriangle } from "lucide-react";
+import { Zap, ShieldAlert, ArrowRight } from "lucide-react";
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
 
 export default function ServiceSelection() {
@@ -109,18 +109,7 @@ export default function ServiceSelection() {
           </p>
         </div>
 
-        {/* Diagnostic Tool Access */}
-        <div className="mt-6 text-center">
-          <Button 
-            onClick={() => setLocation('/diagnostic')}
-            variant="outline"
-            size="sm"
-            className="text-orange-600 border-orange-600 hover:bg-orange-50"
-          >
-            <AlertTriangle className="w-4 h-4 mr-2" />
-            Data Loss Diagnostic Tool
-          </Button>
-        </div>
+
       </div>
     </div>
   );

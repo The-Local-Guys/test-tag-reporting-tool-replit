@@ -256,29 +256,7 @@ export function useSession() {
     }
   }, [sessionId]);
 
-  // Recovery function to retry failed results (legacy - not used with batching)
-  const retryFailedResults = async () => {
-    const failedResults = JSON.parse(localStorage.getItem('failedResults') || '[]');
-    
-    if (failedResults.length === 0) return;
-    
-    console.log(`Found ${failedResults.length} failed results to retry`);
-    
-    // Clear failed results as they're handled by batching now
-    localStorage.removeItem('failedResults');
-  };
-  
-  // Check for failed results when session loads
-  useEffect(() => {
-    if (sessionId && sessionData) {
-      const failedResults = JSON.parse(localStorage.getItem('failedResults') || '[]');
-      if (failedResults.length > 0) {
-        console.log(`Session ${sessionId} has ${failedResults.length} failed results to retry`);
-        // Automatically retry failed results after a short delay
-        setTimeout(() => retryFailedResults(), 2000);
-      }
-    }
-  }, [sessionId, sessionData]);
+
 
   // Clear session
   const clearSession = () => {
@@ -325,6 +303,6 @@ export function useSession() {
     isDeletingResult: deleteResultMutation.isPending,
     
     // Utility functions
-    retryFailedResults,
+
   };
 }
