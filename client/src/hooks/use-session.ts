@@ -126,14 +126,14 @@ export function useSession() {
       itemType: data.itemType,
       location: data.location,
       classification: data.classification,
-      result: data.result,
+      result: data.result as 'pass' | 'fail',
       frequency: data.frequency,
       failureReason: data.failureReason || undefined,
       actionTaken: data.actionTaken || undefined,
       notes: data.notes || undefined,
       photoData: data.photoData || undefined,
-      visionInspection: data.visionInspection,
-      electricalTest: data.electricalTest,
+      visionInspection: data.visionInspection ?? true,
+      electricalTest: data.electricalTest ?? true,
       timestamp: new Date().toISOString(),
     };
     
