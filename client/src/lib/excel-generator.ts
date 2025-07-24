@@ -61,7 +61,14 @@ function getFrequencyLabel(frequency: string): string {
  * @returns Blob object containing the Excel file for download
  */
 export function generateExcelReport(data: ReportData): Blob {
-  const { session, results, summary } = data;
+  const { session, summary } = data;
+  
+  // Sort results by asset number: monthly frequencies first (1, 2, 3...) then 5-yearly (10001, 10002, 10003...)
+  const results = [...data.results].sort((a, b) => {
+    const aAssetNum = parseInt(a.assetNumber) || 0;
+    const bAssetNum = parseInt(b.assetNumber) || 0;
+    return aAssetNum - bAssetNum;
+  });
   
   // Create workbook
   const workbook = XLSX.utils.book_new();

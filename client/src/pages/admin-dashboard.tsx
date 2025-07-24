@@ -489,6 +489,37 @@ export default function AdminDashboard() {
   const handleUpdateResult = () => {
     if (!editingResult || !viewingSession?.session?.id) return;
 
+    // Calculate new asset number based on frequency change
+    let newAssetNumber = editingResult.assetNumber;
+    
+    // If frequency has changed, recalculate asset number
+    if (editResultData.frequency !== editingResult.frequency) {
+      const currentResults = viewingSession.results || [];
+      
+      // Check if the new frequency is 5-yearly
+      const isFiveYearly = editResultData.frequency === 'fiveyearly';
+      
+      if (isFiveYearly) {
+        // Find the highest 5-yearly asset number
+        const fiveYearlyNumbers = currentResults
+          .filter((r: any) => r.frequency === 'fiveyearly' && r.id !== editingResult.id)
+          .map((r: any) => parseInt(r.assetNumber))
+          .filter((num: number) => !isNaN(num) && num >= 10001);
+        
+        const maxFiveYearly = fiveYearlyNumbers.length > 0 ? Math.max(...fiveYearlyNumbers) : 10000;
+        newAssetNumber = (maxFiveYearly + 1).toString();
+      } else {
+        // Find the highest monthly asset number
+        const monthlyNumbers = currentResults
+          .filter((r: any) => r.frequency !== 'fiveyearly' && r.id !== editingResult.id)
+          .map((r: any) => parseInt(r.assetNumber))
+          .filter((num: number) => !isNaN(num) && num < 10000);
+        
+        const maxMonthly = monthlyNumbers.length > 0 ? Math.max(...monthlyNumbers) : 0;
+        newAssetNumber = (maxMonthly + 1).toString();
+      }
+    }
+
     updateResultMutation.mutate({
       id: editingResult.id,
       sessionId: viewingSession.session.id,
@@ -501,6 +532,7 @@ export default function AdminDashboard() {
         failureReason: editResultData.failureReason,
         actionTaken: editResultData.actionTaken,
         notes: editResultData.notes,
+        assetNumber: newAssetNumber,
       },
     });
   };
@@ -1278,10 +1310,17 @@ export default function AdminDashboard() {
                   </TableHeader>
                   <TableBody>
                     {(() => {
-                      const totalItems = viewingSession.results.length;
+                      // Sort results by asset number: monthly frequencies first (1, 2, 3...) then 5-yearly (10001, 10002, 10003...)
+                      const sortedResults = [...viewingSession.results].sort((a: any, b: any) => {
+                        const aAssetNum = parseInt(a.assetNumber) || 0;
+                        const bAssetNum = parseInt(b.assetNumber) || 0;
+                        return aAssetNum - bAssetNum;
+                      });
+                      
+                      const totalItems = sortedResults.length;
                       const startIndex = (currentPage - 1) * itemsPerPage;
                       const endIndex = startIndex + itemsPerPage;
-                      const paginatedResults = viewingSession.results.slice(startIndex, endIndex);
+                      const paginatedResults = sortedResults.slice(startIndex, endIndex);
                       
                       return paginatedResults.map((result: any) => (
                         <TableRow key={result.id}>
@@ -1322,7 +1361,12 @@ export default function AdminDashboard() {
               
               {/* Pagination Controls */}
               {(() => {
-                const totalItems = viewingSession.results.length;
+                const sortedResults = [...viewingSession.results].sort((a: any, b: any) => {
+                  const aAssetNum = parseInt(a.assetNumber) || 0;
+                  const bAssetNum = parseInt(b.assetNumber) || 0;
+                  return aAssetNum - bAssetNum;
+                });
+                const totalItems = sortedResults.length;
                 const totalPages = Math.ceil(totalItems / itemsPerPage);
                 const startIndex = (currentPage - 1) * itemsPerPage;
                 const endIndex = Math.min(startIndex + itemsPerPage, totalItems);

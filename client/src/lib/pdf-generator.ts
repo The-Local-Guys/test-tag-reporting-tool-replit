@@ -62,7 +62,14 @@ function getFrequencyLabel(frequency: string): string {
  * @returns Promise resolving to Blob object containing the PDF file for download
  */
 export async function generatePDFReport(data: ReportData): Promise<Blob> {
-  const { session, results, summary } = data;
+  const { session, summary } = data;
+  
+  // Sort results by asset number: monthly frequencies first (1, 2, 3...) then 5-yearly (10001, 10002, 10003...)
+  const results = [...data.results].sort((a, b) => {
+    const aAssetNum = parseInt(a.assetNumber) || 0;
+    const bAssetNum = parseInt(b.assetNumber) || 0;
+    return aAssetNum - bAssetNum;
+  });
   const doc = new jsPDF();
   
   // Header title - different for emergency exit light testing

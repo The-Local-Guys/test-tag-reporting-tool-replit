@@ -171,3 +171,10 @@ Changelog:
   - Fixed ID handling for batched results with proper temporary ID management
   - Confirmed both update and delete functions working correctly for local storage batching
   - Update function now properly modifies items in local storage before final batch submission
+- July 24, 2025. Enhanced admin dashboard asset numbering and sorting:
+  - Added automatic asset number reassignment when editing test frequency in admin dashboard
+  - Monthly frequencies (3, 6, 12, 24 monthly) use sequential numbering starting from highest existing + 1
+  - 5-yearly frequency uses sequential numbering starting from highest existing 10001+ number + 1
+  - Implemented sorting function in admin report view to display items in proper asset number order
+  - Added sorting to PDF and Excel generators ensuring reports show items in correct sequence
+  - Asset numbers now correctly reflect frequency type when edited through admin interface
