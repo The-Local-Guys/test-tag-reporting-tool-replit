@@ -291,25 +291,17 @@ export default function ReportPreview() {
           let newAssetNumber: string;
           
           if (newIsFiveYearly) {
-            // Moving to 5-yearly: find next 10000+ number
+            // Moving to 5-yearly: count existing 5-yearly items and assign next sequential number
             const fiveYearlyResults = batchedResults.filter(r => 
               r.frequency === 'fiveyearly' && r.id !== originalResult.id
             );
-            const existingNumbers = fiveYearlyResults
-              .map(r => parseInt(r.assetNumber || '10001'))
-              .filter(n => !isNaN(n) && n >= 10001)
-              .sort((a, b) => b - a);
-            newAssetNumber = (existingNumbers.length > 0 ? existingNumbers[0] + 1 : 10001).toString();
+            newAssetNumber = (10001 + fiveYearlyResults.length).toString();
           } else {
-            // Moving to monthly: find next 1+ number
+            // Moving to monthly: count existing monthly items and assign next sequential number
             const monthlyResults = batchedResults.filter(r => 
               r.frequency !== 'fiveyearly' && r.id !== originalResult.id
             );
-            const existingNumbers = monthlyResults
-              .map(r => parseInt(r.assetNumber || '1'))
-              .filter(n => !isNaN(n) && n < 10000)
-              .sort((a, b) => b - a);
-            newAssetNumber = (existingNumbers.length > 0 ? existingNumbers[0] + 1 : 1).toString();
+            newAssetNumber = (1 + monthlyResults.length).toString();
           }
           
           console.log(`Asset number updated: ${originalResult.assetNumber} -> ${newAssetNumber}`);

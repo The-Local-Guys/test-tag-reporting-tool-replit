@@ -178,3 +178,6 @@ Changelog:
   - Implemented sorting function in admin report view to display items in proper asset number order
   - Added sorting to PDF and Excel generators ensuring reports show items in correct sequence
   - Asset numbers now correctly reflect frequency type when edited through admin interface
+  - Fixed asset number calculation logic to properly count existing items in target frequency category
+  - When changing frequency categories, system now assigns next sequential number based on count of existing items
+  - Example: 4 existing 5-yearly items + 1 new = asset #10005, 5 existing monthly items + 1 new = asset #6

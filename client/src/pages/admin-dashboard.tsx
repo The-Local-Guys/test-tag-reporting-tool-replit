@@ -500,23 +500,17 @@ export default function AdminDashboard() {
       const isFiveYearly = editResultData.frequency === 'fiveyearly';
       
       if (isFiveYearly) {
-        // Find the highest 5-yearly asset number
-        const fiveYearlyNumbers = currentResults
-          .filter((r: any) => r.frequency === 'fiveyearly' && r.id !== editingResult.id)
-          .map((r: any) => parseInt(r.assetNumber))
-          .filter((num: number) => !isNaN(num) && num >= 10001);
+        // Count existing 5-yearly items and assign next sequential number
+        const fiveYearlyItems = currentResults
+          .filter((r: any) => r.frequency === 'fiveyearly' && r.id !== editingResult.id);
         
-        const maxFiveYearly = fiveYearlyNumbers.length > 0 ? Math.max(...fiveYearlyNumbers) : 10000;
-        newAssetNumber = (maxFiveYearly + 1).toString();
+        newAssetNumber = (10001 + fiveYearlyItems.length).toString();
       } else {
-        // Find the highest monthly asset number
-        const monthlyNumbers = currentResults
-          .filter((r: any) => r.frequency !== 'fiveyearly' && r.id !== editingResult.id)
-          .map((r: any) => parseInt(r.assetNumber))
-          .filter((num: number) => !isNaN(num) && num < 10000);
+        // Count existing monthly items and assign next sequential number
+        const monthlyItems = currentResults
+          .filter((r: any) => r.frequency !== 'fiveyearly' && r.id !== editingResult.id);
         
-        const maxMonthly = monthlyNumbers.length > 0 ? Math.max(...monthlyNumbers) : 0;
-        newAssetNumber = (maxMonthly + 1).toString();
+        newAssetNumber = (1 + monthlyItems.length).toString();
       }
     }
 
