@@ -304,6 +304,35 @@ export default function ReportPreview() {
             newAssetNumber = (1 + monthlyResults.length).toString();
           }
           
+          // Resequence the original frequency category to fill gaps
+          if (originalIsFiveYearly) {
+            // Resequence remaining 5-yearly items
+            const remaining5YearlyItems = batchedResults
+              .filter(r => r.frequency === 'fiveyearly' && r.id !== originalResult.id)
+              .sort((a, b) => parseInt(a.assetNumber || '10001') - parseInt(b.assetNumber || '10001'));
+            
+            remaining5YearlyItems.forEach((item, index) => {
+              const expectedAssetNumber = (10001 + index).toString();
+              if (item.assetNumber !== expectedAssetNumber) {
+                // Update the asset number in batchedResults
+                updateBatchedResult(item.id, { assetNumber: expectedAssetNumber });
+              }
+            });
+          } else {
+            // Resequence remaining monthly items
+            const remainingMonthlyItems = batchedResults
+              .filter(r => r.frequency !== 'fiveyearly' && r.id !== originalResult.id)
+              .sort((a, b) => parseInt(a.assetNumber || '1') - parseInt(b.assetNumber || '1'));
+            
+            remainingMonthlyItems.forEach((item, index) => {
+              const expectedAssetNumber = (1 + index).toString();
+              if (item.assetNumber !== expectedAssetNumber) {
+                // Update the asset number in batchedResults
+                updateBatchedResult(item.id, { assetNumber: expectedAssetNumber });
+              }
+            });
+          }
+          
           console.log(`Asset number updated: ${originalResult.assetNumber} -> ${newAssetNumber}`);
           data.assetNumber = newAssetNumber;
           

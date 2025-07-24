@@ -181,3 +181,6 @@ Changelog:
   - Fixed asset number calculation logic to properly count existing items in target frequency category
   - When changing frequency categories, system now assigns next sequential number based on count of existing items
   - Example: 4 existing 5-yearly items + 1 new = asset #10005, 5 existing monthly items + 1 new = asset #6
+  - Added automatic asset number resequencing when items are moved between frequency categories
+  - When item is moved from one frequency to another, remaining items automatically resequence to eliminate gaps
+  - Example: items 1,2,3,4,5,6 → move item 3 to 5-yearly → remaining items become 1,2,3,4,5 (no gaps)
