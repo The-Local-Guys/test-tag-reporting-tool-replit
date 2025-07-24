@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Edit2, FileText, CheckCircle, Plus, RotateCcw, LogOut } from 'lucide-react';
+import { Edit2, FileText, CheckCircle, Plus, RotateCcw, LogOut, Trash2 } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocation } from 'wouter';
@@ -69,8 +69,8 @@ export default function ItemSelection() {
     clearSession();
     setLocation('/');
     toast({
-      title: "New Job Started",
-      description: "Ready to begin a fresh test session.",
+      title: "Report Cancelled",
+      description: "The report has been discarded. Ready to start fresh.",
     });
     setShowNewReportConfirm(false);
   };
@@ -185,10 +185,10 @@ export default function ItemSelection() {
         <Button 
           onClick={handleNewJob}
           variant="outline"
-          className="w-full py-3 font-medium border-2 border-primary text-primary hover:bg-primary hover:text-white"
+          className="w-full py-3 font-medium border-red-300 text-red-600 hover:bg-red-50"
         >
-          <RotateCcw className="mr-2 h-4 w-4" />
-          Finish Report / Start New Report
+          <Trash2 className="mr-2 h-4 w-4" />
+          Cancel Report
         </Button>
       </div>
 
@@ -222,19 +222,19 @@ export default function ItemSelection() {
         </div>
       </Modal>
 
-      {/* Confirmation Dialog */}
+      {/* Cancel Report Confirmation Dialog */}
       <AlertDialog open={showNewReportConfirm} onOpenChange={setShowNewReportConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Start New Report?</AlertDialogTitle>
+            <AlertDialogTitle>Cancel Report?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will finish the current report and start a new test session. You can still access this report later from the admin dashboard.
+              This will discard the current report and all test results without saving. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmNewReport}>
-              Yes, Start New Report
+            <AlertDialogCancel>Keep Report</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmNewReport} className="bg-red-600 hover:bg-red-700">
+              Yes, Cancel Report
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
