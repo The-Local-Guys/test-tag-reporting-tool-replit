@@ -201,8 +201,8 @@ export default function ReportPreview() {
     // Navigate to setup page to start a new report
     setLocation('/');
     toast({
-      title: "Starting new report",
-      description: "Ready to create a new test session.",
+      title: "Report Cancelled",
+      description: "The report has been discarded. Ready to start fresh.",
     });
     setShowNewReportConfirm(false);
   };
@@ -775,26 +775,26 @@ export default function ReportPreview() {
         <Button 
           onClick={handleNewReport}
           variant="outline"
-          className="w-full py-3 text-sm font-medium touch-button"
+          className="w-full py-3 text-sm font-medium touch-button border-red-300 text-red-600 hover:bg-red-50"
         >
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Finish Report / Start New Report
+          <Trash2 className="h-4 w-4 mr-2" />
+          Cancel Report
         </Button>
       </div>
 
-      {/* New Report Confirmation Dialog */}
+      {/* Cancel Report Confirmation Dialog */}
       <AlertDialog open={showNewReportConfirm} onOpenChange={setShowNewReportConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Start New Report?</AlertDialogTitle>
+            <AlertDialogTitle>Cancel Report?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will finish the current report and start a new test session. You can still access this report later from the admin dashboard.
+              This will discard the current report and all test results without saving. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmNewReport}>
-              Yes, Start New Report
+            <AlertDialogCancel>Keep Report</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmNewReport} className="bg-red-600 hover:bg-red-700">
+              Yes, Cancel Report
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
