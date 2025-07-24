@@ -333,6 +333,22 @@ export function useSession() {
     const allUpdatedResults = [...monthlyItems, ...fiveYearlyItems];
     setBatchedResults(allUpdatedResults);
 
+    // Update asset counts to reflect the new groupings
+    setAssetCounts({
+      monthly: monthlyItems.length,
+      fiveYearly: fiveYearlyItems.length
+    });
+
+    // Update counters based on new counts
+    setMonthlyAssetCounter(monthlyItems.length);
+    setFiveYearlyAssetCounter(10000 + fiveYearlyItems.length);
+    
+    // Save counters to localStorage
+    if (sessionId) {
+      localStorage.setItem(`monthlyCounter_${sessionId}`, monthlyItems.length.toString());
+      localStorage.setItem(`fiveYearlyCounter_${sessionId}`, (10000 + fiveYearlyItems.length).toString());
+    }
+
     // Save to localStorage
     if (sessionId) {
       localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(allUpdatedResults));
