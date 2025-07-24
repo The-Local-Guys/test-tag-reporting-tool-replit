@@ -274,6 +274,54 @@ export default function ReportPreview() {
       console.log('Editing result:', editingResult);
       console.log('Original batched ID:', (editingResult as any).originalBatchedId);
 
+      // Check if frequency changed and requires asset number update
+      const originalResult = batchedResults.find(r => r.id === (editingResult as any).originalBatchedId);
+      if (originalResult) {
+        const originalFrequency = originalResult.frequency;
+        const newFrequency = data.frequency;
+        
+        const originalIsFiveYearly = originalFrequency === 'fiveyearly';
+        const newIsFiveYearly = newFrequency === 'fiveyearly';
+        
+        // If frequency category changed, update asset number
+        if (originalIsFiveYearly !== newIsFiveYearly) {
+          console.log('Frequency category changed, updating asset number...');
+          
+          // Find the next available asset number for the new frequency category
+          let newAssetNumber: string;
+          
+          if (newIsFiveYearly) {
+            // Moving to 5-yearly: find next 10000+ number
+            const fiveYearlyResults = batchedResults.filter(r => 
+              r.frequency === 'fiveyearly' && r.id !== originalResult.id
+            );
+            const existingNumbers = fiveYearlyResults
+              .map(r => parseInt(r.assetNumber || '10001'))
+              .filter(n => !isNaN(n) && n >= 10001)
+              .sort((a, b) => b - a);
+            newAssetNumber = (existingNumbers.length > 0 ? existingNumbers[0] + 1 : 10001).toString();
+          } else {
+            // Moving to monthly: find next 1+ number
+            const monthlyResults = batchedResults.filter(r => 
+              r.frequency !== 'fiveyearly' && r.id !== originalResult.id
+            );
+            const existingNumbers = monthlyResults
+              .map(r => parseInt(r.assetNumber || '1'))
+              .filter(n => !isNaN(n) && n < 10000)
+              .sort((a, b) => b - a);
+            newAssetNumber = (existingNumbers.length > 0 ? existingNumbers[0] + 1 : 1).toString();
+          }
+          
+          console.log(`Asset number updated: ${originalResult.assetNumber} -> ${newAssetNumber}`);
+          data.assetNumber = newAssetNumber;
+          
+          toast({
+            title: "Asset Number Updated",
+            description: `Asset number changed from #${originalResult.assetNumber} to #${newAssetNumber} due to frequency change.`,
+          });
+        }
+      }
+
       // Use the original batched ID for updating local storage
       const batchedId = (editingResult as any).originalBatchedId || `temp_${editingResult.id}`;
       console.log('Using batched ID for update:', batchedId);
