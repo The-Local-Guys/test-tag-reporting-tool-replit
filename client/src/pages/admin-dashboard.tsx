@@ -213,29 +213,13 @@ export default function AdminDashboard() {
 
   // Update test result mutation
   const updateResultMutation = useMutation({
-    mutationFn: async ({ id, data, sessionId, additionalUpdates }: { id: number; data: any; sessionId: number; additionalUpdates?: any[] }) => {
-      // Update the main item
+    mutationFn: async ({ id, data, sessionId }: { id: number; data: any; sessionId: number }) => {
       const res = await fetch(`/api/sessions/${sessionId}/results/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error('Failed to update test result');
-      
-      // Update additional items for resequencing
-      if (additionalUpdates && additionalUpdates.length > 0) {
-        for (const update of additionalUpdates) {
-          const additionalRes = await fetch(`/api/sessions/${sessionId}/results/${update.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ assetNumber: update.assetNumber }),
-          });
-          if (!additionalRes.ok) {
-            console.error(`Failed to update asset number for item ${update.id}`);
-          }
-        }
-      }
-      
       return res.json();
     },
     onSuccess: () => {
@@ -505,67 +489,31 @@ export default function AdminDashboard() {
   const handleUpdateResult = () => {
     if (!editingResult || !viewingSession?.session?.id) return;
 
-    // Calculate new asset number and resequence items if frequency changed
+    // Calculate new asset number based on frequency change
     let newAssetNumber = editingResult.assetNumber;
-    let additionalUpdates: any[] = [];
     
-    // If frequency has changed, recalculate asset numbers and resequence
+    // If frequency has changed, recalculate asset number
     if (editResultData.frequency !== editingResult.frequency) {
       const currentResults = viewingSession.results || [];
-      const originalFrequency = editingResult.frequency;
-      const newFrequency = editResultData.frequency;
       
-      const originalIsFiveYearly = originalFrequency === 'fiveyearly';
-      const newIsFiveYearly = newFrequency === 'fiveyearly';
+      // Check if the new frequency is 5-yearly
+      const isFiveYearly = editResultData.frequency === 'fiveyearly';
       
-      // Calculate new asset number for the edited item
-      if (newIsFiveYearly) {
+      if (isFiveYearly) {
         // Count existing 5-yearly items and assign next sequential number
         const fiveYearlyItems = currentResults
           .filter((r: any) => r.frequency === 'fiveyearly' && r.id !== editingResult.id);
+        
         newAssetNumber = (10001 + fiveYearlyItems.length).toString();
       } else {
         // Count existing monthly items and assign next sequential number
         const monthlyItems = currentResults
           .filter((r: any) => r.frequency !== 'fiveyearly' && r.id !== editingResult.id);
+        
         newAssetNumber = (1 + monthlyItems.length).toString();
-      }
-      
-      // Resequence the original frequency category to fill gaps
-      if (originalIsFiveYearly) {
-        // Resequence remaining 5-yearly items
-        const remaining5YearlyItems = currentResults
-          .filter((r: any) => r.frequency === 'fiveyearly' && r.id !== editingResult.id)
-          .sort((a: any, b: any) => parseInt(a.assetNumber) - parseInt(b.assetNumber));
-        
-        remaining5YearlyItems.forEach((item: any, index: number) => {
-          const expectedAssetNumber = (10001 + index).toString();
-          if (item.assetNumber !== expectedAssetNumber) {
-            additionalUpdates.push({
-              id: item.id,
-              assetNumber: expectedAssetNumber
-            });
-          }
-        });
-      } else {
-        // Resequence remaining monthly items
-        const remainingMonthlyItems = currentResults
-          .filter((r: any) => r.frequency !== 'fiveyearly' && r.id !== editingResult.id)
-          .sort((a: any, b: any) => parseInt(a.assetNumber) - parseInt(b.assetNumber));
-        
-        remainingMonthlyItems.forEach((item: any, index: number) => {
-          const expectedAssetNumber = (1 + index).toString();
-          if (item.assetNumber !== expectedAssetNumber) {
-            additionalUpdates.push({
-              id: item.id,
-              assetNumber: expectedAssetNumber
-            });
-          }
-        });
       }
     }
 
-    // Update the main item
     updateResultMutation.mutate({
       id: editingResult.id,
       sessionId: viewingSession.session.id,
@@ -580,7 +528,6 @@ export default function AdminDashboard() {
         notes: editResultData.notes,
         assetNumber: newAssetNumber,
       },
-      additionalUpdates: additionalUpdates,
     });
   };
 
