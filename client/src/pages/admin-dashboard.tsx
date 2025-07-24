@@ -425,19 +425,29 @@ export default function AdminDashboard() {
     }
     
     try {
+      // Show loading state if needed (optional enhancement)
+      console.log(`Fetching latest report data for session ${sessionId}...`);
+      
       const response = await fetch(`/api/sessions/${sessionId}/full`);
       if (!response.ok) {
-        throw new Error('Failed to fetch report data');
+        throw new Error(`HTTP ${response.status}: Failed to fetch report data`);
       }
+      
       const reportData = await response.json();
+      console.log(`Successfully fetched report data with ${reportData.results?.length || 0} test results`);
+      
+      // Update state with fresh data
       setViewingSession(reportData);
       setCurrentPage(1); // Reset to first page when opening report
+      
+      // Only open modal after successful data fetch and state update
       setIsViewReportModalOpen(true);
+      
     } catch (error) {
       console.error('Error loading report:', error);
       toast({
         title: "Error loading report",
-        description: "Failed to load the full report data",
+        description: `Failed to load the full report data: ${(error as Error).message}`,
         variant: "destructive",
       });
     }

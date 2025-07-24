@@ -181,3 +181,9 @@ Changelog:
   - Fixed asset number calculation logic to properly count existing items in target frequency category
   - When changing frequency categories, system now assigns next sequential number based on count of existing items
   - Example: 4 existing 5-yearly items + 1 new = asset #10005, 5 existing monthly items + 1 new = asset #6
+- July 24, 2025. Enhanced handleViewReport function in admin dashboard:
+  - Confirmed function properly fetches latest data from server before opening modal
+  - Added enhanced error handling with detailed HTTP status reporting  
+  - Improved logging to track data fetch success and result counts
+  - Modal only opens after successful data fetch and state update
+  - Function handles both session objects and direct session IDs correctly
