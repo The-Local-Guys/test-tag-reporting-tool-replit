@@ -679,7 +679,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate report data
-  app.get("/api/sessions/:id/report", async (req, res) => {
+  app.get("/api/sessions/:id/report", requireAuth, async (req, res) => {
     try {
       const sessionId = parseInt(req.params.id);
       const sessionData = await storage.getFullSessionData(sessionId);
