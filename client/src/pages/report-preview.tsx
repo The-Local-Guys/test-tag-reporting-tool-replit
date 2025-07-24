@@ -35,6 +35,7 @@ export default function ReportPreview() {
     resolver: zodResolver(insertTestResultSchema.omit({ sessionId: true, assetNumber: true })),
     defaultValues: {
       itemName: '',
+      itemType: '',
       location: '',
       classification: 'class1' as const,
       result: 'pass' as const,
@@ -249,6 +250,7 @@ export default function ReportPreview() {
     setEditingResult({ ...testResult, originalBatchedId: result.id } as any);
     editForm.reset({
       itemName: result.itemName,
+      itemType: result.itemType,
       location: result.location,
       classification: result.classification as any,
       result: result.result as any,
@@ -545,6 +547,15 @@ export default function ReportPreview() {
             <Input
               id="edit-itemName"
               {...editForm.register('itemName')}
+              className="text-base"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="edit-itemType">Item Type</Label>
+            <Input
+              id="edit-itemType"
+              {...editForm.register('itemType')}
               className="text-base"
             />
           </div>
