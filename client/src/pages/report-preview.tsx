@@ -22,7 +22,7 @@ import { insertTestResultSchema, type TestResult, type InsertTestResult } from '
  * Shows pass/fail statistics and enables report customization options
  */
 export default function ReportPreview() {
-  const { sessionData, batchedResults, submitBatch, isSubmittingBatch, updateBatchedResult, removeBatchedResult, clearSession, assetProgress, setBatchedResults, sessionId } = useSession();
+  const { sessionData, batchedResults, submitBatch, isSubmittingBatch, updateBatchedResult, removeBatchedResult, clearSession, assetProgress, renumberAssets, sessionId } = useSession();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [editingResult, setEditingResult] = useState<TestResult | null>(null);
@@ -286,39 +286,9 @@ export default function ReportPreview() {
         // If frequency category changed, update asset number and renumber all items
         if (originalIsFiveYearly !== newIsFiveYearly) {
           console.log('Frequency category changed, renumbering all items...');
-
-          // Create a temporary array with the updated item
-          const tempResults = batchedResults.map(r => 
-            r.id === originalResult.id ? { ...r, frequency: newFrequency } : r
-          );
-
-          // Separate into monthly and 5-yearly groups
-          const monthlyItems = tempResults.filter(r => r.frequency !== 'fiveyearly');
-          const fiveYearlyItems = tempResults.filter(r => r.frequency === 'fiveyearly');
-
-          // Renumber monthly items (1, 2, 3...)
-          monthlyItems.forEach((item, index) => {
-            item.assetNumber = (index + 1).toString();
-          });
-
-          // Renumber 5-yearly items (10001, 10002, 10003...)
-          fiveYearlyItems.forEach((item, index) => {
-            item.assetNumber = (10001 + index).toString();
-          });
-
-          // Find the new asset number for the item being edited
-          const updatedItem = tempResults.find(r => r.id === originalResult.id);
-          const newAssetNumber = updatedItem?.assetNumber || '1';
-
-          // Update all affected items in the batch
-          const allUpdatedResults = [...monthlyItems, ...fiveYearlyItems];
-          setBatchedResults(allUpdatedResults);
-
-          // Save to localStorage
-          if (sessionId) {
-            localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(allUpdatedResults));
-          }
-
+          
+          const newAssetNumber = renumberAssets(originalResult.id, newFrequency);
+          
           console.log(`Asset number updated: ${originalResult.assetNumber} -> ${newAssetNumber}`);
           data.assetNumber = newAssetNumber;
 

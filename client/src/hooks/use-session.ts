@@ -306,6 +306,41 @@ export function useSession() {
     }
   };
 
+  /**
+   * Renumbers all assets when frequency categories change
+   */
+  const renumberAssets = (updatedResultId: string, newFrequency: string) => {
+    // Create a temporary array with the updated item
+    const tempResults = batchedResults.map(r => 
+      r.id === updatedResultId ? { ...r, frequency: newFrequency } : r
+    );
+
+    // Separate into monthly and 5-yearly groups
+    const monthlyItems = tempResults.filter(r => r.frequency !== 'fiveyearly');
+    const fiveYearlyItems = tempResults.filter(r => r.frequency === 'fiveyearly');
+
+    // Renumber monthly items (1, 2, 3...)
+    monthlyItems.forEach((item, index) => {
+      item.assetNumber = (index + 1).toString();
+    });
+
+    // Renumber 5-yearly items (10001, 10002, 10003...)
+    fiveYearlyItems.forEach((item, index) => {
+      item.assetNumber = (10001 + index).toString();
+    });
+
+    // Combine and update state
+    const allUpdatedResults = [...monthlyItems, ...fiveYearlyItems];
+    setBatchedResults(allUpdatedResults);
+
+    // Save to localStorage
+    if (sessionId) {
+      localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(allUpdatedResults));
+    }
+
+    return allUpdatedResults.find(r => r.id === updatedResultId)?.assetNumber || '1';
+  };
+
   const updateResultMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<InsertTestResult> }) => {
       if (!sessionId) throw new Error('No active session');
@@ -382,9 +417,11 @@ export function useSession() {
     
     // Batched results
     batchedResults,
+    setBatchedResults,
     addToBatch,
     updateBatchedResult,
     removeBatchedResult,
+    renumberAssets,
     submitBatch: submitBatchMutation.mutate,
     isSubmittingBatch: submitBatchMutation.isPending,
     
