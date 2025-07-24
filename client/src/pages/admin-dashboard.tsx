@@ -492,26 +492,37 @@ export default function AdminDashboard() {
     // Calculate new asset number based on frequency change
     let newAssetNumber = editingResult.assetNumber;
     
-    // If frequency has changed, recalculate asset number
-    if (editResultData.frequency !== editingResult.frequency) {
+    // Check if frequency category changed (monthly <-> 5-yearly)
+    const originalFrequency = editingResult.frequency;
+    const newFrequency = editResultData.frequency;
+    
+    const originalIsFiveYearly = originalFrequency === 'fiveyearly';
+    const newIsFiveYearly = newFrequency === 'fiveyearly';
+    
+    // If frequency category changed, recalculate asset number
+    if (originalIsFiveYearly !== newIsFiveYearly) {
       const currentResults = viewingSession.results || [];
       
-      // Check if the new frequency is 5-yearly
-      const isFiveYearly = editResultData.frequency === 'fiveyearly';
-      
-      if (isFiveYearly) {
-        // Count existing 5-yearly items and assign next sequential number
+      if (newIsFiveYearly) {
+        // Moving to 5-yearly: count existing 5-yearly items and assign next sequential number
         const fiveYearlyItems = currentResults
           .filter((r: any) => r.frequency === 'fiveyearly' && r.id !== editingResult.id);
         
         newAssetNumber = (10001 + fiveYearlyItems.length).toString();
       } else {
-        // Count existing monthly items and assign next sequential number
+        // Moving to monthly: count existing monthly items and assign next sequential number
         const monthlyItems = currentResults
           .filter((r: any) => r.frequency !== 'fiveyearly' && r.id !== editingResult.id);
         
         newAssetNumber = (1 + monthlyItems.length).toString();
       }
+      
+      console.log(`Admin: Asset number updated: ${editingResult.assetNumber} -> ${newAssetNumber}`);
+      
+      toast({
+        title: "Asset Number Updated",
+        description: `Asset number changed from #${editingResult.assetNumber} to #${newAssetNumber} due to frequency change.`,
+      });
     }
 
     updateResultMutation.mutate({
