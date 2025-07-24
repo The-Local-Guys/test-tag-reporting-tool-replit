@@ -56,20 +56,20 @@ export default function ReportPreview() {
   }
 
   const { session, summary } = sessionData;
-  
+
   // Sort batched results by frequency type and asset number
   const sortResultsByAssetNumber = (results: BatchedTestResult[]): BatchedTestResult[] => {
     return [...results].sort((a, b) => {
       const aAssetNum = parseInt(a.assetNumber || '0');
       const bAssetNum = parseInt(b.assetNumber || '0');
-      
+
       // Monthly frequencies (1-9999) come first, then 5-yearly (10000+)
       const aIsMonthly = aAssetNum < 10000;
       const bIsMonthly = bAssetNum < 10000;
-      
+
       if (aIsMonthly && !bIsMonthly) return -1; // Monthly before 5-yearly
       if (!aIsMonthly && bIsMonthly) return 1;  // 5-yearly after monthly
-      
+
       // Within same category, sort by asset number (ascending)
       return aAssetNum - bAssetNum;
     });
@@ -107,17 +107,17 @@ export default function ReportPreview() {
         installationDate: null,
         globeType: null,
       }));
-      
+
       if (!sessionData?.session) {
         throw new Error('Session data is not available');
       }
-      
+
       const previewData = {
         ...sessionData,
         session: sessionData.session,
         results: convertedResults,
       };
-      
+
       await downloadPDF(previewData, `test-report-${session.clientName.replace(/\s+/g, '-').toLowerCase()}.pdf`);
       toast({
         title: "PDF Generated",
@@ -161,17 +161,17 @@ export default function ReportPreview() {
         installationDate: null,
         globeType: null,
       }));
-      
+
       if (!sessionData?.session) {
         throw new Error('Session data is not available');
       }
-      
+
       const previewData = {
         ...sessionData,
         session: sessionData.session,
         results: convertedResults,
       };
-      
+
       downloadExcel(previewData, `test-report-${session.clientName.replace(/\s+/g, '-').toLowerCase()}.xlsx`);
       toast({
         title: "Excel Generated",
@@ -243,7 +243,7 @@ export default function ReportPreview() {
       installationDate: null,
       globeType: null,
     };
-    
+
     // Store the original batched result for updating
     console.log('Setting editing result with batched ID:', result.id);
     setEditingResult({ ...testResult, originalBatchedId: result.id } as any);
@@ -265,35 +265,35 @@ export default function ReportPreview() {
       console.error('No editing result available');
       return;
     }
-    
+
     try {
       console.log('=== Starting handleSaveEdit ===');
       console.log('Form data to save:', data);
       console.log('Editing result:', editingResult);
       console.log('Original batched ID:', (editingResult as any).originalBatchedId);
-      
+
       // Use the original batched ID for updating local storage
       const batchedId = (editingResult as any).originalBatchedId || `temp_${editingResult.id}`;
       console.log('Using batched ID for update:', batchedId);
-      
+
       console.log('Calling updateBatchedResult...');
       updateBatchedResult(batchedId, data);
       console.log('updateBatchedResult completed');
-      
+
       setIsEditModalOpen(false);
       setEditingResult(null);
-      
+
       toast({
         title: "Item Updated",
         description: "Test result has been successfully updated.",
       });
-      
+
       console.log('=== handleSaveEdit completed successfully ===');
     } catch (error) {
       console.error('=== Error in handleSaveEdit ===');
       console.error('Error details:', error);
       console.error('Error stack:', (error as Error).stack);
-      
+
       toast({
         title: "Update Failed",
         description: `Error updating test result: ${(error as Error).message}`,
@@ -330,7 +330,7 @@ export default function ReportPreview() {
       installationDate: null,
       globeType: null,
     };
-    
+
     // Store the original batched result ID for deletion
     setDeletingResult({ ...testResult, originalBatchedId: result.id } as any);
     setShowDeleteConfirm(true);
@@ -338,7 +338,7 @@ export default function ReportPreview() {
 
   const confirmDelete = async () => {
     if (!deletingResult) return;
-    
+
     try {
       // Use the original batched ID for deletion from local storage
       const batchedId = (deletingResult as any).originalBatchedId || `temp_${deletingResult.id}`;
@@ -519,7 +519,27 @@ export default function ReportPreview() {
         onClose={() => setIsEditModalOpen(false)}
         title="Edit Test Result"
       >
-        <form onSubmit={editForm.handleSubmit(handleSaveEdit)} className="space-y-4">
+        <form onSubmit={(e) => {
+          console.log('=== FORM ONSUBMIT TRIGGERED ===');
+          console.log('Event:', e);
+
+          editForm.handleSubmit(
+            (data) => {
+              console.log('=== FORM VALIDATION PASSED ===');
+              console.log('Form submitted with data:', data);
+              handleSaveEdit(data);
+            },
+            (errors) => {
+              console.log('=== FORM VALIDATION FAILED ===');
+              console.log('Form validation errors:', errors);
+              toast({
+                title: "Validation Error",
+                description: "Please check all required fields.",
+                variant: "destructive",
+              });
+            }
+          )(e);
+        }} className="space-y-4">
           <div>
             <Label htmlFor="edit-itemName">Item Name</Label>
             <Input
@@ -652,6 +672,13 @@ export default function ReportPreview() {
             <Button 
               type="submit" 
               className="flex-1 bg-primary"
+              onClick={(e) => {
+                console.log('=== SAVE BUTTON CLICKED ===');
+                console.log('Button event:', e);
+                console.log('Form state:', editForm.formState);
+                console.log('Form values:', editForm.getValues());
+                console.log('Form errors:', editForm.formState.errors);
+              }}
             >
               Save Changes
             </Button>
@@ -689,7 +716,7 @@ export default function ReportPreview() {
             )}
           </Button>
         )}
-        
+
         <div className="text-center">
           <div className="text-sm font-medium text-gray-700">Export Report</div>
           <div className="text-xs text-gray-500">Choose your preferred format</div>
