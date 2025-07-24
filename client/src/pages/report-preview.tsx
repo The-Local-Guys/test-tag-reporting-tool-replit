@@ -22,7 +22,7 @@ import { insertTestResultSchema, type TestResult, type InsertTestResult } from '
  * Shows pass/fail statistics and enables report customization options
  */
 export default function ReportPreview() {
-  const { sessionData, batchedResults, submitBatch, isSubmittingBatch, updateBatchedResult, removeBatchedResult, clearSession, assetProgress } = useSession();
+  const { sessionData, batchedResults, submitBatch, isSubmittingBatch, updateBatchedResult, removeBatchedResult, clearSession, assetProgress, setBatchedResults, sessionId } = useSession();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [editingResult, setEditingResult] = useState<TestResult | null>(null);
@@ -279,37 +279,52 @@ export default function ReportPreview() {
       if (originalResult) {
         const originalFrequency = originalResult.frequency;
         const newFrequency = data.frequency;
-        
+
         const originalIsFiveYearly = originalFrequency === 'fiveyearly';
         const newIsFiveYearly = newFrequency === 'fiveyearly';
-        
-        // If frequency category changed, update asset number
+
+        // If frequency category changed, update asset number and renumber all items
         if (originalIsFiveYearly !== newIsFiveYearly) {
-          console.log('Frequency category changed, updating asset number...');
-          
-          // Find the next available asset number for the new frequency category
-          let newAssetNumber: string;
-          
-          if (newIsFiveYearly) {
-            // Moving to 5-yearly: count existing 5-yearly items and assign next sequential number
-            const fiveYearlyResults = batchedResults.filter(r => 
-              r.frequency === 'fiveyearly' && r.id !== originalResult.id
-            );
-            newAssetNumber = (10001 + fiveYearlyResults.length).toString();
-          } else {
-            // Moving to monthly: count existing monthly items and assign next sequential number
-            const monthlyResults = batchedResults.filter(r => 
-              r.frequency !== 'fiveyearly' && r.id !== originalResult.id
-            );
-            newAssetNumber = (1 + monthlyResults.length).toString();
+          console.log('Frequency category changed, renumbering all items...');
+
+          // Create a temporary array with the updated item
+          const tempResults = batchedResults.map(r => 
+            r.id === originalResult.id ? { ...r, frequency: newFrequency } : r
+          );
+
+          // Separate into monthly and 5-yearly groups
+          const monthlyItems = tempResults.filter(r => r.frequency !== 'fiveyearly');
+          const fiveYearlyItems = tempResults.filter(r => r.frequency === 'fiveyearly');
+
+          // Renumber monthly items (1, 2, 3...)
+          monthlyItems.forEach((item, index) => {
+            item.assetNumber = (index + 1).toString();
+          });
+
+          // Renumber 5-yearly items (10001, 10002, 10003...)
+          fiveYearlyItems.forEach((item, index) => {
+            item.assetNumber = (10001 + index).toString();
+          });
+
+          // Find the new asset number for the item being edited
+          const updatedItem = tempResults.find(r => r.id === originalResult.id);
+          const newAssetNumber = updatedItem?.assetNumber || '1';
+
+          // Update all affected items in the batch
+          const allUpdatedResults = [...monthlyItems, ...fiveYearlyItems];
+          setBatchedResults(allUpdatedResults);
+
+          // Save to localStorage
+          if (sessionId) {
+            localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(allUpdatedResults));
           }
-          
+
           console.log(`Asset number updated: ${originalResult.assetNumber} -> ${newAssetNumber}`);
           data.assetNumber = newAssetNumber;
-          
+
           toast({
-            title: "Asset Number Updated",
-            description: `Asset number changed from #${originalResult.assetNumber} to #${newAssetNumber} due to frequency change.`,
+            title: "Items Renumbered",
+            description: `All items have been renumbered. Asset #${originalResult.assetNumber} is now #${newAssetNumber}.`,
           });
         }
       }

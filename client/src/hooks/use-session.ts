@@ -48,6 +48,22 @@ export function useSession() {
     return localStorage.getItem('currentLocation') || '';
   });
 
+  // Asset count state for tracking current counts
+  const [assetCounts, setAssetCounts] = useState<{ monthly: number; fiveYearly: number }>(() => {
+    if (!sessionId) return { monthly: 0, fiveYearly: 0 };
+    
+    // Calculate from existing batched results
+    const stored = localStorage.getItem(`batchedResults_${sessionId}`);
+    if (stored) {
+      const results: BatchedTestResult[] = JSON.parse(stored);
+      const monthlyCount = results.filter(r => r.frequency !== 'fiveyearly').length;
+      const fiveYearlyCount = results.filter(r => r.frequency === 'fiveyearly').length;
+      return { monthly: monthlyCount, fiveYearly: fiveYearlyCount };
+    }
+    
+    return { monthly: 0, fiveYearly: 0 };
+  });
+
   // Asset number counters - start fresh for each session
   const [monthlyAssetCounter, setMonthlyAssetCounter] = useState<number>(() => {
     if (!sessionId) return 0;
@@ -172,6 +188,12 @@ export function useSession() {
     const updatedResults = [...batchedResults, newResult];
     setBatchedResults(updatedResults);
     
+    // Update asset counts state
+    setAssetCounts(prevCounts => ({
+      ...prevCounts,
+      [isFiveYearly ? 'fiveYearly' : 'monthly']: prevCounts[isFiveYearly ? 'fiveYearly' : 'monthly'] + 1,
+    }));
+    
     // Save to localStorage
     localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(updatedResults));
     
@@ -207,9 +229,10 @@ export function useSession() {
       // Clear batched results after successful submission
       setBatchedResults([]);
       localStorage.removeItem(`batchedResults_${sessionId}`);
-      // Reset asset counters for next session
+      // Reset asset counters and counts for next session
       setMonthlyAssetCounter(0);
       setFiveYearlyAssetCounter(10000);
+      setAssetCounts({ monthly: 0, fiveYearly: 0 });
       if (sessionId) {
         localStorage.removeItem(`monthlyCounter_${sessionId}`);
         localStorage.removeItem(`fiveYearlyCounter_${sessionId}`);
@@ -262,9 +285,20 @@ export function useSession() {
   };
 
   /**
-   * Removes a result from the local batch
+   * Removes a result from the local batch and updates asset counts
    */
   const removeBatchedResult = (id: string) => {
+    const resultToRemove = batchedResults.find(result => result.id === id);
+    if (resultToRemove) {
+      const isFiveYearly = resultToRemove.frequency === 'fiveyearly';
+      
+      // Update asset counts state
+      setAssetCounts(prevCounts => ({
+        ...prevCounts,
+        [isFiveYearly ? 'fiveYearly' : 'monthly']: Math.max(0, prevCounts[isFiveYearly ? 'fiveYearly' : 'monthly'] - 1),
+      }));
+    }
+    
     const updatedResults = batchedResults.filter(result => result.id !== id);
     setBatchedResults(updatedResults);
     if (sessionId) {
@@ -331,6 +365,7 @@ export function useSession() {
     setBatchedResults([]);
     setMonthlyAssetCounter(0);
     setFiveYearlyAssetCounter(10000);
+    setAssetCounts({ monthly: 0, fiveYearly: 0 });
     localStorage.removeItem('currentSessionId');
     localStorage.removeItem('currentLocation');
     localStorage.removeItem('lastSelectedFrequency');
@@ -355,6 +390,7 @@ export function useSession() {
     
     // Local asset progress
     assetProgress: getLocalAssetProgress(),
+    assetCounts,
     
     // Session operations
     createSession: createSessionMutation.mutate,
