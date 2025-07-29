@@ -4,17 +4,17 @@ import express from "express";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
-import { 
-  insertTestSessionSchema, 
+import {
+  insertTestSessionSchema,
   insertTestResultSchema,
   insertUserSchema,
   loginSchema,
-  type User
+  type User,
 } from "@shared/schema";
 import { z } from "zod";
 
 // Extend Express session interface
-declare module 'express-session' {
+declare module "express-session" {
   interface SessionData {
     userId?: number;
     user?: User;
@@ -39,8 +39,12 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
  * Allows super_admin and support_center roles to access admin-only endpoints
  */
 const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (!req.session.userId || !req.session.user || 
-      (req.session.user.role !== "super_admin" && req.session.user.role !== "support_center")) {
+  if (
+    !req.session.userId ||
+    !req.session.user ||
+    (req.session.user.role !== "super_admin" &&
+      req.session.user.role !== "support_center")
+  ) {
     return res.status(403).json({ message: "Admin access required" });
   }
   next();
@@ -52,7 +56,11 @@ const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
  * Used for highest-level administrative operations like user management
  */
 const requireSuperAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (!req.session.userId || !req.session.user || req.session.user.role !== "super_admin") {
+  if (
+    !req.session.userId ||
+    !req.session.user ||
+    req.session.user.role !== "super_admin"
+  ) {
     return res.status(403).json({ message: "Super admin access required" });
   }
   next();
@@ -60,33 +68,36 @@ const requireSuperAdmin = (req: Request, res: Response, next: NextFunction) => {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Session configuration
-  const isProd = process.env.NODE_ENV === "production";
+  // const isProd = process.env.NODE_ENV === "production";
   const PgSession = connectPg(session);
-  app.use(session({
-    store: new PgSession({
-      conString: process.env.DATABASE_URL,
-      createTableIfMissing: false,
-      tableName: "sessions",
+  app.use(
+    session({
+      store: new PgSession({
+        conString: process.env.DATABASE_URL,
+        createTableIfMissing: false,
+        tableName: "sessions",
+      }),
+      secret:
+        process.env.SESSION_SECRET || "your-secret-key-change-in-production",
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        secure: false, // Set to true in production with HTTPS
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      },
     }),
-    secret: process.env.SESSION_SECRET || "your-secret-key-change-in-production",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: isProd, // Set to true in production with HTTPS
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    },
-  }));
-  
+  );
+
   // Configure body parser for larger requests (for photo data)
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ limit: '10mb', extended: true }));
+  app.use(express.json({ limit: "10mb" }));
+  app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
   // Authentication routes
   app.post("/api/register", async (req, res) => {
     try {
       const userData = insertUserSchema.parse(req.body);
-      
+
       // Check if username already exists
       const existingUser = await storage.getUserByUsername(userData.username);
       if (existingUser) {
@@ -94,10 +105,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const user = await storage.createUser(userData);
-      
+
       // Remove password from response
       const { password, ...userWithoutPassword } = user;
-      res.json({ message: "User created successfully", user: userWithoutPassword });
+      res.json({
+        message: "User created successfully",
+        user: userWithoutPassword,
+      });
     } catch (error) {
       console.error("Registration error:", error);
       res.status(400).json({ message: "Registration failed" });
@@ -107,10 +121,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/login", async (req, res) => {
     try {
       const { username, password } = loginSchema.parse(req.body);
-      
+
       const user = await storage.validatePassword(username, password);
       if (!user) {
-        return res.status(401).json({ message: "Invalid username or password" });
+        return res
+          .status(401)
+          .json({ message: "Invalid username or password" });
       }
 
       // Set session data
@@ -131,7 +147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (err) {
         return res.status(500).json({ message: "Logout failed" });
       }
-      res.clearCookie('connect.sid');
+      res.clearCookie("connect.sid");
       res.json({ message: "Logout successful" });
     });
   });
@@ -140,7 +156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.session.userId) {
       return res.status(401).json({ message: "Not authenticated" });
     }
-    
+
     const { password, ...userWithoutPassword } = req.session.user!;
     res.json(userWithoutPassword);
   });
@@ -148,26 +164,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/change-password", requireAuth, async (req, res) => {
     try {
       const { currentPassword, newPassword } = req.body;
-      
+
       if (!currentPassword || !newPassword) {
-        return res.status(400).json({ message: "Current password and new password are required" });
+        return res
+          .status(400)
+          .json({ message: "Current password and new password are required" });
       }
 
       if (newPassword.length < 6) {
-        return res.status(400).json({ message: "New password must be at least 6 characters long" });
+        return res
+          .status(400)
+          .json({ message: "New password must be at least 6 characters long" });
       }
 
       const userId = req.session.userId!;
-      
+
       // Validate current password
-      const isValid = await storage.validatePassword(req.session.user!.username, currentPassword);
+      const isValid = await storage.validatePassword(
+        req.session.user!.username,
+        currentPassword,
+      );
       if (!isValid) {
-        return res.status(400).json({ message: "Current password is incorrect" });
+        return res
+          .status(400)
+          .json({ message: "Current password is incorrect" });
       }
 
       // Update password
       await storage.updateUserPassword(userId, newPassword);
-      
+
       res.json({ message: "Password updated successfully" });
     } catch (error) {
       console.error("Change password error:", error);
@@ -197,13 +222,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Validate request body
       const { username, fullName, role, password } = req.body;
-      
+
       if (!username || !fullName) {
-        return res.status(400).json({ message: "Username and full name are required" });
+        return res
+          .status(400)
+          .json({ message: "Username and full name are required" });
       }
 
       if (password && password.length < 6) {
-        return res.status(400).json({ message: "Password must be at least 6 characters long" });
+        return res
+          .status(400)
+          .json({ message: "Password must be at least 6 characters long" });
       }
 
       // Check if username is already taken by another user
@@ -236,9 +265,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validation = insertUserSchema.safeParse(req.body);
       if (!validation.success) {
-        return res.status(400).json({ 
-          message: "Invalid user data", 
-          errors: validation.error.issues 
+        return res.status(400).json({
+          message: "Invalid user data",
+          errors: validation.error.issues,
         });
       }
 
@@ -255,7 +284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = parseInt(req.params.id);
       const { isActive } = req.body;
-      
+
       const user = await storage.updateUserStatus(userId, isActive);
       const { password, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
@@ -269,7 +298,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const user = req.session.user!;
       let sessions;
-      
+
       // Super admin and support center can see all sessions
       if (user.role === "super_admin" || user.role === "support_center") {
         sessions = await storage.getAllTestSessions();
@@ -277,7 +306,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Technicians can only see their own sessions
         sessions = await storage.getSessionsByUser(user.id);
       }
-      
+
       res.json(sessions);
     } catch (error) {
       console.error("Error fetching sessions:", error);
@@ -301,11 +330,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const sessionId = parseInt(req.params.id);
       const fullData = await storage.getFullSessionData(sessionId);
-      
+
       if (!fullData) {
         return res.status(404).json({ message: "Session not found" });
       }
-      
+
       res.json(fullData);
     } catch (error) {
       console.error("Error fetching full session data:", error);
@@ -317,10 +346,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const sessionId = parseInt(req.params.id);
       console.log("Update session request:", { sessionId, body: req.body });
-      
+
       const sessionData = insertTestSessionSchema.parse(req.body);
       console.log("Parsed session data:", sessionData);
-      
+
       const session = await storage.updateTestSession(sessionId, sessionData);
       console.log("Updated session result:", session);
       res.json(session);
@@ -330,7 +359,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Error message:", error.message);
         console.error("Error stack:", error.stack);
       }
-      res.status(500).json({ message: "Failed to update session", error: error instanceof Error ? error.message : String(error) });
+      res
+        .status(500)
+        .json({
+          message: "Failed to update session",
+          error: error instanceof Error ? error.message : String(error),
+        });
     }
   });
 
@@ -344,7 +378,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to delete session" });
     }
   });
-  
+
   // Create a new test session (protected)
   app.post("/api/sessions", requireAuth, async (req, res) => {
     try {
@@ -352,14 +386,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Associate the session with the logged-in user
       const sessionWithUser = {
         ...sessionData,
-        serviceType: sessionData.serviceType || 'electrical', // Default to electrical if not specified
+        serviceType: sessionData.serviceType || "electrical", // Default to electrical if not specified
         userId: req.session.userId, // Link session to the logged-in user
       };
       const session = await storage.createTestSession(sessionWithUser);
       res.json(session);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        res.status(400).json({ error: "Invalid session data", details: error.errors });
+        res
+          .status(400)
+          .json({ error: "Invalid session data", details: error.errors });
       } else {
         res.status(500).json({ error: "Failed to create session" });
       }
@@ -371,12 +407,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const sessionId = parseInt(req.params.id);
       const session = await storage.getTestSession(sessionId);
-      
+
       if (!session) {
         res.status(404).json({ error: "Session not found" });
         return;
       }
-      
+
       res.json(session);
     } catch (error) {
       res.status(500).json({ error: "Failed to retrieve session" });
@@ -384,37 +420,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get next asset number for session (protected)
-  app.get("/api/sessions/:id/next-asset-number", requireAuth, async (req, res) => {
-    try {
-      const sessionId = parseInt(req.params.id);
-      const nextNumber = await storage.getNextAssetNumber(sessionId);
-      res.json({ nextAssetNumber: nextNumber });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to get next asset number" });
-    }
-  });
+  app.get(
+    "/api/sessions/:id/next-asset-number",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const sessionId = parseInt(req.params.id);
+        const nextNumber = await storage.getNextAssetNumber(sessionId);
+        res.json({ nextAssetNumber: nextNumber });
+      } catch (error) {
+        res.status(500).json({ error: "Failed to get next asset number" });
+      }
+    },
+  );
 
   // Get next monthly asset number for session (protected)
-  app.get("/api/sessions/:id/next-monthly-asset-number", requireAuth, async (req, res) => {
-    try {
-      const sessionId = parseInt(req.params.id);
-      const nextNumber = await storage.getNextMonthlyAssetNumber(sessionId);
-      res.json({ nextAssetNumber: nextNumber });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to get next monthly asset number" });
-    }
-  });
+  app.get(
+    "/api/sessions/:id/next-monthly-asset-number",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const sessionId = parseInt(req.params.id);
+        const nextNumber = await storage.getNextMonthlyAssetNumber(sessionId);
+        res.json({ nextAssetNumber: nextNumber });
+      } catch (error) {
+        res
+          .status(500)
+          .json({ error: "Failed to get next monthly asset number" });
+      }
+    },
+  );
 
   // Get next five yearly asset number for session (protected)
-  app.get("/api/sessions/:id/next-five-yearly-asset-number", requireAuth, async (req, res) => {
-    try {
-      const sessionId = parseInt(req.params.id);
-      const nextNumber = await storage.getNextFiveYearlyAssetNumber(sessionId);
-      res.json({ nextAssetNumber: nextNumber });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to get next five yearly asset number" });
-    }
-  });
+  app.get(
+    "/api/sessions/:id/next-five-yearly-asset-number",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const sessionId = parseInt(req.params.id);
+        const nextNumber =
+          await storage.getNextFiveYearlyAssetNumber(sessionId);
+        res.json({ nextAssetNumber: nextNumber });
+      } catch (error) {
+        res
+          .status(500)
+          .json({ error: "Failed to get next five yearly asset number" });
+      }
+    },
+  );
 
   // Get asset progress for session (protected)
   app.get("/api/sessions/:id/asset-progress", requireAuth, async (req, res) => {
@@ -428,41 +481,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Validate asset number for session (protected)
-  app.post("/api/sessions/:id/validate-asset-number", requireAuth, async (req, res) => {
-    try {
-      const sessionId = parseInt(req.params.id);
-      const { assetNumber, excludeId } = req.body;
-      const isValid = await storage.validateAssetNumber(sessionId, assetNumber, excludeId);
-      res.json({ isValid });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to validate asset number" });
-    }
-  });
+  app.post(
+    "/api/sessions/:id/validate-asset-number",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const sessionId = parseInt(req.params.id);
+        const { assetNumber, excludeId } = req.body;
+        const isValid = await storage.validateAssetNumber(
+          sessionId,
+          assetNumber,
+          excludeId,
+        );
+        res.json({ isValid });
+      } catch (error) {
+        res.status(500).json({ error: "Failed to validate asset number" });
+      }
+    },
+  );
 
   // Create batch test results (NEW BATCHED ENDPOINT)
   app.post("/api/sessions/:id/batch-results", requireAuth, async (req, res) => {
     try {
       const sessionId = parseInt(req.params.id);
       const { results } = req.body;
-      
+
       if (!Array.isArray(results) || results.length === 0) {
         return res.status(400).json({ error: "No results provided" });
       }
-      
-      console.log(`Processing batch of ${results.length} results for session ${sessionId}`);
-      
+
+      console.log(
+        `Processing batch of ${results.length} results for session ${sessionId}`,
+      );
+
       const savedResults: any[] = [];
       const errors: string[] = [];
-      
+
       // Process each result in the batch
       for (let i = 0; i < results.length; i++) {
         const batchedResult = results[i];
-        
+
         try {
           // Convert batched result to database format using client-provided asset number
           const resultData = {
             sessionId,
-            assetNumber: batchedResult.assetNumber || '1', // Use client-provided asset number
+            assetNumber: batchedResult.assetNumber || "1", // Use client-provided asset number
             itemName: batchedResult.itemName,
             itemType: batchedResult.itemType,
             location: batchedResult.location,
@@ -483,20 +546,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             manufacturerInfo: null,
             installationDate: null,
           };
-          
+
           // Create the result directly without checking for duplicates
           const savedResult = await storage.createTestResult(resultData);
           savedResults.push(savedResult);
-          
-          console.log(`Saved result ${i + 1}/${results.length}: ${batchedResult.itemName} -> Asset #${savedResult.assetNumber}`);
-          
+
+          console.log(
+            `Saved result ${i + 1}/${results.length}: ${batchedResult.itemName} -> Asset #${savedResult.assetNumber}`,
+          );
         } catch (error) {
           const errorMsg = `Failed to save result ${i + 1} (${batchedResult.itemName}): ${error}`;
           console.error(errorMsg);
           errors.push(errorMsg);
         }
       }
-      
+
       // Return results with any errors
       const response = {
         savedResults,
@@ -505,15 +569,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         errorCount: errors.length,
         errors: errors.length > 0 ? errors : undefined,
       };
-      
-      console.log(`Batch processing complete: ${savedResults.length}/${results.length} saved successfully`);
-      
+
+      console.log(
+        `Batch processing complete: ${savedResults.length}/${results.length} saved successfully`,
+      );
+
       if (errors.length > 0) {
         res.status(207).json(response); // 207 Multi-Status for partial success
       } else {
         res.json(response);
       }
-      
     } catch (error) {
       console.error("Error processing batch results:", error);
       res.status(500).json({ error: "Failed to process batch results" });
@@ -524,13 +589,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/sessions/:id/results", requireAuth, async (req, res) => {
     const startTime = Date.now();
     const requestId = Math.random().toString(36).substring(7);
-    
+
     try {
-      console.log(`[${requestId}] Starting test result creation at ${new Date().toISOString()}`);
-      
+      console.log(
+        `[${requestId}] Starting test result creation at ${new Date().toISOString()}`,
+      );
+
       const sessionId = parseInt(req.params.id);
       const session = await storage.getTestSession(sessionId);
-      
+
       if (!session) {
         console.log(`[${requestId}] Session ${sessionId} not found`);
         res.status(404).json({ error: "Session not found" });
@@ -538,19 +605,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Validate required fields
-      if (!req.body.itemName || !req.body.location || !req.body.classification) {
+      if (
+        !req.body.itemName ||
+        !req.body.location ||
+        !req.body.classification
+      ) {
         console.log(`[${requestId}] Missing required fields:`, {
           itemName: !!req.body.itemName,
           location: !!req.body.location,
-          classification: !!req.body.classification
+          classification: !!req.body.classification,
         });
-        res.status(400).json({ error: "Missing required fields: itemName, location, classification" });
+        res
+          .status(400)
+          .json({
+            error:
+              "Missing required fields: itemName, location, classification",
+          });
         return;
       }
 
       // If no asset number provided, get the next one
       if (!req.body.assetNumber) {
-        req.body.assetNumber = (await storage.getNextAssetNumber(sessionId)).toString();
+        req.body.assetNumber = (
+          await storage.getNextAssetNumber(sessionId)
+        ).toString();
       }
 
       // Create result data object directly to avoid schema validation issues
@@ -567,106 +645,150 @@ export async function registerRoutes(app: Express): Promise<Server> {
         actionTaken: req.body.actionTaken || null,
         notes: req.body.notes || null,
         photoData: req.body.photoData || null,
-        visionInspection: req.body.visionInspection !== undefined ? req.body.visionInspection : true,
-        electricalTest: req.body.electricalTest !== undefined ? req.body.electricalTest : true,
+        visionInspection:
+          req.body.visionInspection !== undefined
+            ? req.body.visionInspection
+            : true,
+        electricalTest:
+          req.body.electricalTest !== undefined
+            ? req.body.electricalTest
+            : true,
         // Emergency exit light specific fields (AS 2293.2:2019)
         maintenanceType: req.body.maintenanceType || null,
-        dischargeTest: req.body.dischargeTest !== undefined ? req.body.dischargeTest : false,
-        switchingTest: req.body.switchingTest !== undefined ? req.body.switchingTest : false,
-        chargingTest: req.body.chargingTest !== undefined ? req.body.chargingTest : false,
+        dischargeTest:
+          req.body.dischargeTest !== undefined ? req.body.dischargeTest : false,
+        switchingTest:
+          req.body.switchingTest !== undefined ? req.body.switchingTest : false,
+        chargingTest:
+          req.body.chargingTest !== undefined ? req.body.chargingTest : false,
         manufacturerInfo: req.body.manufacturerInfo || null,
-        installationDate: req.body.installationDate || null
+        installationDate: req.body.installationDate || null,
       };
-      
+
       console.log(`[${requestId}] Request body received:`, {
         ...req.body,
-        photoData: req.body.photoData ? `Photo included (${Math.round(req.body.photoData.length / 1024)}KB)` : 'No photo in request'
+        photoData: req.body.photoData
+          ? `Photo included (${Math.round(req.body.photoData.length / 1024)}KB)`
+          : "No photo in request",
       });
       console.log(`[${requestId}] Creating result with data:`, {
         ...resultData,
-        photoData: resultData.photoData ? `Photo data included (${Math.round(resultData.photoData.length / 1024)}KB)` : 'No photo data'
+        photoData: resultData.photoData
+          ? `Photo data included (${Math.round(resultData.photoData.length / 1024)}KB)`
+          : "No photo data",
       });
-      
+
       const result = await storage.createTestResult(resultData);
-      
+
       // Verify the result was created successfully
       if (!result || !result.id) {
-        console.error(`[${requestId}] Failed to create test result - no ID returned`);
-        throw new Error('Failed to create test result - no ID returned');
+        console.error(
+          `[${requestId}] Failed to create test result - no ID returned`,
+        );
+        throw new Error("Failed to create test result - no ID returned");
       }
-      
+
       const processingTime = Date.now() - startTime;
-      console.log(`[${requestId}] Successfully created test result in ${processingTime}ms:`, {
-        id: result.id,
-        assetNumber: result.assetNumber,
-        itemName: result.itemName
-      });
-      
+      console.log(
+        `[${requestId}] Successfully created test result in ${processingTime}ms:`,
+        {
+          id: result.id,
+          assetNumber: result.assetNumber,
+          itemName: result.itemName,
+        },
+      );
+
       res.json(result);
     } catch (error) {
       const processingTime = Date.now() - startTime;
-      console.error(`[${requestId}] Error creating test result after ${processingTime}ms:`, error);
-      console.error(`[${requestId}] Error stack:`, error instanceof Error ? error.stack : 'No stack available');
-      
+      console.error(
+        `[${requestId}] Error creating test result after ${processingTime}ms:`,
+        error,
+      );
+      console.error(
+        `[${requestId}] Error stack:`,
+        error instanceof Error ? error.stack : "No stack available",
+      );
+
       if (error instanceof z.ZodError) {
         console.error(`[${requestId}] Zod validation errors:`, error.errors);
-        res.status(400).json({ error: "Invalid result data", details: error.errors, requestId });
+        res
+          .status(400)
+          .json({
+            error: "Invalid result data",
+            details: error.errors,
+            requestId,
+          });
       } else {
-        res.status(500).json({ error: "Failed to create test result", details: String(error), requestId });
+        res
+          .status(500)
+          .json({
+            error: "Failed to create test result",
+            details: String(error),
+            requestId,
+          });
       }
     }
   });
 
   // Update test result
-  app.patch("/api/sessions/:id/results/:resultId", requireAuth, async (req, res) => {
-    try {
-      const sessionId = parseInt(req.params.id);
-      const resultId = parseInt(req.params.resultId);
-      
-      const session = await storage.getTestSession(sessionId);
-      if (!session) {
-        res.status(404).json({ error: "Session not found" });
-        return;
-      }
+  app.patch(
+    "/api/sessions/:id/results/:resultId",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const sessionId = parseInt(req.params.id);
+        const resultId = parseInt(req.params.resultId);
 
-      const updateData = {
-        itemName: req.body.itemName,
-        location: req.body.location,
-        classification: req.body.classification,
-        result: req.body.result,
-        frequency: req.body.frequency,
-        failureReason: req.body.failureReason || null,
-        actionTaken: req.body.actionTaken || null,
-        notes: req.body.notes || null
-      };
-      
-      const result = await storage.updateTestResult(resultId, updateData);
-      res.json(result);
-    } catch (error) {
-      console.error('Error updating test result:', error);
-      res.status(500).json({ error: "Failed to update test result" });
-    }
-  });
+        const session = await storage.getTestSession(sessionId);
+        if (!session) {
+          res.status(404).json({ error: "Session not found" });
+          return;
+        }
+
+        const updateData = {
+          itemName: req.body.itemName,
+          location: req.body.location,
+          classification: req.body.classification,
+          result: req.body.result,
+          frequency: req.body.frequency,
+          failureReason: req.body.failureReason || null,
+          actionTaken: req.body.actionTaken || null,
+          notes: req.body.notes || null,
+        };
+
+        const result = await storage.updateTestResult(resultId, updateData);
+        res.json(result);
+      } catch (error) {
+        console.error("Error updating test result:", error);
+        res.status(500).json({ error: "Failed to update test result" });
+      }
+    },
+  );
 
   // Delete test result
-  app.delete("/api/sessions/:id/results/:resultId", requireAuth, async (req, res) => {
-    try {
-      const sessionId = parseInt(req.params.id);
-      const resultId = parseInt(req.params.resultId);
-      
-      const session = await storage.getTestSession(sessionId);
-      if (!session) {
-        res.status(404).json({ error: "Session not found" });
-        return;
-      }
+  app.delete(
+    "/api/sessions/:id/results/:resultId",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const sessionId = parseInt(req.params.id);
+        const resultId = parseInt(req.params.resultId);
 
-      await storage.deleteTestResult(resultId);
-      res.json({ message: "Test result deleted successfully" });
-    } catch (error) {
-      console.error('Error deleting test result:', error);
-      res.status(500).json({ error: "Failed to delete test result" });
-    }
-  });
+        const session = await storage.getTestSession(sessionId);
+        if (!session) {
+          res.status(404).json({ error: "Session not found" });
+          return;
+        }
+
+        await storage.deleteTestResult(resultId);
+        res.json({ message: "Test result deleted successfully" });
+      } catch (error) {
+        console.error("Error deleting test result:", error);
+        res.status(500).json({ error: "Failed to delete test result" });
+      }
+    },
+  );
 
   // Get all results for a session
   app.get("/api/sessions/:id/results", requireAuth, async (req, res) => {
@@ -684,7 +806,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const sessionId = parseInt(req.params.id);
       const sessionData = await storage.getFullSessionData(sessionId);
-      
+
       if (!sessionData) {
         res.status(404).json({ error: "Session not found" });
         return;
@@ -692,9 +814,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { session, results } = sessionData;
       const totalItems = results.length;
-      const passedItems = results.filter(r => r.result === 'pass').length;
-      const failedItems = results.filter(r => r.result === 'fail').length;
-      const passRate = totalItems > 0 ? Math.round((passedItems / totalItems) * 100) : 0;
+      const passedItems = results.filter((r) => r.result === "pass").length;
+      const failedItems = results.filter((r) => r.result === "fail").length;
+      const passRate =
+        totalItems > 0 ? Math.round((passedItems / totalItems) * 100) : 0;
 
       res.json({
         session,
@@ -703,8 +826,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalItems,
           passedItems,
           failedItems,
-          passRate
-        }
+          passRate,
+        },
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to generate report" });
