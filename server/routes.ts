@@ -60,6 +60,7 @@ const requireSuperAdmin = (req: Request, res: Response, next: NextFunction) => {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Session configuration
+  const isProd = process.env.NODE_ENV === "production";
   const PgSession = connectPg(session);
   app.use(session({
     store: new PgSession({
@@ -71,7 +72,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false, // Set to true in production with HTTPS
+      secure: isProd, // Set to true in production with HTTPS
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },
