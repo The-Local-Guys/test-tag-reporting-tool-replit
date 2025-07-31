@@ -114,6 +114,7 @@ export default function AdminDashboard() {
   const [editResultData, setEditResultData] = useState({
     itemName: "",
     location: "",
+    assetNumber: "",
     classification: "class1" as any,
     result: "pass" as any,
     frequency: "twelvemonthly" as any,
@@ -121,6 +122,8 @@ export default function AdminDashboard() {
     actionTaken: null as any,
     notes: null as any,
   });
+
+  const [assetNumberError, setAssetNumberError] = useState<string>("");
   const [newItemData, setNewItemData] = useState({
     itemName: "",
     location: "",
@@ -624,6 +627,7 @@ export default function AdminDashboard() {
     setEditResultData({
       itemName: result.itemType || "",
       location: result.location || "",
+      assetNumber: result.assetNumber || "",
       classification: result.classification || "class1",
       result: result.result || "pass",
       frequency: result.frequency || "twelvemonthly",
@@ -631,48 +635,68 @@ export default function AdminDashboard() {
       actionTaken: result.actionTaken,
       notes: result.notes,
     });
+    setAssetNumberError(""); // Clear any previous errors
     setIsEditResultModalOpen(true);
   };
 
   /**
-   * Renumber assets function similar to report preview
-   * Calculates asset numbers based on actual data, not state counts
+   * Validate asset number for duplicates in real-time
+   * Checks if the entered asset number already exists in the current session
    */
-  const renumberAssets = (changingResultId: number, newFrequency: string): string => {
-    if (!viewingSession) return '1';
-    
-    const results = viewingSession.results;
-    const changingResult = results.find((r: any) => r.id === changingResultId);
-    if (!changingResult) return '1';
-    
-    const newIsFiveYearly = newFrequency === 'fiveyearly';
-    
-    if (newIsFiveYearly) {
-      // Count existing 5-yearly items (excluding the one being changed)
-      const existingFiveYearly = results.filter((r: any) => 
-        r.frequency === 'fiveyearly' && r.id !== changingResultId
-      ).length;
-      return (10001 + existingFiveYearly).toString();
-    } else {
-      // Count existing monthly items (excluding the one being changed)
-      const existingMonthly = results.filter((r: any) => 
-        r.frequency !== 'fiveyearly' && r.id !== changingResultId
-      ).length;
-      return (existingMonthly + 1).toString();
+  const validateAssetNumber = (assetNumber: string): string => {
+    if (!assetNumber.trim()) {
+      return "Asset number is required";
     }
+
+    if (!viewingSession?.results) {
+      return "";
+    }
+
+    // Check for duplicates (excluding the current item being edited)
+    const isDuplicate = viewingSession.results.some((result: any) => 
+      result.assetNumber === assetNumber && result.id !== editingResult?.id
+    );
+
+    if (isDuplicate) {
+      return `Asset number ${assetNumber} is already in use`;
+    }
+
+    return "";
   };
 
   /**
-   * Enhanced update result function matching report preview pattern
-   * Properly handles frequency changes between monthly and 5-yearly categories
+   * Handle asset number input changes with real-time validation
+   */
+  const handleAssetNumberChange = (value: string) => {
+    setEditResultData(prev => ({ ...prev, assetNumber: value }));
+    const error = validateAssetNumber(value);
+    setAssetNumberError(error);
+  };
+
+  /**
+   * Manual asset number update function - requires user to enter asset number
+   * Validates for duplicates and provides real-time feedback
    */
   const handleUpdateResult = () => {
     if (!editingResult || !viewingSession?.session?.id) return;
 
-    // Prepare update data
+    // Validate asset number before proceeding
+    const assetError = validateAssetNumber(editResultData.assetNumber);
+    if (assetError) {
+      setAssetNumberError(assetError);
+      toast({
+        title: "Invalid Asset Number",
+        description: assetError,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Prepare update data with manually entered asset number
     const updateData = {
       itemName: editResultData.itemName,
       location: editResultData.location,
+      assetNumber: editResultData.assetNumber,
       classification: editResultData.classification,
       result: editResultData.result,
       frequency: editResultData.frequency,
@@ -681,36 +705,7 @@ export default function AdminDashboard() {
       notes: editResultData.notes,
     };
 
-    // Check if frequency changed and requires asset number update
-    const originalFrequency = editingResult.frequency;
-    const newFrequency = editResultData.frequency;
-
-    const originalIsFiveYearly = originalFrequency === 'fiveyearly';
-    const newIsFiveYearly = newFrequency === 'fiveyearly';
-
-    // If frequency category changed, update asset number using renumberAssets logic
-    if (originalIsFiveYearly !== newIsFiveYearly) {
-      const newAssetNumber = renumberAssets(editingResult.id, newFrequency);
-      
-      console.log(`Admin: Asset number updated: ${editingResult.assetNumber} -> ${newAssetNumber}`);
-      
-      // Update local asset counts for UI consistency
-      if (newIsFiveYearly) {
-        setFiveYearlyAssetCount(prev => prev + 1);
-        setMonthlyAssetCount(prev => Math.max(0, prev - 1));
-      } else {
-        setMonthlyAssetCount(prev => prev + 1);
-        setFiveYearlyAssetCount(prev => Math.max(0, prev - 1));
-      }
-      
-      console.log(`Asset counts - Monthly: ${monthlyAssetCount}, 5-Yearly: ${fiveYearlyAssetCount}`);
-      updateData.assetNumber = newAssetNumber;
-      
-      toast({
-        title: "Items Renumbered",
-        description: `Asset #${editingResult.assetNumber} is now #${newAssetNumber}.`,
-      });
-    }
+    console.log(`Admin: Manually updating asset number to: ${editResultData.assetNumber}`);
 
     updateResultMutation.mutate({
       id: editingResult.id,
@@ -1875,6 +1870,21 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="editAssetNumber">Asset Number *</Label>
+              <Input
+                id="editAssetNumber"
+                type="text"
+                value={editResultData.assetNumber}
+                onChange={(e) => handleAssetNumberChange(e.target.value)}
+                placeholder="Enter asset number"
+                className={assetNumberError ? "border-red-500 focus:border-red-500" : ""}
+              />
+              {assetNumberError && (
+                <p className="text-sm text-red-500 mt-1">{assetNumberError}</p>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="editClassification">Classification</Label>
@@ -2026,7 +2036,7 @@ export default function AdminDashboard() {
               </Button>
               <Button
                 onClick={handleUpdateResult}
-                disabled={updateResultMutation.isPending}
+                disabled={updateResultMutation.isPending || !!assetNumberError}
               >
                 {updateResultMutation.isPending
                   ? "Updating..."
