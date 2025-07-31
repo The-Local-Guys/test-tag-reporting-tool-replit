@@ -7,7 +7,7 @@ neonConfig.webSocketConstructor = ws;
 
 // Use development database in development mode, production database otherwise
 const isDevelopment = process.env.NODE_ENV === 'development';
-const databaseUrl = isDevelopment ? process.env.DEV_DATABASE_URL : process.env.DATABASE_URL;
+const databaseUrl = isDevelopment && process.env.DEV_DATABASE_URL ? process.env.DEV_DATABASE_URL : process.env.DATABASE_URL;
 
 if (!databaseUrl) {
   const requiredVar = isDevelopment ? 'DEV_DATABASE_URL' : 'DATABASE_URL';

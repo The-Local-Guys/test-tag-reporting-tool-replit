@@ -70,7 +70,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Session configuration
   const isDevelopment = process.env.NODE_ENV === 'development';
   const isProd = process.env.NODE_ENV === "production";
-  const databaseUrl = isDevelopment ? process.env.DEV_DATABASE_URL : process.env.DATABASE_URL;
+  const databaseUrl = isDevelopment && process.env.DEV_DATABASE_URL ? process.env.DEV_DATABASE_URL : process.env.DATABASE_URL;
+  
+  if (!databaseUrl) {
+    const requiredVar = isDevelopment ? 'DEV_DATABASE_URL' : 'DATABASE_URL';
+    throw new Error(`${requiredVar} must be set for session storage`);
+  }
 
   const PgSession = connectPg(session);
   app.use(session({
