@@ -301,13 +301,16 @@ export default function AdminDashboard() {
           result.id === editingResult.id ? { ...result, ...updatedResult } : result
         );
         
-        // Recalculate asset counts after the update
-        calculateAssetCounts(updatedResults);
+        // Sort results by asset number for proper display order
+        const sortedResults = sortAssetNumbers(updatedResults);
+        
+        // Recalculate asset counts after the update for future calculations
+        calculateAssetCounts(sortedResults);
         
         // Update the viewing session with new results
         setViewingSession({
           ...viewingSession,
-          results: updatedResults
+          results: sortedResults
         });
       }
       
@@ -632,67 +635,87 @@ export default function AdminDashboard() {
   };
 
   /**
-   * Enhanced update result function with dynamic asset number calculation
+   * Renumber assets function similar to report preview
+   * Calculates asset numbers based on actual data, not state counts
+   */
+  const renumberAssets = (changingResultId: number, newFrequency: string): string => {
+    if (!viewingSession) return '1';
+    
+    const results = viewingSession.results;
+    const changingResult = results.find((r: any) => r.id === changingResultId);
+    if (!changingResult) return '1';
+    
+    const newIsFiveYearly = newFrequency === 'fiveyearly';
+    
+    if (newIsFiveYearly) {
+      // Count existing 5-yearly items (excluding the one being changed)
+      const existingFiveYearly = results.filter((r: any) => 
+        r.frequency === 'fiveyearly' && r.id !== changingResultId
+      ).length;
+      return (10001 + existingFiveYearly).toString();
+    } else {
+      // Count existing monthly items (excluding the one being changed)
+      const existingMonthly = results.filter((r: any) => 
+        r.frequency !== 'fiveyearly' && r.id !== changingResultId
+      ).length;
+      return (existingMonthly + 1).toString();
+    }
+  };
+
+  /**
+   * Enhanced update result function matching report preview pattern
    * Properly handles frequency changes between monthly and 5-yearly categories
    */
   const handleUpdateResult = () => {
     if (!editingResult || !viewingSession?.session?.id) return;
 
-    // Calculate new asset number based on frequency change
-    let newAssetNumber = editingResult.assetNumber;
+    // Prepare update data
+    const updateData = {
+      itemName: editResultData.itemName,
+      location: editResultData.location,
+      classification: editResultData.classification,
+      result: editResultData.result,
+      frequency: editResultData.frequency,
+      failureReason: editResultData.failureReason,
+      actionTaken: editResultData.actionTaken,
+      notes: editResultData.notes,
+    };
 
-    // Check if frequency category changed (monthly <-> 5-yearly)
+    // Check if frequency changed and requires asset number update
     const originalFrequency = editingResult.frequency;
     const newFrequency = editResultData.frequency;
 
-    const originalIsFiveYearly = originalFrequency === "fiveyearly";
-    const newIsFiveYearly = newFrequency === "fiveyearly";
+    const originalIsFiveYearly = originalFrequency === 'fiveyearly';
+    const newIsFiveYearly = newFrequency === 'fiveyearly';
 
-    // If frequency category changed, recalculate asset number using state counts
+    // If frequency category changed, update asset number using renumberAssets logic
     if (originalIsFiveYearly !== newIsFiveYearly) {
+      const newAssetNumber = renumberAssets(editingResult.id, newFrequency);
+      
+      console.log(`Admin: Asset number updated: ${editingResult.assetNumber} -> ${newAssetNumber}`);
+      
+      // Update local asset counts for UI consistency
       if (newIsFiveYearly) {
-        // Moving to 5-yearly: use state count + 10001 base
-        newAssetNumber = (10001 + fiveYearlyAssetCount).toString();
-        
-        // Update counts for future calculations
         setFiveYearlyAssetCount(prev => prev + 1);
         setMonthlyAssetCount(prev => Math.max(0, prev - 1));
       } else {
-        // Moving to monthly: use state count + 1 base
-        newAssetNumber = (1 + monthlyAssetCount).toString();
-        
-        // Update counts for future calculations
         setMonthlyAssetCount(prev => prev + 1);
         setFiveYearlyAssetCount(prev => Math.max(0, prev - 1));
       }
-
-      console.log(
-        `Admin: Asset number updated: ${editingResult.assetNumber} -> ${newAssetNumber}`,
-      );
-      console.log(
-        `Asset counts - Monthly: ${monthlyAssetCount}, 5-Yearly: ${fiveYearlyAssetCount}`,
-      );
-
+      
+      console.log(`Asset counts - Monthly: ${monthlyAssetCount}, 5-Yearly: ${fiveYearlyAssetCount}`);
+      updateData.assetNumber = newAssetNumber;
+      
       toast({
-        title: "Asset Number Updated",
-        description: `Asset number changed from #${editingResult.assetNumber} to #${newAssetNumber} due to frequency change.`,
+        title: "Items Renumbered",
+        description: `Asset #${editingResult.assetNumber} is now #${newAssetNumber}.`,
       });
     }
 
     updateResultMutation.mutate({
       id: editingResult.id,
       sessionId: viewingSession.session.id,
-      data: {
-        itemName: editResultData.itemName,
-        location: editResultData.location,
-        classification: editResultData.classification,
-        result: editResultData.result,
-        frequency: editResultData.frequency,
-        failureReason: editResultData.failureReason,
-        actionTaken: editResultData.actionTaken,
-        notes: editResultData.notes,
-        assetNumber: newAssetNumber,
-      },
+      data: updateData,
     });
   };
 
