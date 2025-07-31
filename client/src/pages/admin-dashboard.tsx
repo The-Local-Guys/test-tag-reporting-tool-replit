@@ -106,6 +106,11 @@ export default function AdminDashboard() {
   // Pagination states
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+  
+  // Asset number calculation states
+  const [monthlyAssetCount, setMonthlyAssetCount] = useState(0);
+  const [fiveYearlyAssetCount, setFiveYearlyAssetCount] = useState(0);
+  
   const [editResultData, setEditResultData] = useState({
     itemName: "",
     location: "",
@@ -488,6 +493,32 @@ export default function AdminDashboard() {
     },
   });
 
+  /**
+   * Sort test results by asset number with proper numerical order
+   * Monthly frequencies (1, 2, 3...) display first, then 5-yearly (10001, 10002, 10003...)
+   */
+  const sortAssetNumbers = (results: any[]) => {
+    return [...results].sort((a: any, b: any) => {
+      const aAssetNum = parseInt(a.assetNumber) || 0;
+      const bAssetNum = parseInt(b.assetNumber) || 0;
+      return aAssetNum - bAssetNum;
+    });
+  };
+
+  /**
+   * Calculate asset number counts for monthly and 5-yearly frequencies
+   * Used to determine next available asset numbers when editing frequency
+   */
+  const calculateAssetCounts = (results: any[]) => {
+    const monthlyCount = results.filter(r => r.frequency !== 'fiveyearly').length;
+    const fiveYearlyCount = results.filter(r => r.frequency === 'fiveyearly').length;
+    
+    setMonthlyAssetCount(monthlyCount);
+    setFiveYearlyAssetCount(fiveYearlyCount);
+    
+    return { monthlyCount, fiveYearlyCount };
+  };
+
   const handleViewReport = async (session: any) => {
     console.log("Session object:", session);
 
@@ -517,6 +548,11 @@ export default function AdminDashboard() {
       console.log(
         `Successfully fetched report data with ${reportData.results?.length || 0} test results`,
       );
+
+      // Calculate asset number counts for this session
+      if (reportData.results) {
+        calculateAssetCounts(reportData.results);
+      }
 
       // Update state with fresh data
       setViewingSession(reportData);
@@ -583,6 +619,10 @@ export default function AdminDashboard() {
     setIsEditResultModalOpen(true);
   };
 
+  /**
+   * Enhanced update result function with dynamic asset number calculation
+   * Properly handles frequency changes between monthly and 5-yearly categories
+   */
   const handleUpdateResult = () => {
     if (!editingResult || !viewingSession?.session?.id) return;
 
@@ -596,28 +636,29 @@ export default function AdminDashboard() {
     const originalIsFiveYearly = originalFrequency === "fiveyearly";
     const newIsFiveYearly = newFrequency === "fiveyearly";
 
-    // If frequency category changed, recalculate asset number
+    // If frequency category changed, recalculate asset number using state counts
     if (originalIsFiveYearly !== newIsFiveYearly) {
-      const currentResults = viewingSession.results || [];
-
       if (newIsFiveYearly) {
-        // Moving to 5-yearly: count existing 5-yearly items and assign next sequential number
-        const fiveYearlyItems = currentResults.filter(
-          (r: any) => r.frequency === "fiveyearly" && r.id !== editingResult.id,
-        );
-
-        newAssetNumber = (10001 + fiveYearlyItems.length).toString();
+        // Moving to 5-yearly: use state count + 10001 base
+        newAssetNumber = (10001 + fiveYearlyAssetCount).toString();
+        
+        // Update counts for future calculations
+        setFiveYearlyAssetCount(prev => prev + 1);
+        setMonthlyAssetCount(prev => Math.max(0, prev - 1));
       } else {
-        // Moving to monthly: count existing monthly items and assign next sequential number
-        const monthlyItems = currentResults.filter(
-          (r: any) => r.frequency !== "fiveyearly" && r.id !== editingResult.id,
-        );
-
-        newAssetNumber = (1 + monthlyItems.length).toString();
+        // Moving to monthly: use state count + 1 base
+        newAssetNumber = (1 + monthlyAssetCount).toString();
+        
+        // Update counts for future calculations
+        setMonthlyAssetCount(prev => prev + 1);
+        setFiveYearlyAssetCount(prev => Math.max(0, prev - 1));
       }
 
       console.log(
         `Admin: Asset number updated: ${editingResult.assetNumber} -> ${newAssetNumber}`,
+      );
+      console.log(
+        `Asset counts - Monthly: ${monthlyAssetCount}, 5-Yearly: ${fiveYearlyAssetCount}`,
       );
 
       toast({
@@ -1535,14 +1576,8 @@ export default function AdminDashboard() {
                   </TableHeader>
                   <TableBody>
                     {(() => {
-                      // Sort results by asset number: monthly frequencies first (1, 2, 3...) then 5-yearly (10001, 10002, 10003...)
-                      const sortedResults = [...viewingSession.results].sort(
-                        (a: any, b: any) => {
-                          const aAssetNum = parseInt(a.assetNumber) || 0;
-                          const bAssetNum = parseInt(b.assetNumber) || 0;
-                          return aAssetNum - bAssetNum;
-                        },
-                      );
+                      // Sort results using the dedicated sorting function
+                      const sortedResults = sortAssetNumbers(viewingSession.results);
 
                       const totalItems = sortedResults.length;
                       const startIndex = (currentPage - 1) * itemsPerPage;
@@ -1604,13 +1639,7 @@ export default function AdminDashboard() {
 
               {/* Pagination Controls */}
               {(() => {
-                const sortedResults = [...viewingSession.results].sort(
-                  (a: any, b: any) => {
-                    const aAssetNum = parseInt(a.assetNumber) || 0;
-                    const bAssetNum = parseInt(b.assetNumber) || 0;
-                    return aAssetNum - bAssetNum;
-                  },
-                );
+                const sortedResults = sortAssetNumbers(viewingSession.results);
                 const totalItems = sortedResults.length;
                 const totalPages = Math.ceil(totalItems / itemsPerPage);
                 const startIndex = (currentPage - 1) * itemsPerPage;

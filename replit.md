@@ -187,3 +187,12 @@ Changelog:
   - Improved logging to track data fetch success and result counts
   - Modal only opens after successful data fetch and state update
   - Function handles both session objects and direct session IDs correctly
+- July 31, 2025. Refactored admin dashboard report editing with enhanced asset numbering:
+  - Added useState to track monthly and 5-yearly asset number counts for dynamic calculation
+  - Created sortAssetNumbers() function for consistent asset number ordering across the interface
+  - Implemented calculateAssetCounts() to determine starting asset numbers when viewing reports
+  - Enhanced handleUpdateResult() with real-time asset count updates during frequency changes
+  - Monthly frequencies (3, 6, 12, 24 monthly) use sequential numbering starting from count + 1
+  - 5-yearly frequency uses sequential numbering starting from count + 10001
+  - Added proper state management to prevent asset number conflicts during editing
+  - Improved sorting consistency throughout admin dashboard report viewing and editing
