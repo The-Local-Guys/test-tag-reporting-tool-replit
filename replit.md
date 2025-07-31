@@ -203,3 +203,10 @@ Changelog:
   - Added range validation: 5-yearly items must use 10000+, monthly items use 1-9999
   - Enhanced UI with dynamic placeholders and validation error messages
   - Fixed local state updates to ensure edited items display changes immediately on screen
+- July 31, 2025. Refactored add item function with same manual asset number validation system:
+  - Implemented manual asset number entry requirement for adding new items
+  - Added frequency-based range validation (monthly: 1-9999, 5-yearly: 10000+)
+  - Implemented automatic asset number clearing when frequency changes during add workflow
+  - Added real-time duplicate detection within session to prevent conflicts
+  - Enhanced add item modal UI with dynamic placeholders and validation messages
+  - Added save button disable functionality when validation errors are present
