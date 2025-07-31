@@ -751,7 +751,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return;
         }
 
-        const updateData = {
+        // Get the current result to check for frequency changes
+        const currentResult = await storage.getTestResult(resultId);
+        if (!currentResult) {
+          res.status(404).json({ error: "Test result not found" });
+          return;
+        }
+
+        const updateData: any = {
           itemName: req.body.itemName,
           location: req.body.location,
           classification: req.body.classification,
@@ -761,6 +768,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           actionTaken: req.body.actionTaken || null,
           notes: req.body.notes || null,
         };
+
+        // Check if frequency changed and requires asset number reassignment
+        if (currentResult.frequency !== req.body.frequency) {
+          const currentIsFiveYearly = currentResult.frequency === 'fiveyearly';
+          const newIsFiveYearly = req.body.frequency === 'fiveyearly';
+          
+          // If frequency category changed, calculate new asset number
+          if (currentIsFiveYearly !== newIsFiveYearly) {
+            const allResults = await storage.getTestResultsBySession(sessionId);
+            
+            if (newIsFiveYearly) {
+              // Changing to 5-yearly: count existing 5-yearly items and assign next number (10001+)
+              const fiveYearlyCount = allResults.filter(r => 
+                r.frequency === 'fiveyearly' && r.id !== resultId
+              ).length;
+              updateData.assetNumber = (10001 + fiveYearlyCount).toString();
+            } else {
+              // Changing to monthly: count existing monthly items and assign next number (1+)
+              const monthlyCount = allResults.filter(r => 
+                r.frequency !== 'fiveyearly' && r.id !== resultId
+              ).length;
+              updateData.assetNumber = (monthlyCount + 1).toString();
+            }
+            
+            console.log(`Asset number reassigned for result ${resultId}: ${currentResult.assetNumber} -> ${updateData.assetNumber} (frequency: ${currentResult.frequency} -> ${req.body.frequency})`);
+          }
+        }
 
         const result = await storage.updateTestResult(resultId, updateData);
         res.json(result);

@@ -294,7 +294,23 @@ export default function AdminDashboard() {
       if (!res.ok) throw new Error("Failed to update test result");
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedResult) => {
+      // Update the local viewing session state immediately for real-time UI updates
+      if (viewingSession && editingResult) {
+        const updatedResults = viewingSession.results.map((result: any) => 
+          result.id === editingResult.id ? { ...result, ...updatedResult } : result
+        );
+        
+        // Recalculate asset counts after the update
+        calculateAssetCounts(updatedResults);
+        
+        // Update the viewing session with new results
+        setViewingSession({
+          ...viewingSession,
+          results: updatedResults
+        });
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["/api/admin/sessions"] });
       if (viewingSession?.session?.id) {
         queryClient.invalidateQueries({
@@ -307,10 +323,6 @@ export default function AdminDashboard() {
       });
       setIsEditResultModalOpen(false);
       setEditingResult(null);
-      // Refresh the viewing session data
-      if (viewingSession?.session?.id) {
-        handleViewReport(viewingSession.session.id);
-      }
     },
     onError: (error) => {
       toast({

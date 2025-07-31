@@ -37,6 +37,7 @@ export interface IStorage {
   createTestResult(result: InsertTestResult): Promise<TestResult>;
   updateTestResult(id: number, data: Partial<InsertTestResult>): Promise<TestResult>;
   deleteTestResult(id: number): Promise<void>;
+  getTestResult(resultId: number): Promise<TestResult | undefined>;
   getTestResultsBySession(sessionId: number): Promise<TestResult[]>;
   getNextAssetNumber(sessionId: number): Promise<number>;
   getNextMonthlyAssetNumber(sessionId: number): Promise<number>;
@@ -371,6 +372,26 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  /**
+   * Retrieves a single test result by its ID
+   * Used for updating or validating individual test results
+   * @param resultId - ID of the test result to retrieve
+   * @returns Test result object if found, undefined if not found
+   */
+  async getTestResult(resultId: number): Promise<TestResult | undefined> {
+    const [result] = await db
+      .select()
+      .from(testResults)
+      .where(eq(testResults.id, resultId));
+    return result;
+  }
+
+  /**
+   * Retrieves all test results for a specific session
+   * Returns results sorted by asset number for proper report sequencing
+   * @param sessionId - ID of the test session to get results for
+   * @returns Array of test results for the session
+   */
   async getTestResultsBySession(sessionId: number): Promise<TestResult[]> {
     const results = await db
       .select()
