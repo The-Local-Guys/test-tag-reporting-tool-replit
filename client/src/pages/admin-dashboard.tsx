@@ -137,6 +137,8 @@ export default function AdminDashboard() {
     electricalTest: true,
   });
 
+  const [newItemAssetNumberError, setNewItemAssetNumberError] = useState<string>("");
+
   // Fetch all users
   const { data: users, isLoading: usersLoading } = useQuery({
     queryKey: ["/api/admin/users"],
@@ -832,7 +834,72 @@ export default function AdminDashboard() {
       visualInspection: true,
       electricalTest: true,
     });
+    setNewItemAssetNumberError("Asset number is required"); // Show validation error for empty field
     setIsAddItemModalOpen(true);
+  };
+
+  /**
+   * Validate new item asset number for duplicates and range requirements
+   */
+  const validateNewItemAssetNumber = (assetNumber: string, frequency: string): string => {
+    if (!assetNumber.trim()) {
+      return "Asset number is required";
+    }
+
+    const assetNum = parseInt(assetNumber);
+    if (isNaN(assetNum) || assetNum <= 0) {
+      return "Asset number must be a positive number";
+    }
+
+    // Validate range based on frequency
+    if (frequency === 'fiveyearly') {
+      if (assetNum < 10000) {
+        return "5-yearly items must have asset numbers starting from 10000";
+      }
+    } else {
+      // Monthly frequencies should be 1-9999
+      if (assetNum >= 10000) {
+        return "Monthly frequency items must have asset numbers below 10000";
+      }
+    }
+
+    if (!addingToSession) {
+      return "";
+    }
+
+    // Get current session results for duplicate checking
+    // We'll validate against the session we're adding to
+    if (viewingSession && viewingSession.session.id === addingToSession.id) {
+      const isDuplicate = viewingSession.results.some((result: any) => 
+        result.assetNumber === assetNumber
+      );
+      if (isDuplicate) {
+        return `Asset number ${assetNumber} is already in use`;
+      }
+    }
+
+    return "";
+  };
+
+  /**
+   * Handle new item asset number input changes with validation
+   */
+  const handleNewItemAssetNumberChange = (value: string) => {
+    setNewItemData(prev => ({ ...prev, assetNumber: value }));
+    const error = validateNewItemAssetNumber(value, newItemData.frequency);
+    setNewItemAssetNumberError(error);
+  };
+
+  /**
+   * Handle new item frequency changes - clear asset number when frequency changes
+   */
+  const handleNewItemFrequencyChange = (newFrequency: string) => {
+    setNewItemData(prev => ({ 
+      ...prev, 
+      frequency: newFrequency,
+      assetNumber: "" // Clear asset number when frequency changes
+    }));
+    setNewItemAssetNumberError("Asset number is required"); // Show validation error for empty field
   };
 
   const handleSaveNewItem = async () => {
@@ -845,29 +912,23 @@ export default function AdminDashboard() {
       return;
     }
 
-    // Get the next asset number if not provided
-    let assetNumber = newItemData.assetNumber;
-    if (!assetNumber) {
-      try {
-        const response = await fetch(
-          `/api/sessions/${addingToSession.id}/next-asset-number`,
-        );
-        if (response.ok) {
-          const data = await response.json();
-          assetNumber = data.nextAssetNumber.toString();
-        } else {
-          assetNumber = "1"; // fallback
-        }
-      } catch (error) {
-        assetNumber = "1"; // fallback
-      }
+    // Validate asset number before proceeding
+    const assetError = validateNewItemAssetNumber(newItemData.assetNumber, newItemData.frequency);
+    if (assetError) {
+      setNewItemAssetNumberError(assetError);
+      toast({
+        title: "Invalid Asset Number",
+        description: assetError,
+        variant: "destructive",
+      });
+      return;
     }
 
     const itemData = {
       itemName: newItemData.itemName,
       itemType: newItemData.itemName,
       location: newItemData.location,
-      assetNumber: assetNumber,
+      assetNumber: newItemData.assetNumber,
       classification: newItemData.classification,
       result: newItemData.result,
       frequency: newItemData.frequency,
@@ -880,6 +941,8 @@ export default function AdminDashboard() {
       notes: null,
       photoData: null,
     };
+
+    console.log(`Admin: Adding new item with asset number: ${newItemData.assetNumber}`);
 
     addItemMutation.mutate({
       sessionId: addingToSession.id,
@@ -2148,19 +2211,23 @@ export default function AdminDashboard() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="newAssetNumber">Asset Number</Label>
+                <Label htmlFor="newAssetNumber">Asset Number *</Label>
                 <Input
                   id="newAssetNumber"
                   type="text"
                   value={newItemData.assetNumber}
-                  onChange={(e) =>
-                    setNewItemData((prev) => ({
-                      ...prev,
-                      assetNumber: e.target.value,
-                    }))
-                  }
-                  placeholder="Auto-generated if empty"
+                  onChange={(e) => handleNewItemAssetNumberChange(e.target.value)}
+                  placeholder={newItemData.frequency === 'fiveyearly' ? "Enter number starting from 10000" : "Enter asset number (1-9999)"}
+                  className={newItemAssetNumberError ? "border-red-500 focus:border-red-500" : ""}
                 />
+                {newItemAssetNumberError && (
+                  <p className="text-sm text-red-500 mt-1">{newItemAssetNumberError}</p>
+                )}
+                <p className="text-sm text-gray-500">
+                  {newItemData.frequency === 'fiveyearly' 
+                    ? "5-yearly items: Use numbers 10000 and above" 
+                    : "Monthly frequencies: Use numbers 1-9999"}
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -2209,9 +2276,7 @@ export default function AdminDashboard() {
                 <Label htmlFor="newFrequency">Test Frequency</Label>
                 <Select
                   value={newItemData.frequency}
-                  onValueChange={(value) =>
-                    setNewItemData((prev) => ({ ...prev, frequency: value }))
-                  }
+                  onValueChange={handleNewItemFrequencyChange}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -2333,7 +2398,7 @@ export default function AdminDashboard() {
               </Button>
               <Button
                 onClick={handleSaveNewItem}
-                disabled={addItemMutation.isPending}
+                disabled={addItemMutation.isPending || !!newItemAssetNumberError}
                 className="bg-green-600 hover:bg-green-700"
               >
                 {addItemMutation.isPending ? "Adding..." : "Add Item"}
