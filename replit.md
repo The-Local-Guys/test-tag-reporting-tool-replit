@@ -196,3 +196,11 @@ Changelog:
   - 5-yearly frequency uses sequential numbering starting from count + 10001
   - Added proper state management to prevent asset number conflicts during editing
   - Improved sorting consistency throughout admin dashboard report viewing and editing
+- July 31, 2025. Completed admin dashboard asset numbering system to match report preview pattern:
+  - Replaced state-based asset counting with actual data-driven calculations using renumberAssets function
+  - Enhanced server-side update endpoint with automatic asset number reassignment for frequency changes
+  - Added getTestResult method to storage interface for individual result retrieval
+  - Implemented real-time local state updates in admin dashboard for immediate UI refresh
+  - Verified both directions work correctly: monthly to 5-yearly and 5-yearly to monthly transitions
+  - Asset numbering now calculates from existing session data rather than potentially inconsistent state counters
+  - System maintains proper sequential numbering: monthly (1,2,3...) and 5-yearly (10001,10002,10003...)
