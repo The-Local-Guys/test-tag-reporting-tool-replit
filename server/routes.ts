@@ -68,26 +68,26 @@ const requireSuperAdmin = (req: Request, res: Response, next: NextFunction) => {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Session configuration
-  // const isProd = process.env.NODE_ENV === "production";
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const isProd = process.env.NODE_ENV === "production";
+  const databaseUrl = isDevelopment ? process.env.DEV_DATABASE_URL : process.env.DATABASE_URL;
+
   const PgSession = connectPg(session);
-  app.use(
-    session({
-      store: new PgSession({
-        conString: process.env.DATABASE_URL,
-        createTableIfMissing: false,
-        tableName: "sessions",
-      }),
-      secret:
-        process.env.SESSION_SECRET || "your-secret-key-change-in-production",
-      resave: false,
-      saveUninitialized: false,
-      cookie: {
-        secure: false, // Set to true in production with HTTPS
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      },
+  app.use(session({
+    store: new PgSession({
+      conString: databaseUrl,
+      createTableIfMissing: false,
+      tableName: "sessions",
     }),
-  );
+    secret: process.env.SESSION_SECRET || "your-secret-key-change-in-production",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: isProd, // Set to true in production with HTTPS
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
+  }));
 
   // Configure body parser for larger requests (for photo data)
   app.use(express.json({ limit: "10mb" }));
