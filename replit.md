@@ -196,3 +196,10 @@ Changelog:
   - 5-yearly frequency uses sequential numbering starting from count + 10001
   - Added proper state management to prevent asset number conflicts during editing
   - Improved sorting consistency throughout admin dashboard report viewing and editing
+- July 31, 2025. Enhanced admin dashboard edit functionality with manual asset number entry:
+  - Replaced automatic asset number reassignment with manual user input requirement
+  - Added real-time validation for duplicate asset numbers and frequency-based range checking
+  - Implemented asset number clearing when frequency changes to force user input
+  - Added range validation: 5-yearly items must use 10000+, monthly items use 1-9999
+  - Enhanced UI with dynamic placeholders and validation error messages
+  - Fixed local state updates to ensure edited items display changes immediately on screen

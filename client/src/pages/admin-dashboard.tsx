@@ -300,9 +300,18 @@ export default function AdminDashboard() {
     onSuccess: (updatedResult) => {
       // Update the local viewing session state immediately for real-time UI updates
       if (viewingSession && editingResult) {
+        console.log('Updating local state with:', updatedResult);
         const updatedResults = viewingSession.results.map((result: any) => 
-          result.id === editingResult.id ? { ...result, ...updatedResult } : result
+          result.id === editingResult.id ? { 
+            ...result, 
+            ...updatedResult,
+            // Ensure itemType is updated from the response
+            itemType: updatedResult.itemName || updatedResult.itemType || result.itemType,
+            assetNumber: updatedResult.assetNumber || result.assetNumber
+          } : result
         );
+        
+        console.log('Updated results array:', updatedResults);
         
         // Sort results by asset number for proper display order
         const sortedResults = sortAssetNumbers(updatedResults);
@@ -315,14 +324,18 @@ export default function AdminDashboard() {
           ...viewingSession,
           results: sortedResults
         });
+        
+        console.log('Local viewing session updated');
       }
       
+      // Also invalidate queries to ensure data consistency
       queryClient.invalidateQueries({ queryKey: ["/api/admin/sessions"] });
       if (viewingSession?.session?.id) {
         queryClient.invalidateQueries({
-          queryKey: ["/api/session", viewingSession.session.id],
+          queryKey: ["/api/sessions", viewingSession.session.id, "full"],
         });
       }
+      
       toast({
         title: "Success",
         description: "Test result updated successfully",
