@@ -640,12 +640,29 @@ export default function AdminDashboard() {
   };
 
   /**
-   * Validate asset number for duplicates in real-time
-   * Checks if the entered asset number already exists in the current session
+   * Validate asset number for duplicates and range requirements
+   * Checks if the entered asset number already exists and follows frequency rules
    */
-  const validateAssetNumber = (assetNumber: string): string => {
+  const validateAssetNumber = (assetNumber: string, frequency: string): string => {
     if (!assetNumber.trim()) {
       return "Asset number is required";
+    }
+
+    const assetNum = parseInt(assetNumber);
+    if (isNaN(assetNum) || assetNum <= 0) {
+      return "Asset number must be a positive number";
+    }
+
+    // Validate range based on frequency
+    if (frequency === 'fiveyearly') {
+      if (assetNum < 10000) {
+        return "5-yearly items must have asset numbers starting from 10000";
+      }
+    } else {
+      // Monthly frequencies should be 1-9999
+      if (assetNum >= 10000) {
+        return "Monthly frequency items must have asset numbers below 10000";
+      }
     }
 
     if (!viewingSession?.results) {
@@ -669,8 +686,20 @@ export default function AdminDashboard() {
    */
   const handleAssetNumberChange = (value: string) => {
     setEditResultData(prev => ({ ...prev, assetNumber: value }));
-    const error = validateAssetNumber(value);
+    const error = validateAssetNumber(value, editResultData.frequency);
     setAssetNumberError(error);
+  };
+
+  /**
+   * Handle frequency changes - clear asset number when frequency changes
+   */
+  const handleFrequencyChange = (newFrequency: string) => {
+    setEditResultData(prev => ({ 
+      ...prev, 
+      frequency: newFrequency,
+      assetNumber: "" // Clear asset number when frequency changes
+    }));
+    setAssetNumberError("Asset number is required"); // Show validation error for empty field
   };
 
   /**
@@ -681,7 +710,7 @@ export default function AdminDashboard() {
     if (!editingResult || !viewingSession?.session?.id) return;
 
     // Validate asset number before proceeding
-    const assetError = validateAssetNumber(editResultData.assetNumber);
+    const assetError = validateAssetNumber(editResultData.assetNumber, editResultData.frequency);
     if (assetError) {
       setAssetNumberError(assetError);
       toast({
@@ -1877,12 +1906,17 @@ export default function AdminDashboard() {
                 type="text"
                 value={editResultData.assetNumber}
                 onChange={(e) => handleAssetNumberChange(e.target.value)}
-                placeholder="Enter asset number"
+                placeholder={editResultData.frequency === 'fiveyearly' ? "Enter number starting from 10000" : "Enter asset number (1-9999)"}
                 className={assetNumberError ? "border-red-500 focus:border-red-500" : ""}
               />
               {assetNumberError && (
                 <p className="text-sm text-red-500 mt-1">{assetNumberError}</p>
               )}
+              <p className="text-sm text-gray-500">
+                {editResultData.frequency === 'fiveyearly' 
+                  ? "5-yearly items: Use numbers 10000 and above" 
+                  : "Monthly frequencies: Use numbers 1-9999"}
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -1914,9 +1948,7 @@ export default function AdminDashboard() {
                 <Label htmlFor="editFrequency">Test Frequency</Label>
                 <Select
                   value={editResultData.frequency}
-                  onValueChange={(value) =>
-                    setEditResultData((prev) => ({ ...prev, frequency: value }))
-                  }
+                  onValueChange={handleFrequencyChange}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select frequency" />
