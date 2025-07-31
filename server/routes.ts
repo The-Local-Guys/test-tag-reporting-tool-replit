@@ -60,11 +60,14 @@ const requireSuperAdmin = (req: Request, res: Response, next: NextFunction) => {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Session configuration
+  const isDevelopment = process.env.NODE_ENV === 'development';
   const isProd = process.env.NODE_ENV === "production";
+  const databaseUrl = isDevelopment ? process.env.DEV_DATABASE_URL : process.env.DATABASE_URL;
+  
   const PgSession = connectPg(session);
   app.use(session({
     store: new PgSession({
-      conString: process.env.DATABASE_URL,
+      conString: databaseUrl,
       createTableIfMissing: false,
       tableName: "sessions",
     }),
