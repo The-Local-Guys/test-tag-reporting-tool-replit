@@ -1,20 +1,52 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Modal } from "@/components/ui/modal";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
-import { Users, FileText, Download, Edit, Trash2, UserCheck, UserX, LogOut, UserPlus, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Users,
+  FileText,
+  Download,
+  Edit,
+  Trash2,
+  UserCheck,
+  UserX,
+  LogOut,
+  UserPlus,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { generatePDFReport, downloadPDF } from "@/lib/pdf-generator";
 import { generateExcelReport, downloadExcel } from "@/lib/excel-generator";
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
@@ -38,7 +70,8 @@ export default function AdminDashboard() {
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
   const [addingToSession, setAddingToSession] = useState<any>(null);
   const [editingSession, setEditingSession] = useState<any>(null);
-  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] =
+    useState(false);
   const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [passwordData, setPasswordData] = useState({
@@ -67,8 +100,9 @@ export default function AdminDashboard() {
     fullName: "",
     role: "technician" as "technician" | "support_center" | "super_admin",
   });
-  const [selectedTechnicianFilter, setSelectedTechnicianFilter] = useState<string>("all");
-  
+  const [selectedTechnicianFilter, setSelectedTechnicianFilter] =
+    useState<string>("all");
+
   // Pagination states
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -108,24 +142,43 @@ export default function AdminDashboard() {
   });
 
   // Filter sessions based on selected technician and sort by newest first
-  const filteredSessions = sessions?.filter((session: any) => {
-    if (selectedTechnicianFilter === "all") return true;
-    return (session.technicianFullName || session.technicianName) === selectedTechnicianFilter;
-  }).sort((a: any, b: any) => {
-    // Sort by date descending (newest first)
-    return new Date(b.testDate).getTime() - new Date(a.testDate).getTime();
-  }) || [];
+  const filteredSessions =
+    sessions
+      ?.filter((session: any) => {
+        if (selectedTechnicianFilter === "all") return true;
+        return (
+          (session.technicianFullName || session.technicianName) ===
+          selectedTechnicianFilter
+        );
+      })
+      .sort((a: any, b: any) => {
+        // Sort by date descending (newest first)
+        return new Date(b.testDate).getTime() - new Date(a.testDate).getTime();
+      }) || [];
 
   // Get unique technician names for filter dropdown
-  const uniqueTechnicians = sessions ? 
-    [...new Set(sessions.map((session: any) => session.technicianFullName || session.technicianName))]
-      .filter(Boolean)
-      .sort() 
+  const uniqueTechnicians = sessions
+    ? [
+        ...new Set(
+          sessions.map(
+            (session: any) =>
+              session.technicianFullName || session.technicianName,
+          ),
+        ),
+      ]
+        .filter(Boolean)
+        .sort()
     : [];
 
   // Update user status mutation
   const updateUserStatusMutation = useMutation({
-    mutationFn: async ({ userId, isActive }: { userId: number; isActive: boolean }) => {
+    mutationFn: async ({
+      userId,
+      isActive,
+    }: {
+      userId: number;
+      isActive: boolean;
+    }) => {
       const response = await fetch(`/api/admin/users/${userId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -177,7 +230,13 @@ export default function AdminDashboard() {
 
   // Update session mutation
   const updateSessionMutation = useMutation({
-    mutationFn: async ({ sessionId, data }: { sessionId: number; data: any }) => {
+    mutationFn: async ({
+      sessionId,
+      data,
+    }: {
+      sessionId: number;
+      data: any;
+    }) => {
       const response = await fetch(`/api/admin/sessions/${sessionId}`, {
         method: "PATCH",
         headers: {
@@ -185,12 +244,12 @@ export default function AdminDashboard() {
         },
         body: JSON.stringify(data),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to update session");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -213,19 +272,29 @@ export default function AdminDashboard() {
 
   // Update test result mutation
   const updateResultMutation = useMutation({
-    mutationFn: async ({ id, data, sessionId }: { id: number; data: any; sessionId: number }) => {
+    mutationFn: async ({
+      id,
+      data,
+      sessionId,
+    }: {
+      id: number;
+      data: any;
+      sessionId: number;
+    }) => {
       const res = await fetch(`/api/sessions/${sessionId}/results/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error('Failed to update test result');
+      if (!res.ok) throw new Error("Failed to update test result");
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/sessions"] });
       if (viewingSession?.session?.id) {
-        queryClient.invalidateQueries({ queryKey: ["/api/session", viewingSession.session.id] });
+        queryClient.invalidateQueries({
+          queryKey: ["/api/session", viewingSession.session.id],
+        });
       }
       toast({
         title: "Success",
@@ -290,7 +359,10 @@ export default function AdminDashboard() {
 
   // Change password mutation
   const changePasswordMutation = useMutation({
-    mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
+    mutationFn: async (data: {
+      currentPassword: string;
+      newPassword: string;
+    }) => {
       const response = await fetch("/api/auth/change-password", {
         method: "POST",
         headers: {
@@ -298,12 +370,12 @@ export default function AdminDashboard() {
         },
         body: JSON.stringify(data),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to change password");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -329,7 +401,13 @@ export default function AdminDashboard() {
 
   // Add item mutation
   const addItemMutation = useMutation({
-    mutationFn: async ({ sessionId, data }: { sessionId: number; data: any }) => {
+    mutationFn: async ({
+      sessionId,
+      data,
+    }: {
+      sessionId: number;
+      data: any;
+    }) => {
       const response = await fetch(`/api/sessions/${sessionId}/results`, {
         method: "POST",
         headers: {
@@ -337,18 +415,20 @@ export default function AdminDashboard() {
         },
         body: JSON.stringify(data),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to add item");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/sessions"] });
       if (viewingSession?.session?.id) {
-        queryClient.invalidateQueries({ queryKey: ["/api/session", viewingSession.session.id] });
+        queryClient.invalidateQueries({
+          queryKey: ["/api/session", viewingSession.session.id],
+        });
         handleViewReport(viewingSession.session.id);
       }
       toast({
@@ -377,12 +457,12 @@ export default function AdminDashboard() {
         },
         body: JSON.stringify(userData),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to create user");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -409,12 +489,12 @@ export default function AdminDashboard() {
   });
 
   const handleViewReport = async (session: any) => {
-    console.log('Session object:', session);
-    
+    console.log("Session object:", session);
+
     // Handle both session object and direct session ID
-    const sessionId = typeof session === 'object' ? session.id : session;
-    console.log('Session ID:', sessionId);
-    
+    const sessionId = typeof session === "object" ? session.id : session;
+    console.log("Session ID:", sessionId);
+
     if (!sessionId) {
       toast({
         title: "Error loading report",
@@ -423,28 +503,29 @@ export default function AdminDashboard() {
       });
       return;
     }
-    
+
     try {
       // Show loading state if needed (optional enhancement)
       console.log(`Fetching latest report data for session ${sessionId}...`);
-      
+
       const response = await fetch(`/api/sessions/${sessionId}/full`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: Failed to fetch report data`);
       }
-      
+
       const reportData = await response.json();
-      console.log(`Successfully fetched report data with ${reportData.results?.length || 0} test results`);
-      
+      console.log(
+        `Successfully fetched report data with ${reportData.results?.length || 0} test results`,
+      );
+
       // Update state with fresh data
       setViewingSession(reportData);
       setCurrentPage(1); // Reset to first page when opening report
-      
+
       // Only open modal after successful data fetch and state update
       setIsViewReportModalOpen(true);
-      
     } catch (error) {
-      console.error('Error loading report:', error);
+      console.error("Error loading report:", error);
       toast({
         title: "Error loading report",
         description: `Failed to load the full report data: ${(error as Error).message}`,
@@ -458,7 +539,7 @@ export default function AdminDashboard() {
     setEditSessionData({
       clientName: session.clientName,
       technicianName: session.technicianName,
-      testDate: session.testDate.split('T')[0], // Convert to YYYY-MM-DD format
+      testDate: session.testDate.split("T")[0], // Convert to YYYY-MM-DD format
       address: session.address,
       siteContact: session.siteContact,
       country: session.country,
@@ -467,7 +548,13 @@ export default function AdminDashboard() {
   };
 
   const handleUpdateSession = () => {
-    if (!editSessionData.clientName || !editSessionData.technicianName || !editSessionData.testDate || !editSessionData.address || !editSessionData.siteContact) {
+    if (
+      !editSessionData.clientName ||
+      !editSessionData.technicianName ||
+      !editSessionData.testDate ||
+      !editSessionData.address ||
+      !editSessionData.siteContact
+    ) {
       toast({
         title: "Missing information",
         description: "Please fill in all required fields.",
@@ -477,7 +564,7 @@ export default function AdminDashboard() {
     }
     updateSessionMutation.mutate({
       sessionId: editingSession.id,
-      data: editSessionData
+      data: editSessionData,
     });
   };
 
@@ -501,34 +588,38 @@ export default function AdminDashboard() {
 
     // Calculate new asset number based on frequency change
     let newAssetNumber = editingResult.assetNumber;
-    
+
     // Check if frequency category changed (monthly <-> 5-yearly)
     const originalFrequency = editingResult.frequency;
     const newFrequency = editResultData.frequency;
-    
-    const originalIsFiveYearly = originalFrequency === 'fiveyearly';
-    const newIsFiveYearly = newFrequency === 'fiveyearly';
-    
+
+    const originalIsFiveYearly = originalFrequency === "fiveyearly";
+    const newIsFiveYearly = newFrequency === "fiveyearly";
+
     // If frequency category changed, recalculate asset number
     if (originalIsFiveYearly !== newIsFiveYearly) {
       const currentResults = viewingSession.results || [];
-      
+
       if (newIsFiveYearly) {
         // Moving to 5-yearly: count existing 5-yearly items and assign next sequential number
-        const fiveYearlyItems = currentResults
-          .filter((r: any) => r.frequency === 'fiveyearly' && r.id !== editingResult.id);
-        
+        const fiveYearlyItems = currentResults.filter(
+          (r: any) => r.frequency === "fiveyearly" && r.id !== editingResult.id,
+        );
+
         newAssetNumber = (10001 + fiveYearlyItems.length).toString();
       } else {
         // Moving to monthly: count existing monthly items and assign next sequential number
-        const monthlyItems = currentResults
-          .filter((r: any) => r.frequency !== 'fiveyearly' && r.id !== editingResult.id);
-        
+        const monthlyItems = currentResults.filter(
+          (r: any) => r.frequency !== "fiveyearly" && r.id !== editingResult.id,
+        );
+
         newAssetNumber = (1 + monthlyItems.length).toString();
       }
-      
-      console.log(`Admin: Asset number updated: ${editingResult.assetNumber} -> ${newAssetNumber}`);
-      
+
+      console.log(
+        `Admin: Asset number updated: ${editingResult.assetNumber} -> ${newAssetNumber}`,
+      );
+
       toast({
         title: "Asset Number Updated",
         description: `Asset number changed from #${editingResult.assetNumber} to #${newAssetNumber} due to frequency change.`,
@@ -645,7 +736,9 @@ export default function AdminDashboard() {
     let assetNumber = newItemData.assetNumber;
     if (!assetNumber) {
       try {
-        const response = await fetch(`/api/sessions/${addingToSession.id}/next-asset-number`);
+        const response = await fetch(
+          `/api/sessions/${addingToSession.id}/next-asset-number`,
+        );
         if (response.ok) {
           const data = await response.json();
           assetNumber = data.nextAssetNumber.toString();
@@ -665,8 +758,10 @@ export default function AdminDashboard() {
       classification: newItemData.classification,
       result: newItemData.result,
       frequency: newItemData.frequency,
-      failureReason: newItemData.result === "fail" ? newItemData.failureReason : null,
-      actionTaken: newItemData.result === "fail" ? newItemData.actionTaken : null,
+      failureReason:
+        newItemData.result === "fail" ? newItemData.failureReason : null,
+      actionTaken:
+        newItemData.result === "fail" ? newItemData.actionTaken : null,
       visualInspection: newItemData.visualInspection,
       electricalTest: newItemData.electricalTest,
       notes: null,
@@ -680,7 +775,11 @@ export default function AdminDashboard() {
   };
 
   const handleCreateUser = () => {
-    if (!newUserData.username || !newUserData.password || !newUserData.fullName) {
+    if (
+      !newUserData.username ||
+      !newUserData.password ||
+      !newUserData.fullName
+    ) {
       toast({
         title: "Missing information",
         description: "Please fill in all required fields.",
@@ -691,20 +790,23 @@ export default function AdminDashboard() {
     createUser.mutate(newUserData);
   };
 
-  const handleDownloadReport = async (session: any, format: 'pdf' | 'excel') => {
+  const handleDownloadReport = async (
+    session: any,
+    format: "pdf" | "excel",
+  ) => {
     try {
       const response = await fetch(`/api/sessions/${session.id}/report`);
       if (!response.ok) throw new Error("Failed to fetch report data");
-      
+
       const reportData = await response.json();
       const filename = `${session.clientName}-${session.testDate}`;
-      
-      if (format === 'pdf') {
+
+      if (format === "pdf") {
         await downloadPDF(reportData, filename);
       } else {
         downloadExcel(reportData, filename);
       }
-      
+
       toast({
         title: "Download started",
         description: `${format.toUpperCase()} report is being downloaded.`,
@@ -722,14 +824,16 @@ export default function AdminDashboard() {
     totalUsers: users?.length || 0,
     activeUsers: users?.filter((u: any) => u.isActive).length || 0,
     totalReports: sessions?.length || 0,
-    recentReports: sessions?.filter((s: any) => {
-      const sessionDate = new Date(s.createdAt);
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      return sessionDate > weekAgo;
-    }).length || 0,
+    recentReports:
+      sessions?.filter((s: any) => {
+        const sessionDate = new Date(s.createdAt);
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        return sessionDate > weekAgo;
+      }).length || 0,
   };
 
+  console.log(process.env.NODE_ENV);
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-7xl mx-auto">
@@ -738,7 +842,9 @@ export default function AdminDashboard() {
           <div className="flex items-center space-x-4">
             <img src={logoPath} alt="The Local Guys" className="h-12 w-auto" />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Admin Dashboard
+              </h1>
               <p className="text-gray-600">Welcome, {user?.fullName}</p>
             </div>
           </div>
@@ -766,23 +872,30 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className={`grid gap-6 mb-8 ${user?.role === 'technician' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-4'}`}>
+        <div
+          className={`grid gap-6 mb-8 ${user?.role === "technician" ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1 md:grid-cols-4"}`}
+        >
           {/* Only show user stats for super admins and support center */}
-          {(user?.role === 'super_admin' || user?.role === 'support_center') && (
+          {(user?.role === "super_admin" ||
+            user?.role === "support_center") && (
             <>
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Total Users
+                  </CardTitle>
                   <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.totalUsers}</div>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Active Users
+                  </CardTitle>
                   <UserCheck className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
@@ -791,11 +904,11 @@ export default function AdminDashboard() {
               </Card>
             </>
           )}
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                {user?.role === 'technician' ? 'My Reports' : 'Total Reports'}
+                {user?.role === "technician" ? "My Reports" : "Total Reports"}
               </CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
@@ -803,7 +916,7 @@ export default function AdminDashboard() {
               <div className="text-2xl font-bold">{stats.totalReports}</div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">This Week</CardTitle>
@@ -816,16 +929,20 @@ export default function AdminDashboard() {
         </div>
 
         {/* Main Content */}
-        <Tabs defaultValue={user?.role === 'technician' ? 'reports' : 'users'} className="space-y-4">
+        <Tabs
+          defaultValue={user?.role === "technician" ? "reports" : "users"}
+          className="space-y-4"
+        >
           <TabsList>
-            {(user?.role === 'super_admin' || user?.role === 'support_center') && (
+            {(user?.role === "super_admin" ||
+              user?.role === "support_center") && (
               <TabsTrigger value="users">User Management</TabsTrigger>
             )}
             <TabsTrigger value="reports">
-              {user?.role === 'technician' ? 'My Reports' : 'All Reports'}
+              {user?.role === "technician" ? "My Reports" : "All Reports"}
             </TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="users" className="space-y-4">
             <Card>
               <CardHeader>
@@ -865,16 +982,26 @@ export default function AdminDashboard() {
                     <TableBody>
                       {users?.map((user: any) => (
                         <TableRow key={user.id}>
-                          <TableCell className="font-medium">{user.fullName}</TableCell>
+                          <TableCell className="font-medium">
+                            {user.fullName}
+                          </TableCell>
                           <TableCell>{user.username}</TableCell>
                           <TableCell>
-                            <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                            <Badge
+                              variant={
+                                user.role === "admin" ? "default" : "secondary"
+                              }
+                            >
                               {user.role}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge variant={user.isActive ? 'default' : 'destructive'}>
-                              {user.isActive ? 'Active' : 'Inactive'}
+                            <Badge
+                              variant={
+                                user.isActive ? "default" : "destructive"
+                              }
+                            >
+                              {user.isActive ? "Active" : "Inactive"}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -899,10 +1026,10 @@ export default function AdminDashboard() {
                                     isActive: checked,
                                   })
                                 }
-                                disabled={user.role === 'admin'}
+                                disabled={user.role === "admin"}
                               />
                               <span className="text-sm text-gray-600">
-                                {user.isActive ? 'Active' : 'Inactive'}
+                                {user.isActive ? "Active" : "Inactive"}
                               </span>
                             </div>
                           </TableCell>
@@ -914,7 +1041,7 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           </TabsContent>
-          
+
           <TabsContent value="reports" className="space-y-4">
             <Card>
               <CardHeader>
@@ -925,9 +1052,13 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 {/* Technician Filter - Only show for super admin and support center */}
-                {(user?.role === "super_admin" || user?.role === "support_center") && (
+                {(user?.role === "super_admin" ||
+                  user?.role === "support_center") && (
                   <div className="mb-4">
-                    <Label htmlFor="technicianFilter" className="text-sm font-medium">
+                    <Label
+                      htmlFor="technicianFilter"
+                      className="text-sm font-medium"
+                    >
                       Filter by Technician
                     </Label>
                     <Select
@@ -970,24 +1101,46 @@ export default function AdminDashboard() {
                     <TableBody>
                       {filteredSessions.map((session: any) => (
                         <TableRow key={session.id}>
-                          <TableCell className="font-medium">{session.clientName}</TableCell>
-                          <TableCell>{session.technicianFullName || session.technicianName}</TableCell>
+                          <TableCell className="font-medium">
+                            {session.clientName}
+                          </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={session.serviceType === 'emergency_exit_light' ? 'bg-red-50 text-red-700' : 'bg-blue-50 text-blue-700'}>
-                              {session.serviceType === 'emergency_exit_light' ? 'Emergency Exit Light' : 'Electrical Test & Tag'}
+                            {session.technicianFullName ||
+                              session.technicianName}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={
+                                session.serviceType === "emergency_exit_light"
+                                  ? "bg-red-50 text-red-700"
+                                  : "bg-blue-50 text-blue-700"
+                              }
+                            >
+                              {session.serviceType === "emergency_exit_light"
+                                ? "Emergency Exit Light"
+                                : "Electrical Test & Tag"}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            {new Date(session.testDate).toLocaleDateString('en-AU')}
+                            {new Date(session.testDate).toLocaleDateString(
+                              "en-AU",
+                            )}
                           </TableCell>
                           <TableCell>{session.address}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                            <Badge
+                              variant="outline"
+                              className="bg-blue-50 text-blue-700"
+                            >
                               {session.totalItems || 0}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="bg-red-50 text-red-700">
+                            <Badge
+                              variant="outline"
+                              className="bg-red-50 text-red-700"
+                            >
                               {session.failedItems || 0}
                             </Badge>
                           </TableCell>
@@ -1012,7 +1165,9 @@ export default function AdminDashboard() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => handleDownloadReport(session, 'pdf')}
+                                onClick={() =>
+                                  handleDownloadReport(session, "pdf")
+                                }
                               >
                                 <Download className="w-4 h-4 mr-1" />
                                 PDF
@@ -1020,17 +1175,22 @@ export default function AdminDashboard() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => handleDownloadReport(session, 'excel')}
+                                onClick={() =>
+                                  handleDownloadReport(session, "excel")
+                                }
                               >
                                 <Download className="w-4 h-4 mr-1" />
                                 Excel
                               </Button>
                               {/* Delete button - only visible for super admin and support center */}
-                              {(user?.role === "super_admin" || user?.role === "support_center") && (
+                              {(user?.role === "super_admin" ||
+                                user?.role === "support_center") && (
                                 <Button
                                   size="sm"
                                   variant="destructive"
-                                  onClick={() => deleteSessionMutation.mutate(session.id)}
+                                  onClick={() =>
+                                    deleteSessionMutation.mutate(session.id)
+                                  }
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </Button>
@@ -1061,7 +1221,12 @@ export default function AdminDashboard() {
               id="fullName"
               type="text"
               value={newUserData.fullName}
-              onChange={(e) => setNewUserData(prev => ({ ...prev, fullName: e.target.value }))}
+              onChange={(e) =>
+                setNewUserData((prev) => ({
+                  ...prev,
+                  fullName: e.target.value,
+                }))
+              }
               placeholder="Enter full name"
               required
             />
@@ -1073,7 +1238,12 @@ export default function AdminDashboard() {
               id="username"
               type="text"
               value={newUserData.username}
-              onChange={(e) => setNewUserData(prev => ({ ...prev, username: e.target.value }))}
+              onChange={(e) =>
+                setNewUserData((prev) => ({
+                  ...prev,
+                  username: e.target.value,
+                }))
+              }
               placeholder="Enter username"
               required
             />
@@ -1085,7 +1255,12 @@ export default function AdminDashboard() {
               id="password"
               type="password"
               value={newUserData.password}
-              onChange={(e) => setNewUserData(prev => ({ ...prev, password: e.target.value }))}
+              onChange={(e) =>
+                setNewUserData((prev) => ({
+                  ...prev,
+                  password: e.target.value,
+                }))
+              }
               placeholder="Enter password"
               required
             />
@@ -1095,28 +1270,29 @@ export default function AdminDashboard() {
             <Label htmlFor="role">Access Level</Label>
             <Select
               value={newUserData.role}
-              onValueChange={(value: "technician" | "support_center" | "super_admin") => 
-                setNewUserData(prev => ({ ...prev, role: value }))
-              }
+              onValueChange={(
+                value: "technician" | "support_center" | "super_admin",
+              ) => setNewUserData((prev) => ({ ...prev, role: value }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select access level" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="technician">Technician</SelectItem>
-                <SelectItem value="support_center">Support Center Staff</SelectItem>
+                <SelectItem value="support_center">
+                  Support Center Staff
+                </SelectItem>
                 {user?.role === "super_admin" && (
                   <SelectItem value="super_admin">Super Admin</SelectItem>
                 )}
               </SelectContent>
             </Select>
             <p className="text-xs text-gray-600">
-              {newUserData.role === "super_admin" 
+              {newUserData.role === "super_admin"
                 ? "Highest level access - full system control (Jarrad151 only)"
                 : newUserData.role === "support_center"
-                ? "Can view/edit all reports, manage technician users"
-                : "Can view/edit own reports only"
-              }
+                  ? "Can view/edit all reports, manage technician users"
+                  : "Can view/edit own reports only"}
             </p>
           </div>
 
@@ -1128,10 +1304,7 @@ export default function AdminDashboard() {
             >
               Cancel
             </Button>
-            <Button
-              onClick={handleCreateUser}
-              disabled={createUser.isPending}
-            >
+            <Button onClick={handleCreateUser} disabled={createUser.isPending}>
               {createUser.isPending ? "Creating..." : "Create User"}
             </Button>
           </div>
@@ -1154,7 +1327,12 @@ export default function AdminDashboard() {
               id="editClientName"
               type="text"
               value={editSessionData.clientName}
-              onChange={(e) => setEditSessionData(prev => ({ ...prev, clientName: e.target.value }))}
+              onChange={(e) =>
+                setEditSessionData((prev) => ({
+                  ...prev,
+                  clientName: e.target.value,
+                }))
+              }
               placeholder="Enter client name"
               required
             />
@@ -1166,7 +1344,12 @@ export default function AdminDashboard() {
               id="editTechnicianName"
               type="text"
               value={editSessionData.technicianName}
-              onChange={(e) => setEditSessionData(prev => ({ ...prev, technicianName: e.target.value }))}
+              onChange={(e) =>
+                setEditSessionData((prev) => ({
+                  ...prev,
+                  technicianName: e.target.value,
+                }))
+              }
               placeholder="Enter technician name"
               required
             />
@@ -1178,7 +1361,12 @@ export default function AdminDashboard() {
               id="editTestDate"
               type="date"
               value={editSessionData.testDate}
-              onChange={(e) => setEditSessionData(prev => ({ ...prev, testDate: e.target.value }))}
+              onChange={(e) =>
+                setEditSessionData((prev) => ({
+                  ...prev,
+                  testDate: e.target.value,
+                }))
+              }
               required
             />
           </div>
@@ -1189,7 +1377,12 @@ export default function AdminDashboard() {
               id="editAddress"
               type="text"
               value={editSessionData.address}
-              onChange={(e) => setEditSessionData(prev => ({ ...prev, address: e.target.value }))}
+              onChange={(e) =>
+                setEditSessionData((prev) => ({
+                  ...prev,
+                  address: e.target.value,
+                }))
+              }
               placeholder="Enter address"
               required
             />
@@ -1201,7 +1394,12 @@ export default function AdminDashboard() {
               id="editSiteContact"
               type="text"
               value={editSessionData.siteContact}
-              onChange={(e) => setEditSessionData(prev => ({ ...prev, siteContact: e.target.value }))}
+              onChange={(e) =>
+                setEditSessionData((prev) => ({
+                  ...prev,
+                  siteContact: e.target.value,
+                }))
+              }
               placeholder="Enter site contact"
               required
             />
@@ -1211,8 +1409,8 @@ export default function AdminDashboard() {
             <Label htmlFor="editCountry">Country</Label>
             <Select
               value={editSessionData.country}
-              onValueChange={(value: "australia" | "newzealand") => 
-                setEditSessionData(prev => ({ ...prev, country: value }))
+              onValueChange={(value: "australia" | "newzealand") =>
+                setEditSessionData((prev) => ({ ...prev, country: value }))
               }
             >
               <SelectTrigger>
@@ -1240,7 +1438,9 @@ export default function AdminDashboard() {
               onClick={handleUpdateSession}
               disabled={updateSessionMutation.isPending}
             >
-              {updateSessionMutation.isPending ? "Updating..." : "Update Session"}
+              {updateSessionMutation.isPending
+                ? "Updating..."
+                : "Update Session"}
             </Button>
           </div>
         </div>
@@ -1263,16 +1463,22 @@ export default function AdminDashboard() {
               <h3 className="font-semibold mb-2">Test Session Details</h3>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="font-medium">Client:</span> {viewingSession.session.clientName}
+                  <span className="font-medium">Client:</span>{" "}
+                  {viewingSession.session.clientName}
                 </div>
                 <div>
-                  <span className="font-medium">Technician:</span> {viewingSession.session.technicianName}
+                  <span className="font-medium">Technician:</span>{" "}
+                  {viewingSession.session.technicianName}
                 </div>
                 <div>
-                  <span className="font-medium">Date:</span> {new Date(viewingSession.session.testDate).toLocaleDateString('en-AU')}
+                  <span className="font-medium">Date:</span>{" "}
+                  {new Date(viewingSession.session.testDate).toLocaleDateString(
+                    "en-AU",
+                  )}
                 </div>
                 <div>
-                  <span className="font-medium">Location:</span> {viewingSession.session.address}
+                  <span className="font-medium">Location:</span>{" "}
+                  {viewingSession.session.address}
                 </div>
               </div>
             </div>
@@ -1280,10 +1486,14 @@ export default function AdminDashboard() {
             {/* Test Results */}
             <div>
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-semibold">Test Results ({viewingSession.results.length} items)</h3>
+                <h3 className="font-semibold">
+                  Test Results ({viewingSession.results.length} items)
+                </h3>
                 <div className="flex items-center space-x-2">
                   {/* Items per page selector */}
-                  <Label htmlFor="itemsPerPage" className="text-sm">Items per page:</Label>
+                  <Label htmlFor="itemsPerPage" className="text-sm">
+                    Items per page:
+                  </Label>
                   <Select
                     value={itemsPerPage.toString()}
                     onValueChange={(value) => {
@@ -1326,34 +1536,52 @@ export default function AdminDashboard() {
                   <TableBody>
                     {(() => {
                       // Sort results by asset number: monthly frequencies first (1, 2, 3...) then 5-yearly (10001, 10002, 10003...)
-                      const sortedResults = [...viewingSession.results].sort((a: any, b: any) => {
-                        const aAssetNum = parseInt(a.assetNumber) || 0;
-                        const bAssetNum = parseInt(b.assetNumber) || 0;
-                        return aAssetNum - bAssetNum;
-                      });
-                      
+                      const sortedResults = [...viewingSession.results].sort(
+                        (a: any, b: any) => {
+                          const aAssetNum = parseInt(a.assetNumber) || 0;
+                          const bAssetNum = parseInt(b.assetNumber) || 0;
+                          return aAssetNum - bAssetNum;
+                        },
+                      );
+
                       const totalItems = sortedResults.length;
                       const startIndex = (currentPage - 1) * itemsPerPage;
                       const endIndex = startIndex + itemsPerPage;
-                      const paginatedResults = sortedResults.slice(startIndex, endIndex);
-                      
+                      const paginatedResults = sortedResults.slice(
+                        startIndex,
+                        endIndex,
+                      );
+
                       return paginatedResults.map((result: any) => (
                         <TableRow key={result.id}>
-                          <TableCell className="font-mono">{result.assetNumber}</TableCell>
+                          <TableCell className="font-mono">
+                            {result.assetNumber}
+                          </TableCell>
                           <TableCell>{result.itemType}</TableCell>
-                          <TableCell>{result.location || '-'}</TableCell>
+                          <TableCell>{result.location || "-"}</TableCell>
                           <TableCell>
                             <Badge variant="outline">
-                              {result.classification?.replace('class', 'Class ') || '-'}
+                              {result.classification?.replace(
+                                "class",
+                                "Class ",
+                              ) || "-"}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">
-                              {result.frequency?.replace('monthly', 'M').replace('yearly', 'Y') || '-'}
+                              {result.frequency
+                                ?.replace("monthly", "M")
+                                .replace("yearly", "Y") || "-"}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge variant={result.result === 'pass' ? 'default' : 'destructive'}>
+                            <Badge
+                              variant={
+                                result.result === "pass"
+                                  ? "default"
+                                  : "destructive"
+                              }
+                            >
                               {result.result?.toUpperCase()}
                             </Badge>
                           </TableCell>
@@ -1373,52 +1601,73 @@ export default function AdminDashboard() {
                   </TableBody>
                 </Table>
               </div>
-              
+
               {/* Pagination Controls */}
               {(() => {
-                const sortedResults = [...viewingSession.results].sort((a: any, b: any) => {
-                  const aAssetNum = parseInt(a.assetNumber) || 0;
-                  const bAssetNum = parseInt(b.assetNumber) || 0;
-                  return aAssetNum - bAssetNum;
-                });
+                const sortedResults = [...viewingSession.results].sort(
+                  (a: any, b: any) => {
+                    const aAssetNum = parseInt(a.assetNumber) || 0;
+                    const bAssetNum = parseInt(b.assetNumber) || 0;
+                    return aAssetNum - bAssetNum;
+                  },
+                );
                 const totalItems = sortedResults.length;
                 const totalPages = Math.ceil(totalItems / itemsPerPage);
                 const startIndex = (currentPage - 1) * itemsPerPage;
-                const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
-                
+                const endIndex = Math.min(
+                  startIndex + itemsPerPage,
+                  totalItems,
+                );
+
                 if (totalPages <= 1) return null;
-                
+
                 return (
                   <div className="flex items-center justify-between mt-4">
                     <div className="text-sm text-gray-500">
-                      Showing {startIndex + 1} to {endIndex} of {totalItems} items
+                      Showing {startIndex + 1} to {endIndex} of {totalItems}{" "}
+                      items
                     </div>
                     <div className="flex items-center space-x-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        onClick={() =>
+                          setCurrentPage((prev) => Math.max(1, prev - 1))
+                        }
                         disabled={currentPage === 1}
                       >
                         <ChevronLeft className="w-4 h-4 mr-1" />
                         Previous
                       </Button>
-                      
+
                       {/* Page numbers */}
                       <div className="flex items-center space-x-1">
                         {Array.from({ length: totalPages }, (_, i) => {
                           const pageNum = i + 1;
                           const isCurrentPage = pageNum === currentPage;
-                          const shouldShow = pageNum === 1 || pageNum === totalPages || 
-                                           (pageNum >= currentPage - 1 && pageNum <= currentPage + 1);
-                          
+                          const shouldShow =
+                            pageNum === 1 ||
+                            pageNum === totalPages ||
+                            (pageNum >= currentPage - 1 &&
+                              pageNum <= currentPage + 1);
+
                           if (!shouldShow) {
-                            if (pageNum === currentPage - 2 || pageNum === currentPage + 2) {
-                              return <span key={pageNum} className="px-2 text-gray-400">...</span>;
+                            if (
+                              pageNum === currentPage - 2 ||
+                              pageNum === currentPage + 2
+                            ) {
+                              return (
+                                <span
+                                  key={pageNum}
+                                  className="px-2 text-gray-400"
+                                >
+                                  ...
+                                </span>
+                              );
                             }
                             return null;
                           }
-                          
+
                           return (
                             <Button
                               key={pageNum}
@@ -1432,11 +1681,15 @@ export default function AdminDashboard() {
                           );
                         })}
                       </div>
-                      
+
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        onClick={() =>
+                          setCurrentPage((prev) =>
+                            Math.min(totalPages, prev + 1),
+                          )
+                        }
                         disabled={currentPage === totalPages}
                       >
                         Next
@@ -1451,18 +1704,28 @@ export default function AdminDashboard() {
             {/* Summary Stats */}
             <div className="grid grid-cols-3 gap-4 text-center">
               <div className="bg-blue-50 p-3 rounded">
-                <div className="text-2xl font-bold text-blue-600">{viewingSession.results.length}</div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {viewingSession.results.length}
+                </div>
                 <div className="text-sm text-blue-600">Total Items</div>
               </div>
               <div className="bg-green-50 p-3 rounded">
                 <div className="text-2xl font-bold text-green-600">
-                  {viewingSession.results.filter((r: any) => r.result === 'pass').length}
+                  {
+                    viewingSession.results.filter(
+                      (r: any) => r.result === "pass",
+                    ).length
+                  }
                 </div>
                 <div className="text-sm text-green-600">Passed</div>
               </div>
               <div className="bg-red-50 p-3 rounded">
                 <div className="text-2xl font-bold text-red-600">
-                  {viewingSession.results.filter((r: any) => r.result === 'fail').length}
+                  {
+                    viewingSession.results.filter(
+                      (r: any) => r.result === "fail",
+                    ).length
+                  }
                 </div>
                 <div className="text-sm text-red-600">Failed</div>
               </div>
@@ -1471,14 +1734,18 @@ export default function AdminDashboard() {
             <div className="flex justify-end space-x-2 pt-4">
               <Button
                 variant="outline"
-                onClick={() => handleDownloadReport(viewingSession.session, 'pdf')}
+                onClick={() =>
+                  handleDownloadReport(viewingSession.session, "pdf")
+                }
               >
                 <Download className="w-4 h-4 mr-1" />
                 Download PDF
               </Button>
               <Button
                 variant="outline"
-                onClick={() => handleDownloadReport(viewingSession.session, 'excel')}
+                onClick={() =>
+                  handleDownloadReport(viewingSession.session, "excel")
+                }
               >
                 <Download className="w-4 h-4 mr-1" />
                 Download Excel
@@ -1515,7 +1782,12 @@ export default function AdminDashboard() {
                   id="editItemName"
                   type="text"
                   value={editResultData.itemName}
-                  onChange={(e) => setEditResultData(prev => ({ ...prev, itemName: e.target.value }))}
+                  onChange={(e) =>
+                    setEditResultData((prev) => ({
+                      ...prev,
+                      itemName: e.target.value,
+                    }))
+                  }
                   placeholder="Enter item type"
                   required
                 />
@@ -1527,7 +1799,12 @@ export default function AdminDashboard() {
                   id="editLocation"
                   type="text"
                   value={editResultData.location}
-                  onChange={(e) => setEditResultData(prev => ({ ...prev, location: e.target.value }))}
+                  onChange={(e) =>
+                    setEditResultData((prev) => ({
+                      ...prev,
+                      location: e.target.value,
+                    }))
+                  }
                   placeholder="Enter location"
                   required
                 />
@@ -1539,7 +1816,12 @@ export default function AdminDashboard() {
                 <Label htmlFor="editClassification">Classification</Label>
                 <Select
                   value={editResultData.classification}
-                  onValueChange={(value) => setEditResultData(prev => ({ ...prev, classification: value }))}
+                  onValueChange={(value) =>
+                    setEditResultData((prev) => ({
+                      ...prev,
+                      classification: value,
+                    }))
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select classification" />
@@ -1558,7 +1840,9 @@ export default function AdminDashboard() {
                 <Label htmlFor="editFrequency">Test Frequency</Label>
                 <Select
                   value={editResultData.frequency}
-                  onValueChange={(value) => setEditResultData(prev => ({ ...prev, frequency: value }))}
+                  onValueChange={(value) =>
+                    setEditResultData((prev) => ({ ...prev, frequency: value }))
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select frequency" />
@@ -1567,7 +1851,9 @@ export default function AdminDashboard() {
                     <SelectItem value="threemonthly">3 Monthly</SelectItem>
                     <SelectItem value="sixmonthly">6 Monthly</SelectItem>
                     <SelectItem value="twelvemonthly">12 Monthly</SelectItem>
-                    <SelectItem value="twentyfourmonthly">24 Monthly</SelectItem>
+                    <SelectItem value="twentyfourmonthly">
+                      24 Monthly
+                    </SelectItem>
                     <SelectItem value="fiveyearly">5 Yearly</SelectItem>
                   </SelectContent>
                 </Select>
@@ -1578,7 +1864,9 @@ export default function AdminDashboard() {
               <Label htmlFor="editResult">Test Result</Label>
               <Select
                 value={editResultData.result}
-                onValueChange={(value) => setEditResultData(prev => ({ ...prev, result: value }))}
+                onValueChange={(value) =>
+                  setEditResultData((prev) => ({ ...prev, result: value }))
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select result" />
@@ -1590,20 +1878,27 @@ export default function AdminDashboard() {
               </Select>
             </div>
 
-            {editResultData.result === 'fail' && (
+            {editResultData.result === "fail" && (
               <>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="editFailureReason">Failure Reason</Label>
                     <Select
                       value={editResultData.failureReason || ""}
-                      onValueChange={(value) => setEditResultData(prev => ({ ...prev, failureReason: value }))}
+                      onValueChange={(value) =>
+                        setEditResultData((prev) => ({
+                          ...prev,
+                          failureReason: value,
+                        }))
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select failure reason" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="vision">Visual Inspection</SelectItem>
+                        <SelectItem value="vision">
+                          Visual Inspection
+                        </SelectItem>
                         <SelectItem value="earth">Earth</SelectItem>
                         <SelectItem value="insulation">Insulation</SelectItem>
                         <SelectItem value="polarity">Polarity</SelectItem>
@@ -1616,14 +1911,21 @@ export default function AdminDashboard() {
                     <Label htmlFor="editActionTaken">Action Taken</Label>
                     <Select
                       value={editResultData.actionTaken || ""}
-                      onValueChange={(value) => setEditResultData(prev => ({ ...prev, actionTaken: value }))}
+                      onValueChange={(value) =>
+                        setEditResultData((prev) => ({
+                          ...prev,
+                          actionTaken: value,
+                        }))
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select action taken" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="given">Given to User</SelectItem>
-                        <SelectItem value="removed">Removed from Service</SelectItem>
+                        <SelectItem value="removed">
+                          Removed from Service
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1635,7 +1937,12 @@ export default function AdminDashboard() {
                     id="editNotes"
                     type="text"
                     value={editResultData.notes || ""}
-                    onChange={(e) => setEditResultData(prev => ({ ...prev, notes: e.target.value }))}
+                    onChange={(e) =>
+                      setEditResultData((prev) => ({
+                        ...prev,
+                        notes: e.target.value,
+                      }))
+                    }
                     placeholder="Enter any additional notes"
                   />
                 </div>
@@ -1657,7 +1964,9 @@ export default function AdminDashboard() {
                 onClick={handleUpdateResult}
                 disabled={updateResultMutation.isPending}
               >
-                {updateResultMutation.isPending ? "Updating..." : "Update Result"}
+                {updateResultMutation.isPending
+                  ? "Updating..."
+                  : "Update Result"}
               </Button>
             </div>
           </div>
@@ -1679,8 +1988,10 @@ export default function AdminDashboard() {
             <div className="bg-gray-50 p-4 rounded-lg">
               <h3 className="font-semibold mb-2">Adding item to:</h3>
               <div className="text-sm">
-                <span className="font-medium">Client:</span> {addingToSession.clientName} | 
-                <span className="font-medium"> Date:</span> {new Date(addingToSession.testDate).toLocaleDateString('en-AU')}
+                <span className="font-medium">Client:</span>{" "}
+                {addingToSession.clientName} |
+                <span className="font-medium"> Date:</span>{" "}
+                {new Date(addingToSession.testDate).toLocaleDateString("en-AU")}
               </div>
             </div>
 
@@ -1691,7 +2002,12 @@ export default function AdminDashboard() {
                   id="newItemName"
                   type="text"
                   value={newItemData.itemName}
-                  onChange={(e) => setNewItemData(prev => ({ ...prev, itemName: e.target.value }))}
+                  onChange={(e) =>
+                    setNewItemData((prev) => ({
+                      ...prev,
+                      itemName: e.target.value,
+                    }))
+                  }
                   placeholder="Enter item type"
                 />
               </div>
@@ -1702,7 +2018,12 @@ export default function AdminDashboard() {
                   id="newLocation"
                   type="text"
                   value={newItemData.location}
-                  onChange={(e) => setNewItemData(prev => ({ ...prev, location: e.target.value }))}
+                  onChange={(e) =>
+                    setNewItemData((prev) => ({
+                      ...prev,
+                      location: e.target.value,
+                    }))
+                  }
                   placeholder="Enter location"
                 />
               </div>
@@ -1713,7 +2034,12 @@ export default function AdminDashboard() {
                   id="newAssetNumber"
                   type="text"
                   value={newItemData.assetNumber}
-                  onChange={(e) => setNewItemData(prev => ({ ...prev, assetNumber: e.target.value }))}
+                  onChange={(e) =>
+                    setNewItemData((prev) => ({
+                      ...prev,
+                      assetNumber: e.target.value,
+                    }))
+                  }
                   placeholder="Auto-generated if empty"
                 />
               </div>
@@ -1722,7 +2048,12 @@ export default function AdminDashboard() {
                 <Label htmlFor="newClassification">Classification</Label>
                 <Select
                   value={newItemData.classification}
-                  onValueChange={(value) => setNewItemData(prev => ({ ...prev, classification: value }))}
+                  onValueChange={(value) =>
+                    setNewItemData((prev) => ({
+                      ...prev,
+                      classification: value,
+                    }))
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -1741,7 +2072,9 @@ export default function AdminDashboard() {
                 <Label htmlFor="newResult">Test Result</Label>
                 <Select
                   value={newItemData.result}
-                  onValueChange={(value) => setNewItemData(prev => ({ ...prev, result: value }))}
+                  onValueChange={(value) =>
+                    setNewItemData((prev) => ({ ...prev, result: value }))
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -1757,7 +2090,9 @@ export default function AdminDashboard() {
                 <Label htmlFor="newFrequency">Test Frequency</Label>
                 <Select
                   value={newItemData.frequency}
-                  onValueChange={(value) => setNewItemData(prev => ({ ...prev, frequency: value }))}
+                  onValueChange={(value) =>
+                    setNewItemData((prev) => ({ ...prev, frequency: value }))
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -1766,7 +2101,9 @@ export default function AdminDashboard() {
                     <SelectItem value="threemonthly">3 Monthly</SelectItem>
                     <SelectItem value="sixmonthly">6 Monthly</SelectItem>
                     <SelectItem value="twelvemonthly">12 Monthly</SelectItem>
-                    <SelectItem value="twentyfourmonthly">24 Monthly</SelectItem>
+                    <SelectItem value="twentyfourmonthly">
+                      24 Monthly
+                    </SelectItem>
                     <SelectItem value="fiveyearly">5 Yearly</SelectItem>
                   </SelectContent>
                 </Select>
@@ -1780,10 +2117,17 @@ export default function AdminDashboard() {
                   type="checkbox"
                   id="newVisualInspection"
                   checked={newItemData.visualInspection}
-                  onChange={(e) => setNewItemData(prev => ({ ...prev, visualInspection: e.target.checked }))}
+                  onChange={(e) =>
+                    setNewItemData((prev) => ({
+                      ...prev,
+                      visualInspection: e.target.checked,
+                    }))
+                  }
                   className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                 />
-                <Label htmlFor="newVisualInspection" className="text-sm">Visual Inspection</Label>
+                <Label htmlFor="newVisualInspection" className="text-sm">
+                  Visual Inspection
+                </Label>
               </div>
 
               <div className="flex items-center space-x-2">
@@ -1791,10 +2135,17 @@ export default function AdminDashboard() {
                   type="checkbox"
                   id="newElectricalTest"
                   checked={newItemData.electricalTest}
-                  onChange={(e) => setNewItemData(prev => ({ ...prev, electricalTest: e.target.checked }))}
+                  onChange={(e) =>
+                    setNewItemData((prev) => ({
+                      ...prev,
+                      electricalTest: e.target.checked,
+                    }))
+                  }
                   className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                 />
-                <Label htmlFor="newElectricalTest" className="text-sm">Electrical Test</Label>
+                <Label htmlFor="newElectricalTest" className="text-sm">
+                  Electrical Test
+                </Label>
               </div>
             </div>
 
@@ -1805,7 +2156,12 @@ export default function AdminDashboard() {
                   <Label htmlFor="newFailureReason">Failure Reason</Label>
                   <Select
                     value={newItemData.failureReason || ""}
-                    onValueChange={(value) => setNewItemData(prev => ({ ...prev, failureReason: value }))}
+                    onValueChange={(value) =>
+                      setNewItemData((prev) => ({
+                        ...prev,
+                        failureReason: value,
+                      }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select failure reason" />
@@ -1824,14 +2180,21 @@ export default function AdminDashboard() {
                   <Label htmlFor="newActionTaken">Action Taken</Label>
                   <Select
                     value={newItemData.actionTaken || ""}
-                    onValueChange={(value) => setNewItemData(prev => ({ ...prev, actionTaken: value }))}
+                    onValueChange={(value) =>
+                      setNewItemData((prev) => ({
+                        ...prev,
+                        actionTaken: value,
+                      }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select action taken" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="given">Given to User</SelectItem>
-                      <SelectItem value="removed">Removed from Service</SelectItem>
+                      <SelectItem value="removed">
+                        Removed from Service
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1887,7 +2250,12 @@ export default function AdminDashboard() {
                 id="currentPassword"
                 type="password"
                 value={passwordData.currentPassword}
-                onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                onChange={(e) =>
+                  setPasswordData((prev) => ({
+                    ...prev,
+                    currentPassword: e.target.value,
+                  }))
+                }
                 placeholder="Enter current password"
               />
             </div>
@@ -1898,7 +2266,12 @@ export default function AdminDashboard() {
                 id="newPassword"
                 type="password"
                 value={passwordData.newPassword}
-                onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                onChange={(e) =>
+                  setPasswordData((prev) => ({
+                    ...prev,
+                    newPassword: e.target.value,
+                  }))
+                }
                 placeholder="Enter new password"
               />
             </div>
@@ -1909,7 +2282,12 @@ export default function AdminDashboard() {
                 id="confirmPassword"
                 type="password"
                 value={passwordData.confirmPassword}
-                onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                onChange={(e) =>
+                  setPasswordData((prev) => ({
+                    ...prev,
+                    confirmPassword: e.target.value,
+                  }))
+                }
                 placeholder="Confirm new password"
               />
             </div>
@@ -1931,7 +2309,9 @@ export default function AdminDashboard() {
               </Button>
               <Button
                 onClick={() => {
-                  if (passwordData.newPassword !== passwordData.confirmPassword) {
+                  if (
+                    passwordData.newPassword !== passwordData.confirmPassword
+                  ) {
                     toast({
                       title: "Error",
                       description: "New passwords do not match",
@@ -1942,7 +2322,8 @@ export default function AdminDashboard() {
                   if (passwordData.newPassword.length < 6) {
                     toast({
                       title: "Error",
-                      description: "Password must be at least 6 characters long",
+                      description:
+                        "Password must be at least 6 characters long",
                       variant: "destructive",
                     });
                     return;
@@ -1952,10 +2333,17 @@ export default function AdminDashboard() {
                     newPassword: passwordData.newPassword,
                   });
                 }}
-                disabled={changePasswordMutation.isPending || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}
+                disabled={
+                  changePasswordMutation.isPending ||
+                  !passwordData.currentPassword ||
+                  !passwordData.newPassword ||
+                  !passwordData.confirmPassword
+                }
                 className="bg-blue-600 hover:bg-blue-700"
               >
-                {changePasswordMutation.isPending ? "Changing..." : "Change Password"}
+                {changePasswordMutation.isPending
+                  ? "Changing..."
+                  : "Change Password"}
               </Button>
             </div>
           </div>
@@ -1991,7 +2379,12 @@ export default function AdminDashboard() {
                 id="editUsername"
                 type="text"
                 value={editUserData.username}
-                onChange={(e) => setEditUserData(prev => ({ ...prev, username: e.target.value }))}
+                onChange={(e) =>
+                  setEditUserData((prev) => ({
+                    ...prev,
+                    username: e.target.value,
+                  }))
+                }
                 placeholder="Enter username"
               />
             </div>
@@ -2002,7 +2395,12 @@ export default function AdminDashboard() {
                 id="editFullName"
                 type="text"
                 value={editUserData.fullName}
-                onChange={(e) => setEditUserData(prev => ({ ...prev, fullName: e.target.value }))}
+                onChange={(e) =>
+                  setEditUserData((prev) => ({
+                    ...prev,
+                    fullName: e.target.value,
+                  }))
+                }
                 placeholder="Enter full name"
               />
             </div>
@@ -2011,9 +2409,9 @@ export default function AdminDashboard() {
               <Label htmlFor="editRole">Role *</Label>
               <Select
                 value={editUserData.role}
-                onValueChange={(value: "technician" | "support_center" | "super_admin") => 
-                  setEditUserData(prev => ({ ...prev, role: value }))
-                }
+                onValueChange={(
+                  value: "technician" | "support_center" | "super_admin",
+                ) => setEditUserData((prev) => ({ ...prev, role: value }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select role" />
@@ -2032,7 +2430,12 @@ export default function AdminDashboard() {
                 id="editNewPassword"
                 type="password"
                 value={editUserData.newPassword}
-                onChange={(e) => setEditUserData(prev => ({ ...prev, newPassword: e.target.value }))}
+                onChange={(e) =>
+                  setEditUserData((prev) => ({
+                    ...prev,
+                    newPassword: e.target.value,
+                  }))
+                }
                 placeholder="Leave blank to keep current password"
               />
             </div>
@@ -2043,7 +2446,12 @@ export default function AdminDashboard() {
                 id="editConfirmPassword"
                 type="password"
                 value={editUserData.confirmPassword}
-                onChange={(e) => setEditUserData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                onChange={(e) =>
+                  setEditUserData((prev) => ({
+                    ...prev,
+                    confirmPassword: e.target.value,
+                  }))
+                }
                 placeholder="Confirm new password"
                 disabled={!editUserData.newPassword}
               />
@@ -2069,7 +2477,11 @@ export default function AdminDashboard() {
               </Button>
               <Button
                 onClick={handleUpdateUser}
-                disabled={editUserMutation.isPending || !editUserData.username || !editUserData.fullName}
+                disabled={
+                  editUserMutation.isPending ||
+                  !editUserData.username ||
+                  !editUserData.fullName
+                }
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 {editUserMutation.isPending ? "Updating..." : "Update User"}
