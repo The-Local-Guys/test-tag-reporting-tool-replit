@@ -769,31 +769,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           notes: req.body.notes || null,
         };
 
-        // Check if frequency changed and requires asset number reassignment
-        if (currentResult.frequency !== req.body.frequency) {
-          const currentIsFiveYearly = currentResult.frequency === 'fiveyearly';
-          const newIsFiveYearly = req.body.frequency === 'fiveyearly';
-          
-          // If frequency category changed, calculate new asset number
-          if (currentIsFiveYearly !== newIsFiveYearly) {
-            const allResults = await storage.getTestResultsBySession(sessionId);
-            
-            if (newIsFiveYearly) {
-              // Changing to 5-yearly: count existing 5-yearly items and assign next number (10001+)
-              const fiveYearlyCount = allResults.filter(r => 
-                r.frequency === 'fiveyearly' && r.id !== resultId
-              ).length;
-              updateData.assetNumber = (10001 + fiveYearlyCount).toString();
-            } else {
-              // Changing to monthly: count existing monthly items and assign next number (1+)
-              const monthlyCount = allResults.filter(r => 
-                r.frequency !== 'fiveyearly' && r.id !== resultId
-              ).length;
-              updateData.assetNumber = (monthlyCount + 1).toString();
-            }
-            
-            console.log(`Asset number reassigned for result ${resultId}: ${currentResult.assetNumber} -> ${updateData.assetNumber} (frequency: ${currentResult.frequency} -> ${req.body.frequency})`);
-          }
+        // Use the asset number provided by the admin (manual entry)
+        if (req.body.assetNumber !== undefined) {
+          updateData.assetNumber = req.body.assetNumber;
+          console.log(`Admin manually set asset number for result ${resultId}: ${currentResult.assetNumber} -> ${updateData.assetNumber} (frequency: ${currentResult.frequency} -> ${req.body.frequency})`);
         }
 
         const result = await storage.updateTestResult(resultId, updateData);
