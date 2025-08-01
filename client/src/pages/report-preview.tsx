@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,6 +32,8 @@ export default function ReportPreview() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [assetNumberError, setAssetNumberError] = useState<string>("");
   const [editAssetNumber, setEditAssetNumber] = useState<string>("");
+  const [monthlyAssetCount, setMonthlyAssetCount] = useState<number>(0);
+  const [fiveYearlyAssetCount, setFiveYearlyAssetCount] = useState<number>(0);
 
   const editForm = useForm({
     resolver: zodResolver(insertTestResultSchema.omit({ sessionId: true, assetNumber: true })),
@@ -80,6 +82,36 @@ export default function ReportPreview() {
 
   // Use sorted batched results
   const results = sortResultsByAssetNumber(batchedResults);
+
+  /**
+   * Calculate current asset counts from batched results
+   */
+  const calculateAssetCounts = () => {
+    let monthlyCount = 0;
+    let fiveYearlyCount = 0;
+
+    batchedResults.forEach(result => {
+      const assetNum = parseInt(result.assetNumber || '0');
+      if (result.frequency === 'fiveyearly') {
+        if (assetNum >= 10000) {
+          fiveYearlyCount = Math.max(fiveYearlyCount, assetNum - 10000);
+        }
+      } else {
+        // Monthly frequencies
+        if (assetNum > 0 && assetNum < 10000) {
+          monthlyCount = Math.max(monthlyCount, assetNum);
+        }
+      }
+    });
+
+    setMonthlyAssetCount(monthlyCount);
+    setFiveYearlyAssetCount(fiveYearlyCount);
+  };
+
+  // Calculate asset counts when batched results change
+  useEffect(() => {
+    calculateAssetCounts();
+  }, [batchedResults]);
 
   const handleExportPDF = async () => {
     try {
@@ -348,6 +380,31 @@ export default function ReportPreview() {
 
       // Use the manually entered asset number
       data.assetNumber = editAssetNumber;
+
+      // Update asset counts if frequency changed
+      const originalResult = batchedResults.find(r => r.id === (editingResult as any).originalBatchedId);
+      if (originalResult) {
+        const originalFrequency = originalResult.frequency;
+        const newFrequency = data.frequency;
+        const assetNum = parseInt(editAssetNumber);
+
+        // Update counts based on frequency changes
+        if (originalFrequency !== newFrequency) {
+          // Remove from old category count
+          if (originalFrequency === 'fiveyearly') {
+            // Don't decrement as we're not removing items, just changing frequency
+          } else {
+            // Monthly frequency change - don't decrement as we're just reassigning
+          }
+
+          // Update for new category
+          if (newFrequency === 'fiveyearly' && assetNum >= 10000) {
+            setFiveYearlyAssetCount(Math.max(fiveYearlyAssetCount, assetNum - 10000));
+          } else if (newFrequency !== 'fiveyearly' && assetNum > 0 && assetNum < 10000) {
+            setMonthlyAssetCount(Math.max(monthlyAssetCount, assetNum));
+          }
+        }
+      }
 
       // Use the original batched ID for updating local storage
       const batchedId = (editingResult as any).originalBatchedId || `temp_${editingResult.id}`;
