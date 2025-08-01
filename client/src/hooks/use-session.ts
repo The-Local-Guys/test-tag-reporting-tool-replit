@@ -142,6 +142,7 @@ export function useSession() {
   /**
    * Adds test result to local batch storage with proper asset numbering
    * Results are stored locally until final report submission
+   * Now checks for manually entered asset numbers to prevent conflicts
    */
   const addToBatch = (data: Omit<InsertTestResult, 'sessionId' | 'assetNumber'>) => {
     if (!sessionId) throw new Error('No active session');
@@ -149,21 +150,59 @@ export function useSession() {
     // Determine if this is a 5-yearly frequency
     const isFiveYearly = data.frequency === 'fiveyearly';
     
-    // Generate asset number and update counters
-    let assetNumber: string;
-    let newMonthlyCounter = monthlyAssetCounter;
-    let newFiveYearlyCounter = fiveYearlyAssetCounter;
+    // Collect all existing asset numbers to avoid conflicts
+    const usedNumbers = new Set<number>();
     
+    // Add numbers from current batched results
+    batchedResults.forEach(result => {
+      const assetNum = parseInt(result.assetNumber || '');
+      if (!isNaN(assetNum) && assetNum > 0) {
+        usedNumbers.add(assetNum);
+      }
+    });
+    
+    // Add manually entered asset numbers from localStorage
+    // These are tracked when users manually edit asset numbers in report preview
+    const manuallyEnteredKey = `manuallyEnteredAssetNumbers_${sessionId}`;
+    const manuallyEnteredData = localStorage.getItem(manuallyEnteredKey);
+    if (manuallyEnteredData) {
+      try {
+        const manualNumbers = JSON.parse(manuallyEnteredData);
+        if (Array.isArray(manualNumbers)) {
+          manualNumbers.forEach(num => {
+            const assetNum = parseInt(num);
+            if (!isNaN(assetNum) && assetNum > 0) {
+              usedNumbers.add(assetNum);
+            }
+          });
+        }
+      } catch (error) {
+        console.warn('Error parsing manually entered asset numbers:', error);
+      }
+    }
+    
+    // Find next available asset number
+    let assetNumber: string;
     if (isFiveYearly) {
-      newFiveYearlyCounter = fiveYearlyAssetCounter + 1;
-      assetNumber = newFiveYearlyCounter.toString();
-      setFiveYearlyAssetCounter(newFiveYearlyCounter);
-      localStorage.setItem(`fiveYearlyCounter_${sessionId}`, newFiveYearlyCounter.toString());
+      // For 5-yearly items, start from 10001 and find first available
+      let candidate = 10001;
+      while (usedNumbers.has(candidate)) {
+        candidate++;
+      }
+      assetNumber = candidate.toString();
+      // Update counter to at least this number
+      setFiveYearlyAssetCounter(Math.max(fiveYearlyAssetCounter, candidate));
+      localStorage.setItem(`fiveYearlyCounter_${sessionId}`, Math.max(fiveYearlyAssetCounter, candidate).toString());
     } else {
-      newMonthlyCounter = monthlyAssetCounter + 1;
-      assetNumber = newMonthlyCounter.toString();
-      setMonthlyAssetCounter(newMonthlyCounter);
-      localStorage.setItem(`monthlyCounter_${sessionId}`, newMonthlyCounter.toString());
+      // For monthly items, start from 1 and find first available
+      let candidate = 1;
+      while (usedNumbers.has(candidate)) {
+        candidate++;
+      }
+      assetNumber = candidate.toString();
+      // Update counter to at least this number
+      setMonthlyAssetCounter(Math.max(monthlyAssetCounter, candidate));
+      localStorage.setItem(`monthlyCounter_${sessionId}`, Math.max(monthlyAssetCounter, candidate).toString());
     }
     
     const newResult: BatchedTestResult = {

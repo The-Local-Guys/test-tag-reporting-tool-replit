@@ -148,7 +148,7 @@ export default function ReportPreview() {
     });
     
     // Add manually entered asset numbers to prevent conflicts
-    manuallyEnteredAssetNumbers.forEach(manualNumber => {
+    Array.from(manuallyEnteredAssetNumbers).forEach(manualNumber => {
       const assetNum = parseInt(manualNumber);
       if (!isNaN(assetNum) && assetNum > 0) {
         usedNumbers.add(assetNum);
@@ -203,7 +203,6 @@ export default function ReportPreview() {
         visionInspection: result.visionInspection,
         electricalTest: result.electricalTest,
         createdAt: new Date(result.timestamp),
-        updatedAt: new Date(result.timestamp),
         maintenanceType: null,
         dischargeTest: false,
         switchingTest: false,
@@ -223,7 +222,7 @@ export default function ReportPreview() {
         results: convertedResults,
       };
 
-      await downloadPDF(previewData, `test-report-${session.clientName.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+      await downloadPDF(previewData, `test-report-${sessionData.session.clientName.replace(/\s+/g, '-').toLowerCase()}.pdf`);
       toast({
         title: "PDF Generated",
         description: "Your test report has been downloaded successfully.",
@@ -257,7 +256,6 @@ export default function ReportPreview() {
         visionInspection: result.visionInspection,
         electricalTest: result.electricalTest,
         createdAt: new Date(result.timestamp),
-        updatedAt: new Date(result.timestamp),
         maintenanceType: null,
         dischargeTest: false,
         switchingTest: false,
@@ -277,7 +275,7 @@ export default function ReportPreview() {
         results: convertedResults,
       };
 
-      downloadExcel(previewData, `test-report-${session.clientName.replace(/\s+/g, '-').toLowerCase()}.xlsx`);
+      downloadExcel(previewData, `test-report-${sessionData.session.clientName.replace(/\s+/g, '-').toLowerCase()}.xlsx`);
       toast({
         title: "Excel Generated",
         description: "Your test report has been downloaded successfully.",
@@ -499,7 +497,28 @@ export default function ReportPreview() {
       // Track manually entered asset number to prevent auto-generation conflicts
       if (editResultData.assetNumber) {
         setManuallyEnteredAssetNumbers(prev => new Set([...prev, editResultData.assetNumber]));
-        console.log(`Manually entered asset number tracked: ${editResultData.assetNumber}`);
+        
+        // Save to localStorage so auto-generation logic can access it
+        const sessionId = sessionData?.session?.id;
+        if (sessionId) {
+          const manuallyEnteredKey = `manuallyEnteredAssetNumbers_${sessionId}`;
+          const currentManual = localStorage.getItem(manuallyEnteredKey);
+          let manualNumbers: string[] = [];
+          
+          if (currentManual) {
+            try {
+              manualNumbers = JSON.parse(currentManual);
+            } catch (error) {
+              console.warn('Error parsing existing manual asset numbers:', error);
+            }
+          }
+          
+          if (!manualNumbers.includes(editResultData.assetNumber)) {
+            manualNumbers.push(editResultData.assetNumber);
+            localStorage.setItem(manuallyEnteredKey, JSON.stringify(manualNumbers));
+            console.log(`Manually entered asset number tracked: ${editResultData.assetNumber}`);
+          }
+        }
       }
 
       // Use the original batched ID for updating local storage
