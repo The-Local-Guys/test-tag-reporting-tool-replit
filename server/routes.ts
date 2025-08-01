@@ -793,14 +793,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const sessionId = parseInt(req.params.id);
         const resultId = parseInt(req.params.resultId);
 
+        // Verify session exists
         const session = await storage.getTestSession(sessionId);
         if (!session) {
           res.status(404).json({ error: "Session not found" });
           return;
         }
 
+        // Verify result exists and belongs to this session
+        const result = await storage.getTestResult(resultId);
+        if (!result) {
+          res.status(404).json({ error: "Test result not found" });
+          return;
+        }
+
+        if (result.sessionId !== sessionId) {
+          res.status(400).json({ error: "Test result does not belong to this session" });
+          return;
+        }
+
+        // Delete the test result
         await storage.deleteTestResult(resultId);
-        res.json({ message: "Test result deleted successfully" });
+        
+        console.log(`Successfully deleted test result ${resultId} from session ${sessionId}`);
+        res.json({ success: true, message: "Test result deleted successfully" });
       } catch (error) {
         console.error("Error deleting test result:", error);
         res.status(500).json({ error: "Failed to delete test result" });

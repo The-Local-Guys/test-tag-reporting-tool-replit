@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Modal } from "@/components/ui/modal";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { ProgressBar } from "@/components/ui/progress-bar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
@@ -138,6 +139,11 @@ export default function AdminDashboard() {
   });
 
   const [newItemAssetNumberError, setNewItemAssetNumberError] = useState<string>("");
+  
+  // Delete result state
+  const [deletingResult, setDeletingResult] = useState<any>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch all users
   const { data: users, isLoading: usersLoading } = useQuery({
@@ -351,6 +357,74 @@ export default function AdminDashboard() {
         description: "Failed to update test result",
         variant: "destructive",
       });
+    },
+  });
+
+  // Delete test result mutation
+  const deleteResultMutation = useMutation({
+    mutationFn: async ({ sessionId, resultId }: { sessionId: number; resultId: number }) => {
+      const response = await fetch(`/api/sessions/${sessionId}/results/${resultId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to delete test result");
+      }
+
+      return response.json();
+    },
+    onSuccess: (_, { resultId }) => {
+      // Update the local viewing session state immediately for real-time UI updates
+      if (viewingSession) {
+        console.log('Removing result from local state:', resultId);
+        const updatedResults = viewingSession.results.filter((result: any) => 
+          result.id !== resultId
+        );
+        
+        console.log('Updated results array after deletion:', updatedResults);
+        
+        // Sort results by asset number for proper display order
+        const sortedResults = sortAssetNumbers(updatedResults);
+        
+        // Recalculate asset counts after the deletion
+        calculateAssetCounts(sortedResults);
+        
+        // Update the viewing session with new results
+        setViewingSession({
+          ...viewingSession,
+          results: sortedResults
+        });
+        
+        console.log('Local viewing session updated after deletion');
+      }
+      
+      // Also invalidate queries to ensure data consistency
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/sessions"] });
+      if (viewingSession?.session?.id) {
+        queryClient.invalidateQueries({
+          queryKey: ["/api/sessions", viewingSession.session.id, "full"],
+        });
+      }
+      
+      toast({
+        title: "Success",
+        description: "Test result deleted successfully",
+      });
+      setIsDeleteModalOpen(false);
+      setDeletingResult(null);
+      setIsDeleting(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error", 
+        description: error.message || "Failed to delete test result",
+        variant: "destructive",
+      });
+      setIsDeleting(false);
     },
   });
 
@@ -947,6 +1021,36 @@ export default function AdminDashboard() {
     setNewItemData(prev => ({ ...prev, assetNumber: value }));
     const error = validateNewItemAssetNumber(value, newItemData.frequency);
     setNewItemAssetNumberError(error);
+  };
+
+  /**
+   * Handle delete result action - shows confirmation dialog
+   */
+  const handleDeleteResult = (result: any) => {
+    setDeletingResult(result);
+    setIsDeleteModalOpen(true);
+  };
+
+  /**
+   * Confirm and execute result deletion
+   */
+  const confirmDeleteResult = () => {
+    if (!deletingResult || !viewingSession?.session?.id) return;
+
+    setIsDeleting(true);
+    deleteResultMutation.mutate({
+      sessionId: viewingSession.session.id,
+      resultId: deletingResult.id,
+    });
+  };
+
+  /**
+   * Cancel result deletion
+   */
+  const cancelDeleteResult = () => {
+    setIsDeleteModalOpen(false);
+    setDeletingResult(null);
+    setIsDeleting(false);
   };
 
   /**
@@ -1815,14 +1919,25 @@ export default function AdminDashboard() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleEditResult(result)}
-                            >
-                              <Edit className="w-4 h-4 mr-1" />
-                              Edit
-                            </Button>
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEditResult(result)}
+                              >
+                                <Edit className="w-4 h-4 mr-1" />
+                                Edit
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleDeleteResult(result)}
+                                className="text-red-600 hover:bg-red-50 hover:border-red-300"
+                              >
+                                <Trash2 className="w-4 h-4 mr-1" />
+                                Delete
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ));
@@ -2733,6 +2848,53 @@ export default function AdminDashboard() {
           </div>
         )}
       </Modal>
+
+      {/* Delete Result Confirmation Modal */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={cancelDeleteResult}
+        title="Delete Test Result"
+        className="max-w-md"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-700">
+            Are you sure you want to delete this test result? This action cannot be undone.
+          </p>
+          
+          {deletingResult && (
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="text-sm">
+                <div><span className="font-medium">Asset Number:</span> {deletingResult.assetNumber}</div>
+                <div><span className="font-medium">Item:</span> {deletingResult.itemType}</div>
+                <div><span className="font-medium">Location:</span> {deletingResult.location || "N/A"}</div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={cancelDeleteResult}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmDeleteResult}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isDeleting ? "Deleting..." : "Delete Result"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Loading Progress Bar - Reusable for server operations */}
+      <ProgressBar
+        isVisible={isDeleting}
+        message="Deleting test result..."
+      />
     </div>
   );
 }
