@@ -81,6 +81,51 @@ export default function ReportPreview() {
   };
 
   /**
+   * Renumber all assets to be sequential within their frequency categories
+   * Monthly frequencies: 1, 2, 3, 4, 5...
+   * 5-yearly frequencies: 10001, 10002, 10003...
+   */
+  const renumberAllAssets = () => {
+    if (!batchedResults.length) return;
+
+    // Separate results by frequency category
+    const monthlyResults = batchedResults.filter(result => result.frequency !== 'fiveyearly');
+    const fiveYearlyResults = batchedResults.filter(result => result.frequency === 'fiveyearly');
+
+    // Sort each category by current asset number to maintain relative order
+    monthlyResults.sort((a, b) => parseInt(a.assetNumber || '0') - parseInt(b.assetNumber || '0'));
+    fiveYearlyResults.sort((a, b) => parseInt(a.assetNumber || '0') - parseInt(b.assetNumber || '0'));
+
+    // Renumber monthly items starting from 1
+    monthlyResults.forEach((result, index) => {
+      result.assetNumber = (index + 1).toString();
+    });
+
+    // Renumber 5-yearly items starting from 10001
+    fiveYearlyResults.forEach((result, index) => {
+      result.assetNumber = (10001 + index).toString();
+    });
+
+    // Combine results back together
+    const renumberedResults = [...monthlyResults, ...fiveYearlyResults];
+    
+    // Update state and localStorage
+    setBatchedResults(renumberedResults);
+    if (sessionData?.session?.id) {
+      localStorage.setItem(`batchedResults_${sessionData.session.id}`, JSON.stringify(renumberedResults));
+      
+      // Clear manually entered asset numbers since we've renumbered everything
+      setManuallyEnteredAssetNumbers(new Set());
+      localStorage.removeItem(`manuallyEnteredAssetNumbers_${sessionData.session.id}`);
+    }
+
+    toast({
+      title: "Assets Renumbered",
+      description: `All ${renumberedResults.length} items have been renumbered sequentially.`,
+    });
+  };
+
+  /**
    * Validate asset number for duplicates and range requirements
    * Now includes manually entered asset numbers to prevent conflicts
    */
@@ -711,6 +756,14 @@ export default function ReportPreview() {
             Excel
           </Button>
         </div>
+        
+        <Button 
+          onClick={renumberAllAssets}
+          variant="outline"
+          className="w-full py-3 font-medium touch-button border-2 border-blue-200 text-blue-700 hover:bg-blue-50"
+        >
+          🔢 Renumber All Assets
+        </Button>
         <Button 
           onClick={handleNewJob}
           className="w-full bg-success text-white py-3 font-medium touch-button"
