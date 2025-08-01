@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,7 +22,7 @@ import { insertTestResultSchema, type TestResult, type InsertTestResult } from '
  * Shows pass/fail statistics and enables report customization options
  */
 export default function ReportPreview() {
-  const { sessionData, batchedResults, submitBatch, isSubmittingBatch, updateBatchedResult, removeBatchedResult, clearSession, assetProgress, sessionId, recalculateAssetCounters } = useSession();
+  const { sessionData, batchedResults, submitBatch, isSubmittingBatch, updateBatchedResult, removeBatchedResult, clearSession, assetProgress, renumberAssets, sessionId } = useSession();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [editingResult, setEditingResult] = useState<TestResult | null>(null);
@@ -30,8 +30,6 @@ export default function ReportPreview() {
   const [showNewReportConfirm, setShowNewReportConfirm] = useState(false);
   const [deletingResult, setDeletingResult] = useState<TestResult | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [assetNumberError, setAssetNumberError] = useState<string>("");
-  const [editAssetNumber, setEditAssetNumber] = useState<string>("");
 
   const editForm = useForm({
     resolver: zodResolver(insertTestResultSchema.omit({ sessionId: true, assetNumber: true })),
@@ -80,8 +78,6 @@ export default function ReportPreview() {
 
   // Use sorted batched results
   const results = sortResultsByAssetNumber(batchedResults);
-
-
 
   const handleExportPDF = async () => {
     try {
@@ -191,63 +187,7 @@ export default function ReportPreview() {
     }
   };
 
-  /**
-   * Validate asset number for duplicates and range requirements
-   */
-  const validateAssetNumber = (assetNumber: string, frequency: string): string => {
-    if (!assetNumber.trim()) {
-      return "Asset number is required";
-    }
 
-    const assetNum = parseInt(assetNumber);
-    if (isNaN(assetNum) || assetNum <= 0) {
-      return "Asset number must be a positive number";
-    }
-
-    // Validate range based on frequency
-    if (frequency === 'fiveyearly') {
-      if (assetNum < 10000) {
-        return "5-yearly items must have asset numbers starting from 10000";
-      }
-    } else {
-      // Monthly frequencies should be 1-9999
-      if (assetNum >= 10000) {
-        return "Monthly frequency items must have asset numbers below 10000";
-      }
-    }
-
-    // Check for duplicates in batched results (excluding the current item being edited)
-    const isDuplicate = batchedResults.some((result) => 
-      result.assetNumber === assetNumber && result.id !== editingResult?.id
-    );
-
-    if (isDuplicate) {
-      return `Asset number ${assetNumber} is already in use`;
-    }
-
-    return "";
-  };
-
-  /**
-   * Handle asset number input changes with real-time validation
-   */
-  const handleAssetNumberChange = (value: string) => {
-    setEditAssetNumber(value);
-    if (editingResult) {
-      const frequency = editForm.watch('frequency') || editingResult.frequency;
-      const error = validateAssetNumber(value, frequency);
-      setAssetNumberError(error);
-    }
-  };
-
-  /**
-   * Handle frequency changes - clear asset number when frequency changes
-   */
-  const handleFrequencyChange = (newFrequency: string) => {
-    editForm.setValue('frequency', newFrequency as any);
-    setEditAssetNumber(""); // Clear asset number when frequency changes
-    setAssetNumberError("Asset number is required"); // Show validation error for empty field
-  };
 
   const handleNewReport = () => {
     setShowNewReportConfirm(true);
@@ -308,8 +248,6 @@ export default function ReportPreview() {
     // Store the original batched result for updating
     console.log('Setting editing result with batched ID:', result.id);
     setEditingResult({ ...testResult, originalBatchedId: result.id } as any);
-    setEditAssetNumber(result.assetNumber || '1'); // Set the current asset number
-    setAssetNumberError(""); // Clear any previous errors
     editForm.reset({
       itemName: result.itemName,
       itemType: result.itemType,
@@ -336,22 +274,30 @@ export default function ReportPreview() {
       console.log('Editing result:', editingResult);
       console.log('Original batched ID:', (editingResult as any).originalBatchedId);
 
-      // Validate asset number before proceeding
-      const assetError = validateAssetNumber(editAssetNumber, data.frequency);
-      if (assetError) {
-        setAssetNumberError(assetError);
-        toast({
-          title: "Invalid Asset Number",
-          description: assetError,
-          variant: "destructive",
-        });
-        return;
+      // Check if frequency changed and requires asset number update
+      const originalResult = batchedResults.find(r => r.id === (editingResult as any).originalBatchedId);
+      if (originalResult) {
+        const originalFrequency = originalResult.frequency;
+        const newFrequency = data.frequency;
+
+        const originalIsFiveYearly = originalFrequency === 'fiveyearly';
+        const newIsFiveYearly = newFrequency === 'fiveyearly';
+
+        // If frequency category changed, update asset number and renumber all items
+        if (originalIsFiveYearly !== newIsFiveYearly) {
+          console.log('Frequency category changed, renumbering all items...');
+          
+          const newAssetNumber = renumberAssets(originalResult.id, newFrequency);
+          
+          console.log(`Asset number updated: ${originalResult.assetNumber} -> ${newAssetNumber}`);
+          data.assetNumber = newAssetNumber;
+
+          toast({
+            title: "Items Renumbered",
+            description: `All items have been renumbered. Asset #${originalResult.assetNumber} is now #${newAssetNumber}.`,
+          });
+        }
       }
-
-      // Use the manually entered asset number
-      data.assetNumber = editAssetNumber;
-
-      // Asset counter updates are now handled automatically in the useSession hook
 
       // Use the original batched ID for updating local storage
       const batchedId = (editingResult as any).originalBatchedId || `temp_${editingResult.id}`;
@@ -683,30 +629,10 @@ export default function ReportPreview() {
           </div>
 
           <div>
-            <Label htmlFor="edit-asset-number">Asset Number *</Label>
-            <Input
-              id="edit-asset-number"
-              type="text"
-              value={editAssetNumber}
-              onChange={(e) => handleAssetNumberChange(e.target.value)}
-              placeholder={editForm.watch('frequency') === 'fiveyearly' ? "Enter number starting from 10000" : "Enter asset number (1-9999)"}
-              className={assetNumberError ? "border-red-500 focus:border-red-500 text-base" : "text-base"}
-            />
-            {assetNumberError && (
-              <p className="text-sm text-red-500 mt-1">{assetNumberError}</p>
-            )}
-            <p className="text-sm text-gray-500">
-              {editForm.watch('frequency') === 'fiveyearly' 
-                ? "5-yearly items: Use numbers 10000 and above" 
-                : "Monthly frequencies: Use numbers 1-9999"}
-            </p>
-          </div>
-
-          <div>
             <Label htmlFor="edit-frequency">Test Frequency</Label>
             <Select 
               value={editForm.watch('frequency')} 
-              onValueChange={handleFrequencyChange}
+              onValueChange={(value) => editForm.setValue('frequency', value as any)}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -782,7 +708,6 @@ export default function ReportPreview() {
             <Button 
               type="submit" 
               className="flex-1 bg-primary"
-              disabled={!!assetNumberError}
               onClick={(e) => {
                 console.log('=== SAVE BUTTON CLICKED ===');
                 console.log('Button event:', e);

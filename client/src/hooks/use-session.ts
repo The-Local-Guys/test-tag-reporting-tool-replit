@@ -249,36 +249,6 @@ export function useSession() {
   });
 
   /**
-   * Recalculate asset counters based on current asset numbers in batched results
-   * This ensures counters stay in sync when items are edited manually
-   */
-  const recalculateAssetCounters = () => {
-    if (!sessionId) return;
-    
-    let highestMonthly = 0;
-    let highestFiveYearly = 10000; // Start from 10000 base
-    
-    batchedResults.forEach(result => {
-      const assetNum = parseInt(result.assetNumber || '0');
-      if (result.frequency === 'fiveyearly' && assetNum >= 10000) {
-        highestFiveYearly = Math.max(highestFiveYearly, assetNum);
-      } else if (result.frequency !== 'fiveyearly' && assetNum > 0 && assetNum < 10000) {
-        highestMonthly = Math.max(highestMonthly, assetNum);
-      }
-    });
-    
-    // Update counters to the highest found values
-    setMonthlyAssetCounter(highestMonthly);
-    setFiveYearlyAssetCounter(highestFiveYearly);
-    
-    // Save to localStorage
-    localStorage.setItem(`monthlyCounter_${sessionId}`, highestMonthly.toString());
-    localStorage.setItem(`fiveYearlyCounter_${sessionId}`, highestFiveYearly.toString());
-    
-    console.log('Recalculated asset counters:', { monthly: highestMonthly, fiveYearly: highestFiveYearly });
-  };
-
-  /**
    * Updates a batched result locally (before server submission)
    */
   const updateBatchedResult = (id: string, updatedData: Partial<BatchedTestResult>) => {
@@ -306,32 +276,6 @@ export function useSession() {
         localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(updatedResults));
         console.log('Saved updated results to localStorage');
       }
-      
-      // Recalculate asset counters after any update that might change asset numbers
-      setTimeout(() => {
-        // Manually trigger recalculation with updated results
-        let highestMonthly = 0;
-        let highestFiveYearly = 10000;
-        
-        updatedResults.forEach(result => {
-          const assetNum = parseInt(result.assetNumber || '0');
-          if (result.frequency === 'fiveyearly' && assetNum >= 10000) {
-            highestFiveYearly = Math.max(highestFiveYearly, assetNum);
-          } else if (result.frequency !== 'fiveyearly' && assetNum > 0 && assetNum < 10000) {
-            highestMonthly = Math.max(highestMonthly, assetNum);
-          }
-        });
-        
-        setMonthlyAssetCounter(highestMonthly);
-        setFiveYearlyAssetCounter(highestFiveYearly);
-        
-        if (sessionId) {
-          localStorage.setItem(`monthlyCounter_${sessionId}`, highestMonthly.toString());
-          localStorage.setItem(`fiveYearlyCounter_${sessionId}`, highestFiveYearly.toString());
-        }
-        
-        console.log('Recalculated asset counters after update:', { monthly: highestMonthly, fiveYearly: highestFiveYearly });
-      }, 100);
       
       console.log('updateBatchedResult completed successfully');
     } catch (error) {
@@ -513,7 +457,6 @@ export function useSession() {
     isDeletingResult: deleteResultMutation.isPending,
     
     // Utility functions
-    recalculateAssetCounters,
 
   };
 }
