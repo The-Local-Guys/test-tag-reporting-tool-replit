@@ -189,7 +189,63 @@ export default function ReportPreview() {
     }
   };
 
+  /**
+   * Validate asset number for duplicates and range requirements
+   */
+  const validateAssetNumber = (assetNumber: string, frequency: string): string => {
+    if (!assetNumber.trim()) {
+      return "Asset number is required";
+    }
 
+    const assetNum = parseInt(assetNumber);
+    if (isNaN(assetNum) || assetNum <= 0) {
+      return "Asset number must be a positive number";
+    }
+
+    // Validate range based on frequency
+    if (frequency === 'fiveyearly') {
+      if (assetNum < 10000) {
+        return "5-yearly items must have asset numbers starting from 10000";
+      }
+    } else {
+      // Monthly frequencies should be 1-9999
+      if (assetNum >= 10000) {
+        return "Monthly frequency items must have asset numbers below 10000";
+      }
+    }
+
+    // Check for duplicates in batched results (excluding the current item being edited)
+    const isDuplicate = batchedResults.some((result) => 
+      result.assetNumber === assetNumber && result.id !== editingResult?.id
+    );
+
+    if (isDuplicate) {
+      return `Asset number ${assetNumber} is already in use`;
+    }
+
+    return "";
+  };
+
+  /**
+   * Handle asset number input changes with real-time validation
+   */
+  const handleAssetNumberChange = (value: string) => {
+    setEditAssetNumber(value);
+    if (editingResult) {
+      const frequency = editForm.watch('frequency') || editingResult.frequency;
+      const error = validateAssetNumber(value, frequency);
+      setAssetNumberError(error);
+    }
+  };
+
+  /**
+   * Handle frequency changes - clear asset number when frequency changes
+   */
+  const handleFrequencyChange = (newFrequency: string) => {
+    editForm.setValue('frequency', newFrequency as any);
+    setEditAssetNumber(""); // Clear asset number when frequency changes
+    setAssetNumberError("Asset number is required"); // Show validation error for empty field
+  };
 
   const handleNewReport = () => {
     setShowNewReportConfirm(true);
