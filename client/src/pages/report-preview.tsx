@@ -30,21 +30,26 @@ export default function ReportPreview() {
   const [showNewReportConfirm, setShowNewReportConfirm] = useState(false);
   const [deletingResult, setDeletingResult] = useState<TestResult | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-  const editForm = useForm({
-    resolver: zodResolver(insertTestResultSchema.omit({ sessionId: true, assetNumber: true })),
-    defaultValues: {
-      itemName: '',
-      itemType: '',
-      location: '',
-      classification: 'class1' as const,
-      result: 'pass' as const,
-      frequency: 'twelvemonthly' as const,
-      failureReason: null,
-      actionTaken: null,
-      notes: null,
-    },
+  
+  // Edit form state with manual asset number tracking
+  const [editResultData, setEditResultData] = useState({
+    itemName: "",
+    itemType: "",
+    location: "",
+    assetNumber: "",
+    classification: "class1" as any,
+    result: "pass" as any,
+    frequency: "twelvemonthly" as any,
+    failureReason: null as any,
+    actionTaken: null as any,
+    notes: null as any,
   });
+  const [assetNumberError, setAssetNumberError] = useState<string>("");
+  
+  // Track manually entered asset numbers to prevent auto-generation conflicts
+  const [manuallyEnteredAssetNumbers, setManuallyEnteredAssetNumbers] = useState<Set<string>>(new Set());
+
+
 
   if (!sessionData) {
     return (
@@ -76,22 +81,59 @@ export default function ReportPreview() {
   };
 
   /**
-   * Generate unique asset number for item being edited
-   * Takes into account manually edited asset numbers and finds next available slots
-   * @param editingResultId - ID of the result being changed
-   * @param newFrequency - New frequency for the result
-   * @returns Next available asset number for the frequency type
+   * Validate asset number for duplicates and range requirements
+   * Now includes manually entered asset numbers to prevent conflicts
+   */
+  const validateAssetNumber = (assetNumber: string, frequency: string): string => {
+    if (!assetNumber.trim()) {
+      return "Asset number is required";
+    }
+
+    const assetNum = parseInt(assetNumber);
+    if (isNaN(assetNum) || assetNum <= 0) {
+      return "Asset number must be a positive number";
+    }
+
+    // Validate range based on frequency
+    if (frequency === 'fiveyearly') {
+      if (assetNum < 10000) {
+        return "5-yearly items must have asset numbers starting from 10000";
+      }
+    } else {
+      // Monthly frequencies should be 1-9999
+      if (assetNum >= 10000) {
+        return "Monthly frequency items must have asset numbers below 10000";
+      }
+    }
+
+    // Check for duplicates in batched results (excluding the one being edited)
+    const editingResultId = editingResult ? (editingResult as any).originalBatchedId : null;
+    const isDuplicate = batchedResults.some((result: BatchedTestResult) => 
+      result.assetNumber === assetNumber && result.id !== editingResultId
+    );
+    
+    if (isDuplicate) {
+      return `Asset number ${assetNumber} is already in use`;
+    }
+
+    return "";
+  };
+
+  /**
+   * Generate unique asset number for auto-assignment
+   * Takes into account both existing results and manually entered numbers
    */
   const generateUniqueAssetNumber = (editingResultId: string, newFrequency: string): string => {
     // Guard against missing results
-    if (!batchedResults.length) {
-      console.warn('generateUniqueAssetNumber: No batched results available');
+    if (!batchedResults.length && manuallyEnteredAssetNumbers.size === 0) {
+      console.warn('generateUniqueAssetNumber: No existing results or manual numbers');
       return newFrequency === 'fiveyearly' ? '10001' : '1';
     }
 
     // Get all existing asset numbers, excluding the one being changed
     const usedNumbers = new Set<number>();
     
+    // Add numbers from batched results
     batchedResults.forEach((result: BatchedTestResult) => {
       // Skip the result being changed, as it will get a new number
       if (result.id === editingResultId) {
@@ -100,6 +142,14 @@ export default function ReportPreview() {
       
       // Parse asset number and add to used set if valid
       const assetNum = parseInt(result.assetNumber || '');
+      if (!isNaN(assetNum) && assetNum > 0) {
+        usedNumbers.add(assetNum);
+      }
+    });
+    
+    // Add manually entered asset numbers to prevent conflicts
+    manuallyEnteredAssetNumbers.forEach(manualNumber => {
+      const assetNum = parseInt(manualNumber);
       if (!isNaN(assetNum) && assetNum > 0) {
         usedNumbers.add(assetNum);
       }
@@ -270,6 +320,104 @@ export default function ReportPreview() {
     });
   };
 
+  const handleDeleteResult = (result: BatchedTestResult) => {
+    // Convert batched result to TestResult format for deletion
+    const testResult: TestResult = {
+      id: parseInt(result.id.replace('temp_', '')),
+      sessionId: sessionData?.session?.id || 0,
+      assetNumber: result.assetNumber || '1',
+      itemName: result.itemName,
+      itemType: result.itemType,
+      location: result.location,
+      classification: result.classification as any,
+      result: result.result as any,
+      frequency: result.frequency as any,
+      failureReason: result.failureReason || null,
+      actionTaken: result.actionTaken || null,
+      notes: result.notes || null,
+      photoData: result.photoData || null,
+      visionInspection: result.visionInspection,
+      electricalTest: result.electricalTest,
+      createdAt: new Date(result.timestamp),
+      updatedAt: new Date(result.timestamp),
+      maintenanceType: null,
+      dischargeTest: false,
+      switchingTest: false,
+      chargingTest: false,
+      manufacturerInfo: null,
+      installationDate: null,
+      globeType: null,
+    };
+
+    setDeletingResult(testResult);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+    if (!deletingResult) return;
+
+    try {
+      // Find the batched result to remove
+      const originalBatchedId = batchedResults.find(r => 
+        parseInt(r.id.replace('temp_', '')) === deletingResult.id
+      )?.id;
+
+      if (originalBatchedId) {
+        removeBatchedResult(originalBatchedId);
+        toast({
+          title: "Item Deleted",
+          description: "Test result has been removed from the report.",
+        });
+      }
+
+      setShowDeleteConfirm(false);
+      setDeletingResult(null);
+    } catch (error) {
+      toast({
+        title: "Delete Failed",
+        description: "There was an error removing the test result.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  /**
+   * Handle asset number input changes with real-time validation
+   */
+  const handleAssetNumberChange = (value: string) => {
+    setEditResultData(prev => ({ ...prev, assetNumber: value }));
+    const error = validateAssetNumber(value, editResultData.frequency);
+    setAssetNumberError(error);
+  };
+
+  /**
+   * Handle frequency changes - clear asset number when frequency changes category
+   */
+  const handleFrequencyChange = (newFrequency: string) => {
+    const currentFrequency = editResultData.frequency;
+    const currentIsFiveYearly = currentFrequency === 'fiveyearly';
+    const newIsFiveYearly = newFrequency === 'fiveyearly';
+    
+    // If frequency category changed, clear asset number and show validation error
+    if (currentIsFiveYearly !== newIsFiveYearly) {
+      setEditResultData(prev => ({ 
+        ...prev, 
+        frequency: newFrequency,
+        assetNumber: "" // Clear asset number when frequency category changes
+      }));
+      setAssetNumberError("Asset number is required"); // Show validation error for empty field
+    } else {
+      // If frequency didn't change category, keep existing asset number
+      setEditResultData(prev => ({ 
+        ...prev, 
+        frequency: newFrequency
+      }));
+      // Re-validate current asset number with new frequency
+      const error = validateAssetNumber(editResultData.assetNumber, newFrequency);
+      setAssetNumberError(error);
+    }
+  };
+
   const handleEditResult = (result: BatchedTestResult) => {
     // Store the original batched result ID for proper updating
     const testResult: TestResult = {
@@ -302,10 +450,13 @@ export default function ReportPreview() {
     // Store the original batched result for updating
     console.log('Setting editing result with batched ID:', result.id);
     setEditingResult({ ...testResult, originalBatchedId: result.id } as any);
-    editForm.reset({
+    
+    // Set form data for manual editing
+    setEditResultData({
       itemName: result.itemName,
       itemType: result.itemType,
       location: result.location,
+      assetNumber: result.assetNumber || "",
       classification: result.classification as any,
       result: result.result as any,
       frequency: result.frequency as any,
@@ -313,47 +464,42 @@ export default function ReportPreview() {
       actionTaken: result.actionTaken || null,
       notes: result.notes || null,
     });
+    
+    // Clear any previous asset number errors
+    setAssetNumberError("");
+    
     setIsEditModalOpen(true);
   };
 
-  const handleSaveEdit = async (data: any) => {
-    if (!editingResult) {
-      console.error('No editing result available');
+  /**
+   * Manual asset number update function - follows admin dashboard pattern
+   * Validates for duplicates and provides real-time feedback
+   */
+  const handleUpdateResult = () => {
+    if (!editingResult) return;
+
+    // Validate asset number before proceeding
+    const assetError = validateAssetNumber(editResultData.assetNumber, editResultData.frequency);
+    if (assetError) {
+      setAssetNumberError(assetError);
+      toast({
+        title: "Invalid Asset Number",
+        description: assetError,
+        variant: "destructive",
+      });
       return;
     }
 
     try {
-      console.log('=== Starting handleSaveEdit ===');
-      console.log('Form data to save:', data);
+      console.log('=== Starting handleUpdateResult ===');
+      console.log('Form data to save:', editResultData);
       console.log('Editing result:', editingResult);
       console.log('Original batched ID:', (editingResult as any).originalBatchedId);
 
-      // Check if frequency changed and requires asset number update
-      const originalResult = batchedResults.find(r => r.id === (editingResult as any).originalBatchedId);
-      if (originalResult) {
-        const originalFrequency = originalResult.frequency;
-        const newFrequency = data.frequency;
-
-        const originalIsFiveYearly = originalFrequency === 'fiveyearly';
-        const newIsFiveYearly = newFrequency === 'fiveyearly';
-
-        // If frequency category changed, assign next available asset number
-        if (originalIsFiveYearly !== newIsFiveYearly) {
-          console.log('Frequency category changed, finding next available asset number...');
-          
-          const newAssetNumber = generateUniqueAssetNumber(originalResult.id, newFrequency);
-          
-          console.log(`Asset number updated: ${originalResult.assetNumber} -> ${newAssetNumber}`);
-          data.assetNumber = newAssetNumber;
-
-          toast({
-            title: "Asset Number Updated",
-            description: `Item assigned asset number ${newAssetNumber} to prevent duplicates.`,
-          });
-        } else {
-          // If frequency didn't change category, keep the existing asset number
-          data.assetNumber = originalResult.assetNumber;
-        }
+      // Track manually entered asset number to prevent auto-generation conflicts
+      if (editResultData.assetNumber) {
+        setManuallyEnteredAssetNumbers(prev => new Set([...prev, editResultData.assetNumber]));
+        console.log(`Manually entered asset number tracked: ${editResultData.assetNumber}`);
       }
 
       // Use the original batched ID for updating local storage
@@ -361,83 +507,41 @@ export default function ReportPreview() {
       console.log('Using batched ID for update:', batchedId);
 
       console.log('Calling updateBatchedResult...');
-      updateBatchedResult(batchedId, data);
+      updateBatchedResult(batchedId, editResultData);
       console.log('updateBatchedResult completed');
 
       setIsEditModalOpen(false);
       setEditingResult(null);
+      
+      // Clear form data
+      setEditResultData({
+        itemName: "",
+        itemType: "",
+        location: "",
+        assetNumber: "",
+        classification: "class1",
+        result: "pass",
+        frequency: "twelvemonthly",
+        failureReason: null,
+        actionTaken: null,
+        notes: null,
+      });
+      setAssetNumberError("");
 
       toast({
         title: "Item Updated",
-        description: "Test result has been successfully updated.",
+        description: "Test result has been successfully updated with your asset number.",
       });
 
-      console.log('=== handleSaveEdit completed successfully ===');
+      console.log('=== handleUpdateResult completed successfully ===');
     } catch (error) {
-      console.error('=== Error in handleSaveEdit ===');
+      console.error('=== Error in handleUpdateResult ===');
       console.error('Error details:', error);
       console.error('Error stack:', (error as Error).stack);
 
       toast({
         title: "Update Failed",
         description: `Error updating test result: ${(error as Error).message}`,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDeleteResult = (result: BatchedTestResult) => {
-    // Store the original batched result for deletion
-    const testResult: TestResult = {
-      id: parseInt(result.id.replace('temp_', '')),
-      sessionId: sessionData?.session?.id || 0,
-      assetNumber: result.assetNumber || '1',
-      itemName: result.itemName,
-      itemType: result.itemType,
-      location: result.location,
-      classification: result.classification as any,
-      result: result.result as any,
-      frequency: result.frequency as any,
-      failureReason: result.failureReason || null,
-      actionTaken: result.actionTaken || null,
-      notes: result.notes || null,
-      photoData: result.photoData || null,
-      visionInspection: result.visionInspection,
-      electricalTest: result.electricalTest,
-      createdAt: new Date(result.timestamp),
-      updatedAt: new Date(result.timestamp),
-      maintenanceType: null,
-      dischargeTest: false,
-      switchingTest: false,
-      chargingTest: false,
-      manufacturerInfo: null,
-      installationDate: null,
-      globeType: null,
-    };
-
-    // Store the original batched result ID for deletion
-    setDeletingResult({ ...testResult, originalBatchedId: result.id } as any);
-    setShowDeleteConfirm(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!deletingResult) return;
-
-    try {
-      // Use the original batched ID for deletion from local storage
-      const batchedId = (deletingResult as any).originalBatchedId || `temp_${deletingResult.id}`;
-      await removeBatchedResult(batchedId);
-      setShowDeleteConfirm(false);
-      setDeletingResult(null);
-      toast({
-        title: "Item Deleted",
-        description: "Test result has been successfully deleted.",
-      });
-    } catch (error) {
-      console.error('Error deleting result:', error);
-      toast({
-        title: "Delete Failed",
-        description: "There was an error deleting the test result.",
         variant: "destructive",
       });
     }
@@ -603,32 +707,13 @@ export default function ReportPreview() {
         onClose={() => setIsEditModalOpen(false)}
         title="Edit Test Result"
       >
-        <form onSubmit={(e) => {
-          console.log('=== FORM ONSUBMIT TRIGGERED ===');
-          console.log('Event:', e);
-
-          editForm.handleSubmit(
-            (data) => {
-              console.log('=== FORM VALIDATION PASSED ===');
-              console.log('Form submitted with data:', data);
-              handleSaveEdit(data);
-            },
-            (errors) => {
-              console.log('=== FORM VALIDATION FAILED ===');
-              console.log('Form validation errors:', errors);
-              toast({
-                title: "Validation Error",
-                description: "Please check all required fields.",
-                variant: "destructive",
-              });
-            }
-          )(e);
-        }} className="space-y-4">
+        <div className="space-y-4">
           <div>
             <Label htmlFor="edit-itemName">Item Name</Label>
             <Input
               id="edit-itemName"
-              {...editForm.register('itemName')}
+              value={editResultData.itemName}
+              onChange={(e) => setEditResultData(prev => ({ ...prev, itemName: e.target.value }))}
               className="text-base"
             />
           </div>
@@ -637,7 +722,8 @@ export default function ReportPreview() {
             <Label htmlFor="edit-itemType">Item Type</Label>
             <Input
               id="edit-itemType"
-              {...editForm.register('itemType')}
+              value={editResultData.itemType}
+              onChange={(e) => setEditResultData(prev => ({ ...prev, itemType: e.target.value }))}
               className="text-base"
             />
           </div>
@@ -646,16 +732,31 @@ export default function ReportPreview() {
             <Label htmlFor="edit-location">Location</Label>
             <Input
               id="edit-location"
-              {...editForm.register('location')}
+              value={editResultData.location}
+              onChange={(e) => setEditResultData(prev => ({ ...prev, location: e.target.value }))}
               className="text-base"
             />
           </div>
 
           <div>
+            <Label htmlFor="edit-assetNumber">Asset Number</Label>
+            <Input
+              id="edit-assetNumber"
+              value={editResultData.assetNumber}
+              onChange={(e) => handleAssetNumberChange(e.target.value)}
+              className={`text-base ${assetNumberError ? 'border-red-500' : ''}`}
+              placeholder="Enter asset number"
+            />
+            {assetNumberError && (
+              <div className="text-red-500 text-sm mt-1">{assetNumberError}</div>
+            )}
+          </div>
+
+          <div>
             <Label htmlFor="edit-classification">Classification</Label>
             <Select 
-              value={editForm.watch('classification')} 
-              onValueChange={(value) => editForm.setValue('classification', value as any)}
+              value={editResultData.classification} 
+              onValueChange={(value) => setEditResultData(prev => ({ ...prev, classification: value as any }))}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -672,8 +773,8 @@ export default function ReportPreview() {
           <div>
             <Label htmlFor="edit-result">Test Result</Label>
             <Select 
-              value={editForm.watch('result')} 
-              onValueChange={(value) => editForm.setValue('result', value as any)}
+              value={editResultData.result} 
+              onValueChange={(value) => setEditResultData(prev => ({ ...prev, result: value as any }))}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -688,8 +789,8 @@ export default function ReportPreview() {
           <div>
             <Label htmlFor="edit-frequency">Test Frequency</Label>
             <Select 
-              value={editForm.watch('frequency')} 
-              onValueChange={(value) => editForm.setValue('frequency', value as any)}
+              value={editResultData.frequency} 
+              onValueChange={handleFrequencyChange}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -704,13 +805,13 @@ export default function ReportPreview() {
             </Select>
           </div>
 
-          {editForm.watch('result') === 'fail' && (
+          {editResultData.result === 'fail' && (
             <>
               <div>
                 <Label htmlFor="edit-failureReason">Failure Reason</Label>
                 <Select 
-                  value={editForm.watch('failureReason') || ''} 
-                  onValueChange={(value) => editForm.setValue('failureReason', value || null)}
+                  value={editResultData.failureReason || ''} 
+                  onValueChange={(value) => setEditResultData(prev => ({ ...prev, failureReason: value || null }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select reason" />
@@ -728,8 +829,8 @@ export default function ReportPreview() {
               <div>
                 <Label htmlFor="edit-actionTaken">Action Taken</Label>
                 <Select 
-                  value={editForm.watch('actionTaken') || ''} 
-                  onValueChange={(value) => editForm.setValue('actionTaken', value || null)}
+                  value={editResultData.actionTaken || ''} 
+                  onValueChange={(value) => setEditResultData(prev => ({ ...prev, actionTaken: value || null }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select action" />
@@ -745,7 +846,8 @@ export default function ReportPreview() {
                 <Label htmlFor="edit-notes">Notes</Label>
                 <Textarea
                   id="edit-notes"
-                  {...editForm.register('notes')}
+                  value={editResultData.notes || ''}
+                  onChange={(e) => setEditResultData(prev => ({ ...prev, notes: e.target.value || null }))}
                   placeholder="Additional notes..."
                   className="text-base"
                 />
@@ -763,81 +865,19 @@ export default function ReportPreview() {
               Cancel
             </Button>
             <Button 
-              type="submit" 
+              type="button" 
               className="flex-1 bg-primary"
-              onClick={(e) => {
-                console.log('=== SAVE BUTTON CLICKED ===');
-                console.log('Button event:', e);
-                console.log('Form state:', editForm.formState);
-                console.log('Form values:', editForm.getValues());
-                console.log('Form errors:', editForm.formState.errors);
-              }}
+              onClick={handleUpdateResult}
+              disabled={!!assetNumberError || !editResultData.assetNumber.trim()}
             >
-              Save Changes
+              Update Result
             </Button>
           </div>
-        </form>
+        </div>
       </Modal>
 
-      {/* Fixed Bottom Export Options */}
-      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 p-4 space-y-3">
-        {/* Submit Results Button - Only show if there are batched results */}
-        {batchedResults.length > 0 && (
-          <Button 
-            onClick={async () => {
-              await submitBatch();
-              // After successful submission, redirect to service selection
-              setLocation('/');
-              toast({
-                title: "Report Submitted Successfully",
-                description: "Ready to start a new test session.",
-              });
-            }}
-            disabled={isSubmittingBatch}
-            className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-sm font-medium touch-button"
-          >
-            {isSubmittingBatch ? (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                Submitting Report...
-              </>
-            ) : (
-              <>
-                <FileText className="h-4 w-4 mr-2" />
-                Submit Report ({batchedResults.length} items)
-              </>
-            )}
-          </Button>
-        )}
-
-        <div className="text-center">
-          <div className="text-sm font-medium text-gray-700">Export Report</div>
-          <div className="text-xs text-gray-500">Choose your preferred format</div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <Button 
-            onClick={handleExportPDF}
-            className="bg-red-600 hover:bg-red-700 text-white py-3 text-sm font-medium touch-button"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            PDF Preview
-          </Button>
-          <Button 
-            onClick={handleExportExcel}
-            className="bg-blue-600 hover:bg-blue-700 text-white py-3 text-sm font-medium touch-button"
-          >
-            📊 Excel Preview
-          </Button>
-        </div>
-        <Button 
-          onClick={handleNewReport}
-          variant="outline"
-          className="w-full py-3 text-sm font-medium touch-button border-red-300 text-red-600 hover:bg-red-50"
-        >
-          <Trash2 className="h-4 w-4 mr-2" />
-          Cancel Report
-        </Button>
-      </div>
+      {/* Delete Result Functions */}
+      {/* Note: handleDeleteResult and confirmDelete functions should be added */}
 
       {/* Cancel Report Confirmation Dialog */}
       <AlertDialog open={showNewReportConfirm} onOpenChange={setShowNewReportConfirm}>
