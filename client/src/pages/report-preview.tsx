@@ -58,6 +58,60 @@ export default function ReportPreview() {
 
   const { session, summary } = sessionData;
 
+  /**
+   * Helper function to find the next available asset number within a range
+   * @param usedNumbers - Set of asset numbers already in use
+   * @param start - Starting number for the range (1 for monthly, 10001 for 5-yearly)
+   * @returns Next available asset number in the specified range
+   */
+  const getNextAvailableAssetNumber = (usedNumbers: Set<number>, start: number): number => {
+    let candidate = start;
+    
+    // Keep incrementing until we find an unused number
+    while (usedNumbers.has(candidate)) {
+      candidate++;
+    }
+    
+    return candidate;
+  };
+
+  /**
+   * Generate unique asset number for item being edited
+   * Takes into account manually edited asset numbers and finds next available slots
+   * @param editingResultId - ID of the result being changed
+   * @param newFrequency - New frequency for the result
+   * @returns Next available asset number for the frequency type
+   */
+  const generateUniqueAssetNumber = (editingResultId: string, newFrequency: string): string => {
+    // Guard against missing results
+    if (!batchedResults.length) {
+      console.warn('generateUniqueAssetNumber: No batched results available');
+      return newFrequency === 'fiveyearly' ? '10001' : '1';
+    }
+
+    // Get all existing asset numbers, excluding the one being changed
+    const usedNumbers = new Set<number>();
+    
+    batchedResults.forEach((result: BatchedTestResult) => {
+      // Skip the result being changed, as it will get a new number
+      if (result.id === editingResultId) {
+        return;
+      }
+      
+      // Parse asset number and add to used set if valid
+      const assetNum = parseInt(result.assetNumber || '');
+      if (!isNaN(assetNum) && assetNum > 0) {
+        usedNumbers.add(assetNum);
+      }
+    });
+
+    // Find next available asset number for the new frequency
+    const startNumber = newFrequency === 'fiveyearly' ? 10001 : 1;
+    const nextAvailable = getNextAvailableAssetNumber(usedNumbers, startNumber);
+    
+    return nextAvailable.toString();
+  };
+
   // Sort batched results by frequency type and asset number
   const sortResultsByAssetNumber = (results: BatchedTestResult[]): BatchedTestResult[] => {
     return [...results].sort((a, b) => {
@@ -283,19 +337,22 @@ export default function ReportPreview() {
         const originalIsFiveYearly = originalFrequency === 'fiveyearly';
         const newIsFiveYearly = newFrequency === 'fiveyearly';
 
-        // If frequency category changed, update asset number and renumber all items
+        // If frequency category changed, assign next available asset number
         if (originalIsFiveYearly !== newIsFiveYearly) {
-          console.log('Frequency category changed, renumbering all items...');
+          console.log('Frequency category changed, finding next available asset number...');
           
-          const newAssetNumber = renumberAssets(originalResult.id, newFrequency);
+          const newAssetNumber = generateUniqueAssetNumber(originalResult.id, newFrequency);
           
           console.log(`Asset number updated: ${originalResult.assetNumber} -> ${newAssetNumber}`);
           data.assetNumber = newAssetNumber;
 
           toast({
-            title: "Items Renumbered",
-            description: `All items have been renumbered. Asset #${originalResult.assetNumber} is now #${newAssetNumber}.`,
+            title: "Asset Number Updated",
+            description: `Item assigned asset number ${newAssetNumber} to prevent duplicates.`,
           });
+        } else {
+          // If frequency didn't change category, keep the existing asset number
+          data.assetNumber = originalResult.assetNumber;
         }
       }
 

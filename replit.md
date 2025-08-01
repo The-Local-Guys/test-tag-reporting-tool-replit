@@ -217,3 +217,10 @@ Changelog:
   - Implemented clean TypeScript with inline comments for maintainability
   - Updated both admin dashboard and use-session hook to use improved asset numbering logic
   - Ensured asset numbers remain unique within sessions even with manual user edits
+- August 1, 2025. Extended duplicate prevention to regular technician report preview:
+  - Added generateUniqueAssetNumber function to prevent asset number duplicates during manual edits
+  - Implemented intelligent asset number allocation for technicians editing items in report preview
+  - Enhanced frequency change handling to assign next available asset number instead of sequential renumbering
+  - Added getNextAvailableAssetNumber helper function to technician workflow for consistent duplicate prevention
+  - Preserved existing asset numbers when frequency stays within same category (monthly vs 5-yearly)
+  - Unified asset numbering logic across both admin dashboard and technician report preview interfaces
