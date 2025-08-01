@@ -210,3 +210,10 @@ Changelog:
   - Added real-time duplicate detection within session to prevent conflicts
   - Enhanced add item modal UI with dynamic placeholders and validation messages
   - Added save button disable functionality when validation errors are present
+- August 1, 2025. Rewritten renumberAssets function with intelligent asset number allocation:
+  - Created getNextAvailableAssetNumber helper function for finding unused numbers in ranges
+  - Enhanced renumberAssets to respect manually edited asset numbers and find next available slots
+  - Added comprehensive guards against missing session data and invalid asset numbers
+  - Implemented clean TypeScript with inline comments for maintainability
+  - Updated both admin dashboard and use-session hook to use improved asset numbering logic
+  - Ensured asset numbers remain unique within sessions even with manual user edits

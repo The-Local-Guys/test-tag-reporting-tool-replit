@@ -309,52 +309,93 @@ export function useSession() {
   /**
    * Renumbers all assets when frequency categories change
    */
-  const renumberAssets = (updatedResultId: string, newFrequency: string) => {
-    // Create a temporary array with the updated item
-    const tempResults = batchedResults.map(r => 
-      r.id === updatedResultId ? { ...r, frequency: newFrequency } : r
+  /**
+   * Helper function to find the next available asset number within a range
+   * @param usedNumbers - Set of asset numbers already in use
+   * @param start - Starting number for the range (1 for monthly, 10001 for 5-yearly)
+   * @returns Next available asset number in the specified range
+   */
+  const getNextAvailableAssetNumber = (usedNumbers: Set<number>, start: number): number => {
+    let candidate = start;
+    
+    // Keep incrementing until we find an unused number
+    while (usedNumbers.has(candidate)) {
+      candidate++;
+    }
+    
+    return candidate;
+  };
+
+  /**
+   * Renumber assets to ensure unique asset numbers within the session
+   * Takes into account manually edited asset numbers and finds next available slots
+   * @param updatedResultId - ID of the result being changed
+   * @param newFrequency - New frequency for the changing result
+   * @returns Asset number assigned to the updated result
+   */
+  const renumberAssets = (updatedResultId: string, newFrequency: string): string => {
+    // Guard against missing results
+    if (!batchedResults.length) {
+      console.warn('renumberAssets: No batched results available');
+      return newFrequency === 'fiveyearly' ? '10001' : '1';
+    }
+
+    // Get all existing asset numbers, excluding the one being changed
+    const usedNumbers = new Set<number>();
+    
+    batchedResults.forEach((result: BatchedTestResult) => {
+      // Skip the result being changed, as it will get a new number
+      if (result.id === updatedResultId) {
+        return;
+      }
+      
+      // Parse asset number and add to used set if valid
+      const assetNum = parseInt(result.assetNumber || '');
+      if (!isNaN(assetNum) && assetNum > 0) {
+        usedNumbers.add(assetNum);
+      }
+    });
+
+    // Find next available asset number for the new frequency
+    const startNumber = newFrequency === 'fiveyearly' ? 10001 : 1;
+    const nextAvailable = getNextAvailableAssetNumber(usedNumbers, startNumber);
+    const newAssetNumber = nextAvailable.toString();
+
+    // Update the specific result with new frequency and asset number
+    const updatedResults = batchedResults.map(r => 
+      r.id === updatedResultId 
+        ? { ...r, frequency: newFrequency, assetNumber: newAssetNumber }
+        : r
     );
 
-    // Separate into monthly and 5-yearly groups
-    const monthlyItems = tempResults.filter(r => r.frequency !== 'fiveyearly');
-    const fiveYearlyItems = tempResults.filter(r => r.frequency === 'fiveyearly');
+    // Update state with the modified results
+    setBatchedResults(updatedResults);
 
-    // Renumber monthly items (1, 2, 3...)
-    monthlyItems.forEach((item, index) => {
-      item.assetNumber = (index + 1).toString();
-    });
+    // Recalculate asset counts after the change
+    const monthlyCount = updatedResults.filter(r => r.frequency !== 'fiveyearly').length;
+    const fiveYearlyCount = updatedResults.filter(r => r.frequency === 'fiveyearly').length;
 
-    // Renumber 5-yearly items (10001, 10002, 10003...)
-    fiveYearlyItems.forEach((item, index) => {
-      item.assetNumber = (10001 + index).toString();
-    });
-
-    // Combine and update state
-    const allUpdatedResults = [...monthlyItems, ...fiveYearlyItems];
-    setBatchedResults(allUpdatedResults);
-
-    // Update asset counts to reflect the new groupings
     setAssetCounts({
-      monthly: monthlyItems.length,
-      fiveYearly: fiveYearlyItems.length
+      monthly: monthlyCount,
+      fiveYearly: fiveYearlyCount
     });
 
     // Update counters based on new counts
-    setMonthlyAssetCounter(monthlyItems.length);
-    setFiveYearlyAssetCounter(10000 + fiveYearlyItems.length);
+    setMonthlyAssetCounter(monthlyCount);
+    setFiveYearlyAssetCounter(10000 + fiveYearlyCount);
     
     // Save counters to localStorage
     if (sessionId) {
-      localStorage.setItem(`monthlyCounter_${sessionId}`, monthlyItems.length.toString());
-      localStorage.setItem(`fiveYearlyCounter_${sessionId}`, (10000 + fiveYearlyItems.length).toString());
+      localStorage.setItem(`monthlyCounter_${sessionId}`, monthlyCount.toString());
+      localStorage.setItem(`fiveYearlyCounter_${sessionId}`, (10000 + fiveYearlyCount).toString());
     }
 
-    // Save to localStorage
+    // Save updated results to localStorage
     if (sessionId) {
-      localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(allUpdatedResults));
+      localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(updatedResults));
     }
 
-    return allUpdatedResults.find(r => r.id === updatedResultId)?.assetNumber || '1';
+    return newAssetNumber;
   };
 
   const updateResultMutation = useMutation({

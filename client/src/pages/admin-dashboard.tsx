@@ -539,6 +539,65 @@ export default function AdminDashboard() {
   };
 
   /**
+   * Helper function to find the next available asset number within a range
+   * @param usedNumbers - Set of asset numbers already in use
+   * @param start - Starting number for the range (1 for monthly, 10001 for 5-yearly)
+   * @returns Next available asset number in the specified range
+   */
+  const getNextAvailableAssetNumber = (usedNumbers: Set<number>, start: number): number => {
+    let candidate = start;
+    
+    // Keep incrementing until we find an unused number
+    while (usedNumbers.has(candidate)) {
+      candidate++;
+    }
+    
+    return candidate;
+  };
+
+  /**
+   * Renumber assets to ensure unique asset numbers within the session
+   * Takes into account manually edited asset numbers and finds next available slots
+   * @param changingResultId - ID of the result being changed (optional)
+   * @param newFrequency - New frequency for the changing result (optional)
+   * @returns Next available asset number for the frequency type
+   */
+  const renumberAssets = (changingResultId?: number, newFrequency?: string): string => {
+    // Guard against missing session data
+    if (!viewingSession?.results) {
+      console.warn('renumberAssets: viewingSession or results is missing');
+      return newFrequency === 'fiveyearly' ? '10001' : '1';
+    }
+
+    // Get all existing asset numbers, excluding the one being changed
+    const usedNumbers = new Set<number>();
+    
+    viewingSession.results.forEach((result: any) => {
+      // Skip the result being changed, as it will get a new number
+      if (changingResultId && result.id === changingResultId) {
+        return;
+      }
+      
+      // Parse asset number and add to used set if valid
+      const assetNum = parseInt(result.assetNumber);
+      if (!isNaN(assetNum) && assetNum > 0) {
+        usedNumbers.add(assetNum);
+      }
+    });
+
+    // If we're updating a specific result's frequency, get the next available number for that frequency
+    if (newFrequency) {
+      const startNumber = newFrequency === 'fiveyearly' ? 10001 : 1;
+      const nextAvailable = getNextAvailableAssetNumber(usedNumbers, startNumber);
+      return nextAvailable.toString();
+    }
+
+    // If no specific frequency provided, default to monthly frequency logic
+    const nextAvailable = getNextAvailableAssetNumber(usedNumbers, 1);
+    return nextAvailable.toString();
+  };
+
+  /**
    * Calculate asset number counts for monthly and 5-yearly frequencies
    * Used to determine next available asset numbers when editing frequency
    */
