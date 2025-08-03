@@ -33,6 +33,23 @@ export interface BatchedTestResult {
 }
 
 /**
+ * Helper function to find the next available asset number within a range
+ * @param usedNumbers - Set of asset numbers already in use
+ * @param start - Starting number for the range (1 for monthly, 10001 for 5-yearly)
+ * @returns Next available asset number in the specified range
+ */
+const getNextAvailableAssetNumber = (usedNumbers: Set<number>, start: number): number => {
+  let candidate = start;
+  
+  // Keep incrementing until we find an unused number
+  while (usedNumbers.has(candidate)) {
+    candidate++;
+  }
+  
+  return candidate;
+};
+
+/**
  * Main hook for managing test sessions and results with batched submission
  * Stores results locally until final report submission to reduce server requests
  * Features automatic asset numbering and comprehensive duplicate prevention
@@ -92,13 +109,51 @@ export function useSession() {
     enabled: !!sessionId,
   });
 
-  // Calculate local asset progress from current counters
+  // Calculate local asset progress from actual used numbers (accounts for gaps)
   const getLocalAssetProgress = () => {
+    // Collect all existing asset numbers
+    const usedNumbers = new Set<number>();
+    
+    // Add numbers from batched results
+    batchedResults.forEach((result: BatchedTestResult) => {
+      const assetNum = parseInt(result.assetNumber || '');
+      if (!isNaN(assetNum) && assetNum > 0) {
+        usedNumbers.add(assetNum);
+      }
+    });
+    
+    // Add manually entered asset numbers from localStorage to prevent conflicts
+    const manuallyEnteredKey = `manuallyEnteredAssetNumbers_${sessionId}`;
+    const manuallyEnteredStored = localStorage.getItem(manuallyEnteredKey);
+    if (manuallyEnteredStored) {
+      const manuallyEnteredAssetNumbers = new Set<string>(JSON.parse(manuallyEnteredStored));
+      Array.from(manuallyEnteredAssetNumbers).forEach(manualNumber => {
+        const assetNum = parseInt(manualNumber);
+        if (!isNaN(assetNum) && assetNum > 0) {
+          usedNumbers.add(assetNum);
+        }
+      });
+    }
+
+    // Find next available numbers using gap-filling logic
+    const nextMonthly = getNextAvailableAssetNumber(usedNumbers, 1);
+    const nextFiveYearly = getNextAvailableAssetNumber(usedNumbers, 10001);
+    
+    // Count items by frequency category
+    const monthlyCount = batchedResults.filter(r => 
+      r.frequency === 'threemonthly' || 
+      r.frequency === 'sixmonthly' || 
+      r.frequency === 'twelvemonthly' || 
+      r.frequency === 'twentyfourmonthly'
+    ).length;
+    
+    const fiveYearlyCount = batchedResults.filter(r => r.frequency === 'fiveyearly').length;
+    
     return {
-      nextMonthly: monthlyAssetCounter + 1,
-      nextFiveYearly: fiveYearlyAssetCounter + 1,
-      monthlyCount: monthlyAssetCounter,
-      fiveYearlyCount: fiveYearlyAssetCounter - 10000,
+      nextMonthly,
+      nextFiveYearly,
+      monthlyCount,
+      fiveYearlyCount,
     };
   };
 
@@ -348,22 +403,7 @@ export function useSession() {
   /**
    * Renumbers all assets when frequency categories change
    */
-  /**
-   * Helper function to find the next available asset number within a range
-   * @param usedNumbers - Set of asset numbers already in use
-   * @param start - Starting number for the range (1 for monthly, 10001 for 5-yearly)
-   * @returns Next available asset number in the specified range
-   */
-  const getNextAvailableAssetNumber = (usedNumbers: Set<number>, start: number): number => {
-    let candidate = start;
-    
-    // Keep incrementing until we find an unused number
-    while (usedNumbers.has(candidate)) {
-      candidate++;
-    }
-    
-    return candidate;
-  };
+
 
   /**
    * Renumber assets to ensure unique asset numbers within the session
