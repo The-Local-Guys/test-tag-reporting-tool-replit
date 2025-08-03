@@ -135,9 +135,10 @@ export function useSession() {
       });
     }
 
-    // Find next available numbers using gap-filling logic
-    const nextMonthly = getNextAvailableAssetNumber(usedNumbers, 1);
-    const nextFiveYearly = getNextAvailableAssetNumber(usedNumbers, 10001);
+    // Find next available numbers using sequence continuation (not gap-filling)
+    // This respects the real-world workflow where manually changed labels shouldn't be reused
+    const nextMonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(1, monthlyAssetCounter + 1));
+    const nextFiveYearly = getNextAvailableAssetNumber(usedNumbers, Math.max(10001, fiveYearlyAssetCounter + 1));
     
     // Count items by frequency category
     const monthlyCount = batchedResults.filter(r => 
@@ -239,25 +240,25 @@ export function useSession() {
     // Find next available asset number
     let assetNumber: string;
     if (isFiveYearly) {
-      // For 5-yearly items, start from 10001 and find first available
-      let candidate = 10001;
+      // For 5-yearly items, start from current counter + 1 (continue sequence)
+      let candidate = Math.max(10001, fiveYearlyAssetCounter + 1);
       while (usedNumbers.has(candidate)) {
         candidate++;
       }
       assetNumber = candidate.toString();
-      // Update counter to at least this number
-      setFiveYearlyAssetCounter(Math.max(fiveYearlyAssetCounter, candidate));
-      localStorage.setItem(`fiveYearlyCounter_${sessionId}`, Math.max(fiveYearlyAssetCounter, candidate).toString());
+      // Update counter to this number
+      setFiveYearlyAssetCounter(candidate);
+      localStorage.setItem(`fiveYearlyCounter_${sessionId}`, candidate.toString());
     } else {
-      // For monthly items, start from 1 and find first available
-      let candidate = 1;
+      // For monthly items, start from current counter + 1 (continue sequence)
+      let candidate = Math.max(1, monthlyAssetCounter + 1);
       while (usedNumbers.has(candidate)) {
         candidate++;
       }
       assetNumber = candidate.toString();
-      // Update counter to at least this number
-      setMonthlyAssetCounter(Math.max(monthlyAssetCounter, candidate));
-      localStorage.setItem(`monthlyCounter_${sessionId}`, Math.max(monthlyAssetCounter, candidate).toString());
+      // Update counter to this number  
+      setMonthlyAssetCounter(candidate);
+      localStorage.setItem(`monthlyCounter_${sessionId}`, candidate.toString());
     }
     
     const newResult: BatchedTestResult = {
