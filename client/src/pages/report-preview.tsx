@@ -309,13 +309,26 @@ export default function ReportPreview() {
     setShowNewReportConfirm(false);
   };
 
-  const handleNewJob = () => {
-    // Navigate to setup page to start a new job
-    setLocation('/');
-    toast({
-      title: "New Job Started",
-      description: "Ready to begin a fresh test session.",
-    });
+  const handleNewJob = async () => {
+    try {
+      // Submit batched results to database before starting new job
+      console.log('Submitting batch results before finishing job...');
+      await submitBatch();
+      
+      // Navigate to setup page to start a new job
+      setLocation('/');
+      toast({
+        title: "Job Completed",
+        description: "Test results saved successfully. Ready for a new job.",
+      });
+    } catch (error) {
+      console.error('Failed to submit results:', error);
+      toast({
+        title: "Submission Failed",
+        description: "Failed to save test results. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDeleteResult = (result: BatchedTestResult) => {
@@ -713,10 +726,20 @@ export default function ReportPreview() {
         </div>
         <Button 
           onClick={handleNewJob}
-          className="w-full bg-success text-white py-3 font-medium touch-button"
+          disabled={isSubmittingBatch}
+          className="w-full bg-success text-white py-3 font-medium touch-button disabled:opacity-50"
         >
-          <Plus className="mr-2 h-4 w-4" />
-          Finish Job
+          {isSubmittingBatch ? (
+            <>
+              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              Saving Results...
+            </>
+          ) : (
+            <>
+              <Plus className="mr-2 h-4 w-4" />
+              Finish Job
+            </>
+          )}
         </Button>
       </div>
 
