@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { MobileMenuProvider } from "@/contexts/MobileMenuContext";
 import { MobileMenu } from "@/components/mobile-menu";
+import { AppLayout } from "@/components/layout/app-layout";
 import NotFound from "@/pages/not-found";
 import ServiceSelection from "@/pages/service-selection";
 import Setup from "@/pages/setup";
@@ -35,7 +36,9 @@ function Router() {
   if (loginMode === 'admin' && user && (user as any).role && ((user as any).role === 'super_admin' || (user as any).role === 'support_center' || (user as any).role === 'technician')) {
     return (
       <MobileMenuProvider>
-        <AdminDashboard />
+        <AppLayout>
+          <AdminDashboard />
+        </AppLayout>
         <MobileMenu />
       </MobileMenuProvider>
     );
@@ -44,17 +47,19 @@ function Router() {
   // Regular technician interface (for testing mode or regular technicians)
   return (
     <MobileMenuProvider>
-      <Switch>
-        <Route path="/" component={ServiceSelection} />
-        <Route path="/setup" component={Setup} />
-        <Route path="/items" component={ItemSelection} />
-        <Route path="/test" component={TestDetails} />
-        <Route path="/emergency-test" component={EmergencyTestDetails} />
-        <Route path="/failure" component={FailureDetails} />
-        <Route path="/report" component={ReportPreview} />
+      <AppLayout>
+        <Switch>
+          <Route path="/" component={ServiceSelection} />
+          <Route path="/setup" component={Setup} />
+          <Route path="/items" component={ItemSelection} />
+          <Route path="/test" component={TestDetails} />
+          <Route path="/emergency-test" component={EmergencyTestDetails} />
+          <Route path="/failure" component={FailureDetails} />
+          <Route path="/report" component={ReportPreview} />
 
-        <Route component={NotFound} />
-      </Switch>
+          <Route component={NotFound} />
+        </Switch>
+      </AppLayout>
       <MobileMenu />
     </MobileMenuProvider>
   );

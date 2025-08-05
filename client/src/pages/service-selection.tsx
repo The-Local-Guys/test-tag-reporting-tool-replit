@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AppHeader } from "@/components/ui/app-header";
 import { Zap, ShieldAlert, ArrowRight } from "lucide-react";
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
 
@@ -17,29 +16,22 @@ export default function ServiceSelection() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <AppHeader 
-        title="Service Selection" 
-        subtitle="Choose the type of testing service you want to perform"
-        showUserInfo={true}
-      />
+    <div className="max-w-4xl mx-auto p-6">
+      <div className="text-center mb-8">
+        <img 
+          src={logoPath} 
+          alt="The Local Guys" 
+          className="h-24 mx-auto mb-6"
+        />
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Select Testing Service
+        </h1>
+        <p className="text-lg text-gray-600">
+          Choose the type of testing you want to perform today
+        </p>
+      </div>
 
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="text-center mb-8">
-          <img 
-            src={logoPath} 
-            alt="The Local Guys" 
-            className="h-24 mx-auto mb-6"
-          />
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Select Testing Service
-          </h1>
-          <p className="text-lg text-gray-600">
-            Choose the type of testing you want to perform today
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-8">
+      <div className="grid md:grid-cols-2 gap-8">
           {/* Electrical Test and Tag */}
           <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-blue-500">
             <CardHeader className="text-center">
@@ -103,13 +95,10 @@ export default function ServiceSelection() {
           </Card>
         </div>
 
-        <div className="mt-8 text-center">
-          <p className="text-sm text-gray-500">
-            Need help choosing? Contact support for guidance on which service is right for your needs.
-          </p>
-        </div>
-
-
+      <div className="mt-8 text-center">
+        <p className="text-sm text-gray-500">
+          Need help choosing? Contact support for guidance on which service is right for your needs.
+        </p>
       </div>
     </div>
   );
