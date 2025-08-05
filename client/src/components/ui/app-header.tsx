@@ -13,7 +13,7 @@ export function AppHeader({ title, subtitle, showUserInfo = true, children }: Ap
   const { user, logout, isLoggingOut } = useAuth();
 
   return (
-    <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 mb-6 relative z-10">
+    <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 mb-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-xl font-semibold">{title}</h1>
@@ -24,7 +24,7 @@ export function AppHeader({ title, subtitle, showUserInfo = true, children }: Ap
           {showUserInfo && user && (
             <div className="flex items-center space-x-2 text-sm text-blue-100">
               <User className="w-4 h-4" />
-              <span>{(user as any)?.fullName || 'User'}</span>
+              <span>{user.fullName}</span>
             </div>
           )}
           <Button

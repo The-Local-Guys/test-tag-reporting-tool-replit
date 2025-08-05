@@ -2,28 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Mobile-specific styles */
-@layer utilities {
-  .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom, 1rem);
-  }
-  
-  .pt-safe {
-    padding-top: env(safe-area-inset-top, 1rem);
-  }
-}
-
-/* Smooth transitions for mobile interactions */
-@layer components {
-  .touch-button {
-    @apply active:scale-95 transition-transform duration-150;
-  }
-  
-  .mobile-menu-overlay {
-    @apply bg-black/20 backdrop-blur-sm;
-  }
-}
-
 :root {
   --background: 0 0% 100%;
   --foreground: 20 14.3% 4.1%;

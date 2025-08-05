@@ -5,9 +5,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { MobileMenu } from "@/components/mobile-menu";
-import { DesktopHeader } from "@/components/desktop-header";
-import { Breadcrumb } from "@/components/breadcrumb";
 import NotFound from "@/pages/not-found";
 import ServiceSelection from "@/pages/service-selection";
 import Setup from "@/pages/setup";
@@ -34,35 +31,22 @@ function Router() {
   
   // Show admin dashboard if user selected admin mode and has admin privileges (including technicians viewing their own data)
   if (loginMode === 'admin' && user && (user as any).role && ((user as any).role === 'super_admin' || (user as any).role === 'support_center' || (user as any).role === 'technician')) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <DesktopHeader />
-        <MobileMenu />
-        <AdminDashboard />
-      </div>
-    );
+    return <AdminDashboard />;
   }
 
   // Regular technician interface (for testing mode or regular technicians)
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DesktopHeader />
-      <MobileMenu />
-      <Breadcrumb />
-      <main className="pb-safe">
-        <Switch>
-          <Route path="/" component={ServiceSelection} />
-          <Route path="/setup" component={Setup} />
-          <Route path="/items" component={ItemSelection} />
-          <Route path="/test" component={TestDetails} />
-          <Route path="/emergency-test" component={EmergencyTestDetails} />
-          <Route path="/failure" component={FailureDetails} />
-          <Route path="/report" component={ReportPreview} />
+    <Switch>
+      <Route path="/" component={ServiceSelection} />
+      <Route path="/setup" component={Setup} />
+      <Route path="/items" component={ItemSelection} />
+      <Route path="/test" component={TestDetails} />
+      <Route path="/emergency-test" component={EmergencyTestDetails} />
+      <Route path="/failure" component={FailureDetails} />
+      <Route path="/report" component={ReportPreview} />
 
-          <Route component={NotFound} />
-        </Switch>
-      </main>
-    </div>
+      <Route component={NotFound} />
+    </Switch>
   );
 }
 
