@@ -3,9 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Edit2, FileText, CheckCircle, Plus, RotateCcw, LogOut, Trash2 } from 'lucide-react';
+import { Edit2, FileText, CheckCircle, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
-import { useAuth } from '@/hooks/useAuth';
+
 import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 
@@ -38,7 +38,6 @@ export default function ItemSelection() {
   const [customItemName, setCustomItemName] = useState('');
   const [showNewReportConfirm, setShowNewReportConfirm] = useState(false);
   const { sessionData, currentLocation, setCurrentLocation, clearSession } = useSession();
-  const { logout, isLoggingOut } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -100,16 +99,6 @@ export default function ItemSelection() {
               <div className="text-blue-100 text-xs">Items Tested</div>
               <div className="text-2xl font-bold">{summary.totalItems}</div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => logout()}
-              disabled={isLoggingOut}
-              className="bg-white/10 border-white/20 text-white hover:bg-white/20 flex items-center gap-2"
-            >
-              <LogOut className="w-4 h-4" />
-              {isLoggingOut ? "Signing out..." : "Sign out"}
-            </Button>
           </div>
         </div>
       </div>

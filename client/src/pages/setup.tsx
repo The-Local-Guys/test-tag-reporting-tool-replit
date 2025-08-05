@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
-import { Clipboard, ArrowRight, LogOut } from 'lucide-react';
+import { Clipboard, ArrowRight } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocation } from 'wouter';
@@ -21,7 +21,7 @@ import logoPath from '@assets/The Local Guys - with plug wide boarder - png seek
  */
 export default function Setup() {
   const { createSession, isCreatingSession, clearSession } = useSession();
-  const { user, logout, isLoggingOut } = useAuth();
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
   
   // Get current date in Australian Central Time
@@ -88,16 +88,6 @@ export default function Setup() {
             <div className="text-blue-100 text-sm mt-1">Step 1 of 3: Client Setup</div>
           </div>
           <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => logout()}
-              disabled={isLoggingOut}
-              className="bg-white/10 border-white/20 text-white hover:bg-white/20 flex items-center gap-2"
-            >
-              <LogOut className="w-4 h-4" />
-              {isLoggingOut ? "Signing out..." : "Sign out"}
-            </Button>
             <Clipboard className="h-6 w-6" />
           </div>
         </div>
