@@ -103,20 +103,20 @@ export function MobileMenu() {
   const menuItems = getMenuItems(currentMode);
 
   return (
-    <div className="md:hidden fixed top-4 left-4 z-50">
+    <div className="md:hidden fixed top-6 left-4 z-[100]">
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetTrigger asChild>
           <Button 
             variant="outline" 
             size="icon"
-            className="bg-white shadow-lg border-gray-200 hover:bg-gray-50"
+            className="bg-white shadow-lg border-gray-200 hover:bg-gray-50 relative z-[100]"
           >
             <Menu className="h-4 w-4" />
             <span className="sr-only">Open menu</span>
           </Button>
         </SheetTrigger>
         
-        <SheetContent side="left" className="w-[280px] sm:w-[300px]">
+        <SheetContent side="left" className="w-[280px] sm:w-[300px] z-[110]">
           <SheetHeader>
             <SheetTitle className="text-left">Navigation</SheetTitle>
           </SheetHeader>
