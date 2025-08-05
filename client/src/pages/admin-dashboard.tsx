@@ -42,7 +42,7 @@ import {
   Trash2,
   UserCheck,
   UserX,
-  LogOut,
+
   UserPlus,
   Plus,
   ChevronLeft,
@@ -58,7 +58,7 @@ import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek
  * Restricted to super_admin and support_center roles
  */
 export default function AdminDashboard() {
-  const { user, logout, isLoggingOut } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
@@ -1196,16 +1196,6 @@ export default function AdminDashboard() {
             >
               <UserCheck className="w-4 h-4" />
               <span>Change Password</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => logout()}
-              disabled={isLoggingOut}
-              className="flex items-center space-x-2"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>{isLoggingOut ? "Signing out..." : "Sign out"}</span>
             </Button>
           </div>
         </div>
