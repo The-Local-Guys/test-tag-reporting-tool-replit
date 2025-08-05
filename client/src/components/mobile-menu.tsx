@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { LogOut, User, Home, Settings, BarChart3, Smartphone, Calendar } from "lucide-react";
+import { LogOut, User, Home, Settings, Lock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMobileMenu } from "@/contexts/MobileMenuContext";
 import { useLocation } from "wouter";
@@ -65,57 +65,25 @@ export function MobileMenu() {
           {/* Navigation items */}
           <div className="space-y-2">
             <div className="text-sm font-medium text-gray-700 mb-3">Navigation</div>
-            <button
-              onClick={() => {
-                sessionStorage.setItem('loginMode', 'testing');
-                window.location.reload();
-              }}
-              className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
-            >
-              <Home className="w-5 h-5" />
-              <span>Testing Mode</span>
-            </button>
+            <div className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 cursor-not-allowed">
+              <div className="flex items-center space-x-3">
+                <Home className="w-5 h-5 text-gray-400" />
+                <span className="text-gray-400">Testing Mode</span>
+              </div>
+              <Lock className="w-4 h-4 text-gray-400" />
+            </div>
             {typedUser && (typedUser.role === 'super_admin' || typedUser.role === 'support_center' || typedUser.role === 'technician') && (
-              <button
-                onClick={() => {
-                  sessionStorage.setItem('loginMode', 'admin');
-                  window.location.reload();
-                }}
-                className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
-              >
-                <Settings className="w-5 h-5" />
-                <span>Admin Dashboard</span>
-              </button>
+              <div className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 cursor-not-allowed">
+                <div className="flex items-center space-x-3">
+                  <Settings className="w-5 h-5 text-gray-400" />
+                  <span className="text-gray-400">Admin Dashboard</span>
+                </div>
+                <Lock className="w-4 h-4 text-gray-400" />
+              </div>
             )}
           </div>
 
-          {/* Coming soon section */}
-          <div className="space-y-3">
-            <div className="text-sm font-medium text-gray-700">Features</div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                <div className="flex items-center space-x-3">
-                  <BarChart3 className="w-5 h-5 text-gray-400" />
-                  <span className="text-sm text-gray-600">Dashboard Analytics</span>
-                </div>
-                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full">Coming Soon</span>
-              </div>
-              <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                <div className="flex items-center space-x-3">
-                  <Smartphone className="w-5 h-5 text-gray-400" />
-                  <span className="text-sm text-gray-600">Mobile App</span>
-                </div>
-                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full">Coming Soon</span>
-              </div>
-              <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                <div className="flex items-center space-x-3">
-                  <Calendar className="w-5 h-5 text-gray-400" />
-                  <span className="text-sm text-gray-600">Automated Scheduling</span>
-                </div>
-                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full">Coming Soon</span>
-              </div>
-            </div>
-          </div>
+
 
           {/* Sign out button */}
           <div className="pt-4 border-t border-gray-200">
