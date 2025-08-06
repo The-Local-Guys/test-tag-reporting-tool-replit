@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { LogOut, User, Home, Settings, Lock } from "lucide-react";
+import { LogOut, User, Home, Settings, Lock, ExternalLink } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMobileMenu } from "@/contexts/MobileMenuContext";
 import { useLocation } from "wouter";
@@ -85,8 +85,19 @@ export function MobileMenu() {
 
 
 
-          {/* Sign out button */}
-          <div className="pt-4 border-t border-gray-200">
+          {/* Action buttons */}
+          <div className="pt-4 border-t border-gray-200 space-y-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                window.open('https://forms.monday.com/forms/761a950aa279edcb02d48257ced6ecc6?r=use1', '_blank');
+                closeMobileMenu();
+              }}
+              className="w-full flex items-center justify-center gap-2 text-blue-600 border-blue-200 hover:bg-blue-50"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Contact Support
+            </Button>
             <Button
               variant="outline"
               onClick={handleLogout}
