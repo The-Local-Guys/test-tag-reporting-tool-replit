@@ -68,12 +68,16 @@ async function addLetterheadToPage(doc: jsPDF, margin: number, pageWidth: number
       reader.readAsDataURL(letterheadBlob);
     });
     
-    // Add letterhead at full width
-    const letterheadWidth = pageWidth - (margin * 2);
-    const letterheadHeight = 40;
+    // Add letterhead at 100% width and 100% height of the page
+    const pageHeight = doc.internal.pageSize.height;
+    const letterheadWidth = pageWidth;
+    const letterheadHeight = pageHeight;
     
-    doc.addImage(letterheadDataUrl, 'PNG', margin, yPosition, letterheadWidth, letterheadHeight);
-    yPosition += letterheadHeight + 15;
+    // Position at (0, 0) to cover entire page
+    doc.addImage(letterheadDataUrl, 'PNG', 0, 0, letterheadWidth, letterheadHeight);
+    
+    // Return position with top margin for content to start below letterhead branding area
+    yPosition += 60; // Give space for letterhead content at top
   } catch (error) {
     // Fallback - add minimal spacing for consistency
     yPosition += 20;
@@ -119,13 +123,16 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       reader.readAsDataURL(letterheadBlob);
     });
     
-    // Add letterhead at full width - letterhead typically spans the full page width
-    const letterheadWidth = pageWidth - (margin * 2);
-    const letterheadHeight = 40; // Adjust height based on letterhead proportions
+    // Add letterhead at 100% width and 100% height of the page
+    const pageHeight = doc.internal.pageSize.height;
+    const letterheadWidth = pageWidth;
+    const letterheadHeight = pageHeight;
     
-    // Add letterhead at top of page
-    doc.addImage(letterheadDataUrl, 'PNG', margin, yPosition, letterheadWidth, letterheadHeight);
-    yPosition += letterheadHeight + 15;
+    // Position at (0, 0) to cover entire page
+    doc.addImage(letterheadDataUrl, 'PNG', 0, 0, letterheadWidth, letterheadHeight);
+    
+    // Give space for letterhead content at top
+    yPosition += 60;
   } catch (error) {
     // Fallback to logo and text if letterhead fails to load
     try {
