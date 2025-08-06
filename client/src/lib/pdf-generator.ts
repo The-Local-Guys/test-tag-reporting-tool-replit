@@ -68,10 +68,10 @@ async function addLetterheadToPage(doc: jsPDF, margin: number, pageWidth: number
       reader.readAsDataURL(letterheadBlob);
     });
     
-    // Add letterhead at 110% width and 105% height of the page, centered
+    // Add letterhead at 115% width and 112% height of the page, centered
     const pageHeight = doc.internal.pageSize.height;
-    const letterheadWidth = pageWidth * 1.1;
-    const letterheadHeight = pageHeight * 1.05;
+    const letterheadWidth = pageWidth * 1.15;
+    const letterheadHeight = pageHeight * 1.12;
     
     // Center the letterhead on the page
     const xOffset = (pageWidth - letterheadWidth) / 2;
@@ -125,10 +125,10 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       reader.readAsDataURL(letterheadBlob);
     });
     
-    // Add letterhead at 110% width and 105% height of the page, centered
+    // Add letterhead at 115% width and 112% height of the page, centered
     const pageHeight = doc.internal.pageSize.height;
-    const letterheadWidth = pageWidth * 1.1;
-    const letterheadHeight = pageHeight * 1.05;
+    const letterheadWidth = pageWidth * 1.15;
+    const letterheadHeight = pageHeight * 1.12;
     
     // Center the letterhead on the page
     const xOffset = (pageWidth - letterheadWidth) / 2;
