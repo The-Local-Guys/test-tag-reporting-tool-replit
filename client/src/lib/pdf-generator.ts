@@ -68,10 +68,10 @@ async function addLetterheadToPage(doc: jsPDF, margin: number, pageWidth: number
       reader.readAsDataURL(letterheadBlob);
     });
     
-    // Add letterhead at 100% width and 100% height of the page
+    // Add letterhead at 120% width and 115% height of the page
     const pageHeight = doc.internal.pageSize.height;
-    const letterheadWidth = pageWidth;
-    const letterheadHeight = pageHeight;
+    const letterheadWidth = pageWidth * 1.2;
+    const letterheadHeight = pageHeight * 1.15;
     
     // Position at (0, 0) to cover entire page
     doc.addImage(letterheadDataUrl, 'PNG', 0, 0, letterheadWidth, letterheadHeight);
@@ -123,10 +123,10 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       reader.readAsDataURL(letterheadBlob);
     });
     
-    // Add letterhead at 100% width and 100% height of the page
+    // Add letterhead at 120% width and 115% height of the page
     const pageHeight = doc.internal.pageSize.height;
-    const letterheadWidth = pageWidth;
-    const letterheadHeight = pageHeight;
+    const letterheadWidth = pageWidth * 1.2;
+    const letterheadHeight = pageHeight * 1.15;
     
     // Position at (0, 0) to cover entire page
     doc.addImage(letterheadDataUrl, 'PNG', 0, 0, letterheadWidth, letterheadHeight);
