@@ -68,13 +68,15 @@ async function addLetterheadToPage(doc: jsPDF, margin: number, pageWidth: number
       reader.readAsDataURL(letterheadBlob);
     });
     
-    // Add letterhead at 120% width and 115% height of the page
+    // Add letterhead at 110% width and 105% height of the page, centered
     const pageHeight = doc.internal.pageSize.height;
-    const letterheadWidth = pageWidth * 1.2;
-    const letterheadHeight = pageHeight * 1.15;
+    const letterheadWidth = pageWidth * 1.1;
+    const letterheadHeight = pageHeight * 1.05;
     
-    // Position at (0, 0) to cover entire page
-    doc.addImage(letterheadDataUrl, 'PNG', 0, 0, letterheadWidth, letterheadHeight);
+    // Center the letterhead on the page
+    const xOffset = (pageWidth - letterheadWidth) / 2;
+    const yOffset = (pageHeight - letterheadHeight) / 2;
+    doc.addImage(letterheadDataUrl, 'PNG', xOffset, yOffset, letterheadWidth, letterheadHeight);
     
     // Return position with top margin for content to start below letterhead branding area
     yPosition += 60; // Give space for letterhead content at top
@@ -123,13 +125,15 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       reader.readAsDataURL(letterheadBlob);
     });
     
-    // Add letterhead at 120% width and 115% height of the page
+    // Add letterhead at 110% width and 105% height of the page, centered
     const pageHeight = doc.internal.pageSize.height;
-    const letterheadWidth = pageWidth * 1.2;
-    const letterheadHeight = pageHeight * 1.15;
+    const letterheadWidth = pageWidth * 1.1;
+    const letterheadHeight = pageHeight * 1.05;
     
-    // Position at (0, 0) to cover entire page
-    doc.addImage(letterheadDataUrl, 'PNG', 0, 0, letterheadWidth, letterheadHeight);
+    // Center the letterhead on the page
+    const xOffset = (pageWidth - letterheadWidth) / 2;
+    const yOffset = (pageHeight - letterheadHeight) / 2;
+    doc.addImage(letterheadDataUrl, 'PNG', xOffset, yOffset, letterheadWidth, letterheadHeight);
     
     // Give space for letterhead content at top
     yPosition += 60;
