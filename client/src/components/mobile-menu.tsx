@@ -96,7 +96,7 @@ export function MobileMenu() {
               className="w-full flex items-center justify-center gap-2 text-blue-600 border-blue-200 hover:bg-blue-50"
             >
               <ExternalLink className="w-4 h-4" />
-              Contact Support
+              Feedback
             </Button>
             <Button
               variant="outline"
