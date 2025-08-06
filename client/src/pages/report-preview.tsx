@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Modal } from '@/components/ui/modal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Download, Mail, Share, Plus, Edit2, FileText, RefreshCw, Trash2 } from 'lucide-react';
+import { ArrowLeft, Download, Mail, Share, Plus, Edit2, FileText, RefreshCw, Trash2, Check } from 'lucide-react';
 import { useSession, type BatchedTestResult } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
 import { downloadPDF } from '@/lib/pdf-generator';
@@ -30,6 +30,8 @@ export default function ReportPreview() {
   const [showNewReportConfirm, setShowNewReportConfirm] = useState(false);
   const [deletingResult, setDeletingResult] = useState<TestResult | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [showPDFSuccess, setShowPDFSuccess] = useState(false);
   
   // Edit form state with manual asset number tracking
   const [editResultData, setEditResultData] = useState({
@@ -184,6 +186,9 @@ export default function ReportPreview() {
   const results = sortResultsByAssetNumber(batchedResults);
 
   const handleExportPDF = async () => {
+    setIsGeneratingPDF(true);
+    setShowPDFSuccess(false);
+    
     try {
       // Convert batched results to TestResult format for PDF generation
       const convertedResults = results.map((result) => ({
@@ -223,11 +228,23 @@ export default function ReportPreview() {
       };
 
       await downloadPDF(previewData, `test-report-${sessionData.session.clientName.replace(/\s+/g, '-').toLowerCase()}.pdf`);
-      toast({
-        title: "PDF Generated",
-        description: "Your test report has been downloaded successfully.",
-      });
+      
+      // Show success animation
+      setShowPDFSuccess(true);
+      
+      // Hide loading screen after animation
+      setTimeout(() => {
+        setIsGeneratingPDF(false);
+        setShowPDFSuccess(false);
+        toast({
+          title: "PDF Generated",
+          description: "Your test report has been downloaded successfully.",
+        });
+      }, 1500);
+      
     } catch (error) {
+      setIsGeneratingPDF(false);
+      setShowPDFSuccess(false);
       toast({
         title: "Export Failed",
         description: "There was an error generating the PDF report.",
@@ -961,6 +978,33 @@ export default function ReportPreview() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* PDF Generation Loading Overlay */}
+      {isGeneratingPDF && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-8 shadow-2xl max-w-sm w-full mx-4 text-center">
+            {!showPDFSuccess ? (
+              <>
+                <div className="mb-6">
+                  <div className="mx-auto w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Generating Report</h3>
+                <p className="text-gray-600">Please wait while your PDF is being created...</p>
+              </>
+            ) : (
+              <div className={`transition-opacity duration-300 ${showPDFSuccess ? 'opacity-100' : 'opacity-0'}`}>
+                <div className="mb-6">
+                  <div className="mx-auto w-16 h-16 bg-green-500 rounded-full flex items-center justify-center">
+                    <Check className="h-8 w-8 text-white" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-semibold text-green-600 mb-2">Report Generated!</h3>
+                <p className="text-gray-600">Your PDF has been created successfully.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
