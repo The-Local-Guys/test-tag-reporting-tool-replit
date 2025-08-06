@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import type { TestSession, TestResult } from '@shared/schema';
 import logoPath from '@assets/The Local Guys - with plug wide boarder - png seek.png';
+import letterheadPath from '@assets/Letterheads_1754455497882.png';
 
 interface ReportData {
   session: TestSession;
@@ -55,6 +56,32 @@ function getFrequencyLabel(frequency: string): string {
   }
 }
 
+async function addLetterheadToPage(doc: jsPDF, margin: number, pageWidth: number): Promise<number> {
+  let yPosition = margin;
+  
+  try {
+    const letterheadResponse = await fetch(letterheadPath);
+    const letterheadBlob = await letterheadResponse.blob();
+    const letterheadDataUrl = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.readAsDataURL(letterheadBlob);
+    });
+    
+    // Add letterhead at full width
+    const letterheadWidth = pageWidth - (margin * 2);
+    const letterheadHeight = 40;
+    
+    doc.addImage(letterheadDataUrl, 'PNG', margin, yPosition, letterheadWidth, letterheadHeight);
+    yPosition += letterheadHeight + 15;
+  } catch (error) {
+    // Fallback - add minimal spacing for consistency
+    yPosition += 20;
+  }
+  
+  return yPosition;
+}
+
 /**
  * Generates a professionally formatted PDF report for electrical and emergency testing
  * Creates multi-page reports with company branding, test results, and compliance formatting
@@ -82,33 +109,52 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   const margin = 20;
   let yPosition = margin;
 
-  // Add logo
+  // Add letterhead
   try {
-    const logoResponse = await fetch(logoPath);
-    const logoBlob = await logoResponse.blob();
-    const logoDataUrl = await new Promise<string>((resolve) => {
+    const letterheadResponse = await fetch(letterheadPath);
+    const letterheadBlob = await letterheadResponse.blob();
+    const letterheadDataUrl = await new Promise<string>((resolve) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
-      reader.readAsDataURL(logoBlob);
+      reader.readAsDataURL(letterheadBlob);
     });
     
-    // Calculate logo dimensions (make it more square and taller)
-    const logoWidth = 45;
-    const logoHeight = 35; // Taller to make it more square
+    // Add letterhead at full width - letterhead typically spans the full page width
+    const letterheadWidth = pageWidth - (margin * 2);
+    const letterheadHeight = 40; // Adjust height based on letterhead proportions
     
-    // Center the logo
-    doc.addImage(logoDataUrl, 'PNG', pageWidth / 2 - logoWidth / 2, yPosition, logoWidth, logoHeight);
-    yPosition += logoHeight + 10;
+    // Add letterhead at top of page
+    doc.addImage(letterheadDataUrl, 'PNG', margin, yPosition, letterheadWidth, letterheadHeight);
+    yPosition += letterheadHeight + 15;
   } catch (error) {
-    // Fallback to text if logo fails to load
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.text('THE LOCAL GUYS', pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 8;
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
-    doc.text('TEST & TAG', pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 20;
+    // Fallback to logo and text if letterhead fails to load
+    try {
+      const logoResponse = await fetch(logoPath);
+      const logoBlob = await logoResponse.blob();
+      const logoDataUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(logoBlob);
+      });
+      
+      // Calculate logo dimensions (make it more square and taller)
+      const logoWidth = 45;
+      const logoHeight = 35; // Taller to make it more square
+      
+      // Center the logo
+      doc.addImage(logoDataUrl, 'PNG', pageWidth / 2 - logoWidth / 2, yPosition, logoWidth, logoHeight);
+      yPosition += logoHeight + 10;
+    } catch (logoError) {
+      // Final fallback to text
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('THE LOCAL GUYS', pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 8;
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text('TEST & TAG', pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 20;
+    }
   }
 
   // Add header
@@ -192,11 +238,12 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   // Table content
   doc.setFontSize(6);
   doc.setFont('helvetica', 'normal');
-  results.forEach((result, index) => {
+  for (let index = 0; index < results.length; index++) {
+    const result = results[index];
     // Check if we need a new page
     if (yPosition > doc.internal.pageSize.height - 30) {
       doc.addPage();
-      yPosition = margin;
+      yPosition = await addLetterheadToPage(doc, margin, pageWidth);
     }
 
     // Use the actual asset number from the database
@@ -282,7 +329,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     }
 
     yPosition += 6;
-  });
+  }
 
   // Add emergency exit light test criteria details (AS/NZS 2293.2:2019)
   if (session.serviceType === 'emergency_exit_light') {
@@ -291,7 +338,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     // Check if we need a new page
     if (yPosition > doc.internal.pageSize.height - 100) {
       doc.addPage();
-      yPosition = margin;
+      yPosition = await addLetterheadToPage(doc, margin, pageWidth);
     }
     
     // Test criteria section header
@@ -304,10 +351,11 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     doc.setFont('helvetica', 'normal');
     
     // Group results by item and show test details
-    results.forEach((result, index) => {
+    for (let index = 0; index < results.length; index++) {
+      const result = results[index];
       if (yPosition > doc.internal.pageSize.height - 50) {
         doc.addPage();
-        yPosition = margin;
+        yPosition = await addLetterheadToPage(doc, margin, pageWidth);
       }
       
       doc.setFont('helvetica', 'bold');
@@ -343,7 +391,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       }
       
       yPosition += 6; // Space between items
-    });
+    }
   }
 
   // Add footer
@@ -368,7 +416,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   if (failedItemsWithDetails.length > 0) {
     // Add new page for failed items details
     doc.addPage();
-    yPosition = margin;
+    yPosition = await addLetterheadToPage(doc, margin, pageWidth);
     
     // Failed items section header
     doc.setFontSize(16);
@@ -380,7 +428,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       // Check if we need a new page
       if (yPosition > doc.internal.pageSize.height - 120) {
         doc.addPage();
-        yPosition = margin;
+        yPosition = await addLetterheadToPage(doc, margin, pageWidth);
       }
       
       // Item header
