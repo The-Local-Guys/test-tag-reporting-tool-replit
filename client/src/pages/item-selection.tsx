@@ -37,8 +37,6 @@ export default function ItemSelection() {
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [customItemName, setCustomItemName] = useState('');
   const [showNewReportConfirm, setShowNewReportConfirm] = useState(false);
-  const [isCancelling, setIsCancelling] = useState(false);
-  const [showCancelSuccess, setShowCancelSuccess] = useState(false);
   const { sessionData, currentLocation, setCurrentLocation, clearSession, sessionId } = useSession();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -66,8 +64,6 @@ export default function ItemSelection() {
   };
 
   const confirmNewReport = async () => {
-    setIsCancelling(true);
-    
     // Try both sessionData.session.id and the sessionId from hook
     const currentSessionId = sessionData?.session?.id || sessionId;
     
@@ -75,14 +71,11 @@ export default function ItemSelection() {
       // If no session ID, just clear local data
       clearSession();
       localStorage.removeItem('currentSession');
-      
-      // Show success feedback
-      setIsCancelling(false);
-      setShowCancelSuccess(true);
-      setTimeout(() => {
-        setLocation('/');
-      }, 1000);
-      
+      setLocation('/');
+      toast({
+        title: "Report Cancelled",
+        description: "The report has been discarded. Ready to start fresh.",
+      });
       setShowNewReportConfirm(false);
       return;
     }
@@ -95,16 +88,14 @@ export default function ItemSelection() {
       clearSession();
       localStorage.removeItem('currentSession');
       
-      // Show success feedback for 1 second
-      setIsCancelling(false);
-      setShowCancelSuccess(true);
+      // Navigate to setup page to start a new report
+      setLocation('/');
       
-      setTimeout(() => {
-        setLocation('/');
-      }, 1000);
-      
+      toast({
+        title: "Report Deleted",
+        description: "The report has been permanently deleted from the database.",
+      });
     } catch (error) {
-      setIsCancelling(false);
       toast({
         title: "Delete Failed",
         description: "Failed to delete the report. Please try again.",
@@ -258,29 +249,13 @@ export default function ItemSelection() {
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel Report?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the current report and all test results from the database. This action cannot be undone.
+              This will discard the current report and all test results without saving. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isCancelling || showCancelSuccess}>Keep Report</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmNewReport} 
-              disabled={isCancelling || showCancelSuccess}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {isCancelling ? (
-                <>
-                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  Deleting...
-                </>
-              ) : showCancelSuccess ? (
-                <>
-                  <CheckCircle className="mr-2 h-4 w-4 text-green-400" />
-                  Report Cancelled
-                </>
-              ) : (
-                "Yes, Cancel Report"
-              )}
+            <AlertDialogCancel>Keep Report</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmNewReport} className="bg-red-600 hover:bg-red-700">
+              Yes, Cancel Report
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
