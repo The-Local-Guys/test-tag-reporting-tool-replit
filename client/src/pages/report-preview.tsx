@@ -314,8 +314,17 @@ export default function ReportPreview() {
   };
 
   const confirmNewReport = async () => {
-    if (!sessionData?.session?.id) {
+    console.log('Attempting to cancel report. Session data:', sessionData);
+    console.log('Session ID from sessionData:', sessionData?.session?.id);
+    console.log('Session ID from hook:', sessionId);
+    
+    // Try both sessionData.session.id and the sessionId from hook
+    const currentSessionId = sessionData?.session?.id || sessionId;
+    console.log('Using session ID:', currentSessionId);
+    
+    if (!currentSessionId) {
       // If no session ID, just clear local data
+      console.log('No session ID found, clearing local data only');
       clearSession();
       localStorage.removeItem('currentSession');
       setLocation('/');
@@ -328,8 +337,10 @@ export default function ReportPreview() {
     }
 
     try {
+      console.log(`Deleting session ${currentSessionId} from database`);
       // Delete the session from the database
-      await deleteResource(`/api/sessions/${sessionData.session.id}`, "report");
+      const response = await deleteResource(`/api/sessions/${currentSessionId}`, "report");
+      console.log('Delete response:', response);
       
       // Clear current session data
       clearSession();
@@ -343,6 +354,7 @@ export default function ReportPreview() {
         description: "The report has been permanently deleted from the database.",
       });
     } catch (error) {
+      console.error('Delete error:', error);
       toast({
         title: "Delete Failed",
         description: "Failed to delete the report. Please try again.",
