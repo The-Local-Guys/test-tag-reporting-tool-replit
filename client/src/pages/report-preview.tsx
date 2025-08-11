@@ -1002,7 +1002,13 @@ export default function ReportPreview() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep Report</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmNewReport} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction 
+              onClick={() => {
+                console.log('=== CONFIRM DELETE BUTTON CLICKED ===');
+                confirmNewReport();
+              }} 
+              className="bg-red-600 hover:bg-red-700"
+            >
               Yes, Cancel Report
             </AlertDialogAction>
           </AlertDialogFooter>
