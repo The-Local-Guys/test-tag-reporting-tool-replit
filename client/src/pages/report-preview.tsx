@@ -310,6 +310,8 @@ export default function ReportPreview() {
 
 
   const handleNewReport = () => {
+    console.log('=== CANCEL BUTTON CLICKED ===');
+    alert('Cancel button was clicked!'); // Temporary alert for testing
     console.log('handleNewReport clicked - showing confirmation dialog');
     setShowNewReportConfirm(true);
   };
