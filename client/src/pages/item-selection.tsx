@@ -5,7 +5,7 @@ import { Modal } from '@/components/ui/modal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Edit2, FileText, CheckCircle, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
-
+import { deleteResource } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 
@@ -37,7 +37,7 @@ export default function ItemSelection() {
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [customItemName, setCustomItemName] = useState('');
   const [showNewReportConfirm, setShowNewReportConfirm] = useState(false);
-  const { sessionData, currentLocation, setCurrentLocation, clearSession } = useSession();
+  const { sessionData, currentLocation, setCurrentLocation, clearSession, sessionId } = useSession();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -63,14 +63,46 @@ export default function ItemSelection() {
     setShowNewReportConfirm(true);
   };
 
-  const confirmNewReport = () => {
-    // Clear any existing session data and navigate to setup page
-    clearSession();
-    setLocation('/');
-    toast({
-      title: "Report Cancelled",
-      description: "The report has been discarded. Ready to start fresh.",
-    });
+  const confirmNewReport = async () => {
+    // Try both sessionData.session.id and the sessionId from hook
+    const currentSessionId = sessionData?.session?.id || sessionId;
+    
+    if (!currentSessionId) {
+      // If no session ID, just clear local data
+      clearSession();
+      localStorage.removeItem('currentSession');
+      setLocation('/');
+      toast({
+        title: "Report Cancelled",
+        description: "The report has been discarded. Ready to start fresh.",
+      });
+      setShowNewReportConfirm(false);
+      return;
+    }
+
+    try {
+      // Delete the session from the database
+      await deleteResource(`/api/sessions/${currentSessionId}`, "report");
+      
+      // Clear current session data
+      clearSession();
+      localStorage.removeItem('currentSession');
+      
+      // Navigate to setup page to start a new report
+      setLocation('/');
+      
+      toast({
+        title: "Report Deleted",
+        description: "The report has been permanently deleted from the database.",
+      });
+    } catch (error) {
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete the report. Please try again.",
+        variant: "destructive",
+      });
+    }
+    
     setShowNewReportConfirm(false);
   };
 

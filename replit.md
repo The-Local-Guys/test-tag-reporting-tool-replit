@@ -35,6 +35,7 @@ Preferred communication style: Simple, everyday language.
 - **Admin Dashboard**: User management, test session oversight, bulk data export, system administration.
 - **Data Flow**: User authentication, test session creation, testing workflow, report generation, and admin operations are managed via a client-side batched local storage system that submits results in a single, atomic operation to the backend. Asset numbering is handled client-side with intelligent allocation and duplicate prevention, then validated server-side upon batch submission.
 - **Mobile Navigation**: Persistent site-wide header with mobile-responsive hamburger menu, accessible from all pages with global sign out functionality.
+- **Session Cancellation**: Comprehensive cancel report functionality available on both item-selection and report-preview pages with database deletion, ownership verification, and proper cleanup of all associated test results.
 
 ## External Dependencies
 
