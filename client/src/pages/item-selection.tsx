@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Edit2, FileText, CheckCircle, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useSession } from '@/hooks/use-session';
 import { deleteResource } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
@@ -37,6 +38,7 @@ export default function ItemSelection() {
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [customItemName, setCustomItemName] = useState('');
   const [showNewReportConfirm, setShowNewReportConfirm] = useState(false);
+  const [isCancellingReport, setIsCancellingReport] = useState(false);
   const { sessionData, currentLocation, setCurrentLocation, clearSession, sessionId } = useSession();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -64,6 +66,8 @@ export default function ItemSelection() {
   };
 
   const confirmNewReport = async () => {
+    setIsCancellingReport(true);
+    
     // Try both sessionData.session.id and the sessionId from hook
     const currentSessionId = sessionData?.session?.id || sessionId;
     
@@ -77,6 +81,7 @@ export default function ItemSelection() {
         description: "The report has been discarded. Ready to start fresh.",
       });
       setShowNewReportConfirm(false);
+      setIsCancellingReport(false);
       return;
     }
 
@@ -104,6 +109,7 @@ export default function ItemSelection() {
     }
     
     setShowNewReportConfirm(false);
+    setIsCancellingReport(false);
   };
 
   const summary = sessionData?.summary || {
@@ -254,8 +260,19 @@ export default function ItemSelection() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep Report</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmNewReport} className="bg-red-600 hover:bg-red-700">
-              Yes, Cancel Report
+            <AlertDialogAction 
+              onClick={confirmNewReport} 
+              disabled={isCancellingReport}
+              className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
+            >
+              {isCancellingReport ? (
+                <>
+                  <LoadingSpinner size="sm" className="mr-2" />
+                  Deleting...
+                </>
+              ) : (
+                'Yes, Cancel Report'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

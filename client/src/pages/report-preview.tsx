@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Modal } from '@/components/ui/modal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ArrowLeft, Download, Mail, Share, Plus, Edit2, FileText, RefreshCw, Trash2, Check } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useSession, type BatchedTestResult } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
 import { downloadPDF } from '@/lib/pdf-generator';
@@ -33,6 +34,7 @@ export default function ReportPreview() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [showPDFSuccess, setShowPDFSuccess] = useState(false);
+  const [isCancellingReport, setIsCancellingReport] = useState(false);
   
   // Edit form state with manual asset number tracking
   const [editResultData, setEditResultData] = useState({
@@ -314,6 +316,8 @@ export default function ReportPreview() {
   };
 
   const confirmNewReport = async () => {
+    setIsCancellingReport(true);
+    
     // Try both sessionData.session.id and the sessionId from hook
     const currentSessionId = sessionData?.session?.id || sessionId;
     
@@ -327,6 +331,7 @@ export default function ReportPreview() {
         description: "The report has been discarded. Ready to start fresh.",
       });
       setShowNewReportConfirm(false);
+      setIsCancellingReport(false);
       return;
     }
 
@@ -354,6 +359,7 @@ export default function ReportPreview() {
     }
     
     setShowNewReportConfirm(false);
+    setIsCancellingReport(false);
   };
 
   const handleNewJob = async () => {
@@ -987,8 +993,19 @@ export default function ReportPreview() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep Report</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmNewReport} className="bg-red-600 hover:bg-red-700">
-              Yes, Cancel Report
+            <AlertDialogAction 
+              onClick={confirmNewReport} 
+              disabled={isCancellingReport}
+              className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
+            >
+              {isCancellingReport ? (
+                <>
+                  <LoadingSpinner size="sm" className="mr-2" />
+                  Deleting...
+                </>
+              ) : (
+                'Yes, Cancel Report'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
