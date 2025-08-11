@@ -310,6 +310,7 @@ export default function ReportPreview() {
 
 
   const handleNewReport = () => {
+    console.log('handleNewReport clicked - showing confirmation dialog');
     setShowNewReportConfirm(true);
   };
 
@@ -655,6 +656,13 @@ export default function ReportPreview() {
             <div className="text-green-100 text-sm">Ready for Export</div>
           </div>
           <div className="flex gap-2">
+            <button 
+              onClick={handleNewReport}
+              className="text-white hover:text-green-200 p-2 rounded-lg hover:bg-green-700 transition-colors"
+              title="Cancel Report"
+            >
+              <RefreshCw className="h-5 w-5" />
+            </button>
             <button 
               onClick={handleExportPDF}
               className="text-white hover:text-green-200 p-2 rounded-lg hover:bg-green-700 transition-colors"
