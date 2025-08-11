@@ -4,7 +4,6 @@ import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Edit2, FileText, CheckCircle, Plus, RotateCcw, Trash2 } from 'lucide-react';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useSession } from '@/hooks/use-session';
 import { deleteResource } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
@@ -38,7 +37,8 @@ export default function ItemSelection() {
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [customItemName, setCustomItemName] = useState('');
   const [showNewReportConfirm, setShowNewReportConfirm] = useState(false);
-  const [isCancellingReport, setIsCancellingReport] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [showCancelSuccess, setShowCancelSuccess] = useState(false);
   const { sessionData, currentLocation, setCurrentLocation, clearSession, sessionId } = useSession();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -66,7 +66,7 @@ export default function ItemSelection() {
   };
 
   const confirmNewReport = async () => {
-    setIsCancellingReport(true);
+    setIsCancelling(true);
     
     // Try both sessionData.session.id and the sessionId from hook
     const currentSessionId = sessionData?.session?.id || sessionId;
@@ -75,13 +75,15 @@ export default function ItemSelection() {
       // If no session ID, just clear local data
       clearSession();
       localStorage.removeItem('currentSession');
-      setLocation('/');
-      toast({
-        title: "Report Cancelled",
-        description: "The report has been discarded. Ready to start fresh.",
-      });
+      
+      // Show success feedback
+      setIsCancelling(false);
+      setShowCancelSuccess(true);
+      setTimeout(() => {
+        setLocation('/');
+      }, 1000);
+      
       setShowNewReportConfirm(false);
-      setIsCancellingReport(false);
       return;
     }
 
@@ -93,14 +95,16 @@ export default function ItemSelection() {
       clearSession();
       localStorage.removeItem('currentSession');
       
-      // Navigate to setup page to start a new report
-      setLocation('/');
+      // Show success feedback for 1 second
+      setIsCancelling(false);
+      setShowCancelSuccess(true);
       
-      toast({
-        title: "Report Deleted",
-        description: "The report has been permanently deleted from the database.",
-      });
+      setTimeout(() => {
+        setLocation('/');
+      }, 1000);
+      
     } catch (error) {
+      setIsCancelling(false);
       toast({
         title: "Delete Failed",
         description: "Failed to delete the report. Please try again.",
@@ -109,7 +113,6 @@ export default function ItemSelection() {
     }
     
     setShowNewReportConfirm(false);
-    setIsCancellingReport(false);
   };
 
   const summary = sessionData?.summary || {
@@ -255,23 +258,28 @@ export default function ItemSelection() {
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel Report?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will discard the current report and all test results without saving. This action cannot be undone.
+              This will permanently delete the current report and all test results from the database. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep Report</AlertDialogCancel>
+            <AlertDialogCancel disabled={isCancelling || showCancelSuccess}>Keep Report</AlertDialogCancel>
             <AlertDialogAction 
               onClick={confirmNewReport} 
-              disabled={isCancellingReport}
-              className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
+              disabled={isCancelling || showCancelSuccess}
+              className="bg-red-600 hover:bg-red-700"
             >
-              {isCancellingReport ? (
+              {isCancelling ? (
                 <>
-                  <LoadingSpinner size="sm" className="mr-2" />
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                   Deleting...
                 </>
+              ) : showCancelSuccess ? (
+                <>
+                  <CheckCircle className="mr-2 h-4 w-4 text-green-400" />
+                  Report Cancelled
+                </>
               ) : (
-                'Yes, Cancel Report'
+                "Yes, Cancel Report"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

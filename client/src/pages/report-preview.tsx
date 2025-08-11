@@ -7,7 +7,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Modal } from '@/components/ui/modal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ArrowLeft, Download, Mail, Share, Plus, Edit2, FileText, RefreshCw, Trash2, Check } from 'lucide-react';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useSession, type BatchedTestResult } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
 import { downloadPDF } from '@/lib/pdf-generator';
@@ -30,11 +29,12 @@ export default function ReportPreview() {
   const [editingResult, setEditingResult] = useState<TestResult | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showNewReportConfirm, setShowNewReportConfirm] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [showCancelSuccess, setShowCancelSuccess] = useState(false);
   const [deletingResult, setDeletingResult] = useState<TestResult | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [showPDFSuccess, setShowPDFSuccess] = useState(false);
-  const [isCancellingReport, setIsCancellingReport] = useState(false);
   
   // Edit form state with manual asset number tracking
   const [editResultData, setEditResultData] = useState({
@@ -316,7 +316,7 @@ export default function ReportPreview() {
   };
 
   const confirmNewReport = async () => {
-    setIsCancellingReport(true);
+    setIsCancelling(true);
     
     // Try both sessionData.session.id and the sessionId from hook
     const currentSessionId = sessionData?.session?.id || sessionId;
@@ -325,13 +325,15 @@ export default function ReportPreview() {
       // If no session ID, just clear local data
       clearSession();
       localStorage.removeItem('currentSession');
-      setLocation('/');
-      toast({
-        title: "Report Cancelled",
-        description: "The report has been discarded. Ready to start fresh.",
-      });
+      
+      // Show success feedback
+      setIsCancelling(false);
+      setShowCancelSuccess(true);
+      setTimeout(() => {
+        setLocation('/');
+      }, 1000);
+      
       setShowNewReportConfirm(false);
-      setIsCancellingReport(false);
       return;
     }
 
@@ -343,14 +345,16 @@ export default function ReportPreview() {
       clearSession();
       localStorage.removeItem('currentSession');
       
-      // Navigate to setup page to start a new report
-      setLocation('/');
+      // Show success feedback for 1 second
+      setIsCancelling(false);
+      setShowCancelSuccess(true);
       
-      toast({
-        title: "Report Deleted",
-        description: "The report has been permanently deleted from the database.",
-      });
+      setTimeout(() => {
+        setLocation('/');
+      }, 1000);
+      
     } catch (error) {
+      setIsCancelling(false);
       toast({
         title: "Delete Failed",
         description: "Failed to delete the report. Please try again.",
@@ -359,7 +363,6 @@ export default function ReportPreview() {
     }
     
     setShowNewReportConfirm(false);
-    setIsCancellingReport(false);
   };
 
   const handleNewJob = async () => {
@@ -988,23 +991,28 @@ export default function ReportPreview() {
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel Report?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will discard the current report and all test results without saving. This action cannot be undone.
+              This will permanently delete the current report and all test results from the database. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep Report</AlertDialogCancel>
+            <AlertDialogCancel disabled={isCancelling || showCancelSuccess}>Keep Report</AlertDialogCancel>
             <AlertDialogAction 
               onClick={confirmNewReport} 
-              disabled={isCancellingReport}
-              className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
+              disabled={isCancelling || showCancelSuccess}
+              className="bg-red-600 hover:bg-red-700"
             >
-              {isCancellingReport ? (
+              {isCancelling ? (
                 <>
-                  <LoadingSpinner size="sm" className="mr-2" />
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                   Deleting...
                 </>
+              ) : showCancelSuccess ? (
+                <>
+                  <CheckCircle className="mr-2 h-4 w-4 text-green-400" />
+                  Report Cancelled
+                </>
               ) : (
-                'Yes, Cancel Report'
+                "Yes, Cancel Report"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
