@@ -824,6 +824,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   );
 
+  // Delete test session (user-accessible for canceling reports)
+  app.delete("/api/sessions/:id", requireAuth, async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      
+      // Verify session exists
+      const session = await storage.getTestSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ error: "Session not found" });
+      }
+      
+      // Verify ownership - users can only delete their own sessions
+      if (session.userId !== req.session.userId) {
+        return res.status(403).json({ error: "You can only delete your own reports" });
+      }
+      
+      // Delete the session (this will cascade delete all test results)
+      await storage.deleteTestSession(sessionId);
+      
+      console.log(`User ${req.session.userId} deleted session ${sessionId}: ${session.clientName}`);
+      res.json({ success: true, message: "Report deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting session:", error);
+      res.status(500).json({ error: "Failed to delete session" });
+    }
+  });
+
   // Get all results for a session
   app.get("/api/sessions/:id/results", requireAuth, async (req, res) => {
     try {

@@ -49,6 +49,23 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
+/**
+ * Reusable delete function for API resources
+ * Can be used throughout the application for consistent deletion behavior
+ * @param url - The API endpoint URL to delete from
+ * @param resourceName - Human-readable name for error messages (e.g., "report", "user", "item")
+ * @returns Promise resolving to the delete response
+ */
+export async function deleteResource(url: string, resourceName: string = "resource"): Promise<Response> {
+  try {
+    const response = await apiRequest("DELETE", url);
+    return response;
+  } catch (error) {
+    console.error(`Failed to delete ${resourceName}:`, error);
+    throw new Error(`Failed to delete ${resourceName}. Please try again.`);
+  }
+}
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

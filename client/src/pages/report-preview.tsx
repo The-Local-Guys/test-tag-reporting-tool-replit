@@ -12,6 +12,7 @@ import { useLocation } from 'wouter';
 import { downloadPDF } from '@/lib/pdf-generator';
 import { downloadExcel } from '@/lib/excel-generator';
 import { useToast } from '@/hooks/use-toast';
+import { deleteResource } from '@/lib/queryClient';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { insertTestResultSchema, type TestResult, type InsertTestResult } from '@shared/schema';
@@ -312,17 +313,43 @@ export default function ReportPreview() {
     setShowNewReportConfirm(true);
   };
 
-  const confirmNewReport = () => {
-    // Clear current session data
-    clearSession();
-    // Clear any cached session data
-    localStorage.removeItem('currentSession');
-    // Navigate to setup page to start a new report
-    setLocation('/');
-    toast({
-      title: "Report Cancelled",
-      description: "The report has been discarded. Ready to start fresh.",
-    });
+  const confirmNewReport = async () => {
+    if (!sessionData?.session?.id) {
+      // If no session ID, just clear local data
+      clearSession();
+      localStorage.removeItem('currentSession');
+      setLocation('/');
+      toast({
+        title: "Report Cancelled",
+        description: "The report has been discarded. Ready to start fresh.",
+      });
+      setShowNewReportConfirm(false);
+      return;
+    }
+
+    try {
+      // Delete the session from the database
+      await deleteResource(`/api/sessions/${sessionData.session.id}`, "report");
+      
+      // Clear current session data
+      clearSession();
+      localStorage.removeItem('currentSession');
+      
+      // Navigate to setup page to start a new report
+      setLocation('/');
+      
+      toast({
+        title: "Report Deleted",
+        description: "The report has been permanently deleted from the database.",
+      });
+    } catch (error) {
+      toast({
+        title: "Delete Failed",
+        description: "Failed to delete the report. Please try again.",
+        variant: "destructive",
+      });
+    }
+    
     setShowNewReportConfirm(false);
   };
 
