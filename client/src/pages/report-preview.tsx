@@ -310,24 +310,15 @@ export default function ReportPreview() {
 
 
   const handleNewReport = () => {
-    console.log('=== CANCEL BUTTON CLICKED ===');
-    alert('Cancel button was clicked!'); // Temporary alert for testing
-    console.log('handleNewReport clicked - showing confirmation dialog');
     setShowNewReportConfirm(true);
   };
 
   const confirmNewReport = async () => {
-    console.log('Attempting to cancel report. Session data:', sessionData);
-    console.log('Session ID from sessionData:', sessionData?.session?.id);
-    console.log('Session ID from hook:', sessionId);
-    
     // Try both sessionData.session.id and the sessionId from hook
     const currentSessionId = sessionData?.session?.id || sessionId;
-    console.log('Using session ID:', currentSessionId);
     
     if (!currentSessionId) {
       // If no session ID, just clear local data
-      console.log('No session ID found, clearing local data only');
       clearSession();
       localStorage.removeItem('currentSession');
       setLocation('/');
@@ -340,10 +331,8 @@ export default function ReportPreview() {
     }
 
     try {
-      console.log(`Deleting session ${currentSessionId} from database`);
       // Delete the session from the database
-      const response = await deleteResource(`/api/sessions/${currentSessionId}`, "report");
-      console.log('Delete response:', response);
+      await deleteResource(`/api/sessions/${currentSessionId}`, "report");
       
       // Clear current session data
       clearSession();
@@ -357,7 +346,6 @@ export default function ReportPreview() {
         description: "The report has been permanently deleted from the database.",
       });
     } catch (error) {
-      console.error('Delete error:', error);
       toast({
         title: "Delete Failed",
         description: "Failed to delete the report. Please try again.",
@@ -659,17 +647,6 @@ export default function ReportPreview() {
           </div>
           <div className="flex gap-2">
             <button 
-              onClick={(e) => {
-                console.log('Button clicked!', e);
-                handleNewReport();
-              }}
-              className="text-white hover:text-green-200 p-2 rounded-lg hover:bg-green-700 transition-colors border-2 border-red-500"
-              title="Cancel Report"
-              type="button"
-            >
-              <RefreshCw className="h-5 w-5" />
-            </button>
-            <button 
               onClick={handleExportPDF}
               className="text-white hover:text-green-200 p-2 rounded-lg hover:bg-green-700 transition-colors"
               title="Download PDF"
@@ -810,6 +787,14 @@ export default function ReportPreview() {
               Finish Job
             </>
           )}
+        </Button>
+        <Button 
+          onClick={handleNewReport}
+          variant="destructive"
+          className="w-full py-3 font-medium touch-button"
+        >
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Cancel Report
         </Button>
       </div>
 
@@ -1002,13 +987,7 @@ export default function ReportPreview() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep Report</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => {
-                console.log('=== CONFIRM DELETE BUTTON CLICKED ===');
-                confirmNewReport();
-              }} 
-              className="bg-red-600 hover:bg-red-700"
-            >
+            <AlertDialogAction onClick={confirmNewReport} className="bg-red-600 hover:bg-red-700">
               Yes, Cancel Report
             </AlertDialogAction>
           </AlertDialogFooter>
