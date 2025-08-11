@@ -659,9 +659,13 @@ export default function ReportPreview() {
           </div>
           <div className="flex gap-2">
             <button 
-              onClick={handleNewReport}
-              className="text-white hover:text-green-200 p-2 rounded-lg hover:bg-green-700 transition-colors"
+              onClick={(e) => {
+                console.log('Button clicked!', e);
+                handleNewReport();
+              }}
+              className="text-white hover:text-green-200 p-2 rounded-lg hover:bg-green-700 transition-colors border-2 border-red-500"
               title="Cancel Report"
+              type="button"
             >
               <RefreshCw className="h-5 w-5" />
             </button>
