@@ -24,7 +24,7 @@ const emergencyTestSchema = z.object({
   manufacturerInfo: z.string().optional(),
   installationDate: z.string().optional(),
   maintenanceType: z.enum(['maintained', 'non_maintained']).optional(),
-  globeType: z.enum(['led', 'halogen']).optional(),
+  globeType: z.enum(['led', 'fluorescent']).optional(),
   visualInspection: z.boolean().default(true),
   dischargeTest: z.boolean().default(false),
   switchingTest: z.boolean().default(false),
@@ -359,14 +359,14 @@ export default function EmergencyTestDetails() {
               <Label htmlFor="globeType">Globe Type</Label>
               <Select 
                 value={form.watch('globeType') || ''} 
-                onValueChange={(value) => form.setValue('globeType', value as 'led' | 'halogen')}
+                onValueChange={(value) => form.setValue('globeType', value as 'led' | 'fluorescent')}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select globe type" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="led">LED</SelectItem>
-                  <SelectItem value="halogen">Halogen</SelectItem>
+                  <SelectItem value="fluorescent">Fluorescent</SelectItem>
                 </SelectContent>
               </Select>
             </div>

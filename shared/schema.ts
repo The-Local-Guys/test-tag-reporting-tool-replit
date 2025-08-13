@@ -57,7 +57,7 @@ export const testResults = pgTable("test_results", {
   electricalTest: boolean("electrical_test").default(true), // Electrical test completed
   // Emergency exit light specific fields (AS/NZS 2293.2:2019)
   maintenanceType: text("maintenance_type"), // 'maintained' or 'non_maintained'
-  globeType: text("globe_type"), // 'led' or 'halogen'
+  globeType: text("globe_type"), // 'led' or 'fluorescent'
   dischargeTest: boolean("discharge_test"), // 90-minute discharge test passed
 
   switchingTest: boolean("switching_test"), // Automatic switching test
@@ -110,5 +110,5 @@ export const countries = ['australia', 'newzealand'] as const;
 export const frequencies = ['threemonthly', 'sixmonthly', 'twelvemonthly', 'twentyfourmonthly', 'fiveyearly'] as const;
 export const emergencyFrequencies = ['sixmonthly', 'annually'] as const;
 export const maintenanceTypes = ['maintained', 'non_maintained'] as const;
-export const globeTypes = ['led', 'halogen'] as const;
+export const globeTypes = ['led', 'fluorescent'] as const;
 export const userRoles = ['super_admin', 'support_center', 'technician'] as const;
