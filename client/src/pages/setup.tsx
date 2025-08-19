@@ -55,17 +55,37 @@ export default function Setup() {
   // Check for unfinished reports when component mounts
   useEffect(() => {
     const checkUnfinishedReport = () => {
+      // Debug: Log all localStorage keys that contain "unfinished"
+      console.log('Checking localStorage for unfinished reports...');
+      Object.keys(localStorage).forEach(key => {
+        if (key.includes('unfinished') || key.includes('Unfinished')) {
+          console.log(`Found localStorage key: ${key} = ${localStorage.getItem(key)}`);
+        }
+      });
+      
+      // Check for multiple possible key variations
       const isUnfinished = localStorage.getItem('unfinished');
       const storedSessionId = localStorage.getItem('unfinishedSessionId');
+      const unfinishedId = localStorage.getItem('unfinishedId'); // Alternative key
+      const currentSessionId = localStorage.getItem('currentSessionId');
       
-      if (isUnfinished === 'true' && storedSessionId) {
+      console.log('Unfinished check:', { isUnfinished, storedSessionId, unfinishedId, currentSessionId });
+      
+      // Try the new key structure first, then fallback to old
+      let targetSessionId = storedSessionId || unfinishedId || currentSessionId;
+      
+      if ((isUnfinished === 'true' || unfinishedId) && targetSessionId) {
         // Check if there are actually batched results for this session
-        const batchedResults = localStorage.getItem(`batchedResults_${storedSessionId}`);
+        const batchedResults = localStorage.getItem(`batchedResults_${targetSessionId}`);
+        console.log(`Checking batchedResults_${targetSessionId}:`, batchedResults);
+        
         if (batchedResults) {
           try {
             const results = JSON.parse(batchedResults);
+            console.log('Parsed batched results:', results);
             if (results.length > 0) {
-              setUnfinishedSessionId(storedSessionId);
+              console.log('Found unfinished report with results, showing dialog');
+              setUnfinishedSessionId(targetSessionId);
               setShowUnfinishedDialog(true);
               return;
             }
@@ -77,6 +97,7 @@ export default function Setup() {
         // Clean up invalid unfinished flags
         localStorage.removeItem('unfinished');
         localStorage.removeItem('unfinishedSessionId');
+        localStorage.removeItem('unfinishedId');
       }
     };
 
@@ -88,6 +109,7 @@ export default function Setup() {
 
   const handleContinueReport = () => {
     if (unfinishedSessionId) {
+      console.log('Continuing report with session ID:', unfinishedSessionId);
       // Set the session back to the unfinished one
       localStorage.setItem('currentSessionId', unfinishedSessionId);
       setLocation('/items');
@@ -96,14 +118,17 @@ export default function Setup() {
   };
 
   const handleStartNew = () => {
+    console.log('Starting new report, clearing unfinished data for session:', unfinishedSessionId);
     // Clear the unfinished report data
     if (unfinishedSessionId) {
       localStorage.removeItem(`batchedResults_${unfinishedSessionId}`);
       localStorage.removeItem(`monthlyCounter_${unfinishedSessionId}`);
       localStorage.removeItem(`fiveYearlyCounter_${unfinishedSessionId}`);
     }
+    // Clear all possible unfinished key variations
     localStorage.removeItem('unfinished');
     localStorage.removeItem('unfinishedSessionId');
+    localStorage.removeItem('unfinishedId');
     setShowUnfinishedDialog(false);
     setUnfinishedSessionId(null);
   };
