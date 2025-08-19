@@ -183,6 +183,9 @@ export function useSession() {
     onSuccess: (session: TestSession) => {
       setSessionId(session.id);
       localStorage.setItem('currentSessionId', session.id.toString());
+      // Mark session as unfinished
+      localStorage.setItem('unfinished', 'true');
+      localStorage.setItem('unfinishedSessionId', session.id.toString());
       // Clear any existing batched results for this session
       setBatchedResults([]);
       localStorage.removeItem(`batchedResults_${session.id}`);
@@ -320,6 +323,10 @@ export function useSession() {
     },
     onSuccess: (submittedResults: TestResult[]) => {
       console.log(`Successfully submitted ${submittedResults.length} results to server`);
+      
+      // Clear unfinished flag since report is now completed
+      localStorage.removeItem('unfinished');
+      localStorage.removeItem('unfinishedSessionId');
       
       // Clear batched results after successful submission
       setBatchedResults([]);
@@ -532,6 +539,9 @@ export function useSession() {
       localStorage.removeItem(`monthlyCounter_${sessionId}`);
       localStorage.removeItem(`fiveYearlyCounter_${sessionId}`);
     }
+    // Clear unfinished flags
+    localStorage.removeItem('unfinished');
+    localStorage.removeItem('unfinishedSessionId');
     setSessionId(null);
     setCurrentLocation('');
     setBatchedResults([]);

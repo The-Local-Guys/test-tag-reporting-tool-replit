@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { insertTestSessionSchema } from '@shared/schema';
@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
-import { Clipboard, ArrowRight } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Clipboard, ArrowRight, AlertCircle } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocation } from 'wouter';
@@ -20,9 +21,11 @@ import logoPath from '@assets/The Local Guys - with plug wide boarder - png seek
  * Creates the testing context for either electrical or emergency exit light testing
  */
 export default function Setup() {
-  const { createSession, isCreatingSession, clearSession } = useSession();
+  const { createSession, isCreatingSession, clearSession, sessionId } = useSession();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  const [showUnfinishedDialog, setShowUnfinishedDialog] = useState(false);
+  const [unfinishedSessionId, setUnfinishedSessionId] = useState<string | null>(null);
   
   // Get current date in Australian Central Time
   const getAustralianDate = () => {
@@ -48,6 +51,62 @@ export default function Setup() {
       country: 'australia',
     },
   });
+
+  // Check for unfinished reports when component mounts
+  useEffect(() => {
+    const checkUnfinishedReport = () => {
+      const isUnfinished = localStorage.getItem('unfinished');
+      const storedSessionId = localStorage.getItem('unfinishedSessionId');
+      
+      if (isUnfinished === 'true' && storedSessionId) {
+        // Check if there are actually batched results for this session
+        const batchedResults = localStorage.getItem(`batchedResults_${storedSessionId}`);
+        if (batchedResults) {
+          try {
+            const results = JSON.parse(batchedResults);
+            if (results.length > 0) {
+              setUnfinishedSessionId(storedSessionId);
+              setShowUnfinishedDialog(true);
+              return;
+            }
+          } catch (error) {
+            console.warn('Error parsing batched results:', error);
+          }
+        }
+        
+        // Clean up invalid unfinished flags
+        localStorage.removeItem('unfinished');
+        localStorage.removeItem('unfinishedSessionId');
+      }
+    };
+
+    // Only check if we're not currently in an active session
+    if (!sessionId) {
+      checkUnfinishedReport();
+    }
+  }, [sessionId]);
+
+  const handleContinueReport = () => {
+    if (unfinishedSessionId) {
+      // Set the session back to the unfinished one
+      localStorage.setItem('currentSessionId', unfinishedSessionId);
+      setLocation('/items');
+    }
+    setShowUnfinishedDialog(false);
+  };
+
+  const handleStartNew = () => {
+    // Clear the unfinished report data
+    if (unfinishedSessionId) {
+      localStorage.removeItem(`batchedResults_${unfinishedSessionId}`);
+      localStorage.removeItem(`monthlyCounter_${unfinishedSessionId}`);
+      localStorage.removeItem(`fiveYearlyCounter_${unfinishedSessionId}`);
+    }
+    localStorage.removeItem('unfinished');
+    localStorage.removeItem('unfinishedSessionId');
+    setShowUnfinishedDialog(false);
+    setUnfinishedSessionId(null);
+  };
 
   const onSubmit = (data: InsertTestSession) => {
     // Clear any existing session data first
@@ -191,6 +250,37 @@ export default function Setup() {
           <ArrowRight className="ml-2 h-5 w-5" />
         </Button>
       </div>
+
+      {/* Unfinished Report Dialog */}
+      <Dialog open={showUnfinishedDialog} onOpenChange={setShowUnfinishedDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-orange-500" />
+              Continue Previous Report?
+            </DialogTitle>
+            <DialogDescription>
+              You have an unfinished report with test results that haven't been submitted yet. 
+              Would you like to continue where you left off or start a new report?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button
+              variant="outline"
+              onClick={handleStartNew}
+              className="w-full sm:w-auto"
+            >
+              Start New Report
+            </Button>
+            <Button
+              onClick={handleContinueReport}
+              className="w-full sm:w-auto"
+            >
+              Continue Previous Report
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
