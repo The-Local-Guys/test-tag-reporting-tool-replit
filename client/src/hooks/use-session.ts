@@ -181,11 +181,13 @@ export function useSession() {
       return response.json();
     },
     onSuccess: (session: TestSession) => {
+      console.log('Session created successfully:', session.id);
       setSessionId(session.id);
       localStorage.setItem('currentSessionId', session.id.toString());
       // Mark session as unfinished
       localStorage.setItem('unfinished', 'true');
       localStorage.setItem('unfinishedSessionId', session.id.toString());
+      console.log('Set unfinished flags for session:', session.id);
       // Clear any existing batched results for this session
       setBatchedResults([]);
       localStorage.removeItem(`batchedResults_${session.id}`);

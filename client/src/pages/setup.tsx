@@ -57,9 +57,10 @@ export default function Setup() {
     const checkUnfinishedReport = () => {
       // Debug: Log all localStorage keys that contain "unfinished"
       console.log('Checking localStorage for unfinished reports...');
+      console.log('All localStorage keys:', Object.keys(localStorage));
       Object.keys(localStorage).forEach(key => {
-        if (key.includes('unfinished') || key.includes('Unfinished')) {
-          console.log(`Found localStorage key: ${key} = ${localStorage.getItem(key)}`);
+        if (key.includes('unfinished') || key.includes('Unfinished') || key.includes('batchedResults') || key.includes('currentSessionId')) {
+          console.log(`Found relevant localStorage key: ${key} = ${localStorage.getItem(key)}`);
         }
       });
       
