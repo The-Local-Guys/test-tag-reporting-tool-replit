@@ -24,9 +24,6 @@ export default function Setup() {
   const { createSession, isCreatingSession, clearSession, sessionId } = useSession();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
-  const [showUnfinishedDialog, setShowUnfinishedDialog] = useState(false);
-  const [unfinishedSessionId, setUnfinishedSessionId] = useState<string | null>(null);
-  const [isCheckingUnfinished, setIsCheckingUnfinished] = useState(true);
   
   // Get current date in Australian Central Time
   const getAustralianDate = () => {
@@ -53,99 +50,7 @@ export default function Setup() {
     },
   });
 
-  // Check for unfinished reports when component mounts - redirect immediately if found
-  useEffect(() => {
-    const checkAndRedirectUnfinishedReport = () => {
-      console.log('Checking for unfinished reports on setup page load...');
-      console.log('All localStorage keys:', Object.keys(localStorage));
-      
-      // Check for multiple possible key variations
-      const isUnfinished = localStorage.getItem('unfinished');
-      const storedSessionId = localStorage.getItem('unfinishedSessionId');
-      const unfinishedId = localStorage.getItem('unfinishedId');
-      const currentSessionId = localStorage.getItem('currentSessionId');
-      
-      // Also check for any batched results that might exist
-      let foundBatchedResults = null;
-      let batchSessionId = null;
-      
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('batchedResults_')) {
-          const sessionId = key.replace('batchedResults_', '');
-          const results = localStorage.getItem(key);
-          if (results) {
-            try {
-              const parsed = JSON.parse(results);
-              if (parsed.length > 0) {
-                console.log(`Found batched results for session ${sessionId}:`, parsed);
-                foundBatchedResults = parsed;
-                batchSessionId = sessionId;
-              }
-            } catch (error) {
-              console.warn('Error parsing batched results:', error);
-            }
-          }
-        }
-      });
-      
-      console.log('Unfinished check:', { isUnfinished, storedSessionId, unfinishedId, currentSessionId, foundBatchedResults, batchSessionId });
-      
-      // Determine target session ID
-      let targetSessionId = storedSessionId || unfinishedId || currentSessionId || batchSessionId;
-      
-      // If we found any unfinished data, redirect immediately to item-selection
-      if ((isUnfinished === 'true' || foundBatchedResults) && targetSessionId) {
-        console.log('Found unfinished report, redirecting to item-selection with session:', targetSessionId);
-        // Set the current session ID to the unfinished one
-        localStorage.setItem('currentSessionId', targetSessionId);
-        setLocation('/items');
-        return;
-      }
-      
-      // Clean up any invalid unfinished flags
-      if (isUnfinished || storedSessionId || unfinishedId) {
-        console.log('Cleaning up invalid unfinished flags');
-        localStorage.removeItem('unfinished');
-        localStorage.removeItem('unfinishedSessionId');
-        localStorage.removeItem('unfinishedId');
-      }
-      
-      setIsCheckingUnfinished(false);
-    };
-
-    // Only check if we're not currently in an active session
-    if (!sessionId) {
-      checkAndRedirectUnfinishedReport();
-    } else {
-      setIsCheckingUnfinished(false);
-    }
-  }, [sessionId, setLocation]);
-
-  const handleContinueReport = () => {
-    if (unfinishedSessionId) {
-      console.log('Continuing report with session ID:', unfinishedSessionId);
-      // Set the session back to the unfinished one
-      localStorage.setItem('currentSessionId', unfinishedSessionId);
-      setLocation('/items');
-    }
-    setShowUnfinishedDialog(false);
-  };
-
-  const handleStartNew = () => {
-    console.log('Starting new report, clearing unfinished data for session:', unfinishedSessionId);
-    // Clear the unfinished report data
-    if (unfinishedSessionId) {
-      localStorage.removeItem(`batchedResults_${unfinishedSessionId}`);
-      localStorage.removeItem(`monthlyCounter_${unfinishedSessionId}`);
-      localStorage.removeItem(`fiveYearlyCounter_${unfinishedSessionId}`);
-    }
-    // Clear all possible unfinished key variations
-    localStorage.removeItem('unfinished');
-    localStorage.removeItem('unfinishedSessionId');
-    localStorage.removeItem('unfinishedId');
-    setShowUnfinishedDialog(false);
-    setUnfinishedSessionId(null);
-  };
+  // Setup page no longer handles unfinished report detection - moved to service selection
 
   const onSubmit = (data: InsertTestSession) => {
     // Don't clear session here - let createSession handle the setup
@@ -162,17 +67,7 @@ export default function Setup() {
     setLocation('/items');
   };
 
-  // Show loading while checking for unfinished reports
-  if (isCheckingUnfinished) {
-    return (
-      <div className="mobile-container flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Checking for unfinished reports...</p>
-        </div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="mobile-container">
@@ -302,36 +197,7 @@ export default function Setup() {
         </Button>
       </div>
 
-      {/* Unfinished Report Dialog */}
-      <Dialog open={showUnfinishedDialog} onOpenChange={setShowUnfinishedDialog}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-orange-500" />
-              Continue Previous Report?
-            </DialogTitle>
-            <DialogDescription>
-              You have an unfinished report with test results that haven't been submitted yet. 
-              Would you like to continue where you left off or start a new report?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex-col gap-2 sm:flex-row">
-            <Button
-              variant="outline"
-              onClick={handleStartNew}
-              className="w-full sm:w-auto"
-            >
-              Start New Report
-            </Button>
-            <Button
-              onClick={handleContinueReport}
-              className="w-full sm:w-auto"
-            >
-              Continue Previous Report
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
     </div>
   );
 }
