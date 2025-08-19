@@ -525,12 +525,31 @@ export function useSession() {
     },
   });
 
-  // Save session ID to localStorage when it changes
+  // Save session ID to localStorage when it changes and restore session data
   useEffect(() => {
     if (sessionId) {
       localStorage.setItem('currentSessionId', sessionId.toString());
+      
+      // Restore batched results if they exist for this session
+      const storedBatchedResults = localStorage.getItem(`batchedResults_${sessionId}`);
+      if (storedBatchedResults && batchedResults.length === 0) {
+        try {
+          const results = JSON.parse(storedBatchedResults);
+          if (results.length > 0) {
+            console.log(`Restoring ${results.length} batched results for session ${sessionId}`);
+            setBatchedResults(results);
+            
+            // Restore asset counts
+            const monthlyCount = results.filter((r: BatchedTestResult) => r.frequency !== 'fiveyearly').length;
+            const fiveYearlyCount = results.filter((r: BatchedTestResult) => r.frequency === 'fiveyearly').length;
+            setAssetCounts({ monthly: monthlyCount, fiveYearly: fiveYearlyCount });
+          }
+        } catch (error) {
+          console.warn('Error restoring batched results:', error);
+        }
+      }
     }
-  }, [sessionId]);
+  }, [sessionId, batchedResults.length]);
 
 
 
