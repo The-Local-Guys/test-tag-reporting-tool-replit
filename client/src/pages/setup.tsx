@@ -134,8 +134,8 @@ export default function Setup() {
   };
 
   const onSubmit = (data: InsertTestSession) => {
-    // Clear any existing session data first
-    clearSession();
+    // Don't clear session here - let createSession handle the setup
+    // This preserves unfinished detection when users navigate back
     
     // Get the selected service type from session storage
     const selectedService = sessionStorage.getItem('selectedService') || 'electrical';
