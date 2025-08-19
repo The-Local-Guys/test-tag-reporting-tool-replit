@@ -326,21 +326,29 @@ export function useSession() {
     onSuccess: (submittedResults: TestResult[]) => {
       console.log(`Successfully submitted ${submittedResults.length} results to server`);
       
-      // Clear unfinished flag since report is now completed
+      // Clear ALL unfinished report indicators since report is now completed
       localStorage.removeItem('unfinished');
       localStorage.removeItem('unfinishedSessionId');
+      localStorage.removeItem('unfinishedId');
+      localStorage.removeItem('currentSessionId');
       
       // Clear batched results after successful submission
       setBatchedResults([]);
-      localStorage.removeItem(`batchedResults_${sessionId}`);
+      if (sessionId) {
+        localStorage.removeItem(`batchedResults_${sessionId}`);
+        localStorage.removeItem(`monthlyCounter_${sessionId}`);
+        localStorage.removeItem(`fiveYearlyCounter_${sessionId}`);
+      }
+      
       // Reset asset counters and counts for next session
       setMonthlyAssetCounter(0);
       setFiveYearlyAssetCounter(10000);
       setAssetCounts({ monthly: 0, fiveYearly: 0 });
-      if (sessionId) {
-        localStorage.removeItem(`monthlyCounter_${sessionId}`);
-        localStorage.removeItem(`fiveYearlyCounter_${sessionId}`);
-      }
+      
+      // Clear session ID to ensure no unfinished detection
+      setSessionId(null);
+      
+      console.log('Cleared all localStorage unfinished flags and session data');
       
       // Refresh session data
       queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}`] });
