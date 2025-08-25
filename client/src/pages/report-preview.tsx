@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Modal } from '@/components/ui/modal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Download, Mail, Share, Plus, Edit2, FileText, RefreshCw, Trash2, Check } from 'lucide-react';
+import { ArrowLeft, Download, Mail, Share, Plus, Edit2, FileText, RefreshCw, Trash2, Check, CheckCircle } from 'lucide-react';
 import { useSession, type BatchedTestResult } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
 import { downloadPDF } from '@/lib/pdf-generator';
@@ -35,6 +35,8 @@ export default function ReportPreview() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [showPDFSuccess, setShowPDFSuccess] = useState(false);
+  const [isFinishingReport, setIsFinishingReport] = useState(false);
+  const [showFinishSuccess, setShowFinishSuccess] = useState(false);
   
   // Edit form state with manual asset number tracking
   const [editResultData, setEditResultData] = useState({
@@ -366,19 +368,38 @@ export default function ReportPreview() {
   };
 
   const handleNewJob = async () => {
+    setIsFinishingReport(true);
+    setShowFinishSuccess(false);
+    
     try {
       // Submit batched results to database before starting new job
       console.log('Submitting batch results before finishing job...');
       await submitBatch();
       
-      // Navigate to setup page to start a new job
-      setLocation('/');
-      toast({
-        title: "Job Completed",
-        description: "Test results saved successfully. Ready for a new job.",
-      });
+      // Wait a moment to ensure localStorage cleanup completes
+      console.log('Waiting for localStorage cleanup to complete...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Show success animation
+      setShowFinishSuccess(true);
+      
+      // Wait for success animation then redirect
+      setTimeout(() => {
+        setIsFinishingReport(false);
+        setShowFinishSuccess(false);
+        setLocation('/');
+        
+        toast({
+          title: "Job Completed",
+          description: "Test results saved successfully. Ready for a new job.",
+        });
+      }, 1500);
+      
     } catch (error) {
       console.error('Failed to submit results:', error);
+      setIsFinishingReport(false);
+      setShowFinishSuccess(false);
+      
       toast({
         title: "Submission Failed",
         description: "Failed to save test results. Please try again.",
@@ -406,7 +427,7 @@ export default function ReportPreview() {
       visionInspection: result.visionInspection,
       electricalTest: result.electricalTest,
       createdAt: new Date(result.timestamp),
-      updatedAt: new Date(result.timestamp),
+
       maintenanceType: null,
       dischargeTest: false,
       switchingTest: false,
@@ -504,7 +525,7 @@ export default function ReportPreview() {
       visionInspection: result.visionInspection,
       electricalTest: result.electricalTest,
       createdAt: new Date(result.timestamp),
-      updatedAt: new Date(result.timestamp),
+
       maintenanceType: null,
       dischargeTest: false,
       switchingTest: false,
@@ -565,7 +586,7 @@ export default function ReportPreview() {
 
       // Track manually entered asset number to prevent auto-generation conflicts
       if (editResultData.assetNumber) {
-        setManuallyEnteredAssetNumbers(prev => new Set([...prev, editResultData.assetNumber]));
+        setManuallyEnteredAssetNumbers(prev => new Set(Array.from(prev).concat(editResultData.assetNumber)));
         
         // Save to localStorage so auto-generation logic can access it
         const sessionId = sessionData?.session?.id;
@@ -782,10 +803,10 @@ export default function ReportPreview() {
         </div>
         <Button 
           onClick={handleNewJob}
-          disabled={isSubmittingBatch}
+          disabled={isSubmittingBatch || isFinishingReport}
           className="w-full bg-success text-white py-3 font-medium touch-button disabled:opacity-50"
         >
-          {isSubmittingBatch ? (
+          {isSubmittingBatch || isFinishingReport ? (
             <>
               <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
               Saving Results...
@@ -1063,6 +1084,33 @@ export default function ReportPreview() {
                 </div>
                 <h3 className="text-xl font-semibold text-green-600 mb-2">Report Generated!</h3>
                 <p className="text-gray-600">Your PDF has been created successfully.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Finish Report Loading Overlay */}
+      {isFinishingReport && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-8 shadow-2xl max-w-sm w-full mx-4 text-center">
+            {!showFinishSuccess ? (
+              <>
+                <div className="mb-6">
+                  <div className="mx-auto w-16 h-16 border-4 border-success border-t-transparent rounded-full animate-spin"></div>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Finishing Report</h3>
+                <p className="text-gray-600">Saving your test results to the database...</p>
+              </>
+            ) : (
+              <div className={`transition-opacity duration-300 ${showFinishSuccess ? 'opacity-100' : 'opacity-0'}`}>
+                <div className="mb-6">
+                  <div className="mx-auto w-16 h-16 bg-green-500 rounded-full flex items-center justify-center">
+                    <Check className="h-8 w-8 text-white" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-semibold text-green-600 mb-2">Report Completed!</h3>
+                <p className="text-gray-600">Your test results have been saved successfully.</p>
               </div>
             )}
           </div>
