@@ -2,11 +2,13 @@ import { Button } from "@/components/ui/button";
 import { LogOut, User, Home, Settings, Lock, ExternalLink, TestTube, Users, FileText, ClipboardCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMobileMenu } from "@/contexts/MobileMenuContext";
+import { useLoading } from "@/contexts/LoadingContext";
 import { useLocation } from "wouter";
 
 export function MobileMenu() {
   const { user, logout, isLoggingOut } = useAuth();
   const { isMobileMenuOpen, closeMobileMenu } = useMobileMenu();
+  const { showPageLoading } = useLoading();
   const [, setLocation] = useLocation();
   
   // Type guard for user object
@@ -22,17 +24,23 @@ export function MobileMenu() {
   const hasTechnicianAccess = typedUser && typedUser.role === 'technician';
 
   const switchToTestingMode = () => {
+    showPageLoading();
     sessionStorage.setItem('loginMode', 'testing');
     setLocation('/');
     closeMobileMenu();
-    window.location.reload();
+    setTimeout(() => {
+      window.location.reload();
+    }, 400);
   };
 
   const switchToAdminMode = () => {
+    showPageLoading();
     sessionStorage.setItem('loginMode', 'admin');
     setLocation('/');
     closeMobileMenu();
-    window.location.reload();
+    setTimeout(() => {
+      window.location.reload();
+    }, 400);
   };
 
   const handleNavigation = (path: string) => {

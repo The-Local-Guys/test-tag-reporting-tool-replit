@@ -1,4 +1,5 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
+import { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -6,8 +7,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { MobileMenuProvider } from "@/contexts/MobileMenuContext";
+import { LoadingProvider, useLoading } from "@/contexts/LoadingContext";
 import { MobileMenu } from "@/components/mobile-menu";
 import { AppLayout } from "@/components/layout/app-layout";
+import { PageLoading } from "@/components/ui/page-loading";
 import NotFound from "@/pages/not-found";
 import ServiceSelection from "@/pages/service-selection";
 import Setup from "@/pages/setup";
@@ -22,6 +25,18 @@ import Login from "@/pages/login";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const { isPageLoading, showPageLoading, hidePageLoading } = useLoading();
+  const [location] = useLocation();
+
+  // Show loading screen on route changes
+  useEffect(() => {
+    showPageLoading();
+    const timer = setTimeout(() => {
+      hidePageLoading();
+    }, 800); // Show loading for at least 800ms
+
+    return () => clearTimeout(timer);
+  }, [location, showPageLoading, hidePageLoading]);
 
   // Show login if not authenticated
   if (!isAuthenticated) {
@@ -35,33 +50,39 @@ function Router() {
   // Show admin dashboard if user selected admin mode and has admin privileges
   if (loginMode === 'admin' && user && (user as any).role && ((user as any).role === 'super_admin' || (user as any).role === 'support_center' || (user as any).role === 'technician')) {
     return (
-      <MobileMenuProvider>
-        <AppLayout>
-          <AdminDashboard />
-        </AppLayout>
-        <MobileMenu />
-      </MobileMenuProvider>
+      <>
+        <PageLoading isVisible={isPageLoading} />
+        <MobileMenuProvider>
+          <AppLayout>
+            <AdminDashboard />
+          </AppLayout>
+          <MobileMenu />
+        </MobileMenuProvider>
+      </>
     );
   }
 
   // Regular technician interface (for testing mode or regular technicians)
   return (
-    <MobileMenuProvider>
-      <AppLayout>
-        <Switch>
-          <Route path="/" component={ServiceSelection} />
-          <Route path="/setup" component={Setup} />
-          <Route path="/items" component={ItemSelection} />
-          <Route path="/test" component={TestDetails} />
-          <Route path="/emergency-test" component={EmergencyTestDetails} />
-          <Route path="/failure" component={FailureDetails} />
-          <Route path="/report" component={ReportPreview} />
+    <>
+      <PageLoading isVisible={isPageLoading} />
+      <MobileMenuProvider>
+        <AppLayout>
+          <Switch>
+            <Route path="/" component={ServiceSelection} />
+            <Route path="/setup" component={Setup} />
+            <Route path="/items" component={ItemSelection} />
+            <Route path="/test" component={TestDetails} />
+            <Route path="/emergency-test" component={EmergencyTestDetails} />
+            <Route path="/failure" component={FailureDetails} />
+            <Route path="/report" component={ReportPreview} />
 
-          <Route component={NotFound} />
-        </Switch>
-      </AppLayout>
-      <MobileMenu />
-    </MobileMenuProvider>
+            <Route component={NotFound} />
+          </Switch>
+        </AppLayout>
+        <MobileMenu />
+      </MobileMenuProvider>
+    </>
   );
 }
 
@@ -70,7 +91,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <Router />
+        <LoadingProvider>
+          <Router />
+        </LoadingProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
