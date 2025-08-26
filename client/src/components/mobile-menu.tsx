@@ -8,7 +8,7 @@ import { useLocation } from "wouter";
 export function MobileMenu() {
   const { user, logout, isLoggingOut } = useAuth();
   const { isMobileMenuOpen, closeMobileMenu } = useMobileMenu();
-  const { showPageLoading } = useLoading();
+  const { startPageLoad } = useLoading();
   const [, setLocation] = useLocation();
   
   // Type guard for user object
@@ -24,23 +24,23 @@ export function MobileMenu() {
   const hasTechnicianAccess = typedUser && typedUser.role === 'technician';
 
   const switchToTestingMode = () => {
-    showPageLoading();
+    startPageLoad();
     sessionStorage.setItem('loginMode', 'testing');
     setLocation('/');
     closeMobileMenu();
     setTimeout(() => {
       window.location.reload();
-    }, 500);
+    }, 100);
   };
 
   const switchToAdminMode = () => {
-    showPageLoading();
+    startPageLoad();
     sessionStorage.setItem('loginMode', 'admin');
     setLocation('/');
     closeMobileMenu();
     setTimeout(() => {
       window.location.reload();
-    }, 500);
+    }, 100);
   };
 
   const handleNavigation = (path: string) => {

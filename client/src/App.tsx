@@ -25,24 +25,23 @@ import Login from "@/pages/login";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
-  const { isPageLoading, showPageLoading, hidePageLoading } = useLoading();
+  const { isPageLoading, finishPageLoad } = useLoading();
   const [location] = useLocation();
   const prevLocationRef = useRef(location);
 
-  // Show loading when location changes, hide when content is ready
+  // Finish loading when content is ready
   useEffect(() => {
     if (prevLocationRef.current !== location) {
-      showPageLoading();
       prevLocationRef.current = location;
       
-      // Hide loading after a brief delay to ensure content is rendered
+      // Allow a brief moment for content to render, then finish loading
       const timer = setTimeout(() => {
-        hidePageLoading();
-      }, 800);
+        finishPageLoad();
+      }, 100);
       
       return () => clearTimeout(timer);
     }
-  }, [location, showPageLoading, hidePageLoading]);
+  }, [location, finishPageLoad]);
 
   // Show login if not authenticated
   if (!isAuthenticated) {

@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Zap, ShieldAlert, ArrowRight, FileText, Plus } from "lucide-react";
+import { useLoading } from "@/contexts/LoadingContext";
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
 
 export default function ServiceSelection() {
   const [, setLocation] = useLocation();
+  const { startPageLoad } = useLoading();
   const [showUnfinishedDialog, setShowUnfinishedDialog] = useState(false);
   const [unfinishedSessionId, setUnfinishedSessionId] = useState<string | null>(null);
   const [unfinishedResults, setUnfinishedResults] = useState<any[]>([]);
@@ -76,11 +78,12 @@ export default function ServiceSelection() {
   }, []);
 
   const handleContinueReport = () => {
+    startPageLoad();
     if (unfinishedSessionId) {
       console.log('Continuing report with session ID:', unfinishedSessionId);
       // Set the current session ID to the unfinished one
       localStorage.setItem('currentSessionId', unfinishedSessionId);
-      setLocation('/items');
+      setTimeout(() => setLocation('/items'), 50);
     }
     setShowUnfinishedDialog(false);
   };
@@ -102,10 +105,11 @@ export default function ServiceSelection() {
   };
 
   const selectService = (serviceType: 'electrical' | 'emergency_exit_light') => {
+    startPageLoad();
     // Store the selected service type
     sessionStorage.setItem('selectedService', serviceType);
     // Navigate to setup page
-    setLocation('/setup');
+    setTimeout(() => setLocation('/setup'), 50);
   };
 
   // Show loading while checking for unfinished reports

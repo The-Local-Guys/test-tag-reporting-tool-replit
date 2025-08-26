@@ -2,34 +2,41 @@ import { createContext, useContext, useState, useRef, ReactNode } from 'react';
 
 interface LoadingContextType {
   isPageLoading: boolean;
-  showPageLoading: () => void;
-  hidePageLoading: () => void;
+  startPageLoad: () => void;
+  finishPageLoad: () => void;
 }
 
 const LoadingContext = createContext<LoadingContextType | null>(null);
 
 export function LoadingProvider({ children }: { children: ReactNode }) {
   const [isPageLoading, setIsPageLoading] = useState(false);
+  const loadingStartTimeRef = useRef<number | null>(null);
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const showPageLoading = () => {
+  const startPageLoad = () => {
     // Clear any pending hide timeout
     if (hideTimeoutRef.current) {
       clearTimeout(hideTimeoutRef.current);
       hideTimeoutRef.current = null;
     }
+    
+    loadingStartTimeRef.current = Date.now();
     setIsPageLoading(true);
   };
 
-  const hidePageLoading = () => {
-    // Delay hiding to ensure content has loaded
+  const finishPageLoad = () => {
+    const now = Date.now();
+    const loadingTime = loadingStartTimeRef.current ? now - loadingStartTimeRef.current : 0;
+    const remainingTime = Math.max(0, 400 - loadingTime); // Minimum 400ms
+    
     hideTimeoutRef.current = setTimeout(() => {
       setIsPageLoading(false);
-    }, 300);
+      loadingStartTimeRef.current = null;
+    }, remainingTime);
   };
 
   return (
-    <LoadingContext.Provider value={{ isPageLoading, showPageLoading, hidePageLoading }}>
+    <LoadingContext.Provider value={{ isPageLoading, startPageLoad, finishPageLoad }}>
       {children}
     </LoadingContext.Provider>
   );
@@ -41,4 +48,17 @@ export function useLoading() {
     throw new Error('useLoading must be used within a LoadingProvider');
   }
   return context;
+}
+
+// Custom hook for navigation with loading
+export function useNavigateWithLoading() {
+  const { startPageLoad } = useLoading();
+  
+  return (href: string) => {
+    startPageLoad();
+    // Use setTimeout to ensure loading appears before navigation
+    setTimeout(() => {
+      window.location.href = href;
+    }, 50);
+  };
 }
