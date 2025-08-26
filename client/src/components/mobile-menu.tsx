@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { LogOut, User, Home, Settings, Lock, ExternalLink } from "lucide-react";
+import { LogOut, User, Home, Settings, Lock, ExternalLink, TestTube, Users, FileText, ClipboardCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMobileMenu } from "@/contexts/MobileMenuContext";
 import { useLocation } from "wouter";
@@ -11,6 +11,29 @@ export function MobileMenu() {
   
   // Type guard for user object
   const typedUser = user as { fullName?: string; role?: string } | undefined;
+
+  // Get current login mode
+  const currentLoginMode = sessionStorage.getItem('loginMode');
+  const isAdminMode = currentLoginMode === 'admin';
+  const isTestingMode = currentLoginMode === 'testing';
+
+  // Check if user has admin privileges
+  const hasAdminAccess = typedUser && (typedUser.role === 'super_admin' || typedUser.role === 'support_center');
+  const hasTechnicianAccess = typedUser && typedUser.role === 'technician';
+
+  const switchToTestingMode = () => {
+    sessionStorage.setItem('loginMode', 'testing');
+    setLocation('/');
+    closeMobileMenu();
+    window.location.reload();
+  };
+
+  const switchToAdminMode = () => {
+    sessionStorage.setItem('loginMode', 'admin');
+    setLocation('/');
+    closeMobileMenu();
+    window.location.reload();
+  };
 
   const handleNavigation = (path: string) => {
     setLocation(path);
@@ -49,6 +72,7 @@ export function MobileMenu() {
               ✕
             </button>
           </div>
+          
           {/* User info section */}
           {typedUser && (
             <div className="flex items-center space-x-3 pb-4 border-b border-gray-200">
@@ -58,32 +82,105 @@ export function MobileMenu() {
               <div>
                 <div className="font-medium text-gray-900">{typedUser.fullName}</div>
                 <div className="text-sm text-gray-500">{typedUser.role?.replace('_', ' ').toUpperCase()}</div>
+                <div className="text-xs text-blue-600 mt-1">
+                  {isAdminMode ? 'Admin Mode' : 'Testing Mode'}
+                </div>
               </div>
             </div>
           )}
 
-          {/* Navigation items */}
-          <div className="space-y-2">
-            <div className="text-sm font-medium text-gray-700 mb-3">Navigation</div>
-            <div className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 cursor-not-allowed">
-              <div className="flex items-center space-x-3">
-                <Home className="w-5 h-5 text-gray-400" />
-                <span className="text-gray-400">Testing Mode</span>
+          {/* Mode Navigation */}
+          <div className="space-y-3">
+            <div className="text-sm font-medium text-gray-700 mb-3">Application Modes</div>
+            
+            {/* Testing Mode */}
+            <Button
+              variant={isTestingMode ? "default" : "outline"}
+              onClick={switchToTestingMode}
+              className="w-full flex items-center justify-start gap-3 text-left"
+            >
+              <TestTube className="w-5 h-5" />
+              <div>
+                <div className="font-medium">Testing Mode</div>
+                <div className="text-sm opacity-75">Perform electrical testing</div>
               </div>
-              <Lock className="w-4 h-4 text-gray-400" />
-            </div>
-            {typedUser && (typedUser.role === 'super_admin' || typedUser.role === 'support_center' || typedUser.role === 'technician') && (
-              <div className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 cursor-not-allowed">
-                <div className="flex items-center space-x-3">
-                  <Settings className="w-5 h-5 text-gray-400" />
-                  <span className="text-gray-400">Admin Dashboard</span>
+            </Button>
+
+            {/* Admin Mode - Only show if user has access */}
+            {(hasAdminAccess || hasTechnicianAccess) && (
+              <Button
+                variant={isAdminMode ? "default" : "outline"}
+                onClick={switchToAdminMode}
+                className="w-full flex items-center justify-start gap-3 text-left"
+              >
+                <Settings className="w-5 h-5" />
+                <div>
+                  <div className="font-medium">
+                    {hasAdminAccess ? 'Admin Dashboard' : 'View My Reports'}
+                  </div>
+                  <div className="text-sm opacity-75">
+                    {hasAdminAccess ? 'Manage users & reports' : 'View your test reports'}
+                  </div>
                 </div>
-                <Lock className="w-4 h-4 text-gray-400" />
-              </div>
+              </Button>
             )}
           </div>
 
+          {/* Current Mode Navigation */}
+          {isTestingMode && (
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-gray-700 mb-3">Testing Navigation</div>
+              
+              <Button
+                variant="ghost"
+                onClick={() => handleNavigation('/')}
+                className="w-full flex items-center justify-start gap-3 text-left"
+              >
+                <Home className="w-5 h-5" />
+                Service Selection
+              </Button>
+              
+              <Button
+                variant="ghost"
+                onClick={() => handleNavigation('/items')}
+                className="w-full flex items-center justify-start gap-3 text-left"
+              >
+                <ClipboardCheck className="w-5 h-5" />
+                Item Selection
+              </Button>
+              
+              <Button
+                variant="ghost"
+                onClick={() => handleNavigation('/report')}
+                className="w-full flex items-center justify-start gap-3 text-left"
+              >
+                <FileText className="w-5 h-5" />
+                Report Preview
+              </Button>
+            </div>
+          )}
 
+          {isAdminMode && hasAdminAccess && (
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-gray-700 mb-3">Admin Navigation</div>
+              
+              <div className="text-sm text-gray-600 p-2 bg-gray-50 rounded-lg">
+                <div className="font-medium">Super Admin Access</div>
+                <div>Full system management capabilities</div>
+              </div>
+            </div>
+          )}
+
+          {isAdminMode && hasTechnicianAccess && !hasAdminAccess && (
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-gray-700 mb-3">My Reports</div>
+              
+              <div className="text-sm text-gray-600 p-2 bg-gray-50 rounded-lg">
+                <div className="font-medium">Technician Access</div>
+                <div>View and manage your test reports</div>
+              </div>
+            </div>
+          )}
 
           {/* Action buttons */}
           <div className="pt-4 border-t border-gray-200 space-y-3">

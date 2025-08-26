@@ -59,6 +59,13 @@ import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek
  */
 export default function AdminDashboard() {
   const { user } = useAuth();
+  
+  // Type guard for user object
+  const typedUser = user as { fullName?: string; role?: 'super_admin' | 'support_center' | 'technician'; id?: number } | undefined;
+  
+  // Role-based access control
+  const hasAdminAccess = typedUser && (typedUser.role === 'super_admin' || typedUser.role === 'support_center');
+  const isTechnician = typedUser && typedUser.role === 'technician';
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
@@ -158,29 +165,30 @@ export default function AdminDashboard() {
   });
 
   // Filter sessions based on selected technician and sort by newest first
-  const filteredSessions =
-    sessions
-      ?.filter((session: any) => {
-        if (selectedTechnicianFilter === "all") return true;
-        return (
-          (session.technicianFullName || session.technicianName) ===
-          selectedTechnicianFilter
-        );
-      })
-      .sort((a: any, b: any) => {
-        // Sort by date descending (newest first)
-        return new Date(b.testDate).getTime() - new Date(a.testDate).getTime();
-      }) || [];
+  const filteredSessions = Array.isArray(sessions)
+    ? sessions
+        .filter((session: any) => {
+          if (selectedTechnicianFilter === "all") return true;
+          return (
+            (session.technicianFullName || session.technicianName) ===
+            selectedTechnicianFilter
+          );
+        })
+        .sort((a: any, b: any) => {
+          // Sort by date descending (newest first)
+          return new Date(b.testDate).getTime() - new Date(a.testDate).getTime();
+        })
+    : [];
 
   // Get unique technician names for filter dropdown
-  const uniqueTechnicians = sessions
+  const uniqueTechnicians = Array.isArray(sessions)
     ? [
-        ...new Set(
+        ...Array.from(new Set(
           sessions.map(
             (session: any) =>
               session.technicianFullName || session.technicianName,
           ),
-        ),
+        )),
       ]
         .filter(Boolean)
         .sort()
@@ -1160,16 +1168,17 @@ export default function AdminDashboard() {
   };
 
   const stats = {
-    totalUsers: users?.length || 0,
-    activeUsers: users?.filter((u: any) => u.isActive).length || 0,
-    totalReports: sessions?.length || 0,
-    recentReports:
-      sessions?.filter((s: any) => {
-        const sessionDate = new Date(s.createdAt);
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        return sessionDate > weekAgo;
-      }).length || 0,
+    totalUsers: Array.isArray(users) ? users.length : 0,
+    activeUsers: Array.isArray(users) ? users.filter((u: any) => u.isActive).length : 0,
+    totalReports: Array.isArray(sessions) ? sessions.length : 0,
+    recentReports: Array.isArray(sessions)
+      ? sessions.filter((s: any) => {
+          const sessionDate = new Date(s.createdAt);
+          const weekAgo = new Date();
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          return sessionDate > weekAgo;
+        }).length
+      : 0,
   };
 
   console.log(process.env.NODE_ENV);
@@ -1184,7 +1193,7 @@ export default function AdminDashboard() {
               <h1 className="text-2xl font-bold text-gray-900">
                 Admin Dashboard
               </h1>
-              <p className="text-gray-600">Welcome, {user?.fullName}</p>
+              <p className="text-gray-600">Welcome, {typedUser?.fullName}</p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
@@ -1202,11 +1211,11 @@ export default function AdminDashboard() {
 
         {/* Stats Cards */}
         <div
-          className={`grid gap-6 mb-8 ${user?.role === "technician" ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1 md:grid-cols-4"}`}
+          className={`grid gap-6 mb-8 ${typedUser?.role === "technician" ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1 md:grid-cols-4"}`}
         >
           {/* Only show user stats for super admins and support center */}
-          {(user?.role === "super_admin" ||
-            user?.role === "support_center") && (
+          {(typedUser?.role === "super_admin" ||
+            typedUser?.role === "support_center") && (
             <>
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -1237,7 +1246,7 @@ export default function AdminDashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                {user?.role === "technician" ? "My Reports" : "Total Reports"}
+                {typedUser?.role === "technician" ? "My Reports" : "Total Reports"}
               </CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
@@ -1259,16 +1268,16 @@ export default function AdminDashboard() {
 
         {/* Main Content */}
         <Tabs
-          defaultValue={user?.role === "technician" ? "reports" : "users"}
+          defaultValue={typedUser?.role === "technician" ? "reports" : "users"}
           className="space-y-4"
         >
           <TabsList>
-            {(user?.role === "super_admin" ||
-              user?.role === "support_center") && (
+            {(typedUser?.role === "super_admin" ||
+              typedUser?.role === "support_center") && (
               <TabsTrigger value="users">User Management</TabsTrigger>
             )}
             <TabsTrigger value="reports">
-              {user?.role === "technician" ? "My Reports" : "All Reports"}
+              {typedUser?.role === "technician" ? "My Reports" : "All Reports"}
             </TabsTrigger>
           </TabsList>
 
@@ -1381,8 +1390,8 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 {/* Technician Filter - Only show for super admin and support center */}
-                {(user?.role === "super_admin" ||
-                  user?.role === "support_center") && (
+                {(typedUser?.role === "super_admin" ||
+                  typedUser?.role === "support_center") && (
                   <div className="mb-4">
                     <Label
                       htmlFor="technicianFilter"
@@ -1512,8 +1521,8 @@ export default function AdminDashboard() {
                                 Excel
                               </Button>
                               {/* Delete button - only visible for super admin and support center */}
-                              {(user?.role === "super_admin" ||
-                                user?.role === "support_center") && (
+                              {(typedUser?.role === "super_admin" ||
+                                typedUser?.role === "support_center") && (
                                 <Button
                                   size="sm"
                                   variant="destructive"
@@ -1611,7 +1620,7 @@ export default function AdminDashboard() {
                 <SelectItem value="support_center">
                   Support Center Staff
                 </SelectItem>
-                {user?.role === "super_admin" && (
+                {typedUser?.role === "super_admin" && (
                   <SelectItem value="super_admin">Super Admin</SelectItem>
                 )}
               </SelectContent>
