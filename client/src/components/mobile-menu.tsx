@@ -89,15 +89,15 @@ export function MobileMenu() {
             </div>
           )}
 
-          {/* Mode Navigation */}
-          <div className="space-y-3">
-            <div className="text-sm font-medium text-gray-700 mb-3">Application Modes</div>
+          {/* Navigation */}
+          <div className="space-y-2">
+            <div className="text-sm font-medium text-gray-700 mb-3">Navigation</div>
             
             {/* Testing Mode */}
             <Button
-              variant={isTestingMode ? "default" : "outline"}
+              variant="ghost"
               onClick={switchToTestingMode}
-              className="w-full flex items-center justify-start gap-3 text-left"
+              className={`w-full flex items-center justify-start gap-3 text-left ${isTestingMode ? 'bg-blue-50 text-blue-700' : ''}`}
             >
               <TestTube className="w-5 h-5" />
               <div>
@@ -109,9 +109,9 @@ export function MobileMenu() {
             {/* Admin Mode - Only show if user has access */}
             {(hasAdminAccess || hasTechnicianAccess) && (
               <Button
-                variant={isAdminMode ? "default" : "outline"}
+                variant="ghost"
                 onClick={switchToAdminMode}
-                className="w-full flex items-center justify-start gap-3 text-left"
+                className={`w-full flex items-center justify-start gap-3 text-left ${isAdminMode ? 'bg-blue-50 text-blue-700' : ''}`}
               >
                 <Settings className="w-5 h-5" />
                 <div>
@@ -124,63 +124,54 @@ export function MobileMenu() {
                 </div>
               </Button>
             )}
-          </div>
 
-          {/* Current Mode Navigation */}
-          {isTestingMode && (
-            <div className="space-y-2">
-              <div className="text-sm font-medium text-gray-700 mb-3">Testing Navigation</div>
-              
-              <Button
-                variant="ghost"
-                onClick={() => handleNavigation('/')}
-                className="w-full flex items-center justify-start gap-3 text-left"
-              >
-                <Home className="w-5 h-5" />
-                Service Selection
-              </Button>
-              
-              <Button
-                variant="ghost"
-                onClick={() => handleNavigation('/items')}
-                className="w-full flex items-center justify-start gap-3 text-left"
-              >
-                <ClipboardCheck className="w-5 h-5" />
-                Item Selection
-              </Button>
-              
-              <Button
-                variant="ghost"
-                onClick={() => handleNavigation('/report')}
-                className="w-full flex items-center justify-start gap-3 text-left"
-              >
-                <FileText className="w-5 h-5" />
-                Report Preview
-              </Button>
-            </div>
-          )}
+            {/* Testing Mode Specific Navigation */}
+            {isTestingMode && (
+              <>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleNavigation('/')}
+                  className="w-full flex items-center justify-start gap-3 text-left ml-4"
+                >
+                  <Home className="w-4 h-4" />
+                  Service Selection
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  onClick={() => handleNavigation('/items')}
+                  className="w-full flex items-center justify-start gap-3 text-left ml-4"
+                >
+                  <ClipboardCheck className="w-4 h-4" />
+                  Item Selection
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  onClick={() => handleNavigation('/report')}
+                  className="w-full flex items-center justify-start gap-3 text-left ml-4"
+                >
+                  <FileText className="w-4 h-4" />
+                  Report Preview
+                </Button>
+              </>
+            )}
 
-          {isAdminMode && hasAdminAccess && (
-            <div className="space-y-2">
-              <div className="text-sm font-medium text-gray-700 mb-3">Admin Navigation</div>
-              
-              <div className="text-sm text-gray-600 p-2 bg-gray-50 rounded-lg">
+            {/* Admin Mode Info */}
+            {isAdminMode && hasAdminAccess && (
+              <div className="text-sm text-gray-600 p-2 bg-gray-50 rounded-lg ml-4">
                 <div className="font-medium">Super Admin Access</div>
                 <div>Full system management capabilities</div>
               </div>
-            </div>
-          )}
+            )}
 
-          {isAdminMode && hasTechnicianAccess && !hasAdminAccess && (
-            <div className="space-y-2">
-              <div className="text-sm font-medium text-gray-700 mb-3">My Reports</div>
-              
-              <div className="text-sm text-gray-600 p-2 bg-gray-50 rounded-lg">
+            {isAdminMode && hasTechnicianAccess && !hasAdminAccess && (
+              <div className="text-sm text-gray-600 p-2 bg-gray-50 rounded-lg ml-4">
                 <div className="font-medium">Technician Access</div>
                 <div>View and manage your test reports</div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Action buttons */}
           <div className="pt-4 border-t border-gray-200 space-y-3">
