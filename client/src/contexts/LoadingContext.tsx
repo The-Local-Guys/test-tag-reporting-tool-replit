@@ -27,7 +27,7 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
   const finishPageLoad = () => {
     const now = Date.now();
     const loadingTime = loadingStartTimeRef.current ? now - loadingStartTimeRef.current : 0;
-    const remainingTime = Math.max(0, 400 - loadingTime); // Minimum 400ms
+    const remainingTime = Math.max(0, 500 - loadingTime); // Minimum 500ms
     
     hideTimeoutRef.current = setTimeout(() => {
       setIsPageLoading(false);
