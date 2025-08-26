@@ -48,6 +48,11 @@ function Router() {
     return <Login />;
   }
 
+  // Show loading spinner while checking auth
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
   // Check if user chose admin mode at login
   const loginMode = sessionStorage.getItem('loginMode');
   console.log('Login mode:', loginMode, 'User role:', (user as any)?.role); // Debug log

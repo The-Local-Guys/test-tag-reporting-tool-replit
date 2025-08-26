@@ -10,6 +10,7 @@ const LoadingContext = createContext<LoadingContextType | null>(null);
 
 export function LoadingProvider({ children }: { children: ReactNode }) {
   const [isPageLoading, setIsPageLoading] = useState(false);
+  const [isPreventingFlash, setIsPreventingFlash] = useState(false);
   const loadingStartTimeRef = useRef<number | null>(null);
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
