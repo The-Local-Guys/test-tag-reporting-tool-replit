@@ -1,5 +1,5 @@
 import { Switch, Route, useLocation } from "wouter";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -25,7 +25,24 @@ import Login from "@/pages/login";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
-  const { isPageLoading } = useLoading();
+  const { isPageLoading, showPageLoading, hidePageLoading } = useLoading();
+  const [location] = useLocation();
+  const prevLocationRef = useRef(location);
+
+  // Show loading when location changes, hide when content is ready
+  useEffect(() => {
+    if (prevLocationRef.current !== location) {
+      showPageLoading();
+      prevLocationRef.current = location;
+      
+      // Hide loading after a brief delay to ensure content is rendered
+      const timer = setTimeout(() => {
+        hidePageLoading();
+      }, 800);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [location, showPageLoading, hidePageLoading]);
 
   // Show login if not authenticated
   if (!isAuthenticated) {
