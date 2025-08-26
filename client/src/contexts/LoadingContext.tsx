@@ -16,8 +16,7 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
   };
 
   const hidePageLoading = () => {
-    // Add a small delay to ensure the page has loaded before hiding
-    setTimeout(() => setIsPageLoading(false), 300);
+    setIsPageLoading(false);
   };
 
   return (

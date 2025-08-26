@@ -30,7 +30,7 @@ export function MobileMenu() {
     closeMobileMenu();
     setTimeout(() => {
       window.location.reload();
-    }, 400);
+    }, 500);
   };
 
   const switchToAdminMode = () => {
@@ -40,7 +40,7 @@ export function MobileMenu() {
     closeMobileMenu();
     setTimeout(() => {
       window.location.reload();
-    }, 400);
+    }, 500);
   };
 
   const handleNavigation = (path: string) => {
