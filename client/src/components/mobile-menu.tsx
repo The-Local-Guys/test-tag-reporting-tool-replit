@@ -125,37 +125,7 @@ export function MobileMenu() {
               </Button>
             )}
 
-            {/* Testing Mode Specific Navigation */}
-            {isTestingMode && (
-              <>
-                <Button
-                  variant="ghost"
-                  onClick={() => handleNavigation('/')}
-                  className="w-full flex items-center justify-start gap-3 text-left ml-4"
-                >
-                  <Home className="w-4 h-4" />
-                  Service Selection
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  onClick={() => handleNavigation('/items')}
-                  className="w-full flex items-center justify-start gap-3 text-left ml-4"
-                >
-                  <ClipboardCheck className="w-4 h-4" />
-                  Item Selection
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  onClick={() => handleNavigation('/report')}
-                  className="w-full flex items-center justify-start gap-3 text-left ml-4"
-                >
-                  <FileText className="w-4 h-4" />
-                  Report Preview
-                </Button>
-              </>
-            )}
+
 
             {/* Admin Mode Info */}
             {isAdminMode && hasAdminAccess && (
