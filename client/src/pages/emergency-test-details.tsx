@@ -307,17 +307,6 @@ export default function EmergencyTestDetails() {
 
               <div className="flex items-center space-x-2">
                 <Checkbox
-                  id="dischargeTest"
-                  checked={form.watch('dischargeTest')}
-                  onCheckedChange={(checked) => form.setValue('dischargeTest', !!checked)}
-                />
-                <Label htmlFor="dischargeTest" className="text-sm">
-                  90-Minute Discharge Test (Battery backup duration)
-                </Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
                   id="switchingTest"
                   checked={form.watch('switchingTest')}
                   onCheckedChange={(checked) => form.setValue('switchingTest', !!checked)}
@@ -335,6 +324,17 @@ export default function EmergencyTestDetails() {
                 />
                 <Label htmlFor="chargingTest" className="text-sm">
                   Charging Circuit Test (Battery charging verification)
+                </Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="dischargeTest"
+                  checked={form.watch('dischargeTest')}
+                  onCheckedChange={(checked) => form.setValue('dischargeTest', !!checked)}
+                />
+                <Label htmlFor="dischargeTest" className="text-sm">
+                  90-Minute Discharge Test (Battery backup duration)
                 </Label>
               </div>
             </div>
