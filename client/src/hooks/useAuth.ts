@@ -35,6 +35,8 @@ export function useAuth() {
       }
       // Force refetch user data
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      // Redirect to admin page after successful login
+      navigateWithReplace('/admin');
     },
   });
 
