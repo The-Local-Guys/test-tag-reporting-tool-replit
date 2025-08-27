@@ -213,13 +213,13 @@ export default function ReportPreview() {
         visionInspection: result.visionInspection,
         electricalTest: result.electricalTest,
         createdAt: new Date(result.timestamp),
-        maintenanceType: null,
-        dischargeTest: false,
-        switchingTest: false,
-        chargingTest: false,
-        manufacturerInfo: null,
-        installationDate: null,
-        globeType: null,
+        maintenanceType: result.maintenanceType || null,
+        dischargeTest: result.dischargeTest || false,
+        switchingTest: result.switchingTest || false,
+        chargingTest: result.chargingTest || false,
+        manufacturerInfo: result.manufacturerInfo || null,
+        installationDate: result.installationDate || null,
+        globeType: result.globeType || null,
       }));
 
       if (!sessionData?.session) {
@@ -428,13 +428,13 @@ export default function ReportPreview() {
       electricalTest: result.electricalTest,
       createdAt: new Date(result.timestamp),
 
-      maintenanceType: null,
-      dischargeTest: false,
-      switchingTest: false,
-      chargingTest: false,
-      manufacturerInfo: null,
-      installationDate: null,
-      globeType: null,
+      maintenanceType: result.maintenanceType || null,
+      dischargeTest: result.dischargeTest || false,
+      switchingTest: result.switchingTest || false,
+      chargingTest: result.chargingTest || false,
+      manufacturerInfo: result.manufacturerInfo || null,
+      installationDate: result.installationDate || null,
+      globeType: result.globeType || null,
     };
 
     setDeletingResult(testResult);
@@ -526,13 +526,13 @@ export default function ReportPreview() {
       electricalTest: result.electricalTest,
       createdAt: new Date(result.timestamp),
 
-      maintenanceType: null,
-      dischargeTest: false,
-      switchingTest: false,
-      chargingTest: false,
-      manufacturerInfo: null,
-      installationDate: null,
-      globeType: null,
+      maintenanceType: result.maintenanceType || null,
+      dischargeTest: result.dischargeTest || false,
+      switchingTest: result.switchingTest || false,
+      chargingTest: result.chargingTest || false,
+      manufacturerInfo: result.manufacturerInfo || null,
+      installationDate: result.installationDate || null,
+      globeType: result.globeType || null,
     };
 
     // Store the original batched result for updating
