@@ -144,6 +144,7 @@ export class DatabaseStorage implements IStorage {
       username: users.username,
       fullName: users.fullName,
       role: users.role,
+      isActive: users.isActive,
       createdAt: users.createdAt,
     }).from(users);
   }
