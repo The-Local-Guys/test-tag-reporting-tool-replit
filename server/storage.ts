@@ -69,7 +69,14 @@ export class DatabaseStorage implements IStorage {
    * @returns User object if found, undefined if not found
    */
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+    const [user] = await db.select({
+      id: users.id,
+      username: users.username,
+      fullName: users.fullName,
+      role: users.role,
+      passwordHash: users.passwordHash,
+      createdAt: users.createdAt,
+    }).from(users).where(eq(users.username, username));
     return user;
   }
 
@@ -132,7 +139,13 @@ export class DatabaseStorage implements IStorage {
    * @returns Array of all user objects in the system
    */
   async getAllUsers(): Promise<User[]> {
-    return await db.select().from(users);
+    return await db.select({
+      id: users.id,
+      username: users.username,
+      fullName: users.fullName,
+      role: users.role,
+      createdAt: users.createdAt,
+    }).from(users);
   }
 
   /**
@@ -234,7 +247,18 @@ export class DatabaseStorage implements IStorage {
    */
   async getSessionsByUser(userId: number): Promise<(TestSession & { totalItems?: number; failedItems?: number })[]> {
     const sessions = await db
-      .select()
+      .select({
+        id: testSessions.id,
+        serviceType: testSessions.serviceType,
+        testDate: testSessions.testDate,
+        technicianName: testSessions.technicianName,
+        clientName: testSessions.clientName,
+        siteContact: testSessions.siteContact,
+        address: testSessions.address,
+        country: testSessions.country,
+        userId: testSessions.userId,
+        createdAt: testSessions.createdAt,
+      })
       .from(testSessions)
       .where(eq(testSessions.userId, userId))
       .orderBy(desc(testSessions.testDate));
@@ -386,7 +410,32 @@ export class DatabaseStorage implements IStorage {
    */
   async getTestResult(resultId: number): Promise<TestResult | undefined> {
     const [result] = await db
-      .select()
+      .select({
+        id: testResults.id,
+        sessionId: testResults.sessionId,
+        assetNumber: testResults.assetNumber,
+        itemName: testResults.itemName,
+        itemType: testResults.itemType,
+        location: testResults.location,
+        classification: testResults.classification,
+        result: testResults.result,
+        frequency: testResults.frequency,
+        failureReason: testResults.failureReason,
+        actionTaken: testResults.actionTaken,
+        notes: testResults.notes,
+        photoData: testResults.photoData,
+        visionInspection: testResults.visionInspection,
+        electricalTest: testResults.electricalTest,
+        createdAt: testResults.createdAt,
+        maintenanceType: testResults.maintenanceType,
+        dischargeTest: testResults.dischargeTest,
+        switchingTest: testResults.switchingTest,
+        chargingTest: testResults.chargingTest,
+        luxValue: testResults.luxValue,
+        manufacturerInfo: testResults.manufacturerInfo,
+        installationDate: testResults.installationDate,
+        globeType: testResults.globeType,
+      })
       .from(testResults)
       .where(eq(testResults.id, resultId));
     return result;
@@ -400,7 +449,32 @@ export class DatabaseStorage implements IStorage {
    */
   async getTestResultsBySession(sessionId: number): Promise<TestResult[]> {
     const results = await db
-      .select()
+      .select({
+        id: testResults.id,
+        sessionId: testResults.sessionId,
+        assetNumber: testResults.assetNumber,
+        itemName: testResults.itemName,
+        itemType: testResults.itemType,
+        location: testResults.location,
+        classification: testResults.classification,
+        result: testResults.result,
+        frequency: testResults.frequency,
+        failureReason: testResults.failureReason,
+        actionTaken: testResults.actionTaken,
+        notes: testResults.notes,
+        photoData: testResults.photoData,
+        visionInspection: testResults.visionInspection,
+        electricalTest: testResults.electricalTest,
+        createdAt: testResults.createdAt,
+        maintenanceType: testResults.maintenanceType,
+        dischargeTest: testResults.dischargeTest,
+        switchingTest: testResults.switchingTest,
+        chargingTest: testResults.chargingTest,
+        luxValue: testResults.luxValue,
+        manufacturerInfo: testResults.manufacturerInfo,
+        installationDate: testResults.installationDate,
+        globeType: testResults.globeType,
+      })
       .from(testResults)
       .where(eq(testResults.sessionId, sessionId));
     
@@ -554,7 +628,32 @@ export class DatabaseStorage implements IStorage {
     const tenSecondsAgo = new Date(Date.now() - 10000); // 10 seconds ago
     
     const results = await db
-      .select()
+      .select({
+        id: testResults.id,
+        sessionId: testResults.sessionId,
+        assetNumber: testResults.assetNumber,
+        itemName: testResults.itemName,
+        itemType: testResults.itemType,
+        location: testResults.location,
+        classification: testResults.classification,
+        result: testResults.result,
+        frequency: testResults.frequency,
+        failureReason: testResults.failureReason,
+        actionTaken: testResults.actionTaken,
+        notes: testResults.notes,
+        photoData: testResults.photoData,
+        visionInspection: testResults.visionInspection,
+        electricalTest: testResults.electricalTest,
+        createdAt: testResults.createdAt,
+        maintenanceType: testResults.maintenanceType,
+        dischargeTest: testResults.dischargeTest,
+        switchingTest: testResults.switchingTest,
+        chargingTest: testResults.chargingTest,
+        luxValue: testResults.luxValue,
+        manufacturerInfo: testResults.manufacturerInfo,
+        installationDate: testResults.installationDate,
+        globeType: testResults.globeType,
+      })
       .from(testResults)
       .where(
         and(
