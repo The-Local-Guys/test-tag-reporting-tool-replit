@@ -64,9 +64,9 @@ export default function EmergencyTestDetails() {
       maintenanceType: 'maintained',
       globeType: 'led',
       visualInspection: true,
-      dischargeTest: false,
-      switchingTest: false,
-      chargingTest: false,
+      dischargeTest: true,
+      switchingTest: true,
+      chargingTest: true,
       notes: '',
     },
   });
