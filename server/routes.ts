@@ -552,6 +552,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             installationDate: batchedResult.installationDate || null,
           };
 
+          console.log('Attempting to insert test result:', resultData);
+
           // Create the result directly without checking for duplicates
           const savedResult = await storage.createTestResult(resultData);
           savedResults.push(savedResult);
