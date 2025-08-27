@@ -64,15 +64,12 @@ export function useAuth() {
       return response.json();
     },
     onSuccess: () => {
+      queryClient.clear();
       // Clear login mode and selected service from session storage
       sessionStorage.removeItem('loginMode');
       sessionStorage.removeItem('selectedService');
       // Clear any localStorage data
       localStorage.clear();
-      // Clear the query client cache and force immediate re-render
-      queryClient.clear();
-      // Force page reload to ensure clean state
-      window.location.href = '/';
     },
   });
 

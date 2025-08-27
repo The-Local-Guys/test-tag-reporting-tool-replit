@@ -97,7 +97,7 @@ export function generateExcelReport(data: ReportData): Blob {
   // Test results header
   // Different headers for emergency exit light testing
   const resultsHeader = session.serviceType === 'emergency_exit_light' 
-    ? ['Asset #', 'Item Name', 'Location', 'Classification', 'Result', 'Manufacturer', 'Install Date', 'Frequency', 'Next Due Date', 'Failure Reason', 'Notes', 'Visual Inspection', 'Discharge Test', 'Switching Test', 'Charging Test', 'Lux Value', 'Maintenance Type', 'Globe Type']
+    ? ['Asset #', 'Item Name', 'Location', 'Classification', 'Result', 'Manufacturer', 'Install Date', 'Frequency', 'Next Due Date', 'Failure Reason', 'Notes', 'Visual Inspection', 'Discharge Test', 'Switching Test', 'Charging Test', 'Maintenance Type', 'Globe Type']
     : ['Asset #', 'Item Name', 'Location', 'Classification', 'Result', 'Vision Inspection', 'Electrical Test', 'Frequency', 'Next Due Date', 'Failure Reason', 'Action Taken', 'Notes'];
   
   // Test results data - different structure for emergency exit light testing
@@ -143,7 +143,6 @@ export function generateExcelReport(data: ReportData): Blob {
         result.dischargeTest ? 'PASS' : 'FAIL',
         result.switchingTest ? 'PASS' : 'FAIL',
         result.chargingTest ? 'PASS' : 'FAIL',
-        result.luxValue !== null && result.luxValue !== undefined ? `${result.luxValue} lux` : 'N/A',
         result.maintenanceType ? (result.maintenanceType === 'maintained' ? 'Maintained' : 'Non-Maintained') : 'N/A',
         result.globeType ? (result.globeType === 'led' ? 'LED' : 'Halogen') : 'N/A'
       ];

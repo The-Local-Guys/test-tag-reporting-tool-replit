@@ -383,12 +383,6 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       doc.text(`• Charging Circuit Test (Battery charging verification): ${result.chargingTest ? 'PASS' : 'FAIL'}`, margin + 5, yPosition);
       yPosition += 6;
       
-      // Show lux measurement if available
-      if (result.luxValue !== null && result.luxValue !== undefined) {
-        doc.text(`• Lux Measurement: ${result.luxValue} lux`, margin + 5, yPosition);
-        yPosition += 6;
-      }
-      
       // Show maintenance type if available
       if (result.maintenanceType) {
         const maintenanceTypeDisplay = result.maintenanceType === 'maintained' ? 'Maintained' : 'Non-Maintained';

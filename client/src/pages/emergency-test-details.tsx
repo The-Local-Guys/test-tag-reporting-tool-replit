@@ -29,7 +29,6 @@ const emergencyTestSchema = z.object({
   dischargeTest: z.boolean().default(false),
   switchingTest: z.boolean().default(false),
   chargingTest: z.boolean().default(false),
-  luxValue: z.number().min(0, 'Lux value must be positive').optional(),
   failureReason: z.enum(['physical_damage', 'battery_failure', 'lamp_failure', 'wiring_fault', 'charging_fault', 'insufficient_illumination', 'mounting_issue', 'other']).optional(),
   notes: z.string().optional(),
 });
@@ -68,7 +67,6 @@ export default function EmergencyTestDetails() {
       dischargeTest: true,
       switchingTest: true,
       chargingTest: true,
-      luxValue: undefined,
       notes: '',
     },
   });
@@ -120,7 +118,6 @@ export default function EmergencyTestDetails() {
         dischargeTest: data.dischargeTest,
         switchingTest: data.switchingTest,
         chargingTest: data.chargingTest,
-        luxValue: data.luxValue || null,
         manufacturerInfo: data.manufacturerInfo || null,
         installationDate: data.installationDate || null,
       });
@@ -144,7 +141,6 @@ export default function EmergencyTestDetails() {
         dischargeTest: data.dischargeTest,
         switchingTest: data.switchingTest,
         chargingTest: data.chargingTest,
-        luxValue: data.luxValue || null,
         manufacturerInfo: data.manufacturerInfo || null,
         installationDate: data.installationDate || null,
       });
@@ -365,33 +361,6 @@ export default function EmergencyTestDetails() {
                   <SelectItem value="fluorescent">Fluorescent</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Lux Measurement */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Lux Measurement</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="luxValue">Illumination Level (lux)</Label>
-              <Input
-                id="luxValue"
-                type="number"
-                min="0"
-                step="0.1"
-                {...form.register('luxValue', { valueAsNumber: true })}
-                placeholder="e.g., 1.5"
-                className="text-base"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Minimum required: 1 lux for escape routes, 0.2 lux for open areas
-              </p>
-              {form.formState.errors.luxValue && (
-                <p className="text-red-500 text-sm mt-1">{form.formState.errors.luxValue.message}</p>
-              )}
             </div>
           </CardContent>
         </Card>

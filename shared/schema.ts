@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, varchar, jsonb, index, real } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, varchar, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -62,7 +62,6 @@ export const testResults = pgTable("test_results", {
 
   switchingTest: boolean("switching_test"), // Automatic switching test
   chargingTest: boolean("charging_test"), // Charging circuit test
-  luxValue: real("lux_value"), // Lux measurement for illumination level
   manufacturerInfo: text("manufacturer_info"), // Manufacturer and model details
   installationDate: text("installation_date"), // Installation/last replacement date
   createdAt: timestamp("created_at").defaultNow(),
