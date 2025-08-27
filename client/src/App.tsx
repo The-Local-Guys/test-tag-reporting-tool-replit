@@ -29,7 +29,11 @@ function Router() {
   const [location] = useLocation();
   const prevLocationRef = useRef(location);
 
-  // Finish loading when content is ready
+  // Get current login mode
+  const loginMode = sessionStorage.getItem('loginMode');
+  console.log('Login mode:', loginMode, 'User role:', (user as any)?.role); // Debug log
+
+  // Always call all hooks before any early returns
   useEffect(() => {
     if (prevLocationRef.current !== location) {
       prevLocationRef.current = location;
@@ -43,28 +47,25 @@ function Router() {
     }
   }, [location, finishPageLoad]);
 
-  // Show login if not authenticated
+  // Update login mode based on current route for SPA behavior
+  useEffect(() => {
+    if (isAuthenticated) {
+      if (location.startsWith('/admin') && loginMode !== 'admin') {
+        sessionStorage.setItem('loginMode', 'admin');
+      } else if (!location.startsWith('/admin') && loginMode !== 'testing') {
+        sessionStorage.setItem('loginMode', 'testing');
+      }
+    }
+  }, [location, loginMode, isAuthenticated]);
+
+  // Now handle conditional rendering after all hooks
   if (!isAuthenticated) {
     return <Login />;
   }
 
-  // Show loading spinner while checking auth
   if (isLoading) {
     return <LoadingSpinner />;
   }
-
-  // Get current login mode and update based on route
-  const loginMode = sessionStorage.getItem('loginMode');
-  console.log('Login mode:', loginMode, 'User role:', (user as any)?.role); // Debug log
-  
-  // Update login mode based on current route for SPA behavior
-  useEffect(() => {
-    if (location.startsWith('/admin') && loginMode !== 'admin') {
-      sessionStorage.setItem('loginMode', 'admin');
-    } else if (!location.startsWith('/admin') && loginMode !== 'testing') {
-      sessionStorage.setItem('loginMode', 'testing');
-    }
-  }, [location, loginMode]);
 
   return (
     <>
