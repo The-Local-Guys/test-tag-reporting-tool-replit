@@ -1,9 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useSpaNavigation } from "./useSpaNavigation";
 import { type User, type LoginData, type InsertUser } from "@shared/schema";
 
 export function useAuth() {
   const queryClient = useQueryClient();
+  const { navigateWithReplace } = useSpaNavigation();
 
   const { data: user, isLoading } = useQuery({
     queryKey: ["/api/auth/user"],
@@ -70,6 +72,8 @@ export function useAuth() {
       sessionStorage.removeItem('selectedService');
       // Clear any localStorage data
       localStorage.clear();
+      // Redirect to login page after successful logout
+      navigateWithReplace('/login');
     },
   });
 
