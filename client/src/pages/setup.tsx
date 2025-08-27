@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Clipboard, ArrowRight, AlertCircle } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useAuth } from '@/hooks/useAuth';
-import { useLocation } from 'wouter';
+import { useSpaNavigation } from '@/hooks/useSpaNavigation';
 import type { InsertTestSession } from '@shared/schema';
 import logoPath from '@assets/The Local Guys - with plug wide boarder - png seek.png';
 
@@ -23,7 +23,7 @@ import logoPath from '@assets/The Local Guys - with plug wide boarder - png seek
 export default function Setup() {
   const { createSession, isCreatingSession, clearSession, sessionId } = useSession();
   const { user } = useAuth();
-  const [, setLocation] = useLocation();
+  const { navigate } = useSpaNavigation();
   
   // Get current date in Australian Central Time
   const getAustralianDate = () => {
@@ -42,7 +42,7 @@ export default function Setup() {
     resolver: zodResolver(insertTestSessionSchema),
     defaultValues: {
       testDate: getAustralianDate(),
-      technicianName: user?.fullName || '',
+      technicianName: (user as any)?.fullName || '',
       clientName: '',
       siteContact: '',
       address: '',
@@ -64,7 +64,7 @@ export default function Setup() {
       serviceType: selectedService as 'electrical' | 'emergency_exit_light',
       country: 'australia', // Always default to Australia
     });
-    setLocation('/items');
+    navigate('/items');
   };
 
 

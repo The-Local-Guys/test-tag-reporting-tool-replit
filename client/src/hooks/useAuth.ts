@@ -33,8 +33,6 @@ export function useAuth() {
       }
       // Force refetch user data
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      // Also force a window reload to ensure proper state
-      window.location.reload();
     },
   });
 
@@ -70,7 +68,8 @@ export function useAuth() {
       // Clear login mode and selected service from session storage
       sessionStorage.removeItem('loginMode');
       sessionStorage.removeItem('selectedService');
-      window.location.reload();
+      // Clear any localStorage data
+      localStorage.clear();
     },
   });
 

@@ -55,11 +55,13 @@ export function useLoading() {
 export function useNavigateWithLoading() {
   const { startPageLoad } = useLoading();
   
-  return (href: string) => {
-    startPageLoad();
-    // Use setTimeout to ensure loading appears before navigation
-    setTimeout(() => {
-      window.location.href = href;
-    }, 50);
+  return (navigate: (path: string) => void) => {
+    return (path: string) => {
+      startPageLoad();
+      // Use setTimeout to ensure loading appears before navigation
+      setTimeout(() => {
+        navigate(path);
+      }, 50);
+    };
   };
 }

@@ -2,14 +2,12 @@ import { Button } from "@/components/ui/button";
 import { LogOut, User, Home, Settings, Lock, ExternalLink, TestTube, Users, FileText, ClipboardCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMobileMenu } from "@/contexts/MobileMenuContext";
-import { useLoading } from "@/contexts/LoadingContext";
-import { useLocation } from "wouter";
+import { useSpaNavigation } from "@/hooks/useSpaNavigation";
 
 export function MobileMenu() {
   const { user, logout, isLoggingOut } = useAuth();
   const { isMobileMenuOpen, closeMobileMenu } = useMobileMenu();
-  const { startPageLoad } = useLoading();
-  const [, setLocation] = useLocation();
+  const { navigate } = useSpaNavigation();
   
   // Type guard for user object
   const typedUser = user as { fullName?: string; role?: string } | undefined;
@@ -24,28 +22,20 @@ export function MobileMenu() {
   const hasTechnicianAccess = typedUser && typedUser.role === 'technician';
 
   const switchToTestingMode = () => {
-    startPageLoad();
     sessionStorage.setItem('loginMode', 'testing');
-    setLocation('/');
     closeMobileMenu();
-    setTimeout(() => {
-      window.location.reload();
-    }, 100);
+    navigate('/');
   };
 
   const switchToAdminMode = () => {
-    startPageLoad();
     sessionStorage.setItem('loginMode', 'admin');
-    setLocation('/');
     closeMobileMenu();
-    setTimeout(() => {
-      window.location.reload();
-    }, 100);
+    navigate('/admin');
   };
 
   const handleNavigation = (path: string) => {
-    setLocation(path);
     closeMobileMenu();
+    navigate(path);
   };
 
   const handleLogout = async () => {
