@@ -18,7 +18,7 @@ import { emergencyClassifications, emergencyFailureReasons, emergencyFrequencies
 // Emergency Exit Light Test Schema following AS 2293.2:2019
 const emergencyTestSchema = z.object({
   location: z.string().min(1, 'Location is required'),
-  classification: z.enum(['emergency_exit_sign', 'emergency_light_downlight', 'combination_unit', 'emergency_spotlight', 'floor_path_light', 'emergency_bulkhead']),
+  classification: z.string().optional(),
   result: z.enum(['pass', 'fail']),
   frequency: z.enum(['sixmonthly', 'annually']),
   manufacturerInfo: z.string().optional(),
@@ -56,7 +56,7 @@ export default function EmergencyTestDetails() {
     resolver: zodResolver(emergencyTestSchema),
     defaultValues: {
       location: '',
-      classification: 'emergency_exit_sign',
+      classification: 'emergency_equipment',
       result: 'pass',
       frequency: 'sixmonthly',
       manufacturerInfo: '',
@@ -72,7 +72,6 @@ export default function EmergencyTestDetails() {
   });
 
   const watchResult = form.watch('result');
-  const watchClassification = form.watch('classification');
 
   // Asset numbers are now auto-generated on server side
 
@@ -248,22 +247,7 @@ export default function EmergencyTestDetails() {
               </div>
             </div>
 
-            <div>
-              <Label htmlFor="classification">Equipment Type *</Label>
-              <Select 
-                value={form.watch('classification')} 
-                onValueChange={(value) => form.setValue('classification', value as any)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select equipment type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="exit_sign">Exit Sign</SelectItem>
-                  <SelectItem value="emergency_light">Emergency Light</SelectItem>
-                  <SelectItem value="combination_unit">Combination Unit</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+
 
             <div>
               <Label htmlFor="manufacturerInfo">Manufacturer & Model</Label>
