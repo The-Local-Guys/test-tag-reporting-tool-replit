@@ -30,6 +30,14 @@ export interface BatchedTestResult {
   electricalTest: boolean;
   timestamp: string;
   assetNumber?: string; // Added for preview display
+  // Emergency-specific fields
+  maintenanceType?: string;
+  globeType?: string;
+  dischargeTest?: boolean;
+  switchingTest?: boolean;
+  chargingTest?: boolean;
+  manufacturerInfo?: string;
+  installationDate?: string;
 }
 
 /**
@@ -282,6 +290,14 @@ export function useSession() {
       visionInspection: data.visionInspection ?? true,
       electricalTest: data.electricalTest ?? true,
       timestamp: new Date().toISOString(),
+      // Emergency-specific fields
+      maintenanceType: data.maintenanceType || undefined,
+      globeType: data.globeType || undefined,
+      dischargeTest: data.dischargeTest || undefined,
+      switchingTest: data.switchingTest || undefined,
+      chargingTest: data.chargingTest || undefined,
+      manufacturerInfo: data.manufacturerInfo || undefined,
+      installationDate: data.installationDate || undefined,
     };
     
     // Add to batched results
