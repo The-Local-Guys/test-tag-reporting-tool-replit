@@ -135,6 +135,14 @@ export default function EmergencyTestDetails() {
         photoData: data.result === 'fail' ? photoData : null,
         visionInspection: data.visualInspection,
         electricalTest: data.dischargeTest, // Using electricalTest field for discharge test 
+        // Emergency specific fields for PDF generation
+        maintenanceType: data.maintenanceType || null,
+        globeType: data.globeType || null,
+        dischargeTest: data.dischargeTest,
+        switchingTest: data.switchingTest,
+        chargingTest: data.chargingTest,
+        manufacturerInfo: data.manufacturerInfo || null,
+        installationDate: data.installationDate || null,
       });
 
       toast({
