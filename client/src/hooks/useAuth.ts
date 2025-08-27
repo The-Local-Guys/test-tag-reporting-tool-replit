@@ -72,8 +72,8 @@ export function useAuth() {
       sessionStorage.removeItem('selectedService');
       // Clear any localStorage data
       localStorage.clear();
-      // Redirect to login page after successful logout
-      navigateWithReplace('/login');
+      // Redirect to root page after successful logout (will show login since user is not authenticated)
+      navigateWithReplace('/');
     },
   });
 
