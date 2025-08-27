@@ -69,29 +69,31 @@ function Router() {
 
   return (
     <>
-      <PageLoading isVisible={isPageLoading} />
       <MobileMenuProvider>
         <AppLayout>
-          <Switch>
-            {/* Admin Routes */}
-            <Route path="/admin">
-              {user && ((user as any).role === 'super_admin' || (user as any).role === 'support_center' || (user as any).role === 'technician') ? 
-                <AdminDashboard /> : 
-                <ServiceSelection />
-              }
-            </Route>
-            
-            {/* Testing Routes */}
-            <Route path="/" component={ServiceSelection} />
-            <Route path="/setup" component={Setup} />
-            <Route path="/items" component={ItemSelection} />
-            <Route path="/test" component={TestDetails} />
-            <Route path="/emergency-test" component={EmergencyTestDetails} />
-            <Route path="/failure" component={FailureDetails} />
-            <Route path="/report" component={ReportPreview} />
+          <div className="relative">
+            <PageLoading isVisible={isPageLoading} />
+            <Switch>
+              {/* Admin Routes */}
+              <Route path="/admin">
+                {user && ((user as any).role === 'super_admin' || (user as any).role === 'support_center' || (user as any).role === 'technician') ? 
+                  <AdminDashboard /> : 
+                  <ServiceSelection />
+                }
+              </Route>
+              
+              {/* Testing Routes */}
+              <Route path="/" component={ServiceSelection} />
+              <Route path="/setup" component={Setup} />
+              <Route path="/items" component={ItemSelection} />
+              <Route path="/test" component={TestDetails} />
+              <Route path="/emergency-test" component={EmergencyTestDetails} />
+              <Route path="/failure" component={FailureDetails} />
+              <Route path="/report" component={ReportPreview} />
 
-            <Route component={NotFound} />
-          </Switch>
+              <Route component={NotFound} />
+            </Switch>
+          </div>
         </AppLayout>
         <MobileMenu />
       </MobileMenuProvider>
