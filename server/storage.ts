@@ -205,7 +205,10 @@ export class DatabaseStorage implements IStorage {
     const sessionsWithCounts = await Promise.all(
       sessions.map(async (session) => {
         const results = await db
-          .select()
+          .select({
+            id: testResults.id,
+            result: testResults.result
+          })
           .from(testResults)
           .where(eq(testResults.sessionId, session.id));
         
@@ -240,7 +243,10 @@ export class DatabaseStorage implements IStorage {
     const sessionsWithCounts = await Promise.all(
       sessions.map(async (session) => {
         const results = await db
-          .select()
+          .select({
+            id: testResults.id,
+            result: testResults.result
+          })
           .from(testResults)
           .where(eq(testResults.sessionId, session.id));
         
