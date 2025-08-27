@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
@@ -156,13 +156,24 @@ export default function AdminDashboard() {
   const { data: users, isLoading: usersLoading } = useQuery({
     queryKey: ["/api/admin/users"],
     retry: false,
+    staleTime: 0, // Always consider data stale
+    refetchOnMount: true, // Always refetch on mount
   });
 
   // Fetch all test sessions
   const { data: sessions, isLoading: sessionsLoading } = useQuery({
     queryKey: ["/api/admin/sessions"],
     retry: false,
+    staleTime: 0, // Always consider data stale
+    refetchOnMount: true, // Always refetch on mount
   });
+
+  // Force refresh data when component mounts or when navigating to admin
+  useEffect(() => {
+    console.log('Admin dashboard mounted, refreshing data...');
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/sessions"] });
+  }, [queryClient]);
 
   // Filter sessions based on selected technician and sort by newest first
   const filteredSessions = Array.isArray(sessions)
@@ -1318,7 +1329,7 @@ export default function AdminDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {users?.map((user: any) => (
+                      {Array.isArray(users) && users.map((user: any) => (
                         <TableRow key={user.id}>
                           <TableCell className="font-medium">
                             {user.fullName}
