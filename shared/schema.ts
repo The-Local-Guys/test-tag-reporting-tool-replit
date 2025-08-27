@@ -46,7 +46,7 @@ export const testResults = pgTable("test_results", {
   itemName: text("item_name").notNull(),
   itemType: text("item_type").notNull(),
   location: text("location").notNull(),
-  classification: text("classification").notNull(), // For electrical: 'class1', 'class2', 'epod', 'rcd' | For emergency: 'exit_sign', 'emergency_light', 'combination_unit'
+  classification: text("classification").notNull(), // For electrical: 'class1', 'class2', 'epod', 'rcd' | For emergency: 'emergency_exit_sign', 'emergency_light_downlight', 'combination_unit', 'emergency_spotlight', 'floor_path_light', 'emergency_bulkhead'
   result: text("result").notNull(), // 'pass' or 'fail'
   failureReason: text("failure_reason"), // nullable for passed items
   actionTaken: text("action_taken"), // nullable for passed items
@@ -101,7 +101,7 @@ export type TestResult = typeof testResults.$inferSelect;
 // Define enum values for validation
 export const serviceTypes = ['electrical', 'emergency_exit_light'] as const;
 export const equipmentClassifications = ['class1', 'class2', 'epod', 'rcd', '3phase'] as const;
-export const emergencyClassifications = ['exit_sign', 'emergency_light', 'combination_unit'] as const;
+export const emergencyClassifications = ['emergency_exit_sign', 'emergency_light_downlight', 'combination_unit', 'emergency_spotlight', 'floor_path_light', 'emergency_bulkhead'] as const;
 export const testResultValues = ['pass', 'fail'] as const;
 export const failureReasons = ['vision', 'earth', 'insulation', 'polarity', 'other'] as const;
 export const emergencyFailureReasons = ['physical_damage', 'battery_failure', 'lamp_failure', 'wiring_fault', 'charging_fault', 'insufficient_illumination', 'mounting_issue', 'other'] as const;

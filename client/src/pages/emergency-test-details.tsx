@@ -18,7 +18,7 @@ import { emergencyClassifications, emergencyFailureReasons, emergencyFrequencies
 // Emergency Exit Light Test Schema following AS 2293.2:2019
 const emergencyTestSchema = z.object({
   location: z.string().min(1, 'Location is required'),
-  classification: z.enum(['exit_sign', 'emergency_light', 'combination_unit']),
+  classification: z.enum(['emergency_exit_sign', 'emergency_light_downlight', 'combination_unit', 'emergency_spotlight', 'floor_path_light', 'emergency_bulkhead']),
   result: z.enum(['pass', 'fail']),
   frequency: z.enum(['sixmonthly', 'annually']),
   manufacturerInfo: z.string().optional(),
@@ -56,7 +56,7 @@ export default function EmergencyTestDetails() {
     resolver: zodResolver(emergencyTestSchema),
     defaultValues: {
       location: '',
-      classification: 'exit_sign',
+      classification: 'emergency_exit_sign',
       result: 'pass',
       frequency: 'sixmonthly',
       manufacturerInfo: '',

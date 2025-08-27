@@ -23,14 +23,12 @@ const electricalItems = [
 ];
 
 const emergencyItems = [
-  { type: 'exit-sign', name: 'Exit Sign', icon: '🚪', description: 'Emergency Exit Sign' },
-  { type: 'emergency-light', name: 'Emergency Light', icon: '🔦', description: 'Emergency Lighting' },
-  { type: 'combination-unit', name: 'Combination Unit', icon: '🔸', description: 'Exit Sign + Light' },
-  { type: 'emergency-spotlight', name: 'Emergency Spotlight', icon: '💡', description: 'Spot Light' },
-  { type: 'emergency-downlight', name: 'Emergency Downlight', icon: '⬇️', description: 'Down Light' },
-  { type: 'emergency-bulkhead', name: 'Emergency Bulkhead', icon: '⬛', description: 'Bulkhead Light' },
-  { type: 'floor-path-light', name: 'Floor Path Light', icon: '🟦', description: 'Path Marking' },
-  { type: 'backup-battery', name: 'Backup Battery Unit', icon: '🔋', description: 'Battery Backup' },
+  { type: 'emergency-exit-sign', name: 'Emergency Exit Sign', icon: '🚪', description: 'Emergency Exit Sign' },
+  { type: 'emergency-light-downlight', name: 'Emergency Light/Downlight (Spitfire)', icon: '🔦', description: 'Emergency Downlight Spitfire Type' },
+  { type: 'combination-unit', name: 'Combination Unit (Sign with Two Side Lights)', icon: '🔸', description: 'Exit Sign with Side Lights' },
+  { type: 'emergency-spotlight', name: 'Emergency Spotlight', icon: '💡', description: 'Emergency Spotlight' },
+  { type: 'floor-path-light', name: 'Floor Path Light', icon: '🟦', description: 'Floor Path Lighting' },
+  { type: 'emergency-bulkhead', name: 'Emergency Bulkhead', icon: '⬛', description: 'Emergency Bulkhead Light' },
 ];
 
 export default function ItemSelection() {
