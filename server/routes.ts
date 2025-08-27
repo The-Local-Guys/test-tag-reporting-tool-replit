@@ -543,13 +543,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             photoData: batchedResult.photoData || null,
             visionInspection: batchedResult.visionInspection,
             electricalTest: batchedResult.electricalTest,
-            // Set other fields to defaults for emergency/electrical tests
-            maintenanceType: null,
-            dischargeTest: false,
-            switchingTest: false,
-            chargingTest: false,
-            manufacturerInfo: null,
-            installationDate: null,
+            // Map emergency/electrical test fields from batch data
+            maintenanceType: batchedResult.maintenanceType || null,
+            dischargeTest: batchedResult.dischargeTest || false,
+            switchingTest: batchedResult.switchingTest || false,
+            chargingTest: batchedResult.chargingTest || false,
+            manufacturerInfo: batchedResult.manufacturerInfo || null,
+            installationDate: batchedResult.installationDate || null,
           };
 
           // Create the result directly without checking for duplicates
