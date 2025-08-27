@@ -548,6 +548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             dischargeTest: batchedResult.dischargeTest || false,
             switchingTest: batchedResult.switchingTest || false,
             chargingTest: batchedResult.chargingTest || false,
+            luxValue: batchedResult.luxValue || null,
             manufacturerInfo: batchedResult.manufacturerInfo || null,
             installationDate: batchedResult.installationDate || null,
           };

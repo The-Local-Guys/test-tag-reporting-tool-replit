@@ -36,6 +36,7 @@ export interface BatchedTestResult {
   dischargeTest?: boolean;
   switchingTest?: boolean;
   chargingTest?: boolean;
+  luxValue?: number;
   manufacturerInfo?: string;
   installationDate?: string;
 }
@@ -296,6 +297,7 @@ export function useSession() {
       dischargeTest: data.dischargeTest || undefined,
       switchingTest: data.switchingTest || undefined,
       chargingTest: data.chargingTest || undefined,
+      luxValue: data.luxValue || undefined,
       manufacturerInfo: data.manufacturerInfo || undefined,
       installationDate: data.installationDate || undefined,
     };
