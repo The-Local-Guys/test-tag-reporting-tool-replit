@@ -199,6 +199,83 @@ export function useSession() {
     }
   }, [existingResults, batchedResults.length, sessionId]);
 
+  // Initialize asset counters with proper sequence continuation and custom start numbers
+  useEffect(() => {
+    if (!sessionId) return;
+
+    // Get session data to determine custom start numbers
+    const getSessionStartNumbers = async () => {
+      try {
+        const sessionResponse = await apiRequest(`/api/sessions/${sessionId}`);
+        const monthlyStartNumber = sessionResponse.monthlyStartNumber || 1;
+        const fiveYearlyStartNumber = sessionResponse.fiveYearlyStartNumber || 10001;
+
+        let monthlyAssetCounter = monthlyStartNumber - 1; // Start one before the start number
+        let fiveYearlyAssetCounter = fiveYearlyStartNumber - 1; // Start one before the start number
+
+        // Get manually entered numbers from localStorage
+        const manuallyEnteredKey = `manuallyEnteredAssetNumbers_${sessionId}`;
+        const manualNumbers = localStorage.getItem(manuallyEnteredKey);
+        let manuallyEnteredNumbers: string[] = [];
+
+        if (manualNumbers) {
+          try {
+            manuallyEnteredNumbers = JSON.parse(manualNumbers);
+          } catch (error) {
+            console.warn('Error parsing manually entered asset numbers:', error);
+          }
+        }
+
+        const usedNumbers = new Set<number>();
+
+        // Process batched results
+        batchedResults.forEach(result => {
+          const assetNum = parseInt(result.assetNumber || '');
+          if (!isNaN(assetNum) && assetNum > 0) {
+            usedNumbers.add(assetNum);
+
+            // Track highest numbers for sequence continuation
+            if (assetNum < fiveYearlyStartNumber) {
+              monthlyAssetCounter = Math.max(monthlyAssetCounter, assetNum);
+            } else {
+              fiveYearlyAssetCounter = Math.max(fiveYearlyAssetCounter, assetNum);
+            }
+          }
+        });
+
+        // Process manual numbers
+        manuallyEnteredNumbers.forEach(manualNumber => {
+          const assetNum = parseInt(manualNumber);
+          if (!isNaN(assetNum) && assetNum > 0) {
+            usedNumbers.add(assetNum);
+
+            // Track highest numbers for sequence continuation
+            if (assetNum < fiveYearlyStartNumber) {
+              monthlyAssetCounter = Math.max(monthlyAssetCounter, assetNum);
+            } else {
+              fiveYearlyAssetCounter = Math.max(fiveYearlyAssetCounter, assetNum);
+            }
+          }
+        });
+
+        // Update state with new counters
+        setMonthlyAssetCounter(monthlyAssetCounter);
+        setFiveYearlyAssetCounter(fiveYearlyAssetCounter);
+
+        // Store in localStorage for persistence
+        localStorage.setItem(`monthlyCounter_${sessionId}`, monthlyAssetCounter.toString());
+        localStorage.setItem(`fiveYearlyCounter_${sessionId}`, fiveYearlyAssetCounter.toString());
+
+        console.log(`Asset counters updated for session ${sessionId}: monthly=${monthlyAssetCounter}, fiveYearly=${fiveYearlyAssetCounter}, startNumbers: monthly=${monthlyStartNumber}, fiveYearly=${fiveYearlyStartNumber}`);
+      } catch (error) {
+        console.error('Error getting session start numbers:', error);
+      }
+    };
+
+    getSessionStartNumbers();
+  }, [sessionId, batchedResults]);
+
+
   /**
    * Calculates asset progress, including next available numbers and counts for each frequency type.
    * It considers custom start numbers defined in the session.
