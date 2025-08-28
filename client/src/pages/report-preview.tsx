@@ -134,9 +134,7 @@ export default function ReportPreview() {
     // Guard against missing results
     if (!batchedResults.length && manuallyEnteredAssetNumbers.size === 0) {
       console.warn('generateUniqueAssetNumber: No existing results or manual numbers');
-      const monthlyStart = sessionData?.session?.monthlyStartNumber || 1;
-      const fiveYearlyStart = sessionData?.session?.fiveYearlyStartNumber || 10001;
-      return newFrequency === 'fiveyearly' ? fiveYearlyStart.toString() : monthlyStart.toString();
+      return newFrequency === 'fiveyearly' ? '10001' : '1';
     }
 
     // Get all existing asset numbers, excluding the one being changed
@@ -164,10 +162,8 @@ export default function ReportPreview() {
       }
     });
 
-    // Find next available asset number for the new frequency using session's custom start numbers
-    const monthlyStart = sessionData?.session?.monthlyStartNumber || 1;
-    const fiveYearlyStart = sessionData?.session?.fiveYearlyStartNumber || 10001;
-    const startNumber = newFrequency === 'fiveyearly' ? fiveYearlyStart : monthlyStart;
+    // Find next available asset number for the new frequency
+    const startNumber = newFrequency === 'fiveyearly' ? 10001 : 1;
     const nextAvailable = getNextAvailableAssetNumber(usedNumbers, startNumber);
     
     return nextAvailable.toString();
