@@ -29,6 +29,9 @@ const emergencyTestSchema = z.object({
   dischargeTest: z.boolean().default(false),
   switchingTest: z.boolean().default(false),
   chargingTest: z.boolean().default(false),
+  luxTest: z.boolean().default(false),
+  luxReading: z.number().optional(),
+  luxCompliant: z.boolean().default(false),
   failureReason: z.enum(['physical_damage', 'battery_failure', 'lamp_failure', 'wiring_fault', 'charging_fault', 'insufficient_illumination', 'mounting_issue', 'other']).optional(),
   notes: z.string().optional(),
 });
@@ -67,6 +70,9 @@ export default function EmergencyTestDetails() {
       dischargeTest: true,
       switchingTest: true,
       chargingTest: true,
+      luxTest: false,
+      luxReading: undefined,
+      luxCompliant: false,
       notes: '',
     },
   });
@@ -329,6 +335,60 @@ export default function EmergencyTestDetails() {
                   90-Minute Discharge Test (Battery backup duration)
                 </Label>
               </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="luxTest"
+                  checked={form.watch('luxTest')}
+                  onCheckedChange={(checked) => {
+                    form.setValue('luxTest', !!checked);
+                    if (!checked) {
+                      form.setValue('luxReading', undefined);
+                      form.setValue('luxCompliant', false);
+                    }
+                  }}
+                />
+                <Label htmlFor="luxTest" className="text-sm">
+                  Lux Level Test (Illumination measurement)
+                </Label>
+              </div>
+              
+              {form.watch('luxTest') && (
+                <div className="ml-6 space-y-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div>
+                    <Label htmlFor="luxReading" className="text-sm font-medium">
+                      Lux Reading (illuminance level)
+                    </Label>
+                    <Input
+                      id="luxReading"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      placeholder="e.g., 0.2"
+                      value={form.watch('luxReading') || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        form.setValue('luxReading', value ? parseFloat(value) : undefined);
+                      }}
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-gray-600 mt-1">
+                      Minimum requirement: 0.2 lux for escape route lighting
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="luxCompliant"
+                      checked={form.watch('luxCompliant')}
+                      onCheckedChange={(checked) => form.setValue('luxCompliant', !!checked)}
+                    />
+                    <Label htmlFor="luxCompliant" className="text-sm">
+                      Meets minimum lux requirements (≥0.2 lux)
+                    </Label>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>

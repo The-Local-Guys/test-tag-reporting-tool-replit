@@ -754,6 +754,15 @@ export default function ReportPreview() {
                   <div className="text-sm text-gray-500">
                     {result.location} • {result.classification.toUpperCase()}
                   </div>
+                  
+                  {/* Show lux testing information for emergency exit lights */}
+                  {sessionData?.session?.serviceType === 'emergency_exit_light' && result.luxTest && (
+                    <div className="text-xs text-blue-600 mt-1 bg-blue-50 px-2 py-1 rounded">
+                      Lux Test: {result.luxCompliant ? 'PASS' : 'FAIL'} 
+                      {result.luxReading && ` (${result.luxReading} lux)`}
+                    </div>
+                  )}
+                  
                   {result.result === 'fail' && (
                     <div className="text-xs text-red-600 mt-1">
                       {result.failureReason || 'Failed'}
