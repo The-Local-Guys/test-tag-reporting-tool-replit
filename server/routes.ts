@@ -412,16 +412,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new test session (protected)
   app.post("/api/sessions", requireAuth, async (req, res) => {
     try {
+      console.log("Session creation request:", req.body);
       const sessionData = insertTestSessionSchema.parse(req.body);
       // Associate the session with the logged-in user
       const sessionWithUser = {
         ...sessionData,
         serviceType: sessionData.serviceType || "electrical", // Default to electrical if not specified
         userId: req.session.userId, // Link session to the logged-in user
+        startingAssetNumber: 1, // Always default to 1
       };
+      console.log("Creating session with data:", sessionWithUser);
       const session = await storage.createTestSession(sessionWithUser);
+      console.log("Session created successfully:", session);
       res.json(session);
     } catch (error) {
+      console.error("Session creation error:", error);
       if (error instanceof z.ZodError) {
         res
           .status(400)
