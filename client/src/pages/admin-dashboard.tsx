@@ -186,8 +186,10 @@ export default function AdminDashboard() {
           );
         })
         .sort((a: any, b: any) => {
-          // Sort by date descending (newest first)
-          return new Date(b.testDate).getTime() - new Date(a.testDate).getTime();
+          // Sort by creation timestamp descending (newest first), fall back to test date
+          const dateA = new Date(a.createdAt || a.testDate);
+          const dateB = new Date(b.createdAt || b.testDate);
+          return dateB.getTime() - dateA.getTime();
         })
     : [];
 
@@ -1464,13 +1466,9 @@ export default function AdminDashboard() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Client</TableHead>
-                        <TableHead>Technician</TableHead>
+                        <TableHead>Client Name</TableHead>
                         <TableHead>Service Type</TableHead>
                         <TableHead>Date</TableHead>
-                        <TableHead>Location</TableHead>
-                        <TableHead>Items Tested</TableHead>
-                        <TableHead>Failed Items</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1479,10 +1477,6 @@ export default function AdminDashboard() {
                         <TableRow key={session.id}>
                           <TableCell className="font-medium">
                             {session.clientName}
-                          </TableCell>
-                          <TableCell>
-                            {session.technicianFullName ||
-                              session.technicianName}
                           </TableCell>
                           <TableCell>
                             <Badge
@@ -1503,90 +1497,15 @@ export default function AdminDashboard() {
                               "en-AU",
                             )}
                           </TableCell>
-                          <TableCell>{session.address}</TableCell>
                           <TableCell>
-                            <Badge
+                            <Button
+                              size="sm"
                               variant="outline"
-                              className="bg-blue-50 text-blue-700"
+                              onClick={() => handleViewReport(session)}
                             >
-                              {session.totalItems || 0}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className="bg-red-50 text-red-700"
-                            >
-                              {session.failedItems || 0}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center space-x-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleViewReport(session)}
-                              >
-                                <FileText className="w-4 h-4 mr-1" />
-                                View
-                              </Button>
-                              {/* Continue button - allows adding more items to existing reports */}
-                              {(typedUser?.role === "technician" && session.userId === typedUser?.id) && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleContinueReport(session)}
-                                  className="bg-blue-50 text-blue-700 hover:bg-blue-100"
-                                >
-                                  <Plus className="w-4 h-4 mr-1" />
-                                  Continue
-                                </Button>
-                              )}
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleEditSession(session)}
-                              >
-                                <Edit className="w-4 h-4 mr-1" />
-                                Edit
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  handleDownloadReport(session, "pdf")
-                                }
-                              >
-                                <Download className="w-4 h-4 mr-1" />
-                                PDF
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  handleDownloadReport(session, "excel")
-                                }
-                              >
-                                <Download className="w-4 h-4 mr-1" />
-                                Excel
-                              </Button>
-                              {/* Delete button - visible for admins and session owners */}
-                              {(typedUser?.role === "super_admin" ||
-                                typedUser?.role === "support_center" ||
-                                (typedUser?.role === "technician" && session.userId === typedUser?.id)) && (
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => {
-                                    if (confirm('Are you sure you want to delete this report? This action cannot be undone.')) {
-                                      deleteSessionMutation.mutate(session.id);
-                                    }
-                                  }}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              )}
-                            </div>
+                              <FileText className="w-4 h-4 mr-1" />
+                              View
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
