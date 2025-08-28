@@ -490,6 +490,53 @@ export default function AdminDashboard() {
     },
   });
 
+  // Edit session mutation
+  const editSessionMutation = useMutation({
+    mutationFn: async ({ sessionId, data }: { sessionId: number; data: any }) => {
+      const response = await fetch(`/api/admin/sessions/${sessionId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to update session");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/sessions"] });
+      if (viewingSession?.session?.id) {
+        queryClient.invalidateQueries({
+          queryKey: ["/api/sessions", viewingSession.session.id, "full"],
+        });
+        // Update local viewing session state
+        setViewingSession(prev => ({
+          ...prev,
+          session: {
+            ...prev.session,
+            ...editSessionData
+          }
+        }));
+      }
+      toast({
+        title: "Success",
+        description: "Session details updated successfully",
+      });
+      setIsEditSessionModalOpen(false);
+      setEditingSession(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update session",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Change password mutation
   const changePasswordMutation = useMutation({
     mutationFn: async (data: {
@@ -785,7 +832,7 @@ export default function AdminDashboard() {
       });
       return;
     }
-    updateSessionMutation.mutate({
+    editSessionMutation.mutate({
       sessionId: editingSession.id,
       data: editSessionData,
     });
@@ -1017,6 +1064,24 @@ export default function AdminDashboard() {
     
     // Navigate to item selection page to continue adding items
     window.location.href = '/items';
+  };
+
+  /**
+   * Handle editing session details (client name, location, date, etc.)
+   */
+  const handleEditSessionFromModal = () => {
+    if (!viewingSession) return;
+    
+    setEditingSession(viewingSession.session);
+    setEditSessionData({
+      clientName: viewingSession.session.clientName || '',
+      technicianName: viewingSession.session.technicianName || '',
+      testDate: viewingSession.session.testDate || '',
+      address: viewingSession.session.address || '',
+      siteContact: viewingSession.session.siteContact || '',
+      country: viewingSession.session.country || 'australia',
+    });
+    setIsEditSessionModalOpen(true);
   };
 
   /**
@@ -1740,15 +1805,15 @@ export default function AdminDashboard() {
                 setIsEditSessionModalOpen(false);
                 setEditingSession(null);
               }}
-              disabled={updateSessionMutation.isPending}
+              disabled={editSessionMutation.isPending}
             >
               Cancel
             </Button>
             <Button
               onClick={handleUpdateSession}
-              disabled={updateSessionMutation.isPending}
+              disabled={editSessionMutation.isPending}
             >
-              {updateSessionMutation.isPending
+              {editSessionMutation.isPending
                 ? "Updating..."
                 : "Update Session"}
             </Button>
@@ -1770,7 +1835,17 @@ export default function AdminDashboard() {
           <div className="space-y-6">
             {/* Session Info */}
             <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="font-semibold mb-2">Test Session Details</h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold">Test Session Details</h3>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleEditSessionFromModal}
+                  className="p-1 h-8 w-8"
+                >
+                  <Edit className="w-4 h-4" />
+                </Button>
+              </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="font-medium">Client:</span>{" "}
