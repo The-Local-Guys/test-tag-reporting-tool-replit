@@ -31,6 +31,16 @@ import {
 import { Modal } from "@/components/ui/modal";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ProgressBar } from "@/components/ui/progress-bar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
