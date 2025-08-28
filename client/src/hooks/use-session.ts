@@ -296,6 +296,9 @@ export function useSession() {
       dischargeTest: data.dischargeTest || undefined,
       switchingTest: data.switchingTest || undefined,
       chargingTest: data.chargingTest || undefined,
+      luxTest: data.luxTest || undefined,
+      luxReading: data.luxReading || undefined,
+      luxCompliant: data.luxCompliant || undefined,
       manufacturerInfo: data.manufacturerInfo || undefined,
       installationDate: data.installationDate || undefined,
     };
