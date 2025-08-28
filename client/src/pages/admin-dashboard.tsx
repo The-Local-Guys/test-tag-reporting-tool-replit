@@ -42,11 +42,11 @@ import {
   Trash2,
   UserCheck,
   UserX,
-
   UserPlus,
   Plus,
   ChevronLeft,
   ChevronRight,
+  PlayCircle,
 } from "lucide-react";
 import { generatePDFReport, downloadPDF } from "@/lib/pdf-generator";
 import { generateExcelReport, downloadExcel } from "@/lib/excel-generator";
@@ -1517,7 +1517,7 @@ export default function AdminDashboard() {
                           <TableHead className="min-w-[120px]">Client Name</TableHead>
                           <TableHead className="min-w-[140px]">Service Type</TableHead>
                           <TableHead className="min-w-[100px]">Date</TableHead>
-                          <TableHead className="min-w-[120px]">Actions</TableHead>
+                          <TableHead className="min-w-[160px]">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                     <TableBody>
@@ -1564,6 +1564,15 @@ export default function AdminDashboard() {
                                 title="Edit Session"
                               >
                                 <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleContinueReport(session)}
+                                className="p-2 h-8 w-8 text-green-600 hover:bg-green-50 hover:border-green-300"
+                                title="Continue Report"
+                              >
+                                <PlayCircle className="w-4 h-4" />
                               </Button>
                               {/* Delete button - visible for admins and session owners */}
                               {(typedUser?.role === "super_admin" ||
