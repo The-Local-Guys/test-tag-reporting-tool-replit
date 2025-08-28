@@ -238,10 +238,10 @@ export default function AdminDashboard() {
     },
   });
 
-  // Delete session mutation
+  // Delete session mutation  
   const deleteSessionMutation = useMutation({
     mutationFn: async (sessionId: number) => {
-      const response = await fetch(`/api/admin/sessions/${sessionId}`, {
+      const response = await fetch(`/api/sessions/${sessionId}`, {
         method: "DELETE",
       });
       if (!response.ok) throw new Error("Failed to delete session");
@@ -1531,15 +1531,18 @@ export default function AdminDashboard() {
                                 <Download className="w-4 h-4 mr-1" />
                                 Excel
                               </Button>
-                              {/* Delete button - only visible for super admin and support center */}
+                              {/* Delete button - visible for admins and session owners */}
                               {(typedUser?.role === "super_admin" ||
-                                typedUser?.role === "support_center") && (
+                                typedUser?.role === "support_center" ||
+                                (typedUser?.role === "technician" && session.userId === typedUser?.id)) && (
                                 <Button
                                   size="sm"
                                   variant="destructive"
-                                  onClick={() =>
-                                    deleteSessionMutation.mutate(session.id)
-                                  }
+                                  onClick={() => {
+                                    if (confirm('Are you sure you want to delete this report? This action cannot be undone.')) {
+                                      deleteSessionMutation.mutate(session.id);
+                                    }
+                                  }}
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </Button>

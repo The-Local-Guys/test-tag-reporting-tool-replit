@@ -281,6 +281,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   /**
+   * Deletes a test session and all associated test results
+   * Used by technicians to remove their own sessions or by admins for management
+   * @param sessionId - ID of the session to delete
+   */
+  async deleteTestSession(sessionId: number): Promise<void> {
+    try {
+      // First delete all test results for this session
+      await db
+        .delete(testResults)
+        .where(eq(testResults.sessionId, sessionId));
+
+      // Then delete the session itself
+      await db
+        .delete(testSessions)
+        .where(eq(testSessions.id, sessionId));
+    } catch (error) {
+      console.error('Error deleting session:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Permanently deletes a test session and all associated test results
    * Cascades delete to maintain database consistency
    * @param sessionId - ID of the session to delete completely

@@ -373,6 +373,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete session route - technicians can delete their own sessions
+  app.delete("/api/sessions/:id", requireAuth, async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const user = req.session.user!;
+
+      // Check if session exists and belongs to user (unless admin)
+      const session = await storage.getTestSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+
+      // Technicians can only delete their own sessions
+      if (user.role === 'technician' && session.userId !== user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      await storage.deleteTestSession(sessionId);
+      res.json({ message: "Session deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting session:", error);
+      res.status(500).json({ message: "Failed to delete session" });
+    }
+  });
+
   app.delete("/api/admin/sessions/:id", requireAdmin, async (req, res) => {
     try {
       const sessionId = parseInt(req.params.id);
