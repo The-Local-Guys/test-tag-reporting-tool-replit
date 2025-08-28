@@ -1636,6 +1636,7 @@ export default function AdminDashboard() {
                           <TableHead className="min-w-[120px]">Client Name</TableHead>
                           <TableHead className="min-w-[140px]">Service Type</TableHead>
                           <TableHead className="min-w-[100px]">Date</TableHead>
+                          <TableHead className="min-w-[100px]">Results</TableHead>
                           <TableHead className="min-w-[160px]">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -1663,6 +1664,25 @@ export default function AdminDashboard() {
                             {new Date(session.testDate).toLocaleDateString(
                               "en-AU",
                             )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {/* Passed Items Circle */}
+                              <div className="flex items-center gap-1">
+                                <div className="w-6 h-6 bg-green-100 text-green-700 rounded-full flex items-center justify-center text-xs font-medium">
+                                  {(session.totalItems || 0) - (session.failedItems || 0)}
+                                </div>
+                                <span className="text-xs text-green-600 hidden sm:inline">Pass</span>
+                              </div>
+                              
+                              {/* Failed Items Circle */}
+                              <div className="flex items-center gap-1">
+                                <div className="w-6 h-6 bg-red-100 text-red-700 rounded-full flex items-center justify-center text-xs font-medium">
+                                  {session.failedItems || 0}
+                                </div>
+                                <span className="text-xs text-red-600 hidden sm:inline">Fail</span>
+                              </div>
+                            </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
