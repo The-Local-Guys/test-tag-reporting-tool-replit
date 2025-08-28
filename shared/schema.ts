@@ -36,6 +36,8 @@ export const testSessions = pgTable("test_sessions", {
   address: text("address").notNull(),
   country: text("country").notNull(), // 'australia' or 'newzealand'
   userId: integer("user_id").references(() => users.id), // Link to technician
+  monthlyStartNumber: integer("monthly_start_number").default(1), // Custom starting number for monthly frequencies
+  fiveYearlyStartNumber: integer("five_yearly_start_number").default(10001), // Custom starting number for 5-yearly frequencies
   createdAt: timestamp("created_at").defaultNow(),
 });
 
