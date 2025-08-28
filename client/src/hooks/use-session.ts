@@ -93,17 +93,17 @@ export function useSession() {
     return { monthly: 0, fiveYearly: 0 };
   });
 
-  // Asset number counters - start fresh for each session
+  // Asset number counters - will be updated when session data loads
   const [monthlyAssetCounter, setMonthlyAssetCounter] = useState<number>(() => {
     if (!sessionId) return 0;
     const stored = localStorage.getItem(`monthlyCounter_${sessionId}`);
-    return stored ? parseInt(stored) : 0;
+    return stored ? parseInt(stored) : 0; // Default to 0, will be updated when session loads
   });
 
   const [fiveYearlyAssetCounter, setFiveYearlyAssetCounter] = useState<number>(() => {
     if (!sessionId) return 10000;
     const stored = localStorage.getItem(`fiveYearlyCounter_${sessionId}`);
-    return stored ? parseInt(stored) : 10000;
+    return stored ? parseInt(stored) : 10000; // Default to 10000, will be updated when session loads
   });
 
   // Batched results stored in local storage
@@ -198,6 +198,29 @@ export function useSession() {
       console.log(`Updated asset counters: monthly=${maxMonthly}, fiveYearly=${maxFiveYearly}`);
     }
   }, [existingResults, batchedResults.length, sessionId]);
+
+  // Effect to initialize asset counters when session data becomes available
+  useEffect(() => {
+    if (session?.startingAssetNumber && sessionId) {
+      const hasStoredCounters = localStorage.getItem(`monthlyCounter_${sessionId}`) || localStorage.getItem(`fiveYearlyCounter_${sessionId}`);
+      
+      // Only initialize if no stored counters exist (fresh session)
+      if (!hasStoredCounters) {
+        console.log(`Initializing asset counters with starting number: ${session.startingAssetNumber}`);
+        
+        // Initialize monthly counter to start from the session's starting number
+        setMonthlyAssetCounter(session.startingAssetNumber - 1);
+        localStorage.setItem(`monthlyCounter_${sessionId}`, (session.startingAssetNumber - 1).toString());
+        
+        // Initialize 5-yearly counter to start from startingAssetNumber + 10000
+        const fiveYearlyStart = session.startingAssetNumber + 10000;
+        setFiveYearlyAssetCounter(fiveYearlyStart - 1);
+        localStorage.setItem(`fiveYearlyCounter_${sessionId}`, (fiveYearlyStart - 1).toString());
+        
+        console.log(`Asset counters initialized: monthly=${session.startingAssetNumber - 1}, fiveYearly=${fiveYearlyStart - 1}`);
+      }
+    }
+  }, [session, sessionId]);
 
   // Calculate local asset progress from actual used numbers (accounts for gaps)
   const getLocalAssetProgress = () => {
@@ -345,8 +368,9 @@ export function useSession() {
       setFiveYearlyAssetCounter(candidate);
       localStorage.setItem(`fiveYearlyCounter_${sessionId}`, candidate.toString());
     } else {
-      // For monthly items, start from current counter + 1 (continue sequence)
-      let candidate = Math.max(1, monthlyAssetCounter + 1);
+      // For monthly items, use session starting number or default to 1
+      const startingNumber = sessionData?.session?.startingAssetNumber || 1;
+      let candidate = Math.max(startingNumber, monthlyAssetCounter + 1);
       while (usedNumbers.has(candidate)) {
         candidate++;
       }
@@ -555,7 +579,14 @@ export function useSession() {
     });
 
     // Find next available asset number for the new frequency
-    const startNumber = newFrequency === 'fiveyearly' ? 10001 : 1;
+    let startNumber: number;
+    if (newFrequency === 'fiveyearly') {
+      startNumber = 10001;
+    } else {
+      // Use session starting number for monthly items
+      const sessionStarting = sessionData?.session?.startingAssetNumber || 1;
+      startNumber = sessionStarting;
+    }
     const nextAvailable = getNextAvailableAssetNumber(usedNumbers, startNumber);
     const newAssetNumber = nextAvailable.toString();
 

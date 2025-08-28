@@ -47,6 +47,7 @@ export default function Setup() {
       siteContact: '',
       address: '',
       country: 'australia',
+      startingAssetNumber: 1,
     },
   });
 
@@ -180,6 +181,26 @@ export default function Setup() {
             )}
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="startingAssetNumber">Starting Asset Number</Label>
+            <Input
+              id="startingAssetNumber"
+              type="number"
+              min="1"
+              max="9999"
+              placeholder="1"
+              {...form.register('startingAssetNumber', { 
+                setValueAs: (value) => value === '' ? 1 : parseInt(value, 10) 
+              })}
+              className="text-base"
+            />
+            <p className="text-sm text-gray-600">
+              Asset numbers will start from this number and increment for each tested item
+            </p>
+            {form.formState.errors.startingAssetNumber && (
+              <p className="text-sm text-error">{form.formState.errors.startingAssetNumber.message}</p>
+            )}
+          </div>
 
         </div>
       </form>

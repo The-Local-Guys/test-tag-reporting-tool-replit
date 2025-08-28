@@ -35,6 +35,7 @@ export const testSessions = pgTable("test_sessions", {
   siteContact: text("site_contact").notNull(),
   address: text("address").notNull(),
   country: text("country").notNull(), // 'australia' or 'newzealand'
+  startingAssetNumber: integer("starting_asset_number").default(1), // Starting asset number for the test session
   userId: integer("user_id").references(() => users.id), // Link to technician
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -64,6 +65,10 @@ export const testResults = pgTable("test_results", {
   chargingTest: boolean("charging_test"), // Charging circuit test
   manufacturerInfo: text("manufacturer_info"), // Manufacturer and model details
   installationDate: text("installation_date"), // Installation/last replacement date
+  // Lux testing specific fields (AS/NZS 2293.2:2019)
+  luxTest: boolean("lux_test"), // Lux test performed
+  luxReading: text("lux_reading"), // Lux reading value
+  luxCompliant: boolean("lux_compliant"), // Lux reading compliant
   createdAt: timestamp("created_at").defaultNow(),
 });
 
