@@ -38,6 +38,10 @@ export interface BatchedTestResult {
   chargingTest?: boolean;
   manufacturerInfo?: string;
   installationDate?: string;
+  // Lux testing fields
+  luxTest?: boolean;
+  luxReading?: number;
+  luxCompliant?: boolean;
 }
 
 /**
@@ -121,49 +125,79 @@ export function useSession() {
   const { data: existingResults } = useQuery<TestResult[]>({
     queryKey: [`/api/sessions/${sessionId}/results`],
     enabled: !!sessionId && session?.id === sessionId,
-    onSuccess: (results) => {
-      // Load existing results into batched results if continuing session
-      if (results && results.length > 0 && batchedResults.length === 0) {
-        const loadedResults: BatchedTestResult[] = results.map((result, index) => ({
-          id: `existing-${result.id}`,
-          itemName: result.itemName,
-          itemType: result.itemType || result.itemName,
-          location: result.location,
-          classification: result.classification,
-          result: result.result,
-          frequency: result.frequency,
-          failureReason: result.failureReason || undefined,
-          actionTaken: result.actionTaken || undefined,
-          notes: result.notes || undefined,
-          photoData: result.photoData || undefined,
-          visionInspection: result.visionInspection,
-          electricalTest: result.electricalTest,
-          timestamp: new Date().toISOString(),
-          assetNumber: result.assetNumber,
-          // Emergency-specific fields
-          maintenanceType: result.maintenanceType || undefined,
-          globeType: result.globeType || undefined,
-          dischargeTest: result.dischargeTest || undefined,
-          switchingTest: result.switchingTest || undefined,
-          chargingTest: result.chargingTest || undefined,
-          manufacturerInfo: result.manufacturerInfo || undefined,
-          installationDate: result.installationDate || undefined,
-        }));
-        
-        setBatchedResults(loadedResults);
-        if (sessionId) {
-          localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(loadedResults));
-        }
-        
-        // Update asset counts based on loaded results
-        const monthlyCount = loadedResults.filter(r => r.frequency !== 'fiveyearly').length;
-        const fiveYearlyCount = loadedResults.filter(r => r.frequency === 'fiveyearly').length;
-        setAssetCounts({ monthly: monthlyCount, fiveYearly: fiveYearlyCount });
-        setMonthlyAssetCounter(monthlyCount);
-        setFiveYearlyAssetCounter(10000 + fiveYearlyCount);
-      }
-    },
   });
+
+  // Effect to handle loading existing results when they become available
+  useEffect(() => {
+    if (existingResults && existingResults.length > 0 && batchedResults.length === 0 && sessionId) {
+      console.log(`Loading ${existingResults.length} existing results for session ${sessionId}`);
+      
+      const loadedResults: BatchedTestResult[] = existingResults.map((result: any) => ({
+        id: `existing-${result.id}`,
+        itemName: result.itemName,
+        itemType: result.itemType || result.itemName,
+        location: result.location,
+        classification: result.classification,
+        result: result.result,
+        frequency: result.frequency,
+        failureReason: result.failureReason || undefined,
+        actionTaken: result.actionTaken || undefined,
+        notes: result.notes || undefined,
+        photoData: result.photoData || undefined,
+        visionInspection: result.visionInspection,
+        electricalTest: result.electricalTest,
+        timestamp: new Date().toISOString(),
+        assetNumber: result.assetNumber,
+        // Emergency-specific fields
+        maintenanceType: result.maintenanceType || undefined,
+        globeType: result.globeType || undefined,
+        dischargeTest: result.dischargeTest || undefined,
+        switchingTest: result.switchingTest || undefined,
+        chargingTest: result.chargingTest || undefined,
+        manufacturerInfo: result.manufacturerInfo || undefined,
+        installationDate: result.installationDate || undefined,
+        // Lux testing fields
+        luxTest: result.luxTest || undefined,
+        luxReading: result.luxReading || undefined,
+        luxCompliant: result.luxCompliant || undefined,
+      }));
+      
+      setBatchedResults(loadedResults);
+      
+      // Store in localStorage for validation and duplicate checking
+      localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(loadedResults));
+      console.log(`Stored ${loadedResults.length} results in localStorage for session ${sessionId}`);
+      
+      // Calculate and update asset counts based on loaded results
+      const monthlyCount = loadedResults.filter(r => r.frequency !== 'fiveyearly').length;
+      const fiveYearlyCount = loadedResults.filter(r => r.frequency === 'fiveyearly').length;
+      setAssetCounts({ monthly: monthlyCount, fiveYearly: fiveYearlyCount });
+      
+      // Set counters to continue from where they left off
+      // Find the highest asset numbers to continue sequence
+      const monthlyAssets = loadedResults
+        .filter(r => r.frequency !== 'fiveyearly')
+        .map(r => parseInt(r.assetNumber || '0'))
+        .filter(n => !isNaN(n) && n > 0);
+      
+      const fiveYearlyAssets = loadedResults
+        .filter(r => r.frequency === 'fiveyearly')
+        .map(r => parseInt(r.assetNumber || '10000'))
+        .filter(n => !isNaN(n) && n >= 10000);
+      
+      const maxMonthly = monthlyAssets.length > 0 ? Math.max(...monthlyAssets) : 0;
+      const maxFiveYearly = fiveYearlyAssets.length > 0 ? Math.max(...fiveYearlyAssets) : 10000;
+      
+      setMonthlyAssetCounter(maxMonthly);
+      setFiveYearlyAssetCounter(maxFiveYearly);
+      
+      // Store counters in localStorage
+      localStorage.setItem(`monthlyCounter_${sessionId}`, maxMonthly.toString());
+      localStorage.setItem(`fiveYearlyCounter_${sessionId}`, maxFiveYearly.toString());
+      
+      console.log(`Updated asset counters: monthly=${maxMonthly}, fiveYearly=${maxFiveYearly}`);
+    }
+  }, [existingResults, batchedResults.length, sessionId]);
 
   // Calculate local asset progress from actual used numbers (accounts for gaps)
   const getLocalAssetProgress = () => {

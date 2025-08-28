@@ -994,10 +994,24 @@ export default function AdminDashboard() {
    * Handle continuing an existing report - sets session and navigates to item selection
    */
   const handleContinueReport = (session: any) => {
-    // Store session ID for continuation
+    console.log(`Starting continue for session ${session.id}`);
+    
+    // Clear any existing session data to prevent conflicts
+    localStorage.removeItem('currentSessionId');
+    localStorage.removeItem('unfinished');
+    localStorage.removeItem('unfinishedSessionId');
+    
+    // Remove any existing batched results for this session
+    localStorage.removeItem(`batchedResults_${session.id}`);
+    localStorage.removeItem(`monthlyCounter_${session.id}`);
+    localStorage.removeItem(`fiveYearlyCounter_${session.id}`);
+    
+    // Set new session data for continuation
     localStorage.setItem('currentSessionId', session.id.toString());
     localStorage.setItem('unfinished', 'true');
     localStorage.setItem('unfinishedSessionId', session.id.toString());
+    
+    console.log(`Set continuation flags for session ${session.id}, navigating to items`);
     
     // Navigate to item selection page to continue adding items
     window.location.href = '/items';
