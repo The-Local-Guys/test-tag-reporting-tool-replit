@@ -991,6 +991,19 @@ export default function AdminDashboard() {
   };
 
   /**
+   * Handle continuing an existing report - sets session and navigates to item selection
+   */
+  const handleContinueReport = (session: any) => {
+    // Store session ID for continuation
+    localStorage.setItem('currentSessionId', session.id.toString());
+    localStorage.setItem('unfinished', 'true');
+    localStorage.setItem('unfinishedSessionId', session.id.toString());
+    
+    // Navigate to item selection page to continue adding items
+    window.location.href = '/items';
+  };
+
+  /**
    * Validate new item asset number for duplicates and range requirements
    */
   const validateNewItemAssetNumber = (assetNumber: string, frequency: string): string => {
@@ -1503,6 +1516,18 @@ export default function AdminDashboard() {
                                 <FileText className="w-4 h-4 mr-1" />
                                 View
                               </Button>
+                              {/* Continue button - allows adding more items to existing reports */}
+                              {(typedUser?.role === "technician" && session.userId === typedUser?.id) && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleContinueReport(session)}
+                                  className="bg-blue-50 text-blue-700 hover:bg-blue-100"
+                                >
+                                  <Plus className="w-4 h-4 mr-1" />
+                                  Continue
+                                </Button>
+                              )}
                               <Button
                                 size="sm"
                                 variant="outline"

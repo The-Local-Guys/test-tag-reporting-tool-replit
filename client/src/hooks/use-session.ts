@@ -117,6 +117,54 @@ export function useSession() {
     enabled: !!sessionId,
   });
 
+  // When continuing an existing session, load existing results from server
+  const { data: existingResults } = useQuery<TestResult[]>({
+    queryKey: [`/api/sessions/${sessionId}/results`],
+    enabled: !!sessionId && session?.id === sessionId,
+    onSuccess: (results) => {
+      // Load existing results into batched results if continuing session
+      if (results && results.length > 0 && batchedResults.length === 0) {
+        const loadedResults: BatchedTestResult[] = results.map((result, index) => ({
+          id: `existing-${result.id}`,
+          itemName: result.itemName,
+          itemType: result.itemType || result.itemName,
+          location: result.location,
+          classification: result.classification,
+          result: result.result,
+          frequency: result.frequency,
+          failureReason: result.failureReason || undefined,
+          actionTaken: result.actionTaken || undefined,
+          notes: result.notes || undefined,
+          photoData: result.photoData || undefined,
+          visionInspection: result.visionInspection,
+          electricalTest: result.electricalTest,
+          timestamp: new Date().toISOString(),
+          assetNumber: result.assetNumber,
+          // Emergency-specific fields
+          maintenanceType: result.maintenanceType || undefined,
+          globeType: result.globeType || undefined,
+          dischargeTest: result.dischargeTest || undefined,
+          switchingTest: result.switchingTest || undefined,
+          chargingTest: result.chargingTest || undefined,
+          manufacturerInfo: result.manufacturerInfo || undefined,
+          installationDate: result.installationDate || undefined,
+        }));
+        
+        setBatchedResults(loadedResults);
+        if (sessionId) {
+          localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(loadedResults));
+        }
+        
+        // Update asset counts based on loaded results
+        const monthlyCount = loadedResults.filter(r => r.frequency !== 'fiveyearly').length;
+        const fiveYearlyCount = loadedResults.filter(r => r.frequency === 'fiveyearly').length;
+        setAssetCounts({ monthly: monthlyCount, fiveYearly: fiveYearlyCount });
+        setMonthlyAssetCounter(monthlyCount);
+        setFiveYearlyAssetCounter(10000 + fiveYearlyCount);
+      }
+    },
+  });
+
   // Calculate local asset progress from actual used numbers (accounts for gaps)
   const getLocalAssetProgress = () => {
     // Collect all existing asset numbers
