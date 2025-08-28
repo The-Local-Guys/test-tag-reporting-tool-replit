@@ -807,12 +807,12 @@ export default function AdminDashboard() {
   const handleEditSession = (session: any) => {
     setEditingSession(session);
     setEditSessionData({
-      clientName: session.clientName,
-      technicianName: session.technicianName,
-      testDate: session.testDate.split("T")[0], // Convert to YYYY-MM-DD format
-      address: session.address,
-      siteContact: session.siteContact,
-      country: session.country,
+      clientName: session.clientName || '',
+      technicianName: session.technicianName || '',
+      testDate: session.testDate?.split("T")[0] || session.testDate || '', // Convert to YYYY-MM-DD format
+      address: session.address || '',
+      siteContact: session.siteContact || '',
+      country: session.country || 'australia',
     });
     setIsEditSessionModalOpen(true);
   };
@@ -1064,24 +1064,6 @@ export default function AdminDashboard() {
     
     // Navigate to item selection page to continue adding items
     window.location.href = '/items';
-  };
-
-  /**
-   * Handle editing session details (client name, location, date, etc.)
-   */
-  const handleEditSessionFromModal = () => {
-    if (!viewingSession) return;
-    
-    setEditingSession(viewingSession.session);
-    setEditSessionData({
-      clientName: viewingSession.session.clientName || '',
-      technicianName: viewingSession.session.technicianName || '',
-      testDate: viewingSession.session.testDate || '',
-      address: viewingSession.session.address || '',
-      siteContact: viewingSession.session.siteContact || '',
-      country: viewingSession.session.country || 'australia',
-    });
-    setIsEditSessionModalOpen(true);
   };
 
   /**
@@ -1528,15 +1510,16 @@ export default function AdminDashboard() {
                     <LoadingSpinner />
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Client Name</TableHead>
-                        <TableHead>Service Type</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="min-w-[120px]">Client Name</TableHead>
+                          <TableHead className="min-w-[140px]">Service Type</TableHead>
+                          <TableHead className="min-w-[100px]">Date</TableHead>
+                          <TableHead className="min-w-[180px]">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
                     <TableBody>
                       {filteredSessions.map((session: any) => (
                         <TableRow key={session.id}>
@@ -1563,19 +1546,50 @@ export default function AdminDashboard() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleViewReport(session)}
-                            >
-                              <FileText className="w-4 h-4 mr-1" />
-                              View
-                            </Button>
+                            <div className="flex items-center gap-1 flex-wrap">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleViewReport(session)}
+                                className="flex items-center gap-1 min-w-0"
+                              >
+                                <FileText className="w-4 h-4 flex-shrink-0" />
+                                <span className="hidden sm:inline">View</span>
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEditSession(session)}
+                                className="flex items-center gap-1 min-w-0"
+                              >
+                                <Edit className="w-4 h-4 flex-shrink-0" />
+                                <span className="hidden sm:inline">Edit</span>
+                              </Button>
+                              {/* Delete button - visible for admins and session owners */}
+                              {(typedUser?.role === "super_admin" ||
+                                typedUser?.role === "support_center" ||
+                                (typedUser?.role === "technician" && session.userId === typedUser?.id)) && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    if (confirm('Are you sure you want to delete this report? This action cannot be undone.')) {
+                                      deleteSessionMutation.mutate(session.id);
+                                    }
+                                  }}
+                                  className="flex items-center gap-1 min-w-0 text-red-600 hover:bg-red-50 hover:border-red-300"
+                                >
+                                  <Trash2 className="w-4 h-4 flex-shrink-0" />
+                                  <span className="hidden sm:inline">Delete</span>
+                                </Button>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
-                  </Table>
+                    </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -1835,17 +1849,7 @@ export default function AdminDashboard() {
           <div className="space-y-6">
             {/* Session Info */}
             <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold">Test Session Details</h3>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleEditSessionFromModal}
-                  className="p-1 h-8 w-8"
-                >
-                  <Edit className="w-4 h-4" />
-                </Button>
-              </div>
+              <h3 className="font-semibold mb-2">Test Session Details</h3>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="font-medium">Client:</span>{" "}
