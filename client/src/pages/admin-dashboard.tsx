@@ -74,6 +74,9 @@ export default function AdminDashboard() {
   const [isViewReportModalOpen, setIsViewReportModalOpen] = useState(false);
   const [viewingSession, setViewingSession] = useState<any>(null);
   const [isContinuing, setIsContinuing] = useState(false);
+  const [showOverrideConfirm, setShowOverrideConfirm] = useState(false);
+  const [pendingContinueSession, setPendingContinueSession] = useState<any>(null);
+  const [existingReportDetails, setExistingReportDetails] = useState<any>(null);
   const [isEditResultModalOpen, setIsEditResultModalOpen] = useState(false);
   const [editingResult, setEditingResult] = useState<any>(null);
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
@@ -1041,9 +1044,55 @@ export default function AdminDashboard() {
   };
 
   /**
-   * Handle continuing an existing report - sets session and navigates to item selection
+   * Check for existing localStorage data and show override confirmation if needed
    */
-  const handleContinueReport = (session: any) => {
+  const checkForExistingData = (session: any) => {
+    // Check for existing unfinished reports
+    const existingUnfinished = localStorage.getItem('unfinished');
+    const existingSessionId = localStorage.getItem('currentSessionId');
+    const existingUnfinishedId = localStorage.getItem('unfinishedSessionId');
+    
+    // Check for any batched results in localStorage
+    let foundBatchedResults = null;
+    let batchSessionId = null;
+    
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith('batchedResults_')) {
+        try {
+          const results = JSON.parse(localStorage.getItem(key) || '[]');
+          if (results.length > 0) {
+            foundBatchedResults = results;
+            batchSessionId = key.replace('batchedResults_', '');
+            break;
+          }
+        } catch (e) {
+          // Ignore invalid JSON
+        }
+      }
+    }
+    
+    // If there's existing data, show override confirmation
+    if (existingUnfinished || existingSessionId || foundBatchedResults) {
+      const existingDetails = {
+        sessionId: existingSessionId || batchSessionId,
+        itemCount: foundBatchedResults ? foundBatchedResults.length : 0,
+        hasUnfinished: !!existingUnfinished
+      };
+      
+      setExistingReportDetails(existingDetails);
+      setPendingContinueSession(session);
+      setShowOverrideConfirm(true);
+      return;
+    }
+    
+    // No conflicts, proceed directly
+    proceedWithContinue(session);
+  };
+  
+  /**
+   * Handle continuing an existing report after conflict resolution
+   */
+  const proceedWithContinue = (session: any) => {
     console.log(`Starting continue for session ${session.id}`);
     
     // Show loading screen
@@ -1054,10 +1103,12 @@ export default function AdminDashboard() {
     localStorage.removeItem('unfinished');
     localStorage.removeItem('unfinishedSessionId');
     
-    // Remove any existing batched results for this session
-    localStorage.removeItem(`batchedResults_${session.id}`);
-    localStorage.removeItem(`monthlyCounter_${session.id}`);
-    localStorage.removeItem(`fiveYearlyCounter_${session.id}`);
+    // Remove any existing batched results for ALL sessions
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith('batchedResults_') || key.startsWith('monthlyCounter_') || key.startsWith('fiveYearlyCounter_')) {
+        localStorage.removeItem(key);
+      }
+    }
     
     // Set new session data for continuation
     localStorage.setItem('currentSessionId', session.id.toString());
@@ -1070,6 +1121,32 @@ export default function AdminDashboard() {
     setTimeout(() => {
       window.location.href = '/items';
     }, 1500);
+  };
+  
+  /**
+   * Handle continuing an existing report - first checks for conflicts
+   */
+  const handleContinueReport = (session: any) => {
+    checkForExistingData(session);
+  };
+  
+  /**
+   * Handle override confirmation - proceed with continue
+   */
+  const handleOverrideConfirm = () => {
+    setShowOverrideConfirm(false);
+    proceedWithContinue(pendingContinueSession);
+    setPendingContinueSession(null);
+    setExistingReportDetails(null);
+  };
+  
+  /**
+   * Handle override cancellation - reset state
+   */
+  const handleOverrideCancel = () => {
+    setShowOverrideConfirm(false);
+    setPendingContinueSession(null);
+    setExistingReportDetails(null);
   };
 
   /**
@@ -2986,6 +3063,43 @@ export default function AdminDashboard() {
         isVisible={isDeleting}
         message="Deleting test result..."
       />
+
+      {/* Override Confirmation Dialog */}
+      <AlertDialog open={showOverrideConfirm} onOpenChange={setShowOverrideConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Continue with Different Report?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have an existing in-progress report that will be overridden:
+              <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                <div className="text-sm text-gray-700">
+                  {existingReportDetails?.hasUnfinished && (
+                    <div>• Current session: {existingReportDetails.sessionId}</div>
+                  )}
+                  {existingReportDetails?.itemCount > 0 && (
+                    <div>• {existingReportDetails.itemCount} unsaved test results</div>
+                  )}
+                </div>
+              </div>
+              <div className="mt-3 text-sm">
+                Continuing with <strong>Session {pendingContinueSession?.id}</strong> will clear all existing in-progress data. 
+                Are you sure you want to proceed?
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleOverrideCancel}>
+              Keep Current Report
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleOverrideConfirm}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Yes, Override Report
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
