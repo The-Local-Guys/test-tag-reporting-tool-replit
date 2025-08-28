@@ -442,23 +442,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getNextAssetNumber(sessionId: number): Promise<number> {
-    // Get the session to check custom start numbers
-    const session = await this.getTestSession(sessionId);
-
     const results = await this.getTestResultsBySession(sessionId);
+    if (results.length === 0) return 1;
 
-    const usedNumbers = new Set(
-      results.map((r) => parseInt(r.assetNumber)).filter((n) => !isNaN(n)),
-    );
+    const existingNumbers = results
+      .map(r => parseInt(r.assetNumber))
+      .filter(n => !isNaN(n))
+      .sort((a, b) => b - a);
 
-    // Use session's custom start number or default to 1
-    const startNumber = session?.monthlyStartNumber || 1;
-    let nextNumber = startNumber;
-    while (usedNumbers.has(nextNumber)) {
-      nextNumber++;
-    }
-
-    return nextNumber;
+    return existingNumbers.length > 0 ? existingNumbers[0] + 1 : 1;
   }
 
   /**
@@ -468,24 +460,27 @@ export class DatabaseStorage implements IStorage {
    * @returns Next available asset number starting from custom start number or 1
    */
   async getNextMonthlyAssetNumber(sessionId: number): Promise<number> {
-    // Get the session to check custom start numbers
+    // Get session to retrieve custom start number
     const session = await this.getTestSession(sessionId);
+    if (!session) {
+      throw new Error('Session not found');
+    }
 
     const results = await this.getTestResultsBySession(sessionId);
 
-    const monthlyStartNumber = session?.monthlyStartNumber || 1;
-    const fiveYearlyStartNumber = session?.fiveYearlyStartNumber || 10001;
+    // Filter for monthly frequencies and get their asset numbers
+    const monthlyResults = results.filter(result =>
+      ['threemonthly', 'sixmonthly', 'twelvemonthly', 'twentyfourmonthly'].includes(result.frequency)
+    );
 
-    // Filter for monthly frequencies (asset numbers below five-yearly start)
-    const monthlyNumbers = results
-      .map((r) => parseInt(r.assetNumber))
-      .filter((n) => !isNaN(n) && n >= monthlyStartNumber && n < fiveYearlyStartNumber);
+    const usedNumbers = monthlyResults
+      .map(result => parseInt(result.assetNumber))
+      .filter(num => !isNaN(num) && num >= 1 && num < 10000);
 
-    const usedNumbers = new Set(monthlyNumbers);
-
-    // Start from session's custom monthly start number
-    let nextNumber = monthlyStartNumber;
-    while (usedNumbers.has(nextNumber)) {
+    // Find the next available number starting from custom start number
+    const startNumber = session.monthlyStartNumber || 1;
+    let nextNumber = startNumber;
+    while (usedNumbers.includes(nextNumber)) {
       nextNumber++;
     }
 
@@ -499,23 +494,27 @@ export class DatabaseStorage implements IStorage {
    * @returns Next available 5-yearly asset number starting from custom start number or 10001
    */
   async getNextFiveYearlyAssetNumber(sessionId: number): Promise<number> {
-    // Get the session to check custom start numbers
+    // Get session to retrieve custom start number
     const session = await this.getTestSession(sessionId);
+    if (!session) {
+      throw new Error('Session not found');
+    }
 
     const results = await this.getTestResultsBySession(sessionId);
 
-    const fiveYearlyStartNumber = session?.fiveYearlyStartNumber || 10001;
+    // Filter for 5-yearly frequencies and get their asset numbers
+    const fiveYearlyResults = results.filter(result =>
+      result.frequency === 'fiveyearly'
+    );
 
-    // Filter for five-yearly frequencies (asset numbers from five-yearly start and above)
-    const fiveYearlyNumbers = results
-      .map((r) => parseInt(r.assetNumber))
-      .filter((n) => !isNaN(n) && n >= fiveYearlyStartNumber);
+    const usedNumbers = fiveYearlyResults
+      .map(result => parseInt(result.assetNumber))
+      .filter(num => !isNaN(num) && num >= 10000);
 
-    const usedNumbers = new Set(fiveYearlyNumbers);
-
-    // Start from session's custom five-yearly start number
-    let nextNumber = fiveYearlyStartNumber;
-    while (usedNumbers.has(nextNumber)) {
+    // Find the next available number starting from custom start number
+    const startNumber = session.fiveYearlyStartNumber || 10001;
+    let nextNumber = startNumber;
+    while (usedNumbers.includes(nextNumber)) {
       nextNumber++;
     }
 
