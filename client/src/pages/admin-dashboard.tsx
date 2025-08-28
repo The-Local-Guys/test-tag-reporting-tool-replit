@@ -1517,7 +1517,7 @@ export default function AdminDashboard() {
                           <TableHead className="min-w-[120px]">Client Name</TableHead>
                           <TableHead className="min-w-[140px]">Service Type</TableHead>
                           <TableHead className="min-w-[100px]">Date</TableHead>
-                          <TableHead className="min-w-[180px]">Actions</TableHead>
+                          <TableHead className="min-w-[120px]">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                     <TableBody>
@@ -1551,19 +1551,19 @@ export default function AdminDashboard() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleViewReport(session)}
-                                className="flex items-center gap-1 min-w-0"
+                                className="p-2 h-8 w-8"
+                                title="View Report"
                               >
-                                <FileText className="w-4 h-4 flex-shrink-0" />
-                                <span className="hidden sm:inline">View</span>
+                                <FileText className="w-4 h-4" />
                               </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleEditSession(session)}
-                                className="flex items-center gap-1 min-w-0"
+                                className="p-2 h-8 w-8"
+                                title="Edit Session"
                               >
-                                <Edit className="w-4 h-4 flex-shrink-0" />
-                                <span className="hidden sm:inline">Edit</span>
+                                <Edit className="w-4 h-4" />
                               </Button>
                               {/* Delete button - visible for admins and session owners */}
                               {(typedUser?.role === "super_admin" ||
@@ -1577,10 +1577,10 @@ export default function AdminDashboard() {
                                       deleteSessionMutation.mutate(session.id);
                                     }
                                   }}
-                                  className="flex items-center gap-1 min-w-0 text-red-600 hover:bg-red-50 hover:border-red-300"
+                                  className="p-2 h-8 w-8 text-red-600 hover:bg-red-50 hover:border-red-300"
+                                  title="Delete Report"
                                 >
-                                  <Trash2 className="w-4 h-4 flex-shrink-0" />
-                                  <span className="hidden sm:inline">Delete</span>
+                                  <Trash2 className="w-4 h-4" />
                                 </Button>
                               )}
                             </div>
