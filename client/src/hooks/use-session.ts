@@ -52,12 +52,12 @@ export interface BatchedTestResult {
  */
 const getNextAvailableAssetNumber = (usedNumbers: Set<number>, start: number): number => {
   let candidate = start;
-
+  
   // Keep incrementing until we find an unused number
   while (usedNumbers.has(candidate)) {
     candidate++;
   }
-
+  
   return candidate;
 };
 
@@ -80,7 +80,7 @@ export function useSession() {
   // Asset count state for tracking current counts
   const [assetCounts, setAssetCounts] = useState<{ monthly: number; fiveYearly: number }>(() => {
     if (!sessionId) return { monthly: 0, fiveYearly: 0 };
-
+    
     // Calculate from existing batched results
     const stored = localStorage.getItem(`batchedResults_${sessionId}`);
     if (stored) {
@@ -89,21 +89,21 @@ export function useSession() {
       const fiveYearlyCount = results.filter(r => r.frequency === 'fiveyearly').length;
       return { monthly: monthlyCount, fiveYearly: fiveYearlyCount };
     }
-
+    
     return { monthly: 0, fiveYearly: 0 };
   });
 
-  // Asset number counters - start fresh for each session
+  // Asset number counters - will be updated when session data loads
   const [monthlyAssetCounter, setMonthlyAssetCounter] = useState<number>(() => {
     if (!sessionId) return 0;
     const stored = localStorage.getItem(`monthlyCounter_${sessionId}`);
-    return stored ? parseInt(stored) : 0;
+    return stored ? parseInt(stored) : 0; // Default to 0, will be updated when session loads
   });
 
   const [fiveYearlyAssetCounter, setFiveYearlyAssetCounter] = useState<number>(() => {
     if (!sessionId) return 10000;
     const stored = localStorage.getItem(`fiveYearlyCounter_${sessionId}`);
-    return stored ? parseInt(stored) : 10000;
+    return stored ? parseInt(stored) : 10000; // Default to 10000, will be updated when session loads
   });
 
   // Batched results stored in local storage
@@ -131,7 +131,7 @@ export function useSession() {
   useEffect(() => {
     if (existingResults && existingResults.length > 0 && batchedResults.length === 0 && sessionId) {
       console.log(`Loading ${existingResults.length} existing results for session ${sessionId}`);
-
+      
       const loadedResults: BatchedTestResult[] = existingResults.map((result: any) => ({
         id: `existing-${result.id}`,
         itemName: result.itemName,
@@ -161,109 +161,98 @@ export function useSession() {
         luxReading: result.luxReading || undefined,
         luxCompliant: result.luxCompliant || undefined,
       }));
-
+      
       setBatchedResults(loadedResults);
-
+      
       // Store in localStorage for validation and duplicate checking
       localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(loadedResults));
       console.log(`Stored ${loadedResults.length} results in localStorage for session ${sessionId}`);
-
+      
       // Calculate and update asset counts based on loaded results
       const monthlyCount = loadedResults.filter(r => r.frequency !== 'fiveyearly').length;
       const fiveYearlyCount = loadedResults.filter(r => r.frequency === 'fiveyearly').length;
       setAssetCounts({ monthly: monthlyCount, fiveYearly: fiveYearlyCount });
-
+      
       // Set counters to continue from where they left off
       // Find the highest asset numbers to continue sequence
       const monthlyAssets = loadedResults
         .filter(r => r.frequency !== 'fiveyearly')
         .map(r => parseInt(r.assetNumber || '0'))
         .filter(n => !isNaN(n) && n > 0);
-
+      
       const fiveYearlyAssets = loadedResults
         .filter(r => r.frequency === 'fiveyearly')
         .map(r => parseInt(r.assetNumber || '10000'))
         .filter(n => !isNaN(n) && n >= 10000);
-
+      
       const maxMonthly = monthlyAssets.length > 0 ? Math.max(...monthlyAssets) : 0;
       const maxFiveYearly = fiveYearlyAssets.length > 0 ? Math.max(...fiveYearlyAssets) : 10000;
-
+      
       setMonthlyAssetCounter(maxMonthly);
       setFiveYearlyAssetCounter(maxFiveYearly);
-
+      
       // Store counters in localStorage
       localStorage.setItem(`monthlyCounter_${sessionId}`, maxMonthly.toString());
       localStorage.setItem(`fiveYearlyCounter_${sessionId}`, maxFiveYearly.toString());
-
+      
       console.log(`Updated asset counters: monthly=${maxMonthly}, fiveYearly=${maxFiveYearly}`);
     }
   }, [existingResults, batchedResults.length, sessionId]);
 
-  /**
-   * Calculates asset progress, including next available numbers and counts for each frequency type.
-   * It considers custom start numbers defined in the session.
-   * @returns An object containing next available monthly and 5-yearly asset numbers, and their respective counts, or null if session data is not available.
-   */
-  const getAssetProgress = () => {
-    if (!sessionId || !batchedResults || !session) return null;
-
-    // Get custom start numbers from session
-    const monthlyStartNumber = session.monthlyStartNumber || 1;
-    const fiveYearlyStartNumber = session.fiveYearlyStartNumber || 10001;
-
-    // Find the highest asset numbers used in each category
-    let monthlyAssetCounter = monthlyStartNumber - 1; // Start just before the custom start number
-    let fiveYearlyAssetCounter = fiveYearlyStartNumber - 1; // Start just before the custom start number
-
-    // Also include manually entered asset numbers
-    const manualNumbers = localStorage.getItem(`manualAssetNumbers_${sessionId}`);
-    let manuallyEnteredNumbers: string[] = [];
-
-    if (manualNumbers) {
-      try {
-        manuallyEnteredNumbers = JSON.parse(manualNumbers);
-      } catch (error) {
-        console.warn('Error parsing manually entered asset numbers:', error);
+  // Effect to initialize asset counters when session data becomes available
+  useEffect(() => {
+    if (session?.startingAssetNumber && sessionId) {
+      const hasStoredCounters = localStorage.getItem(`monthlyCounter_${sessionId}`) || localStorage.getItem(`fiveYearlyCounter_${sessionId}`);
+      
+      // Only initialize if no stored counters exist (fresh session)
+      if (!hasStoredCounters) {
+        console.log(`Initializing asset counters with starting number: ${session.startingAssetNumber}`);
+        
+        // Initialize monthly counter to start from the session's starting number
+        setMonthlyAssetCounter(session.startingAssetNumber - 1);
+        localStorage.setItem(`monthlyCounter_${sessionId}`, (session.startingAssetNumber - 1).toString());
+        
+        // Initialize 5-yearly counter to start from startingAssetNumber + 10000
+        const fiveYearlyStart = session.startingAssetNumber + 10000;
+        setFiveYearlyAssetCounter(fiveYearlyStart - 1);
+        localStorage.setItem(`fiveYearlyCounter_${sessionId}`, (fiveYearlyStart - 1).toString());
+        
+        console.log(`Asset counters initialized: monthly=${session.startingAssetNumber - 1}, fiveYearly=${fiveYearlyStart - 1}`);
       }
     }
+  }, [session, sessionId]);
 
+  // Calculate local asset progress from actual used numbers (accounts for gaps)
+  const getLocalAssetProgress = () => {
+    // Collect all existing asset numbers
     const usedNumbers = new Set<number>();
-
-    // Process batched results
-    batchedResults.forEach(result => {
+    
+    // Add numbers from batched results
+    batchedResults.forEach((result: BatchedTestResult) => {
       const assetNum = parseInt(result.assetNumber || '');
       if (!isNaN(assetNum) && assetNum > 0) {
         usedNumbers.add(assetNum);
-
-        // Track highest numbers for sequence continuation
-        if (assetNum < 10000) {
-          monthlyAssetCounter = Math.max(monthlyAssetCounter, assetNum);
-        } else {
-          fiveYearlyAssetCounter = Math.max(fiveYearlyAssetCounter, assetNum);
-        }
       }
     });
-
-    // Process manual numbers
-    manuallyEnteredNumbers.forEach(manualNumber => {
-      const assetNum = parseInt(manualNumber);
-      if (!isNaN(assetNum) && assetNum > 0) {
-        usedNumbers.add(assetNum);
-
-        // Track highest numbers for sequence continuation
-        if (assetNum < 10000) {
-          monthlyAssetCounter = Math.max(monthlyAssetCounter, assetNum);
-        } else {
-          fiveYearlyAssetCounter = Math.max(fiveYearlyAssetCounter, assetNum);
+    
+    // Add manually entered asset numbers from localStorage to prevent conflicts
+    const manuallyEnteredKey = `manuallyEnteredAssetNumbers_${sessionId}`;
+    const manuallyEnteredStored = localStorage.getItem(manuallyEnteredKey);
+    if (manuallyEnteredStored) {
+      const manuallyEnteredAssetNumbers = new Set<string>(JSON.parse(manuallyEnteredStored));
+      Array.from(manuallyEnteredAssetNumbers).forEach(manualNumber => {
+        const assetNum = parseInt(manualNumber);
+        if (!isNaN(assetNum) && assetNum > 0) {
+          usedNumbers.add(assetNum);
         }
-      }
-    });
+      });
+    }
 
     // Find next available numbers using sequence continuation (not gap-filling)
     // This respects the real-world workflow where manually changed labels shouldn't be reused
-    const nextMonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(monthlyStartNumber, monthlyAssetCounter + 1));
-    const nextFiveYearly = getNextAvailableAssetNumber(usedNumbers, Math.max(fiveYearlyStartNumber, fiveYearlyAssetCounter + 1));
-
+    const nextMonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(1, monthlyAssetCounter + 1));
+    const nextFiveYearly = getNextAvailableAssetNumber(usedNumbers, Math.max(10001, fiveYearlyAssetCounter + 1));
+    
     // Count items by frequency category
     const monthlyCount = batchedResults.filter(r => 
       r.frequency === 'threemonthly' || 
@@ -271,16 +260,14 @@ export function useSession() {
       r.frequency === 'twelvemonthly' || 
       r.frequency === 'twentyfourmonthly'
     ).length;
-
+    
     const fiveYearlyCount = batchedResults.filter(r => r.frequency === 'fiveyearly').length;
-
+    
     return {
       nextMonthly,
       nextFiveYearly,
       monthlyCount,
       fiveYearlyCount,
-      monthlyStartNumber,
-      fiveYearlyStartNumber,
     };
   };
 
@@ -333,13 +320,13 @@ export function useSession() {
    */
   const addToBatch = (data: Omit<InsertTestResult, 'sessionId' | 'assetNumber'>) => {
     if (!sessionId) throw new Error('No active session');
-
+    
     // Determine if this is a 5-yearly frequency
     const isFiveYearly = data.frequency === 'fiveyearly';
-
+    
     // Collect all existing asset numbers to avoid conflicts
     const usedNumbers = new Set<number>();
-
+    
     // Add numbers from current batched results
     batchedResults.forEach(result => {
       const assetNum = parseInt(result.assetNumber || '');
@@ -347,7 +334,7 @@ export function useSession() {
         usedNumbers.add(assetNum);
       }
     });
-
+    
     // Add manually entered asset numbers from localStorage
     // These are tracked when users manually edit asset numbers in report preview
     const manuallyEnteredKey = `manuallyEnteredAssetNumbers_${sessionId}`;
@@ -367,7 +354,7 @@ export function useSession() {
         console.warn('Error parsing manually entered asset numbers:', error);
       }
     }
-
+    
     // Find next available asset number
     let assetNumber: string;
     if (isFiveYearly) {
@@ -381,8 +368,9 @@ export function useSession() {
       setFiveYearlyAssetCounter(candidate);
       localStorage.setItem(`fiveYearlyCounter_${sessionId}`, candidate.toString());
     } else {
-      // For monthly items, start from current counter + 1 (continue sequence)
-      let candidate = Math.max(1, monthlyAssetCounter + 1);
+      // For monthly items, use session starting number or default to 1
+      const startingNumber = sessionData?.session?.startingAssetNumber || 1;
+      let candidate = Math.max(startingNumber, monthlyAssetCounter + 1);
       while (usedNumbers.has(candidate)) {
         candidate++;
       }
@@ -391,7 +379,7 @@ export function useSession() {
       setMonthlyAssetCounter(candidate);
       localStorage.setItem(`monthlyCounter_${sessionId}`, candidate.toString());
     }
-
+    
     const newResult: BatchedTestResult = {
       id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       itemName: data.itemName,
@@ -420,24 +408,24 @@ export function useSession() {
       manufacturerInfo: data.manufacturerInfo || undefined,
       installationDate: data.installationDate || undefined,
     };
-
+    
     // Add to batched results
     const updatedResults = [...batchedResults, newResult];
     setBatchedResults(updatedResults);
-
+    
     // Update asset counts state
     setAssetCounts(prevCounts => ({
       ...prevCounts,
       [isFiveYearly ? 'fiveYearly' : 'monthly']: prevCounts[isFiveYearly ? 'fiveYearly' : 'monthly'] + 1,
     }));
-
+    
     // Save to localStorage
     localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(updatedResults));
-
+    
     // Update current location
     setCurrentLocation(data.location);
     localStorage.setItem('currentLocation', data.location);
-
+    
     console.log(`Added result to batch: ${data.itemName} at ${data.location} -> Asset #${assetNumber}`);
     return newResult;
   };
@@ -451,24 +439,24 @@ export function useSession() {
       if (!sessionId || batchedResults.length === 0) {
         throw new Error('No active session or no results to submit');
       }
-
+      
       console.log(`Submitting batch of ${batchedResults.length} results to server`);
-
+      
       const response = await apiRequest('POST', `/api/sessions/${sessionId}/batch-results`, {
         results: batchedResults
       });
-
+      
       return response.json();
     },
     onSuccess: (submittedResults: TestResult[]) => {
       console.log(`Successfully submitted ${submittedResults.length} results to server`);
-
+      
       // Clear ALL unfinished report indicators since report is now completed
       localStorage.removeItem('unfinished');
       localStorage.removeItem('unfinishedSessionId');
       localStorage.removeItem('unfinishedId');
       localStorage.removeItem('currentSessionId');
-
+      
       // Clear batched results after successful submission
       setBatchedResults([]);
       if (sessionId) {
@@ -476,17 +464,17 @@ export function useSession() {
         localStorage.removeItem(`monthlyCounter_${sessionId}`);
         localStorage.removeItem(`fiveYearlyCounter_${sessionId}`);
       }
-
+      
       // Reset asset counters and counts for next session
       setMonthlyAssetCounter(0);
       setFiveYearlyAssetCounter(10000);
       setAssetCounts({ monthly: 0, fiveYearly: 0 });
-
+      
       // Clear session ID to ensure no unfinished detection
       setSessionId(null);
-
+      
       console.log('Cleared all localStorage unfinished flags and session data');
-
+      
       // Refresh session data
       queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
@@ -504,28 +492,28 @@ export function useSession() {
     try {
       console.log('updateBatchedResult called with:', { id, updatedData });
       console.log('Current batchedResults:', batchedResults);
-
+      
       const foundResult = batchedResults.find(result => result.id === id);
       if (!foundResult) {
         console.error(`No batched result found with ID: ${id}`);
         console.log('Available IDs:', batchedResults.map(r => r.id));
         throw new Error(`No batched result found with ID: ${id}`);
       }
-
+      
       console.log('Found result to update:', foundResult);
-
+      
       const updatedResults = batchedResults.map(result => 
         result.id === id ? { ...result, ...updatedData } : result
       );
-
+      
       console.log('Updated results:', updatedResults);
-
+      
       setBatchedResults(updatedResults);
       if (sessionId) {
         localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(updatedResults));
         console.log('Saved updated results to localStorage');
       }
-
+      
       console.log('updateBatchedResult completed successfully');
     } catch (error) {
       console.error('Error in updateBatchedResult:', error);
@@ -540,20 +528,25 @@ export function useSession() {
     const resultToRemove = batchedResults.find(result => result.id === id);
     if (resultToRemove) {
       const isFiveYearly = resultToRemove.frequency === 'fiveyearly';
-
+      
       // Update asset counts state
       setAssetCounts(prevCounts => ({
         ...prevCounts,
         [isFiveYearly ? 'fiveYearly' : 'monthly']: Math.max(0, prevCounts[isFiveYearly ? 'fiveYearly' : 'monthly'] - 1),
       }));
     }
-
+    
     const updatedResults = batchedResults.filter(result => result.id !== id);
     setBatchedResults(updatedResults);
     if (sessionId) {
       localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(updatedResults));
     }
   };
+
+  /**
+   * Renumbers all assets when frequency categories change
+   */
+
 
   /**
    * Renumber assets to ensure unique asset numbers within the session
@@ -571,13 +564,13 @@ export function useSession() {
 
     // Get all existing asset numbers, excluding the one being changed
     const usedNumbers = new Set<number>();
-
+    
     batchedResults.forEach((result: BatchedTestResult) => {
       // Skip the result being changed, as it will get a new number
       if (result.id === updatedResultId) {
         return;
       }
-
+      
       // Parse asset number and add to used set if valid
       const assetNum = parseInt(result.assetNumber || '');
       if (!isNaN(assetNum) && assetNum > 0) {
@@ -586,7 +579,14 @@ export function useSession() {
     });
 
     // Find next available asset number for the new frequency
-    const startNumber = newFrequency === 'fiveyearly' ? 10001 : 1;
+    let startNumber: number;
+    if (newFrequency === 'fiveyearly') {
+      startNumber = 10001;
+    } else {
+      // Use session starting number for monthly items
+      const sessionStarting = sessionData?.session?.startingAssetNumber || 1;
+      startNumber = sessionStarting;
+    }
     const nextAvailable = getNextAvailableAssetNumber(usedNumbers, startNumber);
     const newAssetNumber = nextAvailable.toString();
 
@@ -612,7 +612,7 @@ export function useSession() {
     // Update counters based on new counts
     setMonthlyAssetCounter(monthlyCount);
     setFiveYearlyAssetCounter(10000 + fiveYearlyCount);
-
+    
     // Save counters to localStorage
     if (sessionId) {
       localStorage.setItem(`monthlyCounter_${sessionId}`, monthlyCount.toString());
@@ -669,7 +669,7 @@ export function useSession() {
   useEffect(() => {
     if (sessionId) {
       localStorage.setItem('currentSessionId', sessionId.toString());
-
+      
       // Restore batched results if they exist for this session
       const storedBatchedResults = localStorage.getItem(`batchedResults_${sessionId}`);
       if (storedBatchedResults && batchedResults.length === 0) {
@@ -678,7 +678,7 @@ export function useSession() {
           if (results.length > 0) {
             console.log(`Restoring ${results.length} batched results for session ${sessionId}`);
             setBatchedResults(results);
-
+            
             // Restore asset counts
             const monthlyCount = results.filter((r: BatchedTestResult) => r.frequency !== 'fiveyearly').length;
             const fiveYearlyCount = results.filter((r: BatchedTestResult) => r.frequency === 'fiveyearly').length;
@@ -722,7 +722,7 @@ export function useSession() {
     currentLocation,
     setCurrentLocation,
     isLoading,
-
+    
     // Batched results
     batchedResults,
     setBatchedResults,
@@ -732,22 +732,22 @@ export function useSession() {
     renumberAssets,
     submitBatch: submitBatchMutation.mutate,
     isSubmittingBatch: submitBatchMutation.isPending,
-
+    
     // Local asset progress
-    assetProgress: getAssetProgress(),
+    assetProgress: getLocalAssetProgress(),
     assetCounts,
-
+    
     // Session operations
     createSession: createSessionMutation.mutate,
     isCreatingSession: createSessionMutation.isPending,
     clearSession,
-
+    
     // Legacy operations (for admin use)
     updateResult: updateResultMutation.mutate,
     deleteResult: deleteResultMutation.mutate,
     isUpdatingResult: updateResultMutation.isPending,
     isDeletingResult: deleteResultMutation.isPending,
-
+    
     // Utility functions
 
   };

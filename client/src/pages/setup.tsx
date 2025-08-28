@@ -24,7 +24,7 @@ export default function Setup() {
   const { createSession, isCreatingSession, clearSession, sessionId } = useSession();
   const { user } = useAuth();
   const { navigate } = useSpaNavigation();
-
+  
   // Get current date in Australian Central Time
   const getAustralianDate = () => {
     const now = new Date();
@@ -47,8 +47,7 @@ export default function Setup() {
       siteContact: '',
       address: '',
       country: 'australia',
-      monthlyStartNumber: 1,
-      fiveYearlyStartNumber: 10001,
+      startingAssetNumber: 1,
     },
   });
 
@@ -57,10 +56,10 @@ export default function Setup() {
   const onSubmit = (data: InsertTestSession) => {
     // Don't clear session here - let createSession handle the setup
     // This preserves unfinished detection when users navigate back
-
+    
     // Get the selected service type from session storage
     const selectedService = sessionStorage.getItem('selectedService') || 'electrical';
-
+    
     createSession({
       ...data,
       serviceType: selectedService as 'electrical' | 'emergency_exit_light',
@@ -182,97 +181,26 @@ export default function Setup() {
             )}
           </div>
 
-          {/* Country Selection */}
-        <div className="space-y-3">
-          <Label className="text-sm font-medium text-gray-700">
-            🌏 Country
-          </Label>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => form.setValue('country', 'australia')}
-              className={`p-4 border-2 rounded-lg font-medium transition-all touch-button ${
-                form.watch('country') === 'australia'
-                  ? 'border-primary bg-primary text-white'
-                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              🇦🇺 Australia
-            </button>
-            <button
-              type="button"
-              onClick={() => form.setValue('country', 'newzealand')}
-              className={`p-4 border-2 rounded-lg font-medium transition-all touch-button ${
-                form.watch('country') === 'newzealand'
-                  ? 'border-primary bg-primary text-white'
-                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              🇳🇿 New Zealand
-            </button>
+          <div className="space-y-2">
+            <Label htmlFor="startingAssetNumber">Starting Asset Number</Label>
+            <Input
+              id="startingAssetNumber"
+              type="number"
+              min="1"
+              max="9999"
+              placeholder="1"
+              {...form.register('startingAssetNumber', { 
+                setValueAs: (value) => value === '' ? 1 : parseInt(value, 10) 
+              })}
+              className="text-base"
+            />
+            <p className="text-sm text-gray-600">
+              Asset numbers will start from this number and increment for each tested item
+            </p>
+            {form.formState.errors.startingAssetNumber && (
+              <p className="text-sm text-error">{form.formState.errors.startingAssetNumber.message}</p>
+            )}
           </div>
-        </div>
-
-        {/* Asset Numbering Configuration */}
-        <div className="space-y-4">
-          <div className="border-t border-gray-200 pt-4">
-            <Label className="text-sm font-medium text-gray-700 mb-4 block">
-              🏷️ Asset Numbering Configuration
-            </Label>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="monthlyStartNumber" className="text-xs font-medium text-gray-600">
-                  Monthly Frequencies Start Number
-                </Label>
-                <Input
-                  id="monthlyStartNumber"
-                  type="number"
-                  min="1"
-                  max="9999"
-                  {...form.register('monthlyStartNumber', {
-                    setValueAs: (value) => parseInt(value || '1'),
-                    validate: (value) => value >= 1 && value <= 9999 || 'Range: 1-9999'
-                  })}
-                  className="text-sm"
-                />
-                <div className="text-xs text-gray-500">
-                  Range: 1-9999
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="fiveYearlyStartNumber" className="text-xs font-medium text-gray-600">
-                  5-Yearly Start Number
-                </Label>
-                <Input
-                  id="fiveYearlyStartNumber"
-                  type="number"
-                  min="10000"
-                  {...form.register('fiveYearlyStartNumber', {
-                    setValueAs: (value) => parseInt(value || '10001'),
-                    validate: (value) => value >= 10000 || 'Range: 10000+'
-                  })}
-                  className="text-sm"
-                />
-                <div className="text-xs text-gray-500">
-                  Range: 10000+
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="text-xs text-blue-800">
-                <div className="font-medium">Asset numbering will start from:</div>
-                <div className="mt-1 space-y-1">
-                  <div>• Monthly items (3, 6, 12, 24 monthly): #{form.watch('monthlyStartNumber')}</div>
-                  <div>• 5-yearly items: #{form.watch('fiveYearlyStartNumber')}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
 
         </div>
       </form>

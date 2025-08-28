@@ -1,8 +1,8 @@
-import {
-  testSessions,
+import { 
+  testSessions, 
   testResults,
   users,
-  type TestSession,
+  type TestSession, 
   type InsertTestSession,
   type TestResult,
   type InsertTestResult,
@@ -19,20 +19,20 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   validatePassword(username: string, password: string): Promise<User | null>;
   updateUserPassword(userId: number, newPassword: string): Promise<void>;
-
+  
   // Admin operations
   getAllUsers(): Promise<User[]>;
   updateUserStatus(userId: number, isActive: boolean): Promise<User>;
   updateUser(userId: number, data: Partial<InsertUser>): Promise<User>;
-  getAllTestSessions(): Promise<(TestSession & { technicianFullName?: string; totalItems?: number; failedItems?: number })[]>;
-  getSessionsByUser(userId: number): Promise<(TestSession & { totalItems?: number; failedItems?: number })[]>;
+  getAllTestSessions(): Promise<(TestSession & { technicianFullName?: string })[]>;
+  getSessionsByUser(userId: number): Promise<TestSession[]>;
   updateTestSession(sessionId: number, data: Partial<InsertTestSession>): Promise<TestSession>;
   deleteTestSession(sessionId: number): Promise<void>;
-
+  
   // Test Sessions
   createTestSession(session: InsertTestSession): Promise<TestSession>;
   getTestSession(id: number): Promise<TestSession | undefined>;
-
+  
   // Test Results
   createTestResult(result: InsertTestResult): Promise<TestResult>;
   updateTestResult(id: number, data: Partial<InsertTestResult>): Promise<TestResult>;
@@ -43,17 +43,15 @@ export interface IStorage {
   getNextMonthlyAssetNumber(sessionId: number): Promise<number>;
   getNextFiveYearlyAssetNumber(sessionId: number): Promise<number>;
   validateAssetNumber(sessionId: number, assetNumber: string, excludeId?: number): Promise<boolean>;
-
+  
   // Asset Progress
   getAssetProgress(sessionId: number): Promise<{
     nextMonthly: number;
     nextFiveYearly: number;
     monthlyCount: number;
     fiveYearlyCount: number;
-    monthlyStartNumber: number;
-    fiveYearlyStartNumber: number;
   }>;
-
+  
   // Report Data
   getFullSessionData(sessionId: number): Promise<{
     session: TestSession;
@@ -63,7 +61,7 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   // User authentication methods
-
+  
   /**
    * Retrieves a user by their username from the database
    * Used during login authentication to find user accounts
@@ -107,7 +105,7 @@ export class DatabaseStorage implements IStorage {
     if (!user || !user.isActive) {
       return null;
     }
-
+    
     const isValid = await bcrypt.compare(password, user.password);
     return isValid ? user : null;
   }
@@ -127,7 +125,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Admin operations
-
+  
   /**
    * Retrieves all users from the database for admin management
    * Used in admin dashboard to display user list with roles and status
@@ -161,16 +159,16 @@ export class DatabaseStorage implements IStorage {
    * @returns Updated user object
    */
   async updateUser(userId: number, data: Partial<InsertUser>): Promise<User> {
-    const updateData: any = {
-      ...data,
-      updatedAt: new Date()
+    const updateData: any = { 
+      ...data, 
+      updatedAt: new Date() 
     };
-
+    
     // Hash password if provided
     if (data.password) {
       updateData.password = await bcrypt.hash(data.password, 10);
     }
-
+    
     const [user] = await db
       .update(users)
       .set(updateData)
@@ -198,13 +196,11 @@ export class DatabaseStorage implements IStorage {
         userId: testSessions.userId,
         createdAt: testSessions.createdAt,
         technicianFullName: users.fullName,
-        monthlyStartNumber: testSessions.monthlyStartNumber,
-        fiveYearlyStartNumber: testSessions.fiveYearlyStartNumber,
       })
       .from(testSessions)
       .leftJoin(users, eq(testSessions.userId, users.id))
       .orderBy(desc(testSessions.testDate));
-
+    
     // Add item counts for each session using simple count query
     const sessionsWithCounts = await Promise.all(
       sessions.map(async (session) => {
@@ -215,10 +211,10 @@ export class DatabaseStorage implements IStorage {
           })
           .from(testResults)
           .where(eq(testResults.sessionId, session.id));
-
+        
         const totalItems = results.length;
         const failedItems = results.filter(result => result.result === 'fail').length;
-
+        
         return {
           ...session,
           totalItems,
@@ -226,7 +222,7 @@ export class DatabaseStorage implements IStorage {
         };
       })
     );
-
+    
     return sessionsWithCounts;
   }
 
@@ -242,7 +238,7 @@ export class DatabaseStorage implements IStorage {
       .from(testSessions)
       .where(eq(testSessions.userId, userId))
       .orderBy(desc(testSessions.testDate));
-
+    
     // Add item counts for each session
     const sessionsWithCounts = await Promise.all(
       sessions.map(async (session) => {
@@ -253,10 +249,10 @@ export class DatabaseStorage implements IStorage {
           })
           .from(testResults)
           .where(eq(testResults.sessionId, session.id));
-
+        
         const totalItems = results.length;
         const failedItems = results.filter(result => result.result === 'fail').length;
-
+        
         return {
           ...session,
           totalItems,
@@ -264,7 +260,7 @@ export class DatabaseStorage implements IStorage {
         };
       })
     );
-
+    
     return sessionsWithCounts;
   }
 
@@ -307,19 +303,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   /**
+   * Permanently deletes a test session and all associated test results
+   * Cascades delete to maintain database consistency
+   * @param sessionId - ID of the session to delete completely
+   */
+  async deleteTestSession(sessionId: number): Promise<void> {
+    // First delete all related test results
+    await db.delete(testResults).where(eq(testResults.sessionId, sessionId));
+    // Then delete the session
+    await db.delete(testSessions).where(eq(testSessions.id, sessionId));
+  }
+
+  /**
    * Creates a new test session to group related test results
    * Sets up testing context with client details and service type
    * @param insertSession - Session data (client, address, technician info)
    * @returns Newly created test session object
    */
-  async createTestSession(sessionData: InsertTestSession): Promise<TestSession> {
+  async createTestSession(insertSession: InsertTestSession): Promise<TestSession> {
     const [session] = await db
       .insert(testSessions)
-      .values({
-        ...sessionData,
-        monthlyStartNumber: sessionData.monthlyStartNumber || 1,
-        fiveYearlyStartNumber: sessionData.fiveYearlyStartNumber || 10001,
-      })
+      .values(insertSession)
       .returning();
     return session;
   }
@@ -350,18 +354,18 @@ export class DatabaseStorage implements IStorage {
         ...insertResult,
         photoData: insertResult.photoData ? `Photo data included (${Math.round(insertResult.photoData.length / 1024)}KB)` : 'No photo data'
       });
-
+      
       // Use the asset number provided by the client (from batched results)
       const assetNumber = insertResult.assetNumber || '1';
-
+      
       // Use the pool directly for raw SQL execution with all fields including emergency-specific ones
       const query = `
-        INSERT INTO test_results
+        INSERT INTO test_results 
         (session_id, asset_number, item_name, item_type, location, classification, result, frequency, failure_reason, action_taken, notes, photo_data, vision_inspection, electrical_test, maintenance_type, globe_type, discharge_test, switching_test, charging_test, manufacturer_info, installation_date)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
         RETURNING *
       `;
-
+      
       const { pool } = await import('./db');
       const result = await pool.query(query, [
         insertResult.sessionId,
@@ -387,7 +391,7 @@ export class DatabaseStorage implements IStorage {
         insertResult.manufacturerInfo,
         insertResult.installationDate,
       ]);
-
+      
       console.log('Successfully inserted test result:', result.rows[0]);
       return result.rows[0] as TestResult;
     } catch (error) {
@@ -421,21 +425,21 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(testResults)
       .where(eq(testResults.sessionId, sessionId));
-
+    
     // Sort by asset number (numerical order) - handle both monthly (1-999) and 5-yearly (10001+) sequences
     return results.sort((a, b) => {
       const aNum = parseInt(a.assetNumber);
       const bNum = parseInt(b.assetNumber);
-
+      
       // If both are numbers, sort numerically
       if (!isNaN(aNum) && !isNaN(bNum)) {
         return aNum - bNum;
       }
-
+      
       // If one is a number and one isn't, number comes first
       if (!isNaN(aNum) && isNaN(bNum)) return -1;
       if (isNaN(aNum) && !isNaN(bNum)) return 1;
-
+      
       // If both are non-numbers, sort alphabetically
       return a.assetNumber.localeCompare(b.assetNumber);
     });
@@ -444,12 +448,12 @@ export class DatabaseStorage implements IStorage {
   async getNextAssetNumber(sessionId: number): Promise<number> {
     const results = await this.getTestResultsBySession(sessionId);
     if (results.length === 0) return 1;
-
+    
     const existingNumbers = results
       .map(r => parseInt(r.assetNumber))
       .filter(n => !isNaN(n))
       .sort((a, b) => b - a);
-
+    
     return existingNumbers.length > 0 ? existingNumbers[0] + 1 : 1;
   }
 
@@ -457,67 +461,62 @@ export class DatabaseStorage implements IStorage {
    * Generates the next sequential asset number for monthly frequency testing (1, 2, 3...)
    * Covers 3, 6, 12, and 24 monthly testing frequencies
    * @param sessionId - ID of the session to generate asset number for
-   * @returns Next available asset number starting from custom start number or 1
+   * @returns Next available asset number starting from 1
    */
   async getNextMonthlyAssetNumber(sessionId: number): Promise<number> {
-    // Get session to retrieve custom start number
-    const session = await this.getTestSession(sessionId);
-    if (!session) {
-      throw new Error('Session not found');
-    }
-
     const results = await this.getTestResultsBySession(sessionId);
-
-    // Filter for monthly frequencies and get their asset numbers
-    const monthlyResults = results.filter(result =>
-      ['threemonthly', 'sixmonthly', 'twelvemonthly', 'twentyfourmonthly'].includes(result.frequency)
+    
+    // Filter for monthly frequencies (3, 6, 12, 24 monthly)
+    const monthlyResults = results.filter(r => 
+      r.frequency === 'threemonthly' || 
+      r.frequency === 'sixmonthly' || 
+      r.frequency === 'twelvemonthly' || 
+      r.frequency === 'twentyfourmonthly'
     );
-
-    const usedNumbers = monthlyResults
-      .map(result => parseInt(result.assetNumber))
-      .filter(num => !isNaN(num) && num >= 1 && num < 10000);
-
-    // Find the next available number starting from custom start number
-    const startNumber = session.monthlyStartNumber || 1;
-    let nextNumber = startNumber;
-    while (usedNumbers.includes(nextNumber)) {
-      nextNumber++;
-    }
-
-    return nextNumber;
+    
+    if (monthlyResults.length === 0) return 1;
+    
+    const existingNumbers = monthlyResults
+      .map(r => parseInt(r.assetNumber))
+      .filter(n => !isNaN(n))
+      .sort((a, b) => b - a);
+    
+    return existingNumbers.length > 0 ? existingNumbers[0] + 1 : 1;
   }
 
   /**
    * Generates the next sequential asset number for 5-yearly testing (10001, 10002, 10003...)
    * Uses separate numbering sequence to distinguish from monthly frequency items
    * @param sessionId - ID of the session to generate asset number for
-   * @returns Next available 5-yearly asset number starting from custom start number or 10001
+   * @returns Next available 5-yearly asset number starting from 10001
    */
   async getNextFiveYearlyAssetNumber(sessionId: number): Promise<number> {
-    // Get session to retrieve custom start number
-    const session = await this.getTestSession(sessionId);
-    if (!session) {
-      throw new Error('Session not found');
-    }
-
     const results = await this.getTestResultsBySession(sessionId);
-
-    // Filter for 5-yearly frequencies and get their asset numbers
-    const fiveYearlyResults = results.filter(result =>
-      result.frequency === 'fiveyearly'
-    );
-
-    const usedNumbers = fiveYearlyResults
-      .map(result => parseInt(result.assetNumber))
-      .filter(num => !isNaN(num) && num >= 10000);
-
-    // Find the next available number starting from custom start number
-    const startNumber = session.fiveYearlyStartNumber || 10001;
-    let nextNumber = startNumber;
-    while (usedNumbers.includes(nextNumber)) {
-      nextNumber++;
+    
+    // Filter for 5 yearly frequency
+    const fiveYearlyResults = results.filter(r => r.frequency === 'fiveyearly');
+    
+    console.log(`Found ${fiveYearlyResults.length} existing 5-yearly items:`, fiveYearlyResults.map(r => ({
+      id: r.id,
+      assetNumber: r.assetNumber,
+      itemName: r.itemName
+    })));
+    
+    if (fiveYearlyResults.length === 0) {
+      console.log('No existing 5-yearly items found, returning 10001');
+      return 10001;
     }
-
+    
+    const existingNumbers = fiveYearlyResults
+      .map(r => parseInt(r.assetNumber))
+      .filter(n => !isNaN(n) && n >= 10001) // Only consider numbers in the new 10001+ range
+      .sort((a, b) => b - a);
+    
+    console.log('Existing 5-yearly asset numbers:', existingNumbers);
+    
+    const nextNumber = existingNumbers.length > 0 ? existingNumbers[0] + 1 : 10001;
+    console.log('Next 5-yearly asset number:', nextNumber);
+    
     return nextNumber;
   }
 
@@ -548,20 +547,20 @@ export class DatabaseStorage implements IStorage {
 
   async isDuplicateAssetNumberForFrequency(sessionId: number, assetNumber: string, frequency: string): Promise<boolean> {
     const results = await this.getTestResultsBySession(sessionId);
-
+    
     // Filter results by frequency group
     const sameFrequencyResults = results.filter(r => {
       if (frequency === 'fiveyearly') {
         return r.frequency === 'fiveyearly';
       } else {
         // Monthly frequencies
-        return r.frequency === 'threemonthly' ||
-               r.frequency === 'sixmonthly' ||
-               r.frequency === 'twelvemonthly' ||
+        return r.frequency === 'threemonthly' || 
+               r.frequency === 'sixmonthly' || 
+               r.frequency === 'twelvemonthly' || 
                r.frequency === 'twentyfourmonthly';
       }
     });
-
+    
     const isDuplicate = sameFrequencyResults.some(r => r.assetNumber === assetNumber);
     console.log(`Checking duplicate for asset number ${assetNumber} in frequency group ${frequency}:`, isDuplicate);
     return isDuplicate;
@@ -575,7 +574,7 @@ export class DatabaseStorage implements IStorage {
    */
   async checkForRecentDuplicates(insertResult: any): Promise<TestResult[]> {
     const tenSecondsAgo = new Date(Date.now() - 10000); // 10 seconds ago
-
+    
     const results = await db
       .select()
       .from(testResults)
@@ -589,7 +588,7 @@ export class DatabaseStorage implements IStorage {
           gte(testResults.createdAt, tenSecondsAgo)
         )
       );
-
+    
     console.log(`Found ${results.length} recent duplicates for item: ${insertResult.itemName}`);
     return results;
   }
@@ -598,44 +597,36 @@ export class DatabaseStorage implements IStorage {
    * Retrieves asset numbering progress and counts for testing interface
    * Shows technicians what asset numbers will be assigned next and current counts
    * @param sessionId - ID of the session to get progress for
-   * @returns Object with next asset numbers, item counts, and start numbers by frequency type
+   * @returns Object with next asset numbers and item counts by frequency type
    */
   async getAssetProgress(sessionId: number): Promise<{
     nextMonthly: number;
     nextFiveYearly: number;
     monthlyCount: number;
     fiveYearlyCount: number;
-    monthlyStartNumber: number;
-    fiveYearlyStartNumber: number;
   }> {
-    // Get session to retrieve custom start numbers
-    const session = await this.getTestSession(sessionId);
-    if (!session) {
-      throw new Error('Session not found');
-    }
-
     const results = await this.getTestResultsBySession(sessionId);
-
-    // Filter results by frequency type
-    const monthlyResults = results.filter(result =>
-      ['threemonthly', 'sixmonthly', 'twelvemonthly', 'twentyfourmonthly'].includes(result.frequency)
+    
+    // Count monthly items
+    const monthlyResults = results.filter(r => 
+      r.frequency === 'threemonthly' || 
+      r.frequency === 'sixmonthly' || 
+      r.frequency === 'twelvemonthly' || 
+      r.frequency === 'twentyfourmonthly'
     );
-
-    const fiveYearlyResults = results.filter(result =>
-      result.frequency === 'fiveyearly'
-    );
-
-    // Get next available asset numbers
+    
+    // Count 5-yearly items
+    const fiveYearlyResults = results.filter(r => r.frequency === 'fiveyearly');
+    
+    // Get next asset numbers
     const nextMonthly = await this.getNextMonthlyAssetNumber(sessionId);
     const nextFiveYearly = await this.getNextFiveYearlyAssetNumber(sessionId);
-
+    
     return {
       nextMonthly,
       nextFiveYearly,
       monthlyCount: monthlyResults.length,
       fiveYearlyCount: fiveYearlyResults.length,
-      monthlyStartNumber: session.monthlyStartNumber || 1,
-      fiveYearlyStartNumber: session.fiveYearlyStartNumber || 10001,
     };
   }
 
@@ -651,7 +642,7 @@ export class DatabaseStorage implements IStorage {
   } | undefined> {
     const session = await this.getTestSession(sessionId);
     if (!session) return undefined;
-
+    
     const results = await this.getTestResultsBySession(sessionId);
     return { session, results };
   }
