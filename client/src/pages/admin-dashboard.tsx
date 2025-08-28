@@ -73,6 +73,7 @@ export default function AdminDashboard() {
   const [isEditSessionModalOpen, setIsEditSessionModalOpen] = useState(false);
   const [isViewReportModalOpen, setIsViewReportModalOpen] = useState(false);
   const [viewingSession, setViewingSession] = useState<any>(null);
+  const [isContinuing, setIsContinuing] = useState(false);
   const [isEditResultModalOpen, setIsEditResultModalOpen] = useState(false);
   const [editingResult, setEditingResult] = useState<any>(null);
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
@@ -1045,6 +1046,9 @@ export default function AdminDashboard() {
   const handleContinueReport = (session: any) => {
     console.log(`Starting continue for session ${session.id}`);
     
+    // Show loading screen
+    setIsContinuing(true);
+    
     // Clear any existing session data to prevent conflicts
     localStorage.removeItem('currentSessionId');
     localStorage.removeItem('unfinished');
@@ -1062,8 +1066,10 @@ export default function AdminDashboard() {
     
     console.log(`Set continuation flags for session ${session.id}, navigating to items`);
     
-    // Navigate to item selection page to continue adding items
-    window.location.href = '/items';
+    // Add a brief delay to show the loading screen, then navigate
+    setTimeout(() => {
+      window.location.href = '/items';
+    }, 500);
   };
 
   /**
@@ -1269,6 +1275,32 @@ export default function AdminDashboard() {
   };
 
   console.log(process.env.NODE_ENV);
+  // Show loading screen when continuing a report
+  if (isContinuing) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center space-y-6">
+          <div className="flex justify-center">
+            <img
+              src={logoPath}
+              alt="The Local Guys"
+              className="h-24 w-auto object-contain"
+            />
+          </div>
+          <div className="space-y-2">
+            <LoadingSpinner />
+            <p className="text-lg font-medium text-gray-700">
+              Continuing Report...
+            </p>
+            <p className="text-sm text-gray-500">
+              Loading item selection page
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-7xl mx-auto">
