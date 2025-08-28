@@ -1066,10 +1066,10 @@ export default function AdminDashboard() {
     
     console.log(`Set continuation flags for session ${session.id}, navigating to items`);
     
-    // Add a brief delay to show the loading screen, then navigate
+    // Add a longer delay to show the loading screen and ensure smooth transition
     setTimeout(() => {
       window.location.href = '/items';
-    }, 500);
+    }, 1500);
   };
 
   /**

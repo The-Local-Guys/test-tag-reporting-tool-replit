@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Edit2, FileText, CheckCircle, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { deleteResource } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
+import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
 
 const electricalItems = [
   { type: 'iec-lead', name: 'IEC Lead', icon: '🔌', description: 'Power Cord' },
@@ -37,9 +39,19 @@ export default function ItemSelection() {
   const [showNewReportConfirm, setShowNewReportConfirm] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [showCancelSuccess, setShowCancelSuccess] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const { sessionData, currentLocation, setCurrentLocation, clearSession, sessionId } = useSession();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  // Set initial loading to false after a brief delay to ensure smooth transition
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitialLoading(false);
+    }, 800); // Slightly longer than admin dashboard delay
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   // Get the selected service type
   const selectedService = sessionData?.session?.serviceType || sessionStorage.getItem('selectedService') || 'electrical';
@@ -119,6 +131,32 @@ export default function ItemSelection() {
     failedItems: 0,
     passRate: 0,
   };
+
+  // Show loading screen during initial transition
+  if (isInitialLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center space-y-6">
+          <div className="flex justify-center">
+            <img
+              src={logoPath}
+              alt="The Local Guys"
+              className="h-24 w-auto object-contain"
+            />
+          </div>
+          <div className="space-y-2">
+            <LoadingSpinner />
+            <p className="text-lg font-medium text-gray-700">
+              Loading Report...
+            </p>
+            <p className="text-sm text-gray-500">
+              Preparing item selection
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mobile-container">
