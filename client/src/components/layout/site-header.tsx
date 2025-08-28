@@ -88,7 +88,7 @@ export function SiteHeader() {
                 className="text-white hover:bg-white/20 flex items-center gap-2"
               >
                 <TestTube className="w-4 h-4" />
-                <span className="hidden lg:inline">Testing</span>
+                <span>Testing</span>
               </Button>
             </Link>
             
@@ -101,7 +101,7 @@ export function SiteHeader() {
                   className="text-white hover:bg-white/20 flex items-center gap-2"
                 >
                   <Shield className="w-4 h-4" />
-                  <span className="hidden lg:inline">
+                  <span>
                     {(typedUser?.role === 'super_admin' || typedUser?.role === 'support_center') ? 'Admin' : 'Reports'}
                   </span>
                 </Button>
@@ -116,7 +116,7 @@ export function SiteHeader() {
               className="text-white hover:bg-white/20 flex items-center gap-2"
             >
               <ExternalLink className="w-4 h-4" />
-              <span className="hidden lg:inline">Feedback</span>
+              <span>Feedback</span>
             </Button>
           </nav>
           
@@ -124,7 +124,7 @@ export function SiteHeader() {
           {typedUser && (
             <div className="flex items-center space-x-2 text-sm text-blue-100 pl-2 border-l border-white/20">
               <User className="w-4 h-4" />
-              <span className="hidden lg:inline">{typedUser.fullName}</span>
+              <span className="hidden xl:inline">{typedUser.fullName}</span>
             </div>
           )}
           <Button
@@ -135,7 +135,7 @@ export function SiteHeader() {
             className="bg-white/10 border-white/20 text-white hover:bg-white/20 flex items-center gap-2"
           >
             <LogOut className="w-4 h-4" />
-            <span className="hidden lg:inline">{isLoggingOut ? "Signing out..." : "Sign out"}</span>
+            <span className="hidden xl:inline">{isLoggingOut ? "Signing out..." : "Sign out"}</span>
           </Button>
         </div>
 
