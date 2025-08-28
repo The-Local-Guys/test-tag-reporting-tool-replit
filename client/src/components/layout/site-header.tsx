@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { LogOut, User, Menu, X } from "lucide-react";
+import { LogOut, User, Menu, X, Home, Settings, FileText, Shield, TestTube, ExternalLink } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMobileMenu } from "@/contexts/MobileMenuContext";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 
 export function SiteHeader() {
   const { user, logout, isLoggingOut } = useAuth();
@@ -79,8 +79,50 @@ export function SiteHeader() {
 
         {/* Desktop navigation - hidden on mobile */}
         <div className="hidden md:flex items-center gap-3">
+          {/* Navigation Links */}
+          <nav className="flex items-center gap-1">
+            <Link href="/">
+              <Button
+                variant="ghost" 
+                size="sm"
+                className="text-white hover:bg-white/20 flex items-center gap-2"
+              >
+                <TestTube className="w-4 h-4" />
+                <span className="hidden lg:inline">Testing</span>
+              </Button>
+            </Link>
+            
+            {/* Show admin link for all authorized users */}
+            {(typedUser?.role === 'super_admin' || typedUser?.role === 'support_center' || typedUser?.role === 'technician') && (
+              <Link href="/admin">
+                <Button
+                  variant="ghost" 
+                  size="sm"
+                  className="text-white hover:bg-white/20 flex items-center gap-2"
+                >
+                  <Shield className="w-4 h-4" />
+                  <span className="hidden lg:inline">
+                    {(typedUser?.role === 'super_admin' || typedUser?.role === 'support_center') ? 'Admin' : 'Reports'}
+                  </span>
+                </Button>
+              </Link>
+            )}
+            
+            {/* Feedback Link */}
+            <Button
+              variant="ghost" 
+              size="sm"
+              onClick={() => window.open('https://forms.monday.com/forms/761a950aa279edcb02d48257ced6ecc6?r=use1', '_blank')}
+              className="text-white hover:bg-white/20 flex items-center gap-2"
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span className="hidden lg:inline">Feedback</span>
+            </Button>
+          </nav>
+          
+          {/* User info and logout */}
           {typedUser && (
-            <div className="flex items-center space-x-2 text-sm text-blue-100">
+            <div className="flex items-center space-x-2 text-sm text-blue-100 pl-2 border-l border-white/20">
               <User className="w-4 h-4" />
               <span className="hidden lg:inline">{typedUser.fullName}</span>
             </div>
