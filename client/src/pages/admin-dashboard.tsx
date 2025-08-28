@@ -1546,7 +1546,7 @@ export default function AdminDashboard() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-1 flex-wrap">
+                            <div className="flex items-center gap-1">
                               <Button
                                 size="sm"
                                 variant="outline"
