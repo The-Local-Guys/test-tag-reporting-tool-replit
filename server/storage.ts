@@ -201,37 +201,13 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(testSessions.userId, users.id))
       .orderBy(desc(testSessions.testDate));
     
-    // Add item counts for each session
+    // Add item counts for each session using simple count query
     const sessionsWithCounts = await Promise.all(
       sessions.map(async (session) => {
         const results = await db
           .select({
             id: testResults.id,
-            sessionId: testResults.sessionId,
-            assetNumber: testResults.assetNumber,
-            itemName: testResults.itemName,
-            itemType: testResults.itemType,
-            location: testResults.location,
-            classification: testResults.classification,
             result: testResults.result,
-            failureReason: testResults.failureReason,
-            actionTaken: testResults.actionTaken,
-            frequency: testResults.frequency,
-            notes: testResults.notes,
-            photoData: testResults.photoData,
-            visionInspection: testResults.visionInspection,
-            electricalTest: testResults.electricalTest,
-            maintenanceType: testResults.maintenanceType,
-            globeType: testResults.globeType,
-            dischargeTest: testResults.dischargeTest,
-            switchingTest: testResults.switchingTest,
-            chargingTest: testResults.chargingTest,
-            luxTest: testResults.luxTest,
-            luxReading: testResults.luxReading,
-            luxCompliant: testResults.luxCompliant,
-            manufacturerInfo: testResults.manufacturerInfo,
-            installationDate: testResults.installationDate,
-            createdAt: testResults.createdAt,
           })
           .from(testResults)
           .where(eq(testResults.sessionId, session.id));
@@ -269,31 +245,7 @@ export class DatabaseStorage implements IStorage {
         const results = await db
           .select({
             id: testResults.id,
-            sessionId: testResults.sessionId,
-            assetNumber: testResults.assetNumber,
-            itemName: testResults.itemName,
-            itemType: testResults.itemType,
-            location: testResults.location,
-            classification: testResults.classification,
             result: testResults.result,
-            failureReason: testResults.failureReason,
-            actionTaken: testResults.actionTaken,
-            frequency: testResults.frequency,
-            notes: testResults.notes,
-            photoData: testResults.photoData,
-            visionInspection: testResults.visionInspection,
-            electricalTest: testResults.electricalTest,
-            maintenanceType: testResults.maintenanceType,
-            globeType: testResults.globeType,
-            dischargeTest: testResults.dischargeTest,
-            switchingTest: testResults.switchingTest,
-            chargingTest: testResults.chargingTest,
-            luxTest: testResults.luxTest,
-            luxReading: testResults.luxReading,
-            luxCompliant: testResults.luxCompliant,
-            manufacturerInfo: testResults.manufacturerInfo,
-            installationDate: testResults.installationDate,
-            createdAt: testResults.createdAt,
           })
           .from(testResults)
           .where(eq(testResults.sessionId, session.id));

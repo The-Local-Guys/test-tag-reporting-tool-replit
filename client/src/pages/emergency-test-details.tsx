@@ -147,6 +147,9 @@ export default function EmergencyTestDetails() {
         dischargeTest: data.dischargeTest,
         switchingTest: data.switchingTest,
         chargingTest: data.chargingTest,
+        luxTest: data.luxTest,
+        luxReading: data.luxReading,
+        luxCompliant: data.luxCompliant,
         manufacturerInfo: data.manufacturerInfo || null,
         installationDate: data.installationDate || null,
       });
