@@ -547,11 +547,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const savedResults: any[] = [];
       const errors: string[] = [];
 
+      // Get existing results to avoid duplicates during report continuation
+      const existingResults = await storage.getTestResultsBySession(sessionId);
+      
       // Process each result in the batch
       for (let i = 0; i < results.length; i++) {
         const batchedResult = results[i];
 
         try {
+          // Check if this result already exists in the database (for continued reports)
+          const existingResult = existingResults.find(existing => 
+            existing.assetNumber === batchedResult.assetNumber &&
+            existing.itemName === batchedResult.itemName &&
+            existing.location === batchedResult.location &&
+            existing.classification === batchedResult.classification
+          );
+
+          if (existingResult) {
+            console.log(`Skipping duplicate result ${i + 1}/${results.length}: ${batchedResult.itemName} (Asset #${batchedResult.assetNumber}) - already exists with ID ${existingResult.id}`);
+            savedResults.push(existingResult);
+            continue;
+          }
+
           // Convert batched result to database format using client-provided asset number
           const resultData = {
             sessionId,
@@ -579,12 +596,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           console.log('Attempting to insert test result:', resultData);
 
-          // Create the result directly without checking for duplicates
+          // Create the result - this is a new result not in the database
           const savedResult = await storage.createTestResult(resultData);
           savedResults.push(savedResult);
 
           console.log(
-            `Saved result ${i + 1}/${results.length}: ${batchedResult.itemName} -> Asset #${savedResult.assetNumber}`,
+            `Saved new result ${i + 1}/${results.length}: ${batchedResult.itemName} -> Asset #${savedResult.assetNumber}`,
           );
         } catch (error) {
           const errorMsg = `Failed to save result ${i + 1} (${batchedResult.itemName}): ${error}`;
@@ -602,8 +619,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         errors: errors.length > 0 ? errors : undefined,
       };
 
+      const newResultsCount = savedResults.filter(r => !existingResults.find(existing => existing.id === r.id)).length;
+      const skippedCount = results.length - newResultsCount;
+      
       console.log(
-        `Batch processing complete: ${savedResults.length}/${results.length} saved successfully`,
+        `Batch processing complete: ${savedResults.length}/${results.length} processed (${newResultsCount} new, ${skippedCount} skipped duplicates)`,
       );
 
       if (errors.length > 0) {
