@@ -1,13 +1,16 @@
+import { useState } from 'react';
 import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { LogOut, User, Home, Settings, Lock, ExternalLink, TestTube, Users, FileText, ClipboardCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMobileMenu } from "@/contexts/MobileMenuContext";
 import { useSpaNavigation } from "@/hooks/useSpaNavigation";
 
 export function MobileMenu() {
-  const { user, logout, isLoggingOut } = useAuth();
+  const { user, logout, isLoggingOut, hasUnsavedResults } = useAuth();
   const { isMobileMenuOpen, closeMobileMenu } = useMobileMenu();
   const { navigate } = useSpaNavigation();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   
   // Type guard for user object
   const typedUser = user as { fullName?: string; role?: string } | undefined;
@@ -42,8 +45,22 @@ export function MobileMenu() {
     try {
       await logout();
       closeMobileMenu();
+    } catch (error: any) {
+      if (error.message === 'UNSAVED_RESULTS') {
+        setShowLogoutConfirm(true);
+      } else {
+        console.error('Logout failed:', error);
+      }
+    }
+  };
+
+  const confirmLogout = async () => {
+    try {
+      await logout(true); // Force logout
+      setShowLogoutConfirm(false);
+      closeMobileMenu();
     } catch (error) {
-      console.error('Logout failed:', error);
+      console.error('Force logout failed:', error);
     }
   };
 
@@ -166,6 +183,29 @@ export function MobileMenu() {
           </div>
         </div>
       </div>
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsaved Test Results</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved test results that will be lost if you sign out. Would you like to save your work first?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowLogoutConfirm(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => { closeMobileMenu(); navigate('/report'); }} className="bg-blue-600 hover:bg-blue-700">
+              Save Work
+            </AlertDialogAction>
+            <AlertDialogAction onClick={confirmLogout} className="bg-red-600 hover:bg-red-700">
+              Sign Out Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

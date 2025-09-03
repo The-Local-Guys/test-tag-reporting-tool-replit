@@ -3,6 +3,29 @@ import { apiRequest } from "@/lib/queryClient";
 import { useSpaNavigation } from "./useSpaNavigation";
 import { type User, type LoginData, type InsertUser } from "@shared/schema";
 
+// Helper function to check for unsaved test results
+export function hasUnsavedTestResults(): boolean {
+  // Check for any batched results in localStorage
+  for (const key of Object.keys(localStorage)) {
+    if (key.startsWith('batchedResults_')) {
+      try {
+        const results = JSON.parse(localStorage.getItem(key) || '[]');
+        if (results.length > 0) {
+          return true;
+        }
+      } catch (e) {
+        // Ignore invalid JSON
+      }
+    }
+  }
+  
+  // Check for unfinished session flags
+  const unfinished = localStorage.getItem('unfinished');
+  const currentSessionId = localStorage.getItem('currentSessionId');
+  
+  return !!(unfinished || currentSessionId);
+}
+
 export function useAuth() {
   const queryClient = useQueryClient();
   const { navigateWithReplace } = useSpaNavigation();
@@ -56,7 +79,12 @@ export function useAuth() {
   });
 
   const logoutMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (forceLogout?: boolean) => {
+      // Check for unsaved test results unless force logout is requested
+      if (!forceLogout && hasUnsavedTestResults()) {
+        throw new Error('UNSAVED_RESULTS');
+      }
+      
       const response = await fetch("/api/logout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -79,15 +107,28 @@ export function useAuth() {
     },
   });
 
+  // Custom logout function that handles unsaved results
+  const handleLogout = async (forceLogout?: boolean) => {
+    try {
+      await logoutMutation.mutateAsync(forceLogout);
+    } catch (error: any) {
+      if (error.message === 'UNSAVED_RESULTS') {
+        throw error; // Re-throw so caller can handle the prompt
+      }
+      throw error; // Re-throw other errors
+    }
+  };
+
   return {
     user,
     isLoading,
     isAuthenticated: !!user,
     login: loginMutation.mutateAsync,
     register: registerMutation.mutateAsync,
-    logout: logoutMutation.mutateAsync,
+    logout: handleLogout,
     isLoggingIn: loginMutation.isPending,
     isRegistering: registerMutation.isPending,
     isLoggingOut: logoutMutation.isPending,
+    hasUnsavedResults: hasUnsavedTestResults,
   };
 }
