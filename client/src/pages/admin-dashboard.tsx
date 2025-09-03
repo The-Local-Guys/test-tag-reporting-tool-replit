@@ -73,6 +73,11 @@ export default function AdminDashboard() {
   // Type guard for user object
   const typedUser = user as { fullName?: string; role?: 'super_admin' | 'support_center' | 'technician'; id?: number } | undefined;
   
+  // Log when admin dashboard loads
+  useEffect(() => {
+    console.log("Hello The Local Guys");
+  }, []);
+  
   // Role-based access control
   const hasAdminAccess = typedUser && (typedUser.role === 'super_admin' || typedUser.role === 'support_center');
   const isTechnician = typedUser && typedUser.role === 'technician';
