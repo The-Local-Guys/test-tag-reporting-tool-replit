@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Clipboard, ArrowRight, AlertCircle } from 'lucide-react';
@@ -61,8 +63,13 @@ export default function Setup() {
     
     createSession({
       ...data,
-      serviceType: selectedService as 'electrical' | 'emergency_exit_light',
-      country: 'australia', // Always default to Australia
+      serviceType: selectedService as 'electrical' | 'emergency_exit_light' | 'fire_testing',
+      country: data.country,
+      // Fire testing specific fields
+      ...(selectedService === 'fire_testing' && {
+        technicianLicensed: data.technicianLicensed,
+        complianceStandard: data.country === 'australia' ? 'AS_1851_AU' : 'NZS_4503_NZ'
+      })
     });
     navigate('/items');
   };
@@ -85,10 +92,12 @@ export default function Setup() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold">
-              {sessionStorage.getItem('selectedService') === 'emergency_exit_light' 
-                ? 'Emergency Exit Light Testing' 
-                : 'Electrical Test & Tag'
-              }
+              {(() => {
+                const service = sessionStorage.getItem('selectedService');
+                if (service === 'emergency_exit_light') return 'Emergency Exit Light Testing';
+                if (service === 'fire_testing') return 'Fire Equipment Testing';
+                return 'Electrical Test & Tag';
+              })()}
             </h1>
             <div className="text-blue-100 text-sm mt-1">Step 1 of 3: Client Setup</div>
           </div>
@@ -180,6 +189,47 @@ export default function Setup() {
             )}
           </div>
 
+          {/* Country Selection */}
+          <div className="space-y-3">
+            <Label>Country</Label>
+            <RadioGroup
+              defaultValue="australia"
+              onValueChange={(value) => form.setValue('country', value as 'australia' | 'newzealand')}
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="australia" id="australia" />
+                <Label htmlFor="australia">Australia (AS 1851)</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="newzealand" id="newzealand" />
+                <Label htmlFor="newzealand">New Zealand (NZS 4503:2005)</Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          {/* Fire Testing Licensing Checkbox */}
+          {sessionStorage.getItem('selectedService') === 'fire_testing' && (
+            <div className="space-y-3 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+              <div className="flex items-start space-x-3">
+                <Checkbox
+                  id="technicianLicensed"
+                  {...form.register('technicianLicensed')}
+                  required
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="technicianLicensed" className="text-sm font-medium leading-tight">
+                    I confirm that I am trained and licensed to complete fire equipment testing
+                  </Label>
+                  <p className="text-xs text-orange-700">
+                    This confirmation is required for compliance and will be recorded in the admin system
+                  </p>
+                </div>
+              </div>
+              {form.formState.errors.technicianLicensed && (
+                <p className="text-sm text-error">{form.formState.errors.technicianLicensed.message}</p>
+              )}
+            </div>
+          )}
 
         </div>
       </form>
