@@ -17,6 +17,7 @@ import Setup from "@/pages/setup";
 import ItemSelection from "@/pages/item-selection";
 import TestDetails from "@/pages/test-details";
 import EmergencyTestDetails from "@/pages/emergency-test-details";
+import FireTestDetails from "@/pages/fire-test-details";
 import FailureDetails from "@/pages/failure-details";
 import ReportPreview from "@/pages/report-preview";
 import AdminDashboard from "@/pages/admin-dashboard";
@@ -87,6 +88,7 @@ function Router() {
             <Route path="/items" component={ItemSelection} />
             <Route path="/test" component={TestDetails} />
             <Route path="/emergency-test" component={EmergencyTestDetails} />
+            <Route path="/fire-test" component={FireTestDetails} />
             <Route path="/failure" component={FailureDetails} />
             <Route path="/report" component={ReportPreview} />
 
