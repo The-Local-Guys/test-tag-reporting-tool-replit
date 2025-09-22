@@ -33,6 +33,8 @@ export function SiteHeader() {
         return 'Test Details';
       case '/emergency-test':
         return 'Emergency Exit Light Testing';
+      case '/fire-test':
+        return 'Fire Equipment Testing';
       case '/failure':
         return 'Failure Details';
       case '/report':
@@ -62,6 +64,8 @@ export function SiteHeader() {
         return 'Record test results';
       case '/emergency-test':
         return 'AS 2293.2:2019 Compliance Testing';
+      case '/fire-test':
+        return 'AS 1851 / NZS 4503:2005 Compliance Testing';
       case '/failure':
         return 'Document failure details';
       case '/report':
