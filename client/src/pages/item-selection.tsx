@@ -36,7 +36,7 @@ const emergencyItems = [
 const fireItems = [
   { type: 'fire-extinguisher', name: 'Fire Extinguisher', icon: '🧯', description: 'Fire Extinguisher' },
   { type: 'fire-blanket', name: 'Fire Blanket', icon: '🔥', description: 'Fire Blanket' },
-  { type: 'fire-hose-reel', name: 'Fire Hose Reel', icon: '🚰', description: 'Fire Hose Reel' },
+  { type: 'fire-hose-reel', name: 'Fire Hose Reel', icon: '🐍', description: 'Fire Hose Reel' },
 ];
 
 export default function ItemSelection() {
