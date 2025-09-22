@@ -240,6 +240,8 @@ export default function ServiceSelection() {
               <CardTitle className="text-xl">Fire Equipment Testing</CardTitle>
               <CardDescription className="text-base">
                 Fire safety equipment testing compliant with AS 1851 (AU) / NZS 4503:2005 (NZ)
+                <br />
+                <span className="text-orange-600 font-medium">(Under Build Stage, Do Not Use)</span>
               </CardDescription>
             </CardHeader>
             <CardContent>
