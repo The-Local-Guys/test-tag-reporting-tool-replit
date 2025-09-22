@@ -218,7 +218,7 @@ export default function Setup() {
                 />
                 <div className="space-y-1">
                   <Label htmlFor="technicianLicensed" className="text-sm font-medium leading-tight">
-                    I confirm that I am trained and licensed to complete fire equipment testing
+                    I confirm that I will only perform testing for services I am trained and licensed to complete fire testing on
                   </Label>
                   <p className="text-xs text-orange-700">
                     This confirmation is required for compliance and will be recorded in the admin system
