@@ -105,9 +105,11 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   });
   const doc = new jsPDF();
   
-  // Header title - different for emergency exit light testing
+  // Header title - different for each service type
   const headerTitle = session.serviceType === 'emergency_exit_light' 
     ? 'Emergency Exit Light Testing Report'
+    : session.serviceType === 'fire_testing'
+    ? 'Fire Equipment Testing Report'
     : 'Electrical Safety Testing Report';
   
   // Page setup
@@ -221,18 +223,24 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   doc.text('Test Results', margin, yPosition);
   yPosition += 10;
 
-  // Table headers - different for emergency exit light testing
+  // Table headers - different for each service type
   doc.setFontSize(6);
   doc.setFont('helvetica', 'bold');
   doc.text('Asset#', margin, yPosition);
   doc.text('Item', margin + 12, yPosition);
   doc.text('Location', margin + 30, yPosition);
-  doc.text('Class', margin + 48, yPosition);
+  doc.text('Type', margin + 48, yPosition);
   doc.text('Result', margin + 62, yPosition);
   
   if (session.serviceType === 'emergency_exit_light') {
     doc.text('Manufacturer', margin + 78, yPosition);
     doc.text('Install Date', margin + 100, yPosition);
+    doc.text('Frequency', margin + 122, yPosition);
+    doc.text('Due Date', margin + 140, yPosition);
+    doc.text('Failure Reason', margin + 158, yPosition);
+  } else if (session.serviceType === 'fire_testing') {
+    doc.text('Size/Weight', margin + 78, yPosition);
+    doc.text('Manufacturer', margin + 100, yPosition);
     doc.text('Frequency', margin + 122, yPosition);
     doc.text('Due Date', margin + 140, yPosition);
     doc.text('Failure Reason', margin + 158, yPosition);
@@ -279,6 +287,17 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       doc.text(result.installationDate || 'N/A', margin + 100, yPosition);
       doc.text(getFrequencyLabel(result.frequency), margin + 122, yPosition);
       doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 140, yPosition);
+    } else if (session.serviceType === 'fire_testing') {
+      // Parse fire equipment details from notes field
+      const notes = result.notes || '';
+      const sizeMatch = notes.match(/Size: ([^|]+)/);
+      const weightMatch = notes.match(/Weight: ([^|]+)/);
+      const sizeWeight = [sizeMatch?.[1]?.trim(), weightMatch?.[1]?.trim()].filter(Boolean).join(' / ') || 'N/A';
+      
+      doc.text(sizeWeight, margin + 78, yPosition);
+      doc.text(result.manufacturerInfo || 'N/A', margin + 100, yPosition);
+      doc.text(getFrequencyLabel(result.frequency), margin + 122, yPosition);
+      doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 140, yPosition);
     } else {
       // Add vision inspection and electrical test status with proper tick/cross marks
       doc.text(result.visionInspection !== false ? 'Y' : 'N', margin + 78, yPosition);
@@ -309,6 +328,26 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
           displayFailureReason = failureReason.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         }
         doc.text(displayFailureReason, margin + 158, yPosition);
+      } else if (session.serviceType === 'fire_testing') {
+        // Fire equipment failure reasons
+        if (failureReason === 'physical_damage') {
+          displayFailureReason = 'Physical Damage';
+        } else if (failureReason === 'pressure_loss') {
+          displayFailureReason = 'Pressure Loss';
+        } else if (failureReason === 'corrosion') {
+          displayFailureReason = 'Corrosion';
+        } else if (failureReason === 'blocked_nozzle') {
+          displayFailureReason = 'Blocked Nozzle';
+        } else if (failureReason === 'damaged_seal') {
+          displayFailureReason = 'Damaged Seal';
+        } else if (failureReason === 'expired') {
+          displayFailureReason = 'Expired';
+        } else if (failureReason === 'mounting_issue') {
+          displayFailureReason = 'Mounting Issue';
+        } else if (failureReason !== 'Not specified') {
+          displayFailureReason = failureReason.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+        doc.text(displayFailureReason, margin + 158, yPosition);
       } else {
         // Standard electrical testing failure reasons
         if (failureReason === 'vision') {
@@ -332,6 +371,8 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       }
     } else {
       if (session.serviceType === 'emergency_exit_light') {
+        doc.text('-', margin + 158, yPosition);
+      } else if (session.serviceType === 'fire_testing') {
         doc.text('-', margin + 158, yPosition);
       } else {
         doc.text('-', margin + 135, yPosition);
@@ -383,10 +424,10 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       doc.text(`• Charging Circuit Test (Battery charging verification): ${result.chargingTest ? 'PASS' : 'FAIL'}`, margin + 5, yPosition);
       yPosition += 6;
       
-      // Show lux test if performed
-      if (result.luxTest) {
-        const luxStatus = result.luxCompliant ? 'PASS' : 'FAIL';
-        const luxReading = result.luxReading ? `${result.luxReading} lux` : 'N/A';
+      // Show lux test if performed (emergency exit light only)
+      if ((result as any).luxTest) {
+        const luxStatus = (result as any).luxCompliant ? 'PASS' : 'FAIL';
+        const luxReading = (result as any).luxReading ? `${(result as any).luxReading} lux` : 'N/A';
         doc.text(`• Lux Level Test (Illumination measurement): ${luxStatus} - Reading: ${luxReading}`, margin + 5, yPosition);
         yPosition += 6;
       }
@@ -413,12 +454,101 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     }
   }
 
+  // Add fire equipment test criteria details (AS 1851 / NZS 4503:2005)
+  if (session.serviceType === 'fire_testing') {
+    yPosition += 10;
+    
+    // Check if we need a new page
+    if (yPosition > doc.internal.pageSize.height - 100) {
+      doc.addPage();
+      yPosition = await addLetterheadToPage(doc, margin, pageWidth);
+    }
+    
+    // Test criteria section header
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    const complianceStandard = session.country === 'newzealand' ? 'NZS 4503:2005' : 'AS 1851';
+    doc.text(`Test Criteria Summary (${complianceStandard})`, margin, yPosition);
+    yPosition += 12;
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    
+    // Group results by item and show test details
+    for (let index = 0; index < results.length; index++) {
+      const result = results[index];
+      if (yPosition > doc.internal.pageSize.height - 50) {
+        doc.addPage();
+        yPosition = await addLetterheadToPage(doc, margin, pageWidth);
+      }
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Asset #${result.assetNumber} - ${result.itemName} (${result.location})`, margin, yPosition);
+      yPosition += 8;
+      
+      // Parse test details from notes
+      const notes = result.notes || '';
+      const equipmentTypeMatch = notes.match(/Equipment Type: ([^|]+)/);
+      const visualInspectionMatch = notes.match(/Visual Inspection: ([^|]+)/);
+      const operationalTestMatch = notes.match(/Operational Test: ([^|]+)/);
+      const pressureTestMatch = notes.match(/Pressure Test: ([^|]+)/);
+      const accessibilityMatch = notes.match(/Accessibility Check: ([^|]+)/);
+      const signageMatch = notes.match(/Signage Check: ([^|]+)/);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.text(`• Visual Inspection (Physical condition, damage, corrosion): ${visualInspectionMatch?.[1] || 'N/A'}`, margin + 5, yPosition);
+      yPosition += 6;
+      doc.text(`• Accessibility Check (Clear access, not obstructed): ${accessibilityMatch?.[1] || 'N/A'}`, margin + 5, yPosition);
+      yPosition += 6;
+      doc.text(`• Signage Check (Proper signage and instructions visible): ${signageMatch?.[1] || 'N/A'}`, margin + 5, yPosition);
+      yPosition += 6;
+      
+      // Equipment-specific tests
+      const equipmentType = equipmentTypeMatch?.[1] || result.classification;
+      if (equipmentType === 'fire_extinguisher') {
+        doc.text(`• Pressure Gauge Check (Pressure within operating range): ${pressureTestMatch?.[1] || 'N/A'}`, margin + 5, yPosition);
+        yPosition += 6;
+        doc.text(`• Operational Test (Trigger mechanism, hose, nozzle): ${operationalTestMatch?.[1] || 'N/A'}`, margin + 5, yPosition);
+        yPosition += 6;
+      } else if (equipmentType === 'fire_hose_reel') {
+        doc.text(`• Operational Test (Hose reel operation, water flow): ${operationalTestMatch?.[1] || 'N/A'}`, margin + 5, yPosition);
+        yPosition += 6;
+      } else if (equipmentType === 'fire_blanket') {
+        doc.text(`• Operational Test (Easy removal, blanket condition): ${operationalTestMatch?.[1] || 'N/A'}`, margin + 5, yPosition);
+        yPosition += 6;
+      }
+      
+      // Show equipment details if available
+      const sizeMatch = notes.match(/Size: ([^|]+)/);
+      const weightMatch = notes.match(/Weight: ([^|]+)/);
+      if (sizeMatch?.[1]) {
+        doc.text(`• Size: ${sizeMatch[1]}`, margin + 5, yPosition);
+        yPosition += 6;
+      }
+      if (weightMatch?.[1]) {
+        doc.text(`• Weight: ${weightMatch[1]}`, margin + 5, yPosition);
+        yPosition += 6;
+      }
+      
+      // Show notes if any (excluding the parsed fields)
+      const remainingNotes = notes.split('|')[0]?.trim(); // Get first part before equipment details
+      if (remainingNotes && remainingNotes !== notes) {
+        doc.text(`• Additional Notes: ${remainingNotes}`, margin + 5, yPosition);
+        yPosition += 6;
+      }
+      
+      yPosition += 6; // Space between items
+    }
+  }
+
   // Add footer
   const footerY = doc.internal.pageSize.height - 20;
   doc.setFontSize(8);
   doc.setFont('helvetica', 'italic');
   const footerText = session.serviceType === 'emergency_exit_light' 
     ? 'This report complies with AS 2293.2:2019 emergency lighting standards.'
+    : session.serviceType === 'fire_testing'
+    ? `This report complies with ${session.country === 'newzealand' ? 'NZS 4503:2005' : 'AS 1851'} fire equipment standards.`
     : 'This report complies with AS/NZS 3760 electrical safety standards.';
   doc.text(
     footerText,

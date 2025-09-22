@@ -127,6 +127,19 @@ export default function FireTestDetails() {
         installationDate: data.installationDate || null,
       });
 
+      // Compile additional test details into notes for now
+      const additionalTestDetails = [
+        data.notes,
+        `Equipment Type: ${data.equipmentType}`,
+        data.size ? `Size: ${data.size}` : '',
+        data.weight ? `Weight: ${data.weight}` : '',
+        `Visual Inspection: ${data.visualInspection ? 'Pass' : 'Fail'}`,
+        `Operational Test: ${data.operationalTest ? 'Pass' : 'Fail'}`,
+        data.equipmentType === 'fire_extinguisher' ? `Pressure Test: ${data.pressureTest ? 'Pass' : 'Fail'}` : '',
+        `Accessibility Check: ${data.accessibilityCheck ? 'Pass' : 'Fail'}`,
+        `Signage Check: ${data.signageCheck ? 'Pass' : 'Fail'}`,
+      ].filter(Boolean).join(' | ');
+
       addToBatch({
         itemName: itemName,
         itemType: itemType,
@@ -136,20 +149,12 @@ export default function FireTestDetails() {
         frequency: data.frequency,
         failureReason: data.failureReason || null,
         actionTaken: data.result === 'fail' ? 'removed' : null,
-        notes: data.notes || null,
+        notes: additionalTestDetails || null,
         photoData: data.result === 'fail' ? photoData : null,
         visionInspection: data.visualInspection,
         electricalTest: data.operationalTest, // Map operational test to electrical test field
-        // Fire specific fields for PDF generation
-        equipmentType: data.equipmentType,
-        size: data.size || null,
-        weight: data.weight || null,
         manufacturerInfo: data.manufacturerInfo || null,
         installationDate: data.installationDate || null,
-        // Fire testing checks
-        pressureTest: data.pressureTest,
-        accessibilityCheck: data.accessibilityCheck,
-        signageCheck: data.signageCheck,
       });
 
       toast({
