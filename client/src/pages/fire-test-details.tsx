@@ -20,8 +20,6 @@ const fireTestSchema = z.object({
   extinguisherType: z.enum(['dry_powder', 'water', 'co2', 'wet_chemical', 'foam', 'vaporising_liquid']).optional(),
   result: z.enum(['pass', 'fail']),
   frequency: z.enum(['sixmonthly', 'annually']),
-  manufacturerInfo: z.string().optional(),
-  installationDate: z.string().optional(),
   size: z.string().optional(),
   weight: z.string().optional(),
   visionInspection: z.boolean().default(true),
@@ -68,8 +66,6 @@ export default function FireTestDetails() {
       extinguisherType: undefined,
       result: 'pass',
       frequency: 'sixmonthly',
-      manufacturerInfo: '',
-      installationDate: '',
       size: '',
       weight: '',
       visionInspection: true,
@@ -126,8 +122,6 @@ export default function FireTestDetails() {
         pressureTest: data.pressureTest,
         accessibilityCheck: data.accessibilityCheck,
         signageCheck: data.signageCheck,
-        manufacturerInfo: data.manufacturerInfo || null,
-        installationDate: data.installationDate || null,
       });
 
       // Compile additional test details into notes for now
@@ -157,8 +151,6 @@ export default function FireTestDetails() {
         photoData: data.result === 'fail' ? photoData : null,
         visionInspection: data.visionInspection,
         electricalTest: data.operationalTest, // Map operational test to electrical test field
-        manufacturerInfo: data.manufacturerInfo || null,
-        installationDate: data.installationDate || null,
         extinguisherType: data.extinguisherType || null,
       });
 
@@ -318,25 +310,6 @@ export default function FireTestDetails() {
               </div>
             )}
 
-            <div>
-              <Label htmlFor="manufacturerInfo">Manufacturer & Model</Label>
-              <Input
-                id="manufacturerInfo"
-                {...form.register('manufacturerInfo')}
-                placeholder="e.g., Brand Model123"
-                className="text-base"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="installationDate">Installation/Last Service Date</Label>
-              <Input
-                id="installationDate"
-                type="date"
-                {...form.register('installationDate')}
-                className="text-base"
-              />
-            </div>
 
             {watchEquipmentType === 'fire_extinguisher' && (
               <>
