@@ -67,11 +67,21 @@ export const testResults = pgTable("test_results", {
   chargingTest: boolean("charging_test"), // Charging circuit test
   manufacturerInfo: text("manufacturer_info"), // Manufacturer and model details
   installationDate: text("installation_date"), // Installation/last replacement date
+  // Legacy emergency light fields (deprecated, keeping temporarily to avoid migration conflicts)
+  luxTest: boolean("lux_test"), // Legacy lux level test field
+  luxReading: text("lux_reading"), // Legacy lux reading field
+  luxCompliant: boolean("lux_compliant"), // Legacy lux compliance field
   // Fire testing specific fields (AS 1851 / NZS 4503:2005)
   equipmentType: text("equipment_type"), // 'fire_extinguisher', 'fire_blanket', 'fire_hose_reel'
   size: text("size"), // For extinguishers - e.g., "1.5kg", "4.5kg"
   weight: text("weight"), // Current weight for extinguishers
   testType: text("test_type"), // 'test_1_6monthly', 'test_2_12monthly', 'test_4_replacement'
+  // Fire equipment inspection results
+  fireVisualInspection: boolean("fire_visual_inspection"), // Physical condition check
+  accessibilityCheck: boolean("accessibility_check"), // Clear access verification
+  signageCheck: boolean("signage_check"), // Proper signage verification
+  operationalTest: boolean("operational_test"), // Equipment operation check
+  pressureTest: boolean("pressure_test"), // Pressure gauge check (for extinguishers)
   createdAt: timestamp("created_at").defaultNow(),
 });
 
