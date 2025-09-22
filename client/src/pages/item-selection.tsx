@@ -11,29 +11,30 @@ import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
 
-// Custom SVG component for fire hose reel icon
+// Custom SVG component for fire hose reel icon - matches the provided design
 function HoseReelIcon({ className = "h-8 w-8" }: { className?: string }) {
   return (
     <svg 
       viewBox="0 0 24 24" 
       aria-label="Fire hose reel" 
       role="img" 
-      className={className} 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="1.5" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
+      className={className}
     >
-      {/* Hose reel circle */}
-      <circle cx="9" cy="12" r="6" />
-      {/* Coiled hose on reel */}
-      <path d="M9 12c2-1 2-3 0-4m0 4c1.8.9 1.8 2.7 0 3.6" />
-      {/* Hose extending from reel */}
-      <path d="M15 12h3" />
-      <path d="M18 12v4c0 1.1-.9 2-2 2h-1" />
-      {/* Nozzle */}
-      <path d="M15 18l3 3" />
+      {/* Left mounting bracket */}
+      <rect x="2" y="4" width="2" height="14" fill="#6B7280" stroke="#374151" strokeWidth="0.5" rx="1"/>
+      {/* Right mounting bracket */}
+      <rect x="20" y="4" width="2" height="14" fill="#6B7280" stroke="#374151" strokeWidth="0.5" rx="1"/>
+      
+      {/* Coiled red hose - multiple loops */}
+      <ellipse cx="12" cy="8" rx="7" ry="1.5" fill="#DC2626" stroke="#B91C1C" strokeWidth="0.5"/>
+      <ellipse cx="12" cy="10" rx="7" ry="1.5" fill="#DC2626" stroke="#B91C1C" strokeWidth="0.5"/>
+      <ellipse cx="12" cy="12" rx="7" ry="1.5" fill="#DC2626" stroke="#B91C1C" strokeWidth="0.5"/>
+      <ellipse cx="12" cy="14" rx="7" ry="1.5" fill="#DC2626" stroke="#B91C1C" strokeWidth="0.5"/>
+      <ellipse cx="12" cy="16" rx="7" ry="1.5" fill="#DC2626" stroke="#B91C1C" strokeWidth="0.5"/>
+      
+      {/* Nozzle at bottom */}
+      <rect x="11" y="18" width="2" height="3" fill="#374151" stroke="#1F2937" strokeWidth="0.5" rx="0.5"/>
+      <rect x="10.5" y="21" width="3" height="1.5" fill="#374151" stroke="#1F2937" strokeWidth="0.5" rx="0.3"/>
     </svg>
   );
 }
