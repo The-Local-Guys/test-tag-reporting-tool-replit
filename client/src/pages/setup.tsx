@@ -213,7 +213,8 @@ export default function Setup() {
               <div className="flex items-start space-x-3">
                 <Checkbox
                   id="technicianLicensed"
-                  {...form.register('technicianLicensed')}
+                  checked={form.watch('technicianLicensed') || false}
+                  onCheckedChange={(checked) => form.setValue('technicianLicensed', checked === true)}
                   required
                 />
                 <div className="space-y-1">
