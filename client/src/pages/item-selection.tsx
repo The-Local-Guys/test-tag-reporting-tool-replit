@@ -33,6 +33,12 @@ const emergencyItems = [
   { type: 'emergency-bulkhead', name: 'Emergency Bulkhead', icon: '⬛', description: 'Emergency Bulkhead Light' },
 ];
 
+const fireItems = [
+  { type: 'fire-extinguisher', name: 'Fire Extinguisher', icon: '🧯', description: 'Fire Extinguisher' },
+  { type: 'fire-blanket', name: 'Fire Blanket', icon: '🔥', description: 'Fire Blanket' },
+  { type: 'fire-hose-reel', name: 'Fire Hose Reel', icon: '🚒', description: 'Fire Hose Reel' },
+];
+
 export default function ItemSelection() {
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [customItemName, setCustomItemName] = useState('');
@@ -55,11 +61,13 @@ export default function ItemSelection() {
 
   // Get the selected service type
   const selectedService = sessionData?.session?.serviceType || sessionStorage.getItem('selectedService') || 'electrical';
-  const predefinedItems = selectedService === 'emergency_exit_light' ? emergencyItems : electricalItems;
+  const predefinedItems = selectedService === 'emergency_exit_light' ? emergencyItems : 
+                         selectedService === 'fire_testing' ? fireItems : electricalItems;
 
   const handleItemSelect = (itemType: string, itemName: string) => {
     // Route to different test pages based on service type
-    const testRoute = selectedService === 'emergency_exit_light' ? '/emergency-test' : '/test';
+    const testRoute = selectedService === 'emergency_exit_light' ? '/emergency-test' : 
+                     selectedService === 'fire_testing' ? '/fire-test' : '/test';
     setLocation(`${testRoute}?item=${encodeURIComponent(itemName)}&type=${itemType}`);
   };
 
@@ -165,7 +173,8 @@ export default function ItemSelection() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold">
-              {selectedService === 'emergency_exit_light' ? 'Emergency Equipment Selection' : 'Select Item to Test'}
+              {selectedService === 'emergency_exit_light' ? 'Emergency Equipment Selection' : 
+               selectedService === 'fire_testing' ? 'Fire Equipment Selection' : 'Select Item to Test'}
             </h1>
             <div className="text-blue-100 text-sm">
               {sessionData?.session?.clientName || 'Loading...'}
