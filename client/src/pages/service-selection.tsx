@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Zap, ShieldAlert, ArrowRight, FileText, Plus } from "lucide-react";
+import { Zap, ShieldAlert, ArrowRight, FileText, Plus, Flame } from "lucide-react";
 import { useSpaNavigation } from "@/hooks/useSpaNavigation";
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
 
@@ -101,7 +101,7 @@ export default function ServiceSelection() {
     setShowUnfinishedDialog(false);
   };
 
-  const selectService = (serviceType: 'electrical' | 'emergency_exit_light') => {
+  const selectService = (serviceType: 'electrical' | 'emergency_exit_light' | 'fire_testing') => {
     // Store the selected service type
     sessionStorage.setItem('selectedService', serviceType);
     // Navigate to setup page
@@ -168,7 +168,7 @@ export default function ServiceSelection() {
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-8">
+      <div className="grid md:grid-cols-3 gap-6">
           {/* Electrical Test and Tag */}
           <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-blue-500">
             <CardHeader className="text-center">
@@ -226,6 +226,36 @@ export default function ServiceSelection() {
                 size="lg"
               >
                 Select Emergency Testing
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Fire Testing */}
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-orange-500">
+            <CardHeader className="text-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-orange-100 rounded-full flex items-center justify-center">
+                <Flame className="w-8 h-8 text-orange-600" />
+              </div>
+              <CardTitle className="text-xl">Fire Equipment Testing</CardTitle>
+              <CardDescription className="text-base">
+                Fire safety equipment testing compliant with AS 1851 (AU) / NZS 4503:2005 (NZ)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="text-sm text-gray-600 space-y-2 mb-6">
+                <li>• Fire extinguisher testing</li>
+                <li>• Fire blanket inspection</li>
+                <li>• Fire hose reel testing</li>
+                <li>• 6-monthly and 12-monthly tests</li>
+                <li>• Compliance documentation</li>
+              </ul>
+              <Button 
+                onClick={() => selectService('fire_testing')}
+                className="w-full bg-orange-600 hover:bg-orange-700"
+                size="lg"
+              >
+                Select Fire Testing
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </CardContent>
