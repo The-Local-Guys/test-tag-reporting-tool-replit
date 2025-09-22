@@ -23,7 +23,7 @@ const fireTestSchema = z.object({
   installationDate: z.string().optional(),
   size: z.string().optional(),
   weight: z.string().optional(),
-  visualInspection: z.boolean().default(true),
+  visionInspection: z.boolean().default(true),
   operationalTest: z.boolean().default(false),
   pressureTest: z.boolean().default(false),
   accessibilityCheck: z.boolean().default(false),
@@ -70,7 +70,7 @@ export default function FireTestDetails() {
       installationDate: '',
       size: '',
       weight: '',
-      visualInspection: true,
+      visionInspection: true,
       operationalTest: true,
       pressureTest: false,
       accessibilityCheck: true,
@@ -115,7 +115,7 @@ export default function FireTestDetails() {
         actionTaken: data.result === 'fail' ? 'removed' : null,
         notes: data.notes || null,
         photoData: data.result === 'fail' ? photoData : null,
-        visionInspection: data.visualInspection,
+        visionInspection: data.visionInspection,
         // Fire specific fields
         size: data.size || null,
         weight: data.weight || null,
@@ -133,7 +133,7 @@ export default function FireTestDetails() {
         `Equipment Type: ${data.equipmentType}`,
         data.size ? `Size: ${data.size}` : '',
         data.weight ? `Weight: ${data.weight}` : '',
-        `Visual Inspection: ${data.visualInspection ? 'Pass' : 'Fail'}`,
+        `Visual Inspection: ${data.visionInspection ? 'Pass' : 'Fail'}`,
         `Operational Test: ${data.operationalTest ? 'Pass' : 'Fail'}`,
         data.equipmentType === 'fire_extinguisher' ? `Pressure Test: ${data.pressureTest ? 'Pass' : 'Fail'}` : '',
         `Accessibility Check: ${data.accessibilityCheck ? 'Pass' : 'Fail'}`,
@@ -151,7 +151,7 @@ export default function FireTestDetails() {
         actionTaken: data.result === 'fail' ? 'removed' : null,
         notes: additionalTestDetails || null,
         photoData: data.result === 'fail' ? photoData : null,
-        visionInspection: data.visualInspection,
+        visionInspection: data.visionInspection,
         electricalTest: data.operationalTest, // Map operational test to electrical test field
         manufacturerInfo: data.manufacturerInfo || null,
         installationDate: data.installationDate || null,
@@ -345,11 +345,11 @@ export default function FireTestDetails() {
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
                 <Checkbox
-                  id="visualInspection"
-                  checked={form.watch('visualInspection')}
-                  onCheckedChange={(checked) => form.setValue('visualInspection', !!checked)}
+                  id="visionInspection"
+                  checked={form.watch('visionInspection')}
+                  onCheckedChange={(checked) => form.setValue('visionInspection', !!checked)}
                 />
-                <Label htmlFor="visualInspection" className="text-sm">
+                <Label htmlFor="visionInspection" className="text-sm">
                   Visual Inspection (Physical condition, damage, corrosion)
                 </Label>
               </div>
