@@ -73,6 +73,7 @@ export const testResults = pgTable("test_results", {
   luxCompliant: boolean("lux_compliant"), // Legacy lux compliance field
   // Fire testing specific fields (AS 1851 / NZS 4503:2005)
   equipmentType: text("equipment_type"), // 'fire_extinguisher', 'fire_blanket', 'fire_hose_reel'
+  extinguisherType: text("extinguisher_type"), // 'dry_powder', 'water', 'co2', 'wet_chemical', 'foam', 'vaporising_liquid'
   size: text("size"), // For extinguishers - e.g., "1.5kg", "4.5kg"
   weight: text("weight"), // Current weight for extinguishers
   testType: text("test_type"), // 'test_1_6monthly', 'test_2_12monthly', 'test_4_replacement'

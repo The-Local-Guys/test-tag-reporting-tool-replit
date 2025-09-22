@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 const fireTestSchema = z.object({
   location: z.string().min(1, 'Location is required'),
   equipmentType: z.enum(['fire_extinguisher', 'fire_blanket', 'fire_hose_reel']),
+  extinguisherType: z.enum(['dry_powder', 'water', 'co2', 'wet_chemical', 'foam', 'vaporising_liquid']).optional(),
   result: z.enum(['pass', 'fail']),
   frequency: z.enum(['sixmonthly', 'annually']),
   manufacturerInfo: z.string().optional(),
@@ -64,6 +65,7 @@ export default function FireTestDetails() {
     defaultValues: {
       location: '',
       equipmentType: getEquipmentType(itemType),
+      extinguisherType: undefined,
       result: 'pass',
       frequency: 'sixmonthly',
       manufacturerInfo: '',
@@ -109,6 +111,7 @@ export default function FireTestDetails() {
         itemType: itemType,
         location: data.location,
         equipmentType: data.equipmentType,
+        extinguisherType: data.extinguisherType || null,
         result: data.result,
         frequency: data.frequency,
         failureReason: data.failureReason || null,
@@ -131,6 +134,7 @@ export default function FireTestDetails() {
       const additionalTestDetails = [
         data.notes,
         `Equipment Type: ${data.equipmentType}`,
+        data.extinguisherType ? `Extinguisher Type: ${data.extinguisherType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}` : '',
         data.size ? `Size: ${data.size}` : '',
         data.weight ? `Weight: ${data.weight}` : '',
         `Visual Inspection: ${data.visionInspection ? 'Pass' : 'Fail'}`,
@@ -155,6 +159,7 @@ export default function FireTestDetails() {
         electricalTest: data.operationalTest, // Map operational test to electrical test field
         manufacturerInfo: data.manufacturerInfo || null,
         installationDate: data.installationDate || null,
+        extinguisherType: data.extinguisherType || null,
       });
 
       toast({
@@ -289,6 +294,29 @@ export default function FireTestDetails() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Fire Extinguisher Type Selection */}
+            {watchEquipmentType === 'fire_extinguisher' && (
+              <div>
+                <Label htmlFor="extinguisherType">Fire Extinguisher Type</Label>
+                <Select 
+                  value={form.watch('extinguisherType')} 
+                  onValueChange={(value) => form.setValue('extinguisherType', value as 'dry_powder' | 'water' | 'co2' | 'wet_chemical' | 'foam' | 'vaporising_liquid')}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select extinguisher type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="dry_powder">Dry Powder</SelectItem>
+                    <SelectItem value="water">Water</SelectItem>
+                    <SelectItem value="co2">CO2</SelectItem>
+                    <SelectItem value="wet_chemical">Wet Chemical</SelectItem>
+                    <SelectItem value="foam">Foam</SelectItem>
+                    <SelectItem value="vaporising_liquid">Vaporising Liquid</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div>
               <Label htmlFor="manufacturerInfo">Manufacturer & Model</Label>
