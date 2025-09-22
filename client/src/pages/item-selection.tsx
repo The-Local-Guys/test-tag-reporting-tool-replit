@@ -11,7 +11,41 @@ import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
 
-const electricalItems = [
+// Custom SVG component for fire hose reel icon
+function HoseReelIcon({ className = "h-8 w-8" }: { className?: string }) {
+  return (
+    <svg 
+      viewBox="0 0 24 24" 
+      aria-label="Fire hose reel" 
+      role="img" 
+      className={className} 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="1.5" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    >
+      {/* Hose reel circle */}
+      <circle cx="9" cy="12" r="6" />
+      {/* Coiled hose on reel */}
+      <path d="M9 12c2-1 2-3 0-4m0 4c1.8.9 1.8 2.7 0 3.6" />
+      {/* Hose extending from reel */}
+      <path d="M15 12h3" />
+      <path d="M18 12v4c0 1.1-.9 2-2 2h-1" />
+      {/* Nozzle */}
+      <path d="M15 18l3 3" />
+    </svg>
+  );
+}
+
+type Item = {
+  type: string;
+  name: string;
+  icon: string | React.ReactNode;
+  description: string;
+};
+
+const electricalItems: Item[] = [
   { type: 'iec-lead', name: 'IEC Lead', icon: '🔌', description: 'Power Cord' },
   { type: 'computer', name: 'Computer', icon: '💻', description: 'Desktop/Laptop' },
   { type: 'monitor', name: 'Monitor', icon: '🖥️', description: 'Display Screen' },
@@ -24,7 +58,7 @@ const electricalItems = [
   { type: 'power-pack', name: 'Power Pack', icon: '⬛', description: 'Portable Power' },
 ];
 
-const emergencyItems = [
+const emergencyItems: Item[] = [
   { type: 'emergency-exit-sign', name: 'Emergency Exit Sign', icon: '🚪', description: 'Emergency Exit Sign' },
   { type: 'emergency-light-downlight', name: 'Emergency Light/Downlight (Spitfire)', icon: '🔦', description: 'Emergency Downlight Spitfire Type' },
   { type: 'combination-unit', name: 'Combination Unit (Sign with Two Side Lights)', icon: '🔸', description: 'Exit Sign with Side Lights' },
@@ -33,10 +67,10 @@ const emergencyItems = [
   { type: 'emergency-bulkhead', name: 'Emergency Bulkhead', icon: '⬛', description: 'Emergency Bulkhead Light' },
 ];
 
-const fireItems = [
+const fireItems: Item[] = [
   { type: 'fire-extinguisher', name: 'Fire Extinguisher', icon: '🧯', description: 'Fire Extinguisher' },
   { type: 'fire-blanket', name: 'Fire Blanket', icon: '🔥', description: 'Fire Blanket' },
-  { type: 'fire-hose-reel', name: 'Fire Hose Reel', icon: '🐍', description: 'Fire Hose Reel' },
+  { type: 'fire-hose-reel', name: 'Fire Hose Reel', icon: <HoseReelIcon className="h-8 w-8 text-red-600 dark:text-red-400" />, description: 'Fire Hose Reel' },
 ];
 
 export default function ItemSelection() {
@@ -228,8 +262,15 @@ export default function ItemSelection() {
               key={item.type}
               onClick={() => handleItemSelect(item.type, item.name)}
               className="bg-white border-2 border-gray-200 rounded-xl p-4 text-center hover:border-primary hover:bg-blue-50 transition-all touch-button"
+              data-testid={`button-item-${item.type}`}
             >
-              <div className="text-3xl mb-2">{item.icon}</div>
+              <div className="flex justify-center items-center mb-2 h-12" data-testid={`icon-item-${item.type}`}>
+                {typeof item.icon === 'string' ? (
+                  <span className="text-3xl">{item.icon}</span>
+                ) : (
+                  item.icon
+                )}
+              </div>
               <div className="font-medium text-gray-800">{item.name}</div>
             </button>
           ))}
