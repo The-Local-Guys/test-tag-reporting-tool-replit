@@ -36,6 +36,7 @@ export const testSessions = pgTable("test_sessions", {
   address: text("address").notNull(),
   country: text("country").notNull(), // 'australia' or 'newzealand'
   userId: integer("user_id").references(() => users.id), // Link to technician
+  startingAssetNumber: integer("starting_asset_number"), // Starting asset number for the session
   // Fire testing specific fields
   technicianLicensed: boolean("technician_licensed"), // Licensing acknowledgment for fire testing
   complianceStandard: text("compliance_standard"), // 'AS_1851_AU' or 'NZS_4503_NZ'

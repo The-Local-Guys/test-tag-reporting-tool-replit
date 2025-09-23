@@ -103,13 +103,10 @@ export class DatabaseStorage implements IStorage {
   async validatePassword(username: string, password: string): Promise<User | null> {
     const user = await this.getUserByUsername(username);
     if (!user || !user.isActive) {
-      console.log(`User validation failed for ${username}: user not found or inactive`);
       return null;
     }
     
-    console.log(`Validating password for user ${username} (ID: ${user.id})`);
     const isValid = await bcrypt.compare(password, user.password);
-    console.log(`Password validation result for ${username}: ${isValid}`);
     return isValid ? user : null;
   }
 
@@ -197,6 +194,9 @@ export class DatabaseStorage implements IStorage {
         address: testSessions.address,
         country: testSessions.country,
         userId: testSessions.userId,
+        startingAssetNumber: testSessions.startingAssetNumber,
+        technicianLicensed: testSessions.technicianLicensed,
+        complianceStandard: testSessions.complianceStandard,
         createdAt: testSessions.createdAt,
         technicianFullName: users.fullName,
       })
@@ -310,12 +310,6 @@ export class DatabaseStorage implements IStorage {
    * Cascades delete to maintain database consistency
    * @param sessionId - ID of the session to delete completely
    */
-  async deleteTestSession(sessionId: number): Promise<void> {
-    // First delete all related test results
-    await db.delete(testResults).where(eq(testResults.sessionId, sessionId));
-    // Then delete the session
-    await db.delete(testSessions).where(eq(testSessions.id, sessionId));
-  }
 
   /**
    * Creates a new test session to group related test results
@@ -339,7 +333,21 @@ export class DatabaseStorage implements IStorage {
    */
   async getTestSession(id: number): Promise<TestSession | undefined> {
     const [session] = await db
-      .select()
+      .select({
+        id: testSessions.id,
+        serviceType: testSessions.serviceType,
+        testDate: testSessions.testDate,
+        technicianName: testSessions.technicianName,
+        clientName: testSessions.clientName,
+        siteContact: testSessions.siteContact,
+        address: testSessions.address,
+        country: testSessions.country,
+        userId: testSessions.userId,
+        startingAssetNumber: testSessions.startingAssetNumber,
+        technicianLicensed: testSessions.technicianLicensed,
+        complianceStandard: testSessions.complianceStandard,
+        createdAt: testSessions.createdAt,
+      })
       .from(testSessions)
       .where(eq(testSessions.id, id));
     return session || undefined;
