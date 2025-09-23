@@ -532,7 +532,7 @@ export default function AdminDashboard() {
           queryKey: ["/api/sessions", viewingSession.session.id, "full"],
         });
         // Update local viewing session state
-        setViewingSession(prev => ({
+        setViewingSession((prev: any) => ({
           ...prev,
           session: {
             ...prev.session,
