@@ -914,6 +914,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/sessions/:id/report", requireAuth, async (req, res) => {
     try {
       const sessionId = parseInt(req.params.id);
+      const user = req.session.user!;
       const sessionData = await storage.getFullSessionData(sessionId);
 
       if (!sessionData) {
@@ -922,6 +923,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { session, results } = sessionData;
+      
+      // Check permissions: technicians can only access their own reports
+      if (user.role === "technician" && session.userId !== user.id) {
+        res.status(403).json({ error: "You can only access your own reports" });
+        return;
+      }
+
       const totalItems = results.length;
       const passedItems = results.filter((r) => r.result === "pass").length;
       const failedItems = results.filter((r) => r.result === "fail").length;
@@ -939,6 +947,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       });
     } catch (error) {
+      console.error("Error generating report:", error);
       res.status(500).json({ error: "Failed to generate report" });
     }
   });
