@@ -379,7 +379,7 @@ export function useSession() {
       switchingTest: data.switchingTest || undefined,
       chargingTest: data.chargingTest || undefined,
       luxTest: data.luxTest || undefined,
-      luxReading: data.luxReading || undefined,
+      luxReading: data.luxReading ? parseFloat(data.luxReading as string) : undefined,
       luxCompliant: data.luxCompliant || undefined,
       manufacturerInfo: data.manufacturerInfo || undefined,
       installationDate: data.installationDate || undefined,
