@@ -971,21 +971,24 @@ export default function ReportPreview() {
                 </Select>
               </div>
 
-              <div>
-                <Label htmlFor="edit-actionTaken">Action Taken</Label>
-                <Select 
-                  value={editResultData.actionTaken || ''} 
-                  onValueChange={(value) => setEditResultData(prev => ({ ...prev, actionTaken: value || null }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select action" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="given">Given to Site Contact</SelectItem>
-                    <SelectItem value="removed">Removed from Site</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Action Taken field - only show for electrical testing, not for emergency exit lights */}
+              {sessionData?.session?.serviceType !== 'emergency_exit_light' && (
+                <div>
+                  <Label htmlFor="edit-actionTaken">Action Taken</Label>
+                  <Select 
+                    value={editResultData.actionTaken || ''} 
+                    onValueChange={(value) => setEditResultData(prev => ({ ...prev, actionTaken: value || null }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select action" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="given">Given to Site Contact</SelectItem>
+                      <SelectItem value="removed">Removed from Site</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div>
                 <Label htmlFor="edit-notes">Notes</Label>
