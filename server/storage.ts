@@ -182,7 +182,7 @@ export class DatabaseStorage implements IStorage {
    * Includes technician names, item counts, and failure statistics
    * @returns Array of test sessions with enriched data for management overview
    */
-  async getAllTestSessions(): Promise<(TestSession & { technicianFullName?: string; totalItems?: number; failedItems?: number })[]> {
+  async getAllTestSessions(): Promise<(TestSession & { technicianFullName?: string | null; totalItems?: number; failedItems?: number })[]> {
     const sessions = await db
       .select({
         id: testSessions.id,

@@ -229,22 +229,25 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   doc.text('Asset#', margin, yPosition);
   doc.text('Item', margin + 12, yPosition);
   doc.text('Location', margin + 30, yPosition);
-  doc.text('Type', margin + 48, yPosition);
-  doc.text('Result', margin + 62, yPosition);
   
   if (session.serviceType === 'emergency_exit_light') {
-    doc.text('Manufacturer', margin + 78, yPosition);
-    doc.text('Install Date', margin + 100, yPosition);
-    doc.text('Frequency', margin + 122, yPosition);
-    doc.text('Due Date', margin + 140, yPosition);
-    doc.text('Failure Reason', margin + 158, yPosition);
+    doc.text('Result', margin + 48, yPosition);
+    doc.text('Manufacturer', margin + 62, yPosition);
+    doc.text('Install Date', margin + 84, yPosition);
+    doc.text('Frequency', margin + 106, yPosition);
+    doc.text('Due Date', margin + 124, yPosition);
+    doc.text('Failure Reason', margin + 142, yPosition);
   } else if (session.serviceType === 'fire_testing') {
+    doc.text('Type', margin + 48, yPosition);
+    doc.text('Result', margin + 62, yPosition);
     doc.text('Size/Weight', margin + 78, yPosition);
     doc.text('Manufacturer', margin + 100, yPosition);
     doc.text('Frequency', margin + 122, yPosition);
     doc.text('Due Date', margin + 140, yPosition);
     doc.text('Failure Reason', margin + 158, yPosition);
   } else {
+    doc.text('Type', margin + 48, yPosition);
+    doc.text('Result', margin + 62, yPosition);
     doc.text('V', margin + 78, yPosition);
     doc.text('E', margin + 85, yPosition);
     doc.text('Frequency', margin + 92, yPosition);
@@ -269,25 +272,36 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     doc.text(result.assetNumber.toString(), margin, yPosition);
     doc.text(result.itemName, margin + 12, yPosition);
     doc.text(result.location, margin + 30, yPosition);
-    doc.text(result.classification.toUpperCase(), margin + 48, yPosition);
     
-    // Color code the result
-    if (result.result === 'pass') {
-      doc.setTextColor(0, 128, 0); // Green
-      doc.text('PASS', margin + 62, yPosition);
-    } else {
-      doc.setTextColor(255, 0, 0); // Red
-      doc.text('FAIL', margin + 62, yPosition);
-    }
-    doc.setTextColor(0, 0, 0); // Reset to black
-
     if (session.serviceType === 'emergency_exit_light') {
+      // Color code the result for emergency exit light
+      if (result.result === 'pass') {
+        doc.setTextColor(0, 128, 0); // Green
+        doc.text('PASS', margin + 48, yPosition);
+      } else {
+        doc.setTextColor(255, 0, 0); // Red
+        doc.text('FAIL', margin + 48, yPosition);
+      }
+      doc.setTextColor(0, 0, 0); // Reset to black
+      
       // Show manufacturer and installation date for emergency exit light testing
-      doc.text(result.manufacturerInfo || 'N/A', margin + 78, yPosition);
-      doc.text(result.installationDate || 'N/A', margin + 100, yPosition);
-      doc.text(getFrequencyLabel(result.frequency), margin + 122, yPosition);
-      doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 140, yPosition);
+      doc.text(result.manufacturerInfo || 'N/A', margin + 62, yPosition);
+      doc.text(result.installationDate || 'N/A', margin + 84, yPosition);
+      doc.text(getFrequencyLabel(result.frequency), margin + 106, yPosition);
+      doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 124, yPosition);
     } else if (session.serviceType === 'fire_testing') {
+      // For fire testing, show classification/type
+      doc.text(result.classification.toUpperCase(), margin + 48, yPosition);
+      
+      // Color code the result
+      if (result.result === 'pass') {
+        doc.setTextColor(0, 128, 0); // Green
+        doc.text('PASS', margin + 62, yPosition);
+      } else {
+        doc.setTextColor(255, 0, 0); // Red
+        doc.text('FAIL', margin + 62, yPosition);
+      }
+      doc.setTextColor(0, 0, 0); // Reset to black
       // Parse fire equipment details from notes field
       const notes = result.notes || '';
       const sizeMatch = notes.match(/Size: ([^|]+)/);
@@ -299,6 +313,19 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       doc.text(getFrequencyLabel(result.frequency), margin + 122, yPosition);
       doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 140, yPosition);
     } else {
+      // For regular electrical testing, show classification/type
+      doc.text(result.classification.toUpperCase(), margin + 48, yPosition);
+      
+      // Color code the result
+      if (result.result === 'pass') {
+        doc.setTextColor(0, 128, 0); // Green
+        doc.text('PASS', margin + 62, yPosition);
+      } else {
+        doc.setTextColor(255, 0, 0); // Red
+        doc.text('FAIL', margin + 62, yPosition);
+      }
+      doc.setTextColor(0, 0, 0); // Reset to black
+      
       // Add vision inspection and electrical test status with proper tick/cross marks
       doc.text(result.visionInspection !== false ? 'Y' : 'N', margin + 78, yPosition);
       doc.text(result.electricalTest !== false ? 'Y' : 'N', margin + 85, yPosition);
@@ -327,7 +354,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         } else if (failureReason !== 'Not specified') {
           displayFailureReason = failureReason.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         }
-        doc.text(displayFailureReason, margin + 158, yPosition);
+        doc.text(displayFailureReason, margin + 142, yPosition);
       } else if (session.serviceType === 'fire_testing') {
         // Fire equipment failure reasons
         if (failureReason === 'physical_damage') {
@@ -347,7 +374,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         } else if (failureReason !== 'Not specified') {
           displayFailureReason = failureReason.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         }
-        doc.text(displayFailureReason, margin + 158, yPosition);
+        doc.text(displayFailureReason, margin + 142, yPosition);
       } else {
         // Standard electrical testing failure reasons
         if (failureReason === 'vision') {
@@ -371,7 +398,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       }
     } else {
       if (session.serviceType === 'emergency_exit_light') {
-        doc.text('-', margin + 158, yPosition);
+        doc.text('-', margin + 142, yPosition);
       } else if (session.serviceType === 'fire_testing') {
         doc.text('-', margin + 158, yPosition);
       } else {

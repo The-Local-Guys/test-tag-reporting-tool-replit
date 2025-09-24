@@ -96,7 +96,7 @@ export function generateExcelReport(data: ReportData): Blob {
   
   // Test results header - different headers for each service type
   const resultsHeader = session.serviceType === 'emergency_exit_light' 
-    ? ['Asset #', 'Item Name', 'Location', 'Classification', 'Result', 'Manufacturer', 'Install Date', 'Frequency', 'Next Due Date', 'Failure Reason', 'Notes', 'Visual Inspection', 'Discharge Test', 'Switching Test', 'Charging Test', 'Maintenance Type', 'Globe Type']
+    ? ['Asset #', 'Item Name', 'Location', 'Result', 'Manufacturer', 'Install Date', 'Frequency', 'Next Due Date', 'Failure Reason', 'Notes', 'Visual Inspection', 'Discharge Test', 'Switching Test', 'Charging Test', 'Maintenance Type', 'Globe Type']
     : session.serviceType === 'fire_testing'
     ? ['Asset #', 'Item Name', 'Location', 'Type', 'Result', 'Size/Weight', 'Manufacturer', 'Frequency', 'Next Due Date', 'Failure Reason', 'Notes', 'Visual Inspection', 'Accessibility', 'Signage', 'Operational Test', 'Pressure Test']
     : ['Asset #', 'Item Name', 'Location', 'Classification', 'Result', 'Vision Inspection', 'Electrical Test', 'Frequency', 'Next Due Date', 'Failure Reason', 'Action Taken', 'Notes'];
@@ -151,7 +151,6 @@ export function generateExcelReport(data: ReportData): Blob {
         result.assetNumber, // Asset number
         result.itemName,
         result.location,
-        result.classification.toUpperCase(),
         result.result.toUpperCase(),
         result.manufacturerInfo || 'N/A',
         result.installationDate || 'N/A',
