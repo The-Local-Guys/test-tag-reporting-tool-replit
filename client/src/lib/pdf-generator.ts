@@ -103,7 +103,11 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     const bAssetNum = parseInt(b.assetNumber) || 0;
     return aAssetNum - bAssetNum;
   });
-  const doc = new jsPDF();
+  
+  // Use landscape orientation for emergency exit light reports, portrait for others
+  const doc = new jsPDF({
+    orientation: session.serviceType === 'emergency_exit_light' ? 'landscape' : 'portrait'
+  });
   
   // Header title - different for each service type
   const headerTitle = session.serviceType === 'emergency_exit_light' 
