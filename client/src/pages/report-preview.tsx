@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { deleteResource } from '@/lib/queryClient';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { insertTestResultSchema, type TestResult, type InsertTestResult } from '@shared/schema';
+import { insertTestResultSchema, type TestResult, type InsertTestResult, failureReasons, emergencyFailureReasons, fireFailureReasons } from '@shared/schema';
 
 /**
  * Report preview and generation interface
@@ -55,6 +55,47 @@ export default function ReportPreview() {
   
   // Track manually entered asset numbers to prevent auto-generation conflicts
   const [manuallyEnteredAssetNumbers, setManuallyEnteredAssetNumbers] = useState<Set<string>>(new Set());
+
+  // Helper function to get appropriate failure reasons based on service type
+  const getFailureReasons = () => {
+    const serviceType = sessionData?.session?.serviceType;
+    switch (serviceType) {
+      case 'emergency_exit_light':
+        return emergencyFailureReasons;
+      case 'fire_testing':
+        return fireFailureReasons;
+      default:
+        return failureReasons; // electrical testing
+    }
+  };
+
+  // Helper function to convert snake_case to display labels
+  const getFailureReasonLabel = (reason: string) => {
+    const labelMap: { [key: string]: string } = {
+      // Electrical testing reasons
+      'vision': 'Vision',
+      'earth': 'Earth',
+      'insulation': 'Insulation', 
+      'polarity': 'Polarity',
+      // Emergency exit light reasons
+      'physical_damage': 'Physical Damage',
+      'battery_failure': 'Battery Failure',
+      'lamp_failure': 'Lamp/LED Failure',
+      'wiring_fault': 'Wiring Fault',
+      'charging_fault': 'Charging Fault',
+      'insufficient_illumination': 'Insufficient Illumination',
+      'mounting_issue': 'Mounting Issue',
+      // Fire testing reasons
+      'pressure_loss': 'Pressure Loss',
+      'corrosion': 'Corrosion',
+      'blocked_nozzle': 'Blocked Nozzle',
+      'damaged_seal': 'Damaged Seal',
+      'expired': 'Expired',
+      // Common
+      'other': 'Other'
+    };
+    return labelMap[reason] || reason;
+  };
 
 
 
@@ -962,11 +1003,11 @@ export default function ReportPreview() {
                     <SelectValue placeholder="Select reason" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="vision">Vision</SelectItem>
-                    <SelectItem value="earth">Earth</SelectItem>
-                    <SelectItem value="insulation">Insulation</SelectItem>
-                    <SelectItem value="polarity">Polarity</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    {getFailureReasons().map((reason) => (
+                      <SelectItem key={reason} value={reason}>
+                        {getFailureReasonLabel(reason)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
