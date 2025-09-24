@@ -1639,6 +1639,7 @@ export default function AdminDashboard() {
                       <TableHeader>
                         <TableRow>
                           <TableHead className="min-w-[120px]">Client Name</TableHead>
+                          <TableHead className="min-w-[120px]">Technician</TableHead>
                           <TableHead className="min-w-[140px]">Service Type</TableHead>
                           <TableHead className="min-w-[100px]">Date</TableHead>
                           <TableHead className="min-w-[100px]">Results</TableHead>
@@ -1650,6 +1651,9 @@ export default function AdminDashboard() {
                         <TableRow key={session.id}>
                           <TableCell className="font-medium">
                             {session.clientName}
+                          </TableCell>
+                          <TableCell className="text-gray-700">
+                            {session.technicianFullName || session.technicianName || 'Unknown'}
                           </TableCell>
                           <TableCell>
                             <Badge
