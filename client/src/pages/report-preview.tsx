@@ -982,6 +982,7 @@ export default function ReportPreview() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="monthly">Monthly</SelectItem>
                 <SelectItem value="threemonthly">3 Monthly</SelectItem>
                 <SelectItem value="sixmonthly">6 Monthly</SelectItem>
                 <SelectItem value="twelvemonthly">12 Monthly</SelectItem>
