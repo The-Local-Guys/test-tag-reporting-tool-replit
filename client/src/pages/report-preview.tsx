@@ -982,12 +982,33 @@ export default function ReportPreview() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="monthly">Monthly</SelectItem>
-                <SelectItem value="threemonthly">3 Monthly</SelectItem>
-                <SelectItem value="sixmonthly">6 Monthly</SelectItem>
-                <SelectItem value="twelvemonthly">12 Monthly</SelectItem>
-                <SelectItem value="twentyfourmonthly">24 Monthly</SelectItem>
-                <SelectItem value="fiveyearly">5 Yearly</SelectItem>
+                {/* Electrical testing frequencies */}
+                {sessionData?.session?.serviceType !== 'emergency_exit_light' && sessionData?.session?.serviceType !== 'fire_testing' && (
+                  <>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="threemonthly">3 Monthly</SelectItem>
+                    <SelectItem value="sixmonthly">6 Monthly</SelectItem>
+                    <SelectItem value="twelvemonthly">12 Monthly</SelectItem>
+                    <SelectItem value="twentyfourmonthly">24 Monthly</SelectItem>
+                    <SelectItem value="fiveyearly">5 Yearly</SelectItem>
+                  </>
+                )}
+                
+                {/* Emergency exit light frequencies */}
+                {sessionData?.session?.serviceType === 'emergency_exit_light' && (
+                  <>
+                    <SelectItem value="sixmonthly">6 Monthly</SelectItem>
+                    <SelectItem value="annually">Annually</SelectItem>
+                  </>
+                )}
+                
+                {/* Fire testing frequencies */}
+                {sessionData?.session?.serviceType === 'fire_testing' && (
+                  <>
+                    <SelectItem value="sixmonthly">6 Monthly</SelectItem>
+                    <SelectItem value="twelvemonthly">12 Monthly</SelectItem>
+                  </>
+                )}
               </SelectContent>
             </Select>
           </div>

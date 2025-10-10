@@ -33,6 +33,9 @@ function calculateNextDueDate(testDate: string, frequency: string, result: strin
     case 'twelvemonthly':
       date.setFullYear(date.getFullYear() + 1);
       break;
+    case 'annually':
+      date.setFullYear(date.getFullYear() + 1);
+      break;
     case 'twentyfourmonthly':
       date.setFullYear(date.getFullYear() + 2);
       break;
@@ -52,6 +55,7 @@ function getFrequencyLabel(frequency: string): string {
     case 'threemonthly': return '3 Monthly';
     case 'sixmonthly': return '6 Monthly';
     case 'twelvemonthly': return '12 Monthly';
+    case 'annually': return 'Annually';
     case 'twentyfourmonthly': return '24 Monthly';
     case 'fiveyearly': return '5 Yearly';
     default: return '12 Monthly';
