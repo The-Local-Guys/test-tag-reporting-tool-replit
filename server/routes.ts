@@ -588,9 +588,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             electricalTest: batchedResult.electricalTest,
             // Map emergency/electrical test fields from batch data
             maintenanceType: batchedResult.maintenanceType || null,
+            globeType: batchedResult.globeType || null,
             dischargeTest: batchedResult.dischargeTest || false,
             switchingTest: batchedResult.switchingTest || false,
             chargingTest: batchedResult.chargingTest || false,
+            luxTest: batchedResult.luxTest || false,
+            luxReading: batchedResult.luxReading || null,
+            luxCompliant: batchedResult.luxCompliant || false,
             manufacturerInfo: batchedResult.manufacturerInfo || null,
             installationDate: batchedResult.installationDate || null,
           };

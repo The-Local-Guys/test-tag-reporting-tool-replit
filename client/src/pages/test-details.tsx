@@ -24,6 +24,7 @@ const classificationOptions = [
 ];
 
 const frequencyOptions = [
+  { value: 'monthly', label: 'Monthly' },
   { value: 'threemonthly', label: '3 Monthly' },
   { value: 'sixmonthly', label: '6 Monthly' },
   { value: 'twelvemonthly', label: '12 Monthly' },
