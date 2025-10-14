@@ -185,6 +185,8 @@ export default function AdminDashboard() {
     retry: false,
     staleTime: 0, // Always consider data stale
     refetchOnMount: true, // Always refetch on mount
+    refetchInterval: 5000,
+    refetchIntervalInBackground:true
   });
 
   // Force refresh data when component mounts or when navigating to admin

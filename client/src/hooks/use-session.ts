@@ -287,6 +287,7 @@ export function useSession() {
       localStorage.setItem(`monthlyCounter_${session.id}`, '0');
       localStorage.setItem(`fiveYearlyCounter_${session.id}`, '10000');
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/sessions'] });
     },
   });
 
@@ -454,6 +455,7 @@ export function useSession() {
       // Refresh session data
       queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/sessions'] });
     },
     onError: (error) => {
       console.error('Failed to submit batch results:', error);

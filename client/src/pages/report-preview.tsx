@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,6 +16,8 @@ import { deleteResource } from '@/lib/queryClient';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { insertTestResultSchema, type TestResult, type InsertTestResult, failureReasons, emergencyFailureReasons, fireFailureReasons } from '@shared/schema';
+import { cn } from '@/lib/utils';
+import { useConditionalNavigation } from '@/hooks/useConditionalNavigation';
 
 /**
  * Report preview and generation interface
@@ -24,7 +26,7 @@ import { insertTestResultSchema, type TestResult, type InsertTestResult, failure
  */
 export default function ReportPreview() {
   const { sessionData, batchedResults, submitBatch, isSubmittingBatch, updateBatchedResult, removeBatchedResult, clearSession, assetProgress, renumberAssets, sessionId } = useSession();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const [editingResult, setEditingResult] = useState<TestResult | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -38,6 +40,10 @@ export default function ReportPreview() {
   const [isFinishingReport, setIsFinishingReport] = useState(false);
   const [showFinishSuccess, setShowFinishSuccess] = useState(false);
   
+  
+  const { navigate, showConfirm, confirmNavigation, cancelNavigation } = useConditionalNavigation();
+
+
   // Edit form state with manual asset number tracking
   const [editResultData, setEditResultData] = useState({
     itemName: "",
@@ -379,7 +385,7 @@ export default function ReportPreview() {
       setIsCancelling(false);
       setShowCancelSuccess(true);
       setTimeout(() => {
-        setLocation('/');
+        navigate('/');
       }, 1000);
       
       setShowNewReportConfirm(false);
@@ -399,7 +405,7 @@ export default function ReportPreview() {
       setShowCancelSuccess(true);
       
       setTimeout(() => {
-        setLocation('/');
+        navigate('/');
       }, 1000);
       
     } catch (error) {
@@ -425,8 +431,7 @@ export default function ReportPreview() {
       
       // Wait a moment to ensure localStorage cleanup completes
       console.log('Waiting for localStorage cleanup to complete...');
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      await new Promise(resolve => setTimeout(resolve, 2500));
       // Show success animation
       setShowFinishSuccess(true);
       
@@ -434,7 +439,7 @@ export default function ReportPreview() {
       setTimeout(() => {
         setIsFinishingReport(false);
         setShowFinishSuccess(false);
-        setLocation('/');
+        navigate('/');
         
         toast({
           title: "Job Completed",
@@ -716,7 +721,7 @@ export default function ReportPreview() {
       <div className="bg-success text-white p-4 sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <button 
-            onClick={() => setLocation('/items')}
+            onClick={() => navigate('/items')}
             className="text-white hover:text-green-200 p-1 rounded-lg hover:bg-green-700 transition-colors"
           >
             <ArrowLeft className="h-6 w-6" />
@@ -1178,6 +1183,36 @@ export default function ReportPreview() {
           </div>
         </div>
       )}
+
+
+      {/* Unsaved Changes Modal */}
+       <AlertDialog open={showConfirm}>
+      <AlertDialogContent className="max-w-sm rounded-2xl shadow-lg">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="text-lg font-semibold">
+            Unsaved Changes
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-muted-foreground">
+            You have unsaved changes. Do you want to stay or continue leaving this page?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <AlertDialogFooter className="flex justify-end gap-3 mt-6">
+          <AlertDialogCancel
+            onClick={cancelNavigation}
+            className="rounded-lg border border-input px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
+          >
+            Stay
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={confirmNavigation}
+            className="rounded-lg bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            Continue
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </div>
   );
 }
