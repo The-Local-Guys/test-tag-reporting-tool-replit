@@ -23,6 +23,9 @@ function calculateNextDueDate(testDate: string, frequency: string, result: strin
   }
   
   switch (frequency) {
+    case 'monthly':
+      date.setMonth(date.getMonth() + 1);
+      break;
     case 'threemonthly':
       date.setMonth(date.getMonth() + 3);
       break;
@@ -47,6 +50,7 @@ function calculateNextDueDate(testDate: string, frequency: string, result: strin
 
 function getFrequencyLabel(frequency: string): string {
   switch (frequency) {
+    case 'monthly': return 'Monthly';
     case 'threemonthly': return '3 Monthly';
     case 'sixmonthly': return '6 Monthly';
     case 'twelvemonthly': return '12 Monthly';
