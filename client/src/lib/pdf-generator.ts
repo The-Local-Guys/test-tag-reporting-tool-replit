@@ -266,44 +266,69 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   doc.setFont('helvetica', 'normal');
   for (let index = 0; index < results.length; index++) {
     const result = results[index];
-    // Check if we need a new page
-    if (yPosition > doc.internal.pageSize.height - 30) {
+
+    // Calculate column widths for word wrapping
+    const itemNameWidth = 17; // Width for item name column
+    const locationWidth = 17; // Width for location column
+    
+    // Split text to fit column widths
+    const itemNameLines = doc.splitTextToSize(result.itemName, itemNameWidth);
+    const locationLines = doc.splitTextToSize(result.location, locationWidth);
+    
+    // Calculate row height based on maximum lines needed
+    const maxLines = Math.max(itemNameLines.length, locationLines.length);
+    const lineHeight = 4; // Height per line
+    const rowHeight = maxLines * lineHeight;
+    
+    // Check if we need a new page (accounting for row height)
+    if (yPosition + rowHeight > doc.internal.pageSize.height - 30) {
       doc.addPage();
       yPosition = await addLetterheadToPage(doc, margin, pageWidth);
     }
+    
+    // Store starting Y position for this row
+    const rowStartY = yPosition;
 
     // Use the actual asset number from the database
-    doc.text(result.assetNumber.toString(), margin, yPosition);
-    doc.text(result.itemName, margin + 12, yPosition);
-    doc.text(result.location, margin + 30, yPosition);
+    doc.text(result.assetNumber.toString(), margin, rowStartY);
+    
+    // Draw item name with word wrapping
+    itemNameLines.forEach((line: string, i: number) => {
+      doc.text(line, margin + 12, rowStartY + (i * lineHeight));
+    });
+    
+    // Draw location with word wrapping
+    locationLines.forEach((line: string, i: number) => {
+      doc.text(line, margin + 30, rowStartY + (i * lineHeight));
+    });
     
     if (session.serviceType === 'emergency_exit_light') {
       // Color code the result for emergency exit light
       if (result.result === 'pass') {
         doc.setTextColor(0, 128, 0); // Green
-        doc.text('PASS', margin + 48, yPosition);
+        doc.text('PASS', margin + 48, rowStartY);
       } else {
         doc.setTextColor(255, 0, 0); // Red
-        doc.text('FAIL', margin + 48, yPosition);
+        doc.text('FAIL', margin + 48, rowStartY);
       }
       doc.setTextColor(0, 0, 0); // Reset to black
       
       // Show manufacturer and installation date for emergency exit light testing
-      doc.text(result.manufacturerInfo || 'N/A', margin + 62, yPosition);
-      doc.text(result.installationDate || 'N/A', margin + 84, yPosition);
-      doc.text(getFrequencyLabel(result.frequency), margin + 106, yPosition);
-      doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 124, yPosition);
+      doc.text(result.manufacturerInfo || 'N/A', margin + 62, rowStartY);
+      doc.text(result.installationDate || 'N/A', margin + 84, rowStartY);
+      doc.text(getFrequencyLabel(result.frequency), margin + 106, rowStartY);
+      doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 124, rowStartY);
     } else if (session.serviceType === 'fire_testing') {
       // For fire testing, show classification/type
-      doc.text(result.classification.toUpperCase(), margin + 48, yPosition);
+      doc.text(result.classification.toUpperCase(), margin + 48, rowStartY);
       
       // Color code the result
       if (result.result === 'pass') {
         doc.setTextColor(0, 128, 0); // Green
-        doc.text('PASS', margin + 62, yPosition);
+        doc.text('PASS', margin + 62, rowStartY);
       } else {
         doc.setTextColor(255, 0, 0); // Red
-        doc.text('FAIL', margin + 62, yPosition);
+        doc.text('FAIL', margin + 62, rowStartY);
       }
       doc.setTextColor(0, 0, 0); // Reset to black
       // Parse fire equipment details from notes field
@@ -312,31 +337,31 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       const weightMatch = notes.match(/Weight: ([^|]+)/);
       const sizeWeight = [sizeMatch?.[1]?.trim(), weightMatch?.[1]?.trim()].filter(Boolean).join(' / ') || 'N/A';
       
-      doc.text(sizeWeight, margin + 78, yPosition);
-      doc.text(result.manufacturerInfo || 'N/A', margin + 100, yPosition);
-      doc.text(getFrequencyLabel(result.frequency), margin + 122, yPosition);
-      doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 140, yPosition);
+      doc.text(sizeWeight, margin + 78, rowStartY);
+      doc.text(result.manufacturerInfo || 'N/A', margin + 100, rowStartY);
+      doc.text(getFrequencyLabel(result.frequency), margin + 122, rowStartY);
+      doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 140, rowStartY);
     } else {
       // For regular electrical testing, show classification/type
-      doc.text(result.classification.toUpperCase(), margin + 48, yPosition);
+      doc.text(result.classification.toUpperCase(), margin + 48, rowStartY);
       
       // Color code the result
       if (result.result === 'pass') {
         doc.setTextColor(0, 128, 0); // Green
-        doc.text('PASS', margin + 62, yPosition);
+        doc.text('PASS', margin + 62, rowStartY);
       } else {
         doc.setTextColor(255, 0, 0); // Red
-        doc.text('FAIL', margin + 62, yPosition);
+        doc.text('FAIL', margin + 62, rowStartY);
       }
       doc.setTextColor(0, 0, 0); // Reset to black
       
       // Add vision inspection and electrical test status with proper tick/cross marks
-      doc.text(result.visionInspection !== false ? 'Y' : 'N', margin + 78, yPosition);
-      doc.text(result.electricalTest !== false ? 'Y' : 'N', margin + 85, yPosition);
+      doc.text(result.visionInspection !== false ? 'Y' : 'N', margin + 78, rowStartY);
+      doc.text(result.electricalTest !== false ? 'Y' : 'N', margin + 85, rowStartY);
       
       // Add frequency and next due date
-      doc.text(getFrequencyLabel(result.frequency), margin + 92, yPosition);
-      doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 115, yPosition);
+      doc.text(getFrequencyLabel(result.frequency), margin + 92, rowStartY);
+      doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 115, rowStartY);
     }
 
     // Add failure reason (positioning differs by service type)
@@ -358,7 +383,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         } else if (failureReason !== 'Not specified') {
           displayFailureReason = failureReason.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         }
-        doc.text(displayFailureReason, margin + 142, yPosition);
+        doc.text(displayFailureReason, margin + 142, rowStartY);
       } else if (session.serviceType === 'fire_testing') {
         // Fire equipment failure reasons
         if (failureReason === 'physical_damage') {
@@ -378,7 +403,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         } else if (failureReason !== 'Not specified') {
           displayFailureReason = failureReason.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         }
-        doc.text(displayFailureReason, margin + 142, yPosition);
+        doc.text(displayFailureReason, margin + 142, rowStartY);
       } else {
         // Standard electrical testing failure reasons
         if (failureReason === 'vision') {
@@ -397,21 +422,22 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
           displayActionTaken = actionTaken.charAt(0).toUpperCase() + actionTaken.slice(1);
         }
         
-        doc.text(displayFailureReason, margin + 135, yPosition);
-        doc.text(displayActionTaken, margin + 158, yPosition);
+        doc.text(displayFailureReason, margin + 135, rowStartY);
+        doc.text(displayActionTaken, margin + 158, rowStartY);
       }
     } else {
       if (session.serviceType === 'emergency_exit_light') {
-        doc.text('-', margin + 142, yPosition);
+        doc.text('-', margin + 142, rowStartY);
       } else if (session.serviceType === 'fire_testing') {
-        doc.text('-', margin + 158, yPosition);
+        doc.text('-', margin + 158, rowStartY);
       } else {
-        doc.text('-', margin + 135, yPosition);
-        doc.text('-', margin + 158, yPosition);
+        doc.text('-', margin + 135, rowStartY);
+        doc.text('-', margin + 158, rowStartY);
       }
     }
 
-    yPosition += 6;
+    // Use dynamic row height instead of fixed 6
+    yPosition += rowHeight + 2; // Add 2 for spacing between rows
   }
 
   // Add emergency exit light test criteria details (AS/NZS 2293.2:2019)
