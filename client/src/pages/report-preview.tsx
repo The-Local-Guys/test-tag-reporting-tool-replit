@@ -17,7 +17,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { insertTestResultSchema, type TestResult, type InsertTestResult, failureReasons, emergencyFailureReasons, fireFailureReasons } from '@shared/schema';
 import { cn } from '@/lib/utils';
-import { useConditionalNavigation } from '@/hooks/useConditionalNavigation';
+import { useConditionalNav } from '@/contexts/ConditionalNavContext';
 
 /**
  * Report preview and generation interface
@@ -41,7 +41,7 @@ export default function ReportPreview() {
   const [showFinishSuccess, setShowFinishSuccess] = useState(false);
   
   
-  const { navigate, showConfirm, confirmNavigation, cancelNavigation } = useConditionalNavigation();
+  const { navigate, showConfirm, confirmNavigation, cancelNavigation } = useConditionalNav();
 
 
   // Edit form state with manual asset number tracking

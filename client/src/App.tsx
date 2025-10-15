@@ -23,6 +23,7 @@ import ReportPreview from "@/pages/report-preview";
 import AdminDashboard from "@/pages/admin-dashboard";
 
 import Login from "@/pages/login";
+import { ConditionalNavProvider } from "./contexts/ConditionalNavContext";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -70,6 +71,7 @@ function Router() {
 
   return (
     <>
+      <ConditionalNavProvider>
       <PageLoading isVisible={isPageLoading} />
       <MobileMenuProvider>
         <AppLayout>
@@ -97,6 +99,8 @@ function Router() {
         </AppLayout>
         <MobileMenu />
       </MobileMenuProvider>
+      </ConditionalNavProvider>
+
     </>
   );
 }

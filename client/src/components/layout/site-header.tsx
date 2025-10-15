@@ -4,13 +4,15 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { LogOut, User, Menu, X, Home, Settings, FileText, Shield, TestTube, ExternalLink } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMobileMenu } from "@/contexts/MobileMenuContext";
-import { useLocation, Link } from "wouter";
+import { useLocation } from "wouter";
+import { useConditionalNav } from '@/contexts/ConditionalNavContext';
 
 export function SiteHeader() {
   const { user, logout, isLoggingOut, hasUnsavedResults } = useAuth();
   const { isMobileMenuOpen, toggleMobileMenu } = useMobileMenu();
   const [location] = useLocation();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const { navigate } = useConditionalNav();
   
   // Type guard for user object
   const typedUser = user as { fullName?: string; role?: string } | undefined;
@@ -110,31 +112,31 @@ export function SiteHeader() {
         <div className="hidden md:flex items-center gap-3">
           {/* Navigation Links */}
           <nav className="flex items-center gap-1">
-            <Link href="/">
-              <Button
-                variant="ghost" 
-                size="sm"
-                className="text-white hover:bg-white/20 flex items-center gap-2"
-              >
-                <TestTube className="w-4 h-4" />
-                <span>Testing</span>
-              </Button>
-            </Link>
+            {/* Replace Link with Button calling navigate */}
+            <Button
+              variant="ghost" 
+              size="sm"
+              onClick={() => navigate('/')} // Use conditional navigate
+              className="text-white hover:bg-white/20 flex items-center gap-2"
+            >
+              <TestTube className="w-4 h-4" />
+              <span>Testing</span>
+            </Button>
             
             {/* Show admin link for all authorized users */}
             {(typedUser?.role === 'super_admin' || typedUser?.role === 'support_center' || typedUser?.role === 'technician') && (
-              <Link href="/admin">
-                <Button
-                  variant="ghost" 
-                  size="sm"
-                  className="text-white hover:bg-white/20 flex items-center gap-2"
-                >
-                  <Shield className="w-4 h-4" />
-                  <span>
-                    {(typedUser?.role === 'super_admin' || typedUser?.role === 'support_center') ? 'Admin' : 'Reports'}
-                  </span>
-                </Button>
-              </Link>
+              // Replace Link with Button calling navigate
+              <Button
+                variant="ghost" 
+                size="sm"
+                onClick={() => navigate('/admin')} // Use conditional navigate
+                className="text-white hover:bg-white/20 flex items-center gap-2"
+              >
+                <Shield className="w-4 h-4" />
+                <span>
+                  {(typedUser?.role === 'super_admin' || typedUser?.role === 'support_center') ? 'Admin' : 'Reports'}
+                </span>
+              </Button>
             )}
             
             {/* Feedback Link */}
@@ -195,7 +197,7 @@ export function SiteHeader() {
           <AlertDialogCancel onClick={() => setShowLogoutConfirm(false)}>
             Cancel
           </AlertDialogCancel>
-          <AlertDialogAction onClick={() => window.location.href = '/report'} className="bg-blue-600 hover:bg-blue-700">
+          <AlertDialogAction onClick={() => navigate('/report')} className="bg-blue-600 hover:bg-blue-700">
             Save Work
           </AlertDialogAction>
           <AlertDialogAction onClick={confirmLogout} className="bg-red-600 hover:bg-red-700">

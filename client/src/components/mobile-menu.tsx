@@ -4,12 +4,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { LogOut, User, Home, Settings, Lock, ExternalLink, TestTube, Users, FileText, ClipboardCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMobileMenu } from "@/contexts/MobileMenuContext";
-import { useSpaNavigation } from "@/hooks/useSpaNavigation";
+import { useConditionalNav } from '@/contexts/ConditionalNavContext';
 
 export function MobileMenu() {
   const { user, logout, isLoggingOut, hasUnsavedResults } = useAuth();
   const { isMobileMenuOpen, closeMobileMenu } = useMobileMenu();
-  const { navigate } = useSpaNavigation();
+  const { navigate } = useConditionalNav();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   
   // Type guard for user object
@@ -135,7 +135,7 @@ export function MobileMenu() {
                   </div>
                   <div className="text-sm opacity-75">
                     {hasAdminAccess ? 'Manage users & reports' : 'View your test reports'}
-                  </div>
+                </div>
                 </div>
               </Button>
             )}

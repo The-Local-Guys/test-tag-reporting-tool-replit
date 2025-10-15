@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { json } from "stream/consumers";
 
 export function useConditionalNavigation() {
@@ -11,7 +11,7 @@ export function useConditionalNavigation() {
     // Example: unsaved changes check
     let hasUnfinishedReport = localStorage.getItem("unfinished"); // Replace with your real condition
     console.log("**********", hasUnfinishedReport, "type: ", typeof(hasUnfinishedReport))
-    if (hasUnfinishedReport === "true") {
+    if (location === "/report" && hasUnfinishedReport === "true") {
       setPendingLocation(target);
       setShowConfirm(true);
     } else {
