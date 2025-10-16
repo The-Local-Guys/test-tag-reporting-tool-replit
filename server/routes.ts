@@ -576,6 +576,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             assetNumber: batchedResult.assetNumber || "1", // Use client-provided asset number
             itemName: batchedResult.itemName,
             itemType: batchedResult.itemType,
+            itemCode: batchedResult.itemCode || null, // Item code for National Client items
             location: batchedResult.location,
             classification: batchedResult.classification,
             result: batchedResult.result,
