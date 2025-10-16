@@ -121,7 +121,12 @@ export default function ItemSelection() {
 
   const handleCustomItemAdd = () => {
     if (customItemName.trim()) {
-      handleItemSelect('custom', customItemName.trim());
+      // Format custom items for National Client as "532 Other (custom_item_name)"
+      const itemName = isNationalClient 
+        ? `532 Other (${customItemName.trim()})`
+        : customItemName.trim();
+      
+      handleItemSelect('custom', itemName);
       setCustomItemName('');
       setIsCustomModalOpen(false);
     }
@@ -286,7 +291,7 @@ export default function ItemSelection() {
           </div>
 
           {/* Search Results */}
-          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+          <div className="space-y-2 max-h-[50vh] overflow-y-auto mb-4">
             {filteredNationalItems.length > 0 ? (
               filteredNationalItems.slice(0, 50).map((item) => (
                 <button
@@ -306,6 +311,18 @@ export default function ItemSelection() {
               </div>
             )}
           </div>
+
+          {/* Custom Item Button for National Client */}
+          <button
+            onClick={() => setIsCustomModalOpen(true)}
+            className="w-full bg-gradient-to-br from-gray-100 to-gray-200 border-2 border-dashed border-gray-400 rounded-lg p-4 text-center hover:from-blue-50 hover:to-blue-100 hover:border-primary transition-all"
+            data-testid="button-custom-item-national"
+          >
+            <div className="flex items-center justify-center gap-2">
+              <Plus className="h-5 w-5 text-gray-600" />
+              <span className="font-medium text-gray-800">Other - Custom Item</span>
+            </div>
+          </button>
         </div>
       ) : (
         <div className="p-4 pb-24">
