@@ -110,7 +110,19 @@ export function useSession() {
   const [batchedResults, setBatchedResults] = useState<BatchedTestResult[]>(() => {
     if (!sessionId) return [];
     const stored = localStorage.getItem(`batchedResults_${sessionId}`);
-    return stored ? JSON.parse(stored) : [];
+    if (!stored) return [];
+    
+    // Parse and migrate legacy data by removing itemCode field
+    const parsed = JSON.parse(stored);
+    const migrated = parsed.map((result: any) => {
+      const { itemCode, ...rest } = result;
+      return rest;
+    });
+    
+    // Save migrated data back to localStorage
+    localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(migrated));
+    
+    return migrated;
   });
 
   const queryClient = useQueryClient();
@@ -648,11 +660,21 @@ export function useSession() {
           const results = JSON.parse(storedBatchedResults);
           if (results.length > 0) {
             console.log(`Restoring ${results.length} batched results for session ${sessionId}`);
-            setBatchedResults(results);
+            
+            // Migrate legacy data by removing itemCode field
+            const migratedResults = results.map((result: any) => {
+              const { itemCode, ...rest } = result;
+              return rest;
+            });
+            
+            // Save migrated data back to localStorage
+            localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(migratedResults));
+            
+            setBatchedResults(migratedResults);
             
             // Restore asset counts
-            const monthlyCount = results.filter((r: BatchedTestResult) => r.frequency !== 'fiveyearly').length;
-            const fiveYearlyCount = results.filter((r: BatchedTestResult) => r.frequency === 'fiveyearly').length;
+            const monthlyCount = migratedResults.filter((r: BatchedTestResult) => r.frequency !== 'fiveyearly').length;
+            const fiveYearlyCount = migratedResults.filter((r: BatchedTestResult) => r.frequency === 'fiveyearly').length;
             setAssetCounts({ monthly: monthlyCount, fiveYearly: fiveYearlyCount });
           }
         } catch (error) {
