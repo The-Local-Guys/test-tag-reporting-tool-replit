@@ -60,6 +60,13 @@ function getFrequencyLabel(frequency: string): string {
   }
 }
 
+function formatItemName(result: any, isNationalClient: boolean): string {
+  if (isNationalClient && result.itemCode) {
+    return `${result.itemCode} - ${result.itemName}`;
+  }
+  return result.itemName;
+}
+
 async function addLetterheadToPage(doc: jsPDF, margin: number, pageWidth: number): Promise<number> {
   let yPosition = margin;
   
@@ -271,8 +278,11 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     const itemNameWidth = 17; // Width for item name column
     const locationWidth = 17; // Width for location column
     
+    // Format item name based on country (show code for National Client)
+    const formattedItemName = formatItemName(result, session.country === 'national_client');
+    
     // Split text to fit column widths
-    const itemNameLines = doc.splitTextToSize(result.itemName, itemNameWidth);
+    const itemNameLines = doc.splitTextToSize(formattedItemName, itemNameWidth);
     const locationLines = doc.splitTextToSize(result.location, locationWidth);
     
     // Calculate row height based on maximum lines needed
@@ -468,7 +478,8 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       }
       
       doc.setFont('helvetica', 'bold');
-      doc.text(`Asset #${result.assetNumber} - ${result.itemName} (${result.location})`, margin, yPosition);
+      const detailItemName = formatItemName(result, session.country === 'national_client');
+      doc.text(`Asset #${result.assetNumber} - ${detailItemName} (${result.location})`, margin, yPosition);
       yPosition += 8;
       
       doc.setFont('helvetica', 'normal');
@@ -540,7 +551,8 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       }
       
       doc.setFont('helvetica', 'bold');
-      doc.text(`Asset #${result.assetNumber} - ${result.itemName} (${result.location})`, margin, yPosition);
+      const detailItemName = formatItemName(result, session.country === 'national_client');
+      doc.text(`Asset #${result.assetNumber} - ${detailItemName} (${result.location})`, margin, yPosition);
       yPosition += 8;
       
       // Parse test details from notes
@@ -640,7 +652,8 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       // Item header
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text(`Asset #${result.assetNumber} - ${result.itemName}`, margin, yPosition);
+      const fireItemName = formatItemName(result, session.country === 'national_client');
+      doc.text(`Asset #${result.assetNumber} - ${fireItemName}`, margin, yPosition);
       yPosition += 7;
       
       doc.setFontSize(10);
