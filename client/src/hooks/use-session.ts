@@ -18,6 +18,7 @@ export interface BatchedTestResult {
   id: string; // Temporary local ID
   itemName: string;
   itemType: string;
+  itemCode?: string; // Item code for National Client items
   location: string;
   classification: string;
   result: 'pass' | 'fail';
