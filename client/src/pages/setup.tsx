@@ -68,7 +68,7 @@ export default function Setup() {
       // Fire testing specific fields
       ...(selectedService === 'fire_testing' && {
         technicianLicensed: data.technicianLicensed,
-        complianceStandard: data.country === 'australia' ? 'AS_1851_AU' : 'NZS_4503_NZ'
+        complianceStandard: data.country === 'newzealand' ? 'NZS_4503_NZ' : 'AS_1851_AU'
       })
     });
     navigate('/items');
@@ -194,7 +194,7 @@ export default function Setup() {
             <Label>Country</Label>
             <RadioGroup
               defaultValue="australia"
-              onValueChange={(value) => form.setValue('country', value as 'australia' | 'newzealand')}
+              onValueChange={(value) => form.setValue('country', value as 'australia' | 'newzealand' | 'national_client')}
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="australia" id="australia" />
@@ -203,6 +203,10 @@ export default function Setup() {
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="newzealand" id="newzealand" />
                 <Label htmlFor="newzealand">New Zealand (NZS 4503:2005)</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="national_client" id="national_client" />
+                <Label htmlFor="national_client">National Client</Label>
               </div>
             </RadioGroup>
           </div>

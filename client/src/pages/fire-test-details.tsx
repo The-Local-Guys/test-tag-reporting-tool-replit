@@ -190,7 +190,7 @@ export default function FireTestDetails() {
   // Get compliance standard based on session country
   const getComplianceStandard = () => {
     const country = sessionData?.session?.country;
-    return country === 'newzealand' ? 'NZS 4503:2005' : 'AS 1851';
+    return country === 'newzealand' ? 'NZS 4503:2005' : 'AS 1851'; // Default to AS 1851 for Australia and National Client
   };
 
   return (

@@ -34,7 +34,7 @@ export const testSessions = pgTable("test_sessions", {
   clientName: text("client_name").notNull(),
   siteContact: text("site_contact").notNull(),
   address: text("address").notNull(),
-  country: text("country").notNull(), // 'australia' or 'newzealand'
+  country: text("country").notNull(), // 'australia', 'newzealand', or 'national_client'
   userId: integer("user_id").references(() => users.id), // Link to technician
   startingAssetNumber: integer("starting_asset_number"), // Starting asset number for the session
   // Fire testing specific fields
@@ -130,7 +130,7 @@ export const failureReasons = ['vision', 'earth', 'insulation', 'polarity', 'oth
 export const emergencyFailureReasons = ['physical_damage', 'battery_failure', 'lamp_failure', 'wiring_fault', 'charging_fault', 'insufficient_illumination', 'mounting_issue', 'other'] as const;
 export const fireFailureReasons = ['physical_damage', 'pressure_loss', 'corrosion', 'blocked_nozzle', 'damaged_seal', 'expired', 'mounting_issue', 'other'] as const;
 export const actionsTaken = ['given', 'removed'] as const;
-export const countries = ['australia', 'newzealand'] as const;
+export const countries = ['australia', 'newzealand', 'national_client'] as const;
 export const frequencies = ['threemonthly', 'sixmonthly', 'twelvemonthly', 'twentyfourmonthly', 'fiveyearly'] as const;
 export const emergencyFrequencies = ['sixmonthly', 'annually'] as const;
 export const fireFrequencies = ['sixmonthly', 'twelvemonthly'] as const;
