@@ -45,6 +45,15 @@ export interface BatchedTestResult {
 }
 
 /**
+ * Helper function to sanitize batched results by removing legacy fields
+ * Strips out itemCode and any other deprecated fields from localStorage data
+ */
+function sanitizeBatchedResult(result: any): BatchedTestResult {
+  const { itemCode, ...rest } = result;
+  return rest as BatchedTestResult;
+}
+
+/**
  * Helper function to find the next available asset number within a range
  * @param usedNumbers - Set of asset numbers already in use
  * @param start - Starting number for the range (1 for monthly, 10001 for 5-yearly)
@@ -112,17 +121,14 @@ export function useSession() {
     const stored = localStorage.getItem(`batchedResults_${sessionId}`);
     if (!stored) return [];
     
-    // Parse and migrate legacy data by removing itemCode field
+    // Parse and sanitize legacy data by removing deprecated fields
     const parsed = JSON.parse(stored);
-    const migrated = parsed.map((result: any) => {
-      const { itemCode, ...rest } = result;
-      return rest;
-    });
+    const sanitized = parsed.map(sanitizeBatchedResult);
     
-    // Save migrated data back to localStorage
-    localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(migrated));
+    // Save sanitized data back to localStorage
+    localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(sanitized));
     
-    return migrated;
+    return sanitized;
   });
 
   const queryClient = useQueryClient();
@@ -307,12 +313,16 @@ export function useSession() {
    * Adds test result to local batch storage with proper asset numbering
    * Results are stored locally until final report submission
    * Now checks for manually entered asset numbers to prevent conflicts
+   * Includes defensive sanitization to strip any legacy/unexpected fields
    */
-  const addToBatch = (data: Omit<InsertTestResult, 'sessionId' | 'assetNumber'> & { itemCode?: string }) => {
+  const addToBatch = (data: Omit<InsertTestResult, 'sessionId' | 'assetNumber'>) => {
     if (!sessionId) throw new Error('No active session');
     
+    // Defensive sanitization: strip itemCode and any other unexpected fields from incoming data
+    const { itemCode, ...cleanData } = data as any;
+    
     // Determine if this is a 5-yearly frequency
-    const isFiveYearly = data.frequency === 'fiveyearly';
+    const isFiveYearly = cleanData.frequency === 'fiveyearly';
     
     // Collect all existing asset numbers to avoid conflicts
     const usedNumbers = new Set<number>();
@@ -371,31 +381,31 @@ export function useSession() {
     
     const newResult: BatchedTestResult = {
       id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      itemName: data.itemName,
-      itemType: data.itemType,
-      location: data.location,
-      classification: data.classification,
-      result: data.result as 'pass' | 'fail',
-      frequency: data.frequency,
+      itemName: cleanData.itemName,
+      itemType: cleanData.itemType,
+      location: cleanData.location,
+      classification: cleanData.classification,
+      result: cleanData.result as 'pass' | 'fail',
+      frequency: cleanData.frequency,
       assetNumber,
-      failureReason: data.failureReason || undefined,
-      actionTaken: data.actionTaken || undefined,
-      notes: data.notes || undefined,
-      photoData: data.photoData || undefined,
-      visionInspection: data.visionInspection ?? true,
-      electricalTest: data.electricalTest ?? true,
+      failureReason: cleanData.failureReason || undefined,
+      actionTaken: cleanData.actionTaken || undefined,
+      notes: cleanData.notes || undefined,
+      photoData: cleanData.photoData || undefined,
+      visionInspection: cleanData.visionInspection ?? true,
+      electricalTest: cleanData.electricalTest ?? true,
       timestamp: new Date().toISOString(),
       // Emergency-specific fields
-      maintenanceType: data.maintenanceType || undefined,
-      globeType: data.globeType || undefined,
-      dischargeTest: data.dischargeTest || undefined,
-      switchingTest: data.switchingTest || undefined,
-      chargingTest: data.chargingTest || undefined,
-      luxTest: data.luxTest || undefined,
-      luxReading: data.luxReading ? parseFloat(data.luxReading as string) : undefined,
-      luxCompliant: data.luxCompliant || undefined,
-      manufacturerInfo: data.manufacturerInfo || undefined,
-      installationDate: data.installationDate || undefined,
+      maintenanceType: cleanData.maintenanceType || undefined,
+      globeType: cleanData.globeType || undefined,
+      dischargeTest: cleanData.dischargeTest || undefined,
+      switchingTest: cleanData.switchingTest || undefined,
+      chargingTest: cleanData.chargingTest || undefined,
+      luxTest: cleanData.luxTest || undefined,
+      luxReading: cleanData.luxReading ? parseFloat(cleanData.luxReading as string) : undefined,
+      luxCompliant: cleanData.luxCompliant || undefined,
+      manufacturerInfo: cleanData.manufacturerInfo || undefined,
+      installationDate: cleanData.installationDate || undefined,
     };
     
     // Add to batched results
@@ -412,10 +422,10 @@ export function useSession() {
     localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(updatedResults));
     
     // Update current location
-    setCurrentLocation(data.location);
-    localStorage.setItem('currentLocation', data.location);
+    setCurrentLocation(cleanData.location);
+    localStorage.setItem('currentLocation', cleanData.location);
     
-    console.log(`Added result to batch: ${data.itemName} at ${data.location} -> Asset #${assetNumber}`);
+    console.log(`Added result to batch: ${cleanData.itemName} at ${cleanData.location} -> Asset #${assetNumber}`);
     return newResult;
   };
 
@@ -661,20 +671,17 @@ export function useSession() {
           if (results.length > 0) {
             console.log(`Restoring ${results.length} batched results for session ${sessionId}`);
             
-            // Migrate legacy data by removing itemCode field
-            const migratedResults = results.map((result: any) => {
-              const { itemCode, ...rest } = result;
-              return rest;
-            });
+            // Sanitize legacy data by removing deprecated fields
+            const sanitizedResults = results.map(sanitizeBatchedResult);
             
-            // Save migrated data back to localStorage
-            localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(migratedResults));
+            // Save sanitized data back to localStorage
+            localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(sanitizedResults));
             
-            setBatchedResults(migratedResults);
+            setBatchedResults(sanitizedResults);
             
             // Restore asset counts
-            const monthlyCount = migratedResults.filter((r: BatchedTestResult) => r.frequency !== 'fiveyearly').length;
-            const fiveYearlyCount = migratedResults.filter((r: BatchedTestResult) => r.frequency === 'fiveyearly').length;
+            const monthlyCount = sanitizedResults.filter((r: BatchedTestResult) => r.frequency !== 'fiveyearly').length;
+            const fiveYearlyCount = sanitizedResults.filter((r: BatchedTestResult) => r.frequency === 'fiveyearly').length;
             setAssetCounts({ monthly: monthlyCount, fiveYearly: fiveYearlyCount });
           }
         } catch (error) {
