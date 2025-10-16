@@ -795,7 +795,7 @@ export default function ReportPreview() {
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="font-medium text-gray-800">
-                    #{result.assetNumber || 'TBD'} - {result.itemName}
+                    #{result.assetNumber || 'TBD'} - {result.itemCode && session?.country === 'national_client' ? `${result.itemCode} - ${result.itemName}` : result.itemName}
                   </div>
                   <div className="text-sm text-gray-500">
                     {result.location} • {result.classification.toUpperCase()}
@@ -1115,7 +1115,7 @@ export default function ReportPreview() {
             <AlertDialogDescription>
               {deletingResult && (
                 <>
-                  Are you sure you want to delete <strong>#{deletingResult.assetNumber} - {deletingResult.itemName}</strong>? 
+                  Are you sure you want to delete <strong>#{deletingResult.assetNumber} - {deletingResult.itemCode && session?.country === 'national_client' ? `${deletingResult.itemCode} - ${deletingResult.itemName}` : deletingResult.itemName}</strong>? 
                   This action cannot be undone.
                 </>
               )}
