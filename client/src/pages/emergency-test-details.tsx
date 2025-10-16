@@ -54,6 +54,7 @@ export default function EmergencyTestDetails() {
   const urlParams = new URLSearchParams(window.location.search);
   const itemName = urlParams.get('item') || 'Emergency Equipment';
   const itemType = urlParams.get('type') || 'emergency-equipment';
+  const itemCode = urlParams.get('code') || undefined;
 
   const form = useForm<EmergencyTestForm>({
     resolver: zodResolver(emergencyTestSchema),
@@ -131,6 +132,7 @@ export default function EmergencyTestDetails() {
       addToBatch({
         itemName: itemName,
         itemType: itemType,
+        itemCode: itemCode,
         location: data.location,
         classification: data.classification,
         result: data.result,
