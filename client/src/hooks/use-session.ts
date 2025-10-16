@@ -18,7 +18,6 @@ export interface BatchedTestResult {
   id: string; // Temporary local ID
   itemName: string;
   itemType: string;
-  itemCode?: string; // Item code for National Client items
   location: string;
   classification: string;
   result: 'pass' | 'fail';
@@ -362,7 +361,6 @@ export function useSession() {
       id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       itemName: data.itemName,
       itemType: data.itemType,
-      itemCode: data.itemCode, // Store item code for National Client items
       location: data.location,
       classification: data.classification,
       result: data.result as 'pass' | 'fail',

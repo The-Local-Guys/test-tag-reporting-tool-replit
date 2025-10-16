@@ -49,7 +49,6 @@ export default function FireTestDetails() {
   const urlParams = new URLSearchParams(window.location.search);
   const itemName = urlParams.get('item') || 'Fire Equipment';
   const itemType = urlParams.get('type') || 'fire-equipment';
-  const itemCode = urlParams.get('code') || undefined;
 
   // Determine equipment type from item type
   const getEquipmentType = (type: string) => {
@@ -142,7 +141,6 @@ export default function FireTestDetails() {
       addToBatch({
         itemName: itemName,
         itemType: itemType,
-        itemCode: itemCode,
         location: data.location,
         classification: data.equipmentType, // Using equipmentType as classification
         result: data.result,
