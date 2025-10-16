@@ -291,7 +291,7 @@ export default function ItemSelection() {
           </div>
 
           {/* Search Results */}
-          <div className="space-y-2 max-h-[50vh] overflow-y-auto mb-4">
+          <div className="space-y-2 max-h-[35vh] overflow-y-auto mb-4">
             {filteredNationalItems.length > 0 ? (
               filteredNationalItems.slice(0, 50).map((item) => (
                 <button
