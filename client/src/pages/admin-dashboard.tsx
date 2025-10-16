@@ -119,7 +119,7 @@ export default function AdminDashboard() {
     testDate: "",
     address: "",
     siteContact: "",
-    country: "australia" as "australia" | "newzealand",
+    country: "australia" as "australia" | "newzealand" | "national_client",
   });
   const [newUserData, setNewUserData] = useState({
     username: "",
@@ -1957,7 +1957,7 @@ export default function AdminDashboard() {
             <Label htmlFor="editCountry">Country</Label>
             <Select
               value={editSessionData.country}
-              onValueChange={(value: "australia" | "newzealand") =>
+              onValueChange={(value: "australia" | "newzealand" | "national_client") =>
                 setEditSessionData((prev) => ({ ...prev, country: value }))
               }
             >
@@ -1967,6 +1967,7 @@ export default function AdminDashboard() {
               <SelectContent>
                 <SelectItem value="australia">Australia</SelectItem>
                 <SelectItem value="newzealand">New Zealand</SelectItem>
+                <SelectItem value="national_client">National Client</SelectItem>
               </SelectContent>
             </Select>
           </div>
