@@ -105,14 +105,11 @@ export default function ItemSelection() {
                          selectedService === 'fire_testing' ? fireItems : electricalItems;
 
   // Filter national client items based on search query
-  // Only show items when there's actual search input
-  const filteredNationalItems = searchQuery.trim() 
-    ? nationalClientItems.filter(item => {
-        const query = searchQuery.toLowerCase();
-        return item.code.toLowerCase().includes(query) || 
-               item.name.toLowerCase().includes(query);
-      })
-    : [];
+  const filteredNationalItems = nationalClientItems.filter(item => {
+    const query = searchQuery.toLowerCase();
+    return item.code.toLowerCase().includes(query) || 
+           item.name.toLowerCase().includes(query);
+  });
 
   const handleItemSelect = (itemType: string, itemName: string) => {
     // Route to different test pages based on service type
@@ -294,11 +291,11 @@ export default function ItemSelection() {
           </div>
 
           {/* Search Results */}
-          <div className="space-y-2 max-h-[35vh] overflow-y-auto mb-4">
+          <div className="space-y-2 max-h-[50vh] overflow-y-auto mb-4">
             {filteredNationalItems.length > 0 ? (
-              filteredNationalItems.slice(0, 50).map((item, index) => (
+              filteredNationalItems.slice(0, 50).map((item) => (
                 <button
-                  key={`${item.code}-${index}`}
+                  key={item.code}
                   onClick={() => handleItemSelect(item.item_type, `${item.code} - ${item.name}`)}
                   className="w-full bg-white border border-gray-200 rounded-lg p-3 text-left hover:border-primary hover:bg-blue-50 transition-all"
                   data-testid={`button-national-item-${item.code}`}
