@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Clipboard, ArrowRight, AlertCircle } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useSession } from '@/hooks/use-session';
 import { useAuth } from '@/hooks/useAuth';
 import { useSpaNavigation } from '@/hooks/useSpaNavigation';
@@ -26,6 +27,7 @@ export default function Setup() {
   const { createSession, isCreatingSession, clearSession, sessionId } = useSession();
   const { user } = useAuth();
   const { navigate } = useSpaNavigation();
+  const [isNavigating, setIsNavigating] = useState(false);
   
   // Get current date in Australian Central Time
   const getAustralianDate = () => {
@@ -71,10 +73,47 @@ export default function Setup() {
         complianceStandard: data.country === 'newzealand' ? 'NZS_4503_NZ' : 'AS_1851_AU'
       })
     });
-    navigate('/items');
   };
 
+  // Wait for session to be created, then navigate with delay to ensure data is loaded
+  useEffect(() => {
+    if (sessionId && isCreatingSession === false && !isNavigating) {
+      setIsNavigating(true);
+      
+      // Add a delay to ensure session data is fully loaded before navigating
+      setTimeout(() => {
+        navigate('/items');
+      }, 800); // 800ms delay to ensure session data is ready
+    }
+  }, [sessionId, isCreatingSession, navigate, isNavigating]);
 
+
+
+  // Show loading screen when creating session or navigating
+  if (isCreatingSession || isNavigating) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center space-y-6">
+          <div className="flex justify-center">
+            <img
+              src={logoPath}
+              alt="The Local Guys"
+              className="h-24 w-auto object-contain"
+            />
+          </div>
+          <div className="space-y-2">
+            <LoadingSpinner />
+            <p className="text-lg font-medium text-gray-700">
+              Creating Session...
+            </p>
+            <p className="text-sm text-gray-500">
+              Setting up your testing environment
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mobile-container">
