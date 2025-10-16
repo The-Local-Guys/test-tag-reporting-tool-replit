@@ -58,6 +58,13 @@ function getFrequencyLabel(frequency: string): string {
   }
 }
 
+function formatItemName(result: any, isNationalClient: boolean): string {
+  if (isNationalClient && result.itemCode) {
+    return `${result.itemCode} - ${result.itemName}`;
+  }
+  return result.itemName;
+}
+
 /**
  * Generates an Excel spreadsheet report with test results and compliance data
  * Creates downloadable .xlsx files with formatted data, calculations, and summaries
@@ -153,7 +160,7 @@ export function generateExcelReport(data: ReportData): Blob {
     if (session.serviceType === 'emergency_exit_light') {
       return [
         result.assetNumber, // Asset number
-        result.itemName,
+        formatItemName(result, session.country === 'national_client'),
         result.location,
         result.result.toUpperCase(),
         result.manufacturerInfo || 'N/A',
@@ -183,7 +190,7 @@ export function generateExcelReport(data: ReportData): Blob {
       
       return [
         result.assetNumber, // Asset number
-        result.itemName,
+        formatItemName(result, session.country === 'national_client'),
         result.location,
         result.equipmentType ? result.equipmentType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'N/A',
         result.result.toUpperCase(),
@@ -212,7 +219,7 @@ export function generateExcelReport(data: ReportData): Blob {
 
       return [
         result.assetNumber, // Asset number
-        result.itemName,
+        formatItemName(result, session.country === 'national_client'),
         result.location,
         result.classification.toUpperCase(),
         result.result.toUpperCase(),
