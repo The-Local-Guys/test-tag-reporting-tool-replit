@@ -111,11 +111,14 @@ export default function ItemSelection() {
            item.name.toLowerCase().includes(query);
   });
 
-  const handleItemSelect = (itemType: string, itemName: string) => {
+  const handleItemSelect = (itemType: string, itemName: string, itemCode?: string) => {
     // Route to different test pages based on service type
     const testRoute = selectedService === 'emergency_exit_light' ? '/emergency-test' : 
                      selectedService === 'fire_testing' ? '/fire-test' : '/test';
-    setLocation(`${testRoute}?item=${encodeURIComponent(itemName)}&type=${itemType}`);
+    
+    // Include item code in URL params for National Client items
+    const codeParam = itemCode ? `&code=${encodeURIComponent(itemCode)}` : '';
+    setLocation(`${testRoute}?item=${encodeURIComponent(itemName)}&type=${itemType}${codeParam}`);
   };
 
   const handleCustomItemAdd = () => {
@@ -290,7 +293,7 @@ export default function ItemSelection() {
               filteredNationalItems.slice(0, 50).map((item) => (
                 <button
                   key={item.code}
-                  onClick={() => handleItemSelect(item.item_type, item.name)}
+                  onClick={() => handleItemSelect(item.item_type, item.name, item.code)}
                   className="w-full bg-white border border-gray-200 rounded-lg p-3 text-left hover:border-primary hover:bg-blue-50 transition-all"
                   data-testid={`button-national-item-${item.code}`}
                 >
