@@ -49,7 +49,6 @@ export const testResults = pgTable("test_results", {
   assetNumber: text("asset_number").notNull(),
   itemName: text("item_name").notNull(),
   itemType: text("item_type").notNull(),
-  itemCode: text("item_code"), // Item code for National Client items
   location: text("location").notNull(),
   classification: text("classification").notNull(), // For electrical: 'class1', 'class2', 'epod', 'rcd' | For emergency: 'emergency_exit_sign', 'emergency_light_downlight', 'combination_unit', 'emergency_spotlight', 'floor_path_light', 'emergency_bulkhead'
   result: text("result").notNull(), // 'pass' or 'fail'
