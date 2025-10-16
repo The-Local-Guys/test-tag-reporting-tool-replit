@@ -83,7 +83,7 @@ export default function ItemSelection() {
   const [showCancelSuccess, setShowCancelSuccess] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const { sessionData, currentLocation, setCurrentLocation, clearSession, sessionId } = useSession();
+  const { sessionData, currentLocation, setCurrentLocation, clearSession, sessionId, isLoading: isLoadingSession } = useSession();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -187,8 +187,8 @@ export default function ItemSelection() {
     passRate: 0,
   };
 
-  // Show loading screen during initial transition
-  if (isInitialLoading) {
+  // Show loading screen during initial transition or when session is loading
+  if (isInitialLoading || isLoadingSession) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center space-y-6">
