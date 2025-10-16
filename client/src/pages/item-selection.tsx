@@ -4,12 +4,13 @@ import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { Edit2, FileText, CheckCircle, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { Edit2, FileText, CheckCircle, Plus, RotateCcw, Trash2, Search } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { deleteResource } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
+import nationalClientItems from '@/data/national-client-items';
 
 // Custom SVG component for fire hose reel icon - matches the provided design
 function HoseReelIcon({ className = "h-8 w-8" }: { className?: string }) {
@@ -81,6 +82,7 @@ export default function ItemSelection() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [showCancelSuccess, setShowCancelSuccess] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const { sessionData, currentLocation, setCurrentLocation, clearSession, sessionId } = useSession();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -94,10 +96,20 @@ export default function ItemSelection() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Get the selected service type
+  // Get the selected service type and country
   const selectedService = sessionData?.session?.serviceType || sessionStorage.getItem('selectedService') || 'electrical';
+  const country = sessionData?.session?.country;
+  const isNationalClient = country === 'national_client';
+  
   const predefinedItems = selectedService === 'emergency_exit_light' ? emergencyItems : 
                          selectedService === 'fire_testing' ? fireItems : electricalItems;
+
+  // Filter national client items based on search query
+  const filteredNationalItems = nationalClientItems.filter(item => {
+    const query = searchQuery.toLowerCase();
+    return item.code.toLowerCase().includes(query) || 
+           item.name.toLowerCase().includes(query);
+  });
 
   const handleItemSelect = (itemType: string, itemName: string) => {
     // Route to different test pages based on service type
@@ -255,38 +267,78 @@ export default function ItemSelection() {
         </div>
       </div>
 
-      {/* Item Selection Grid */}
-      <div className="p-4 pb-24">
-        <div className="grid grid-cols-2 gap-3">
-          {predefinedItems.map((item) => (
-            <button
-              key={item.type}
-              onClick={() => handleItemSelect(item.type, item.name)}
-              className="bg-white border-2 border-gray-200 rounded-xl p-4 text-center hover:border-primary hover:bg-blue-50 transition-all touch-button"
-              data-testid={`button-item-${item.type}`}
-            >
-              <div className="flex justify-center items-center mb-2 h-12" data-testid={`icon-item-${item.type}`}>
-                {typeof item.icon === 'string' ? (
-                  <span className="text-3xl">{item.icon}</span>
-                ) : (
-                  item.icon
-                )}
-              </div>
-              <div className="font-medium text-gray-800">{item.name}</div>
-            </button>
-          ))}
-
-          <button
-            onClick={() => setIsCustomModalOpen(true)}
-            className="bg-gradient-to-br from-gray-100 to-gray-200 border-2 border-dashed border-gray-400 rounded-xl p-4 text-center hover:from-blue-50 hover:to-blue-100 hover:border-primary transition-all touch-button"
-          >
-            <div className="text-3xl mb-2">
-              <Plus className="h-8 w-8 mx-auto text-gray-600" />
+      {/* Item Selection - National Client Search or Regular Grid */}
+      {isNationalClient ? (
+        <div className="p-4 pb-24">
+          {/* Search Input */}
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by code or item name..."
+                className="pl-10 text-base h-12"
+                data-testid="input-national-client-search"
+              />
             </div>
-            <div className="font-medium text-gray-800">Other</div>
-          </button>
+          </div>
+
+          {/* Search Results */}
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+            {filteredNationalItems.length > 0 ? (
+              filteredNationalItems.slice(0, 50).map((item) => (
+                <button
+                  key={item.code}
+                  onClick={() => handleItemSelect(item.item_type, item.name)}
+                  className="w-full bg-white border border-gray-200 rounded-lg p-3 text-left hover:border-primary hover:bg-blue-50 transition-all"
+                  data-testid={`button-national-item-${item.code}`}
+                >
+                  <div className="font-medium text-gray-800">
+                    {item.code} - {item.name}
+                  </div>
+                </button>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                {searchQuery ? 'No items found' : 'Start typing to search...'}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="p-4 pb-24">
+          <div className="grid grid-cols-2 gap-3">
+            {predefinedItems.map((item) => (
+              <button
+                key={item.type}
+                onClick={() => handleItemSelect(item.type, item.name)}
+                className="bg-white border-2 border-gray-200 rounded-xl p-4 text-center hover:border-primary hover:bg-blue-50 transition-all touch-button"
+                data-testid={`button-item-${item.type}`}
+              >
+                <div className="flex justify-center items-center mb-2 h-12" data-testid={`icon-item-${item.type}`}>
+                  {typeof item.icon === 'string' ? (
+                    <span className="text-3xl">{item.icon}</span>
+                  ) : (
+                    item.icon
+                  )}
+                </div>
+                <div className="font-medium text-gray-800">{item.name}</div>
+              </button>
+            ))}
+
+            <button
+              onClick={() => setIsCustomModalOpen(true)}
+              className="bg-gradient-to-br from-gray-100 to-gray-200 border-2 border-dashed border-gray-400 rounded-xl p-4 text-center hover:from-blue-50 hover:to-blue-100 hover:border-primary transition-all touch-button"
+            >
+              <div className="text-3xl mb-2">
+                <Plus className="h-8 w-8 mx-auto text-gray-600" />
+              </div>
+              <div className="font-medium text-gray-800">Other</div>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Fixed Bottom Actions */}
       <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 p-4 space-y-3">
