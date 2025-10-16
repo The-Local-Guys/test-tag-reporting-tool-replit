@@ -428,7 +428,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .status(400)
           .json({ error: "Invalid session data", details: error.errors });
       } else {
-        res.status(500).json({ error: "Failed to create session", details: error.message });
+        res.status(500).json({ error: "Failed to create session", details: error instanceof Error ? error.message : String(error) });
       }
     }
   });
@@ -576,7 +576,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             assetNumber: batchedResult.assetNumber || "1", // Use client-provided asset number
             itemName: batchedResult.itemName,
             itemType: batchedResult.itemType,
-            itemCode: batchedResult.itemCode || null, // Item code for National Client items
             location: batchedResult.location,
             classification: batchedResult.classification,
             result: batchedResult.result,
