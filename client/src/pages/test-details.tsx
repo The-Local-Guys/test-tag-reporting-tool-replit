@@ -47,7 +47,7 @@ export default function TestDetails() {
     // Get the last selected frequency from localStorage, default to 'twelvemonthly'
     return localStorage.getItem('lastSelectedFrequency') || 'twelvemonthly';
   });
-  const [currentItem, setCurrentItem] = useState<{name: string, type: string} | null>(null);
+  const [currentItem, setCurrentItem] = useState<{name: string, type: string, code?: string} | null>(null);
   const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]);
   const [showCamera, setShowCamera] = useState(false);
   const [visionInspection, setVisionInspection] = useState(true);
@@ -67,8 +67,13 @@ export default function TestDetails() {
     const params = new URLSearchParams(search);
     const item = params.get('item');
     const type = params.get('type');
+    const code = params.get('code');
     if (item && type) {
-      setCurrentItem({ name: decodeURIComponent(item), type });
+      setCurrentItem({ 
+        name: decodeURIComponent(item), 
+        type,
+        code: code ? decodeURIComponent(code) : undefined
+      });
     }
   }, [search]);
 
@@ -148,10 +153,11 @@ export default function TestDetails() {
 
     const formValues = form.getValues();
     
-    const testData: Omit<InsertTestResult, 'sessionId'> = {
+    const testData: Omit<InsertTestResult, 'sessionId'> & { itemCode?: string } = {
       assetNumber: '', // Will be auto-generated on server side
       itemName: currentItem.name,
       itemType: currentItem.type,
+      itemCode: currentItem.code, // Include item code for National Client items
       location: formValues.location,
       classification: selectedClass,
       result,

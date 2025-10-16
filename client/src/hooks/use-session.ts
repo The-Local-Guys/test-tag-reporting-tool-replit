@@ -297,7 +297,7 @@ export function useSession() {
    * Results are stored locally until final report submission
    * Now checks for manually entered asset numbers to prevent conflicts
    */
-  const addToBatch = (data: Omit<InsertTestResult, 'sessionId' | 'assetNumber'>) => {
+  const addToBatch = (data: Omit<InsertTestResult, 'sessionId' | 'assetNumber'> & { itemCode?: string }) => {
     if (!sessionId) throw new Error('No active session');
     
     // Determine if this is a 5-yearly frequency
@@ -362,6 +362,7 @@ export function useSession() {
       id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       itemName: data.itemName,
       itemType: data.itemType,
+      itemCode: data.itemCode, // Store item code for National Client items
       location: data.location,
       classification: data.classification,
       result: data.result as 'pass' | 'fail',
