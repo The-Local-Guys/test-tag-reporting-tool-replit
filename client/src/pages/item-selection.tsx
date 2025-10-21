@@ -276,35 +276,37 @@ export default function ItemSelection() {
         </div>
       </div>
 
-      {/* Environment Selection */}
-      <div className="bg-blue-50 border-b border-blue-100 p-4">
-        <div className="space-y-2">
-          <div className="text-sm text-gray-600 text-center">Select Environment:</div>
-          <Select
-            value={selectedEnvironmentId}
-            onValueChange={setSelectedEnvironmentId}
-          >
-            <SelectTrigger className="bg-white" data-testid="select-environment">
-              <SelectValue placeholder="Default Items" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="default" data-testid="option-default-environment">
-                Default Items
-              </SelectItem>
-              {environments && environments.length > 0 && environments.map((env) => (
-                <SelectItem key={env.id} value={env.id.toString()} data-testid={`option-environment-${env.id}`}>
-                  {env.name}
+      {/* Environment Selection - Hidden for ARA Compliance */}
+      {!isNationalClient && (
+        <div className="bg-blue-50 border-b border-blue-100 p-4">
+          <div className="space-y-2">
+            <div className="text-sm text-gray-600 text-center">Select Environment:</div>
+            <Select
+              value={selectedEnvironmentId}
+              onValueChange={setSelectedEnvironmentId}
+            >
+              <SelectTrigger className="bg-white" data-testid="select-environment">
+                <SelectValue placeholder="Default Items" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default" data-testid="option-default-environment">
+                  Default Items
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="text-xs text-gray-500 text-center">
-            {selectedEnvironmentId === 'default' 
-              ? 'Using default item list' 
-              : `Using "${selectedEnvironment?.name}" items`}
+                {environments && environments.length > 0 && environments.map((env) => (
+                  <SelectItem key={env.id} value={env.id.toString()} data-testid={`option-environment-${env.id}`}>
+                    {env.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="text-xs text-gray-500 text-center">
+              {selectedEnvironmentId === 'default' 
+                ? 'Using default item list' 
+                : `Using "${selectedEnvironment?.name}" items`}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Item Selection - ARA Compliance Search or Regular Grid */}
       {isNationalClient ? (
