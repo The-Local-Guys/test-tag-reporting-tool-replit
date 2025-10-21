@@ -145,8 +145,8 @@ export function SiteHeader() {
               </Button>
             )}
             
-            {/* Environments link - only for technicians in testing mode */}
-            {sessionStorage.getItem('loginMode') === 'testing' && typedUser?.role === 'technician' && (
+            {/* Environments link - only for technicians */}
+            {typedUser?.role === 'technician' && (
               <Button
                 variant="ghost" 
                 size="sm"
