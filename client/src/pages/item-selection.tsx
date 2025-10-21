@@ -369,7 +369,7 @@ export default function ItemSelection() {
               >
                 <div className="flex justify-center items-center mb-2 h-12" data-testid={`icon-item-${item.type}`}>
                   {typeof item.icon === 'string' ? (
-                    <span className="text-3xl">{item.icon || "📦"}</span>
+                    <span className="text-3xl">{item.icon}</span>
                   ) : (
                     item.icon
                   )}

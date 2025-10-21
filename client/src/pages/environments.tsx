@@ -30,7 +30,7 @@ export default function Environments() {
   const [newItem, setNewItem] = useState<Item>({
     type: "",
     name: "",
-    icon: "",
+    icon: "📦",
     description: "",
   });
 
@@ -42,7 +42,10 @@ export default function Environments() {
   // Create environment mutation
   const createMutation = useMutation({
     mutationFn: async (data: { name: string; serviceType: string }) => {
-      return await apiRequest("POST", "/api/environments", { ...data, items: [] });
+      return await apiRequest("/api/environments", {
+        method: "POST",
+        body: JSON.stringify({ ...data, items: [] }),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/environments"] });
@@ -65,7 +68,10 @@ export default function Environments() {
   // Update environment mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Environment> }) => {
-      return await apiRequest("PATCH", `/api/environments/${id}`, data);
+      return await apiRequest(`/api/environments/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/environments"] });
@@ -88,7 +94,9 @@ export default function Environments() {
   // Delete environment mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest("DELETE", `/api/environments/${id}`);
+      return await apiRequest(`/api/environments/${id}`, {
+        method: "DELETE",
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/environments"] });
@@ -133,7 +141,7 @@ export default function Environments() {
   const handleCancelEdit = () => {
     setEditingEnvironmentId(null);
     setEditItems([]);
-    setNewItem({ type: "", name: "", icon: "", description: "" });
+    setNewItem({ type: "", name: "", icon: "📦", description: "" });
   };
 
   const handleAddItem = () => {
@@ -145,8 +153,8 @@ export default function Environments() {
       });
       return;
     }
-    setEditItems([...editItems, { ...newItem, icon: newItem.icon.trim() || "📦" }]);
-    setNewItem({ type: "", name: "", icon: "", description: "" });
+    setEditItems([...editItems, newItem]);
+    setNewItem({ type: "", name: "", icon: "📦", description: "" });
   };
 
   const handleRemoveItem = (index: number) => {
@@ -322,14 +330,14 @@ export default function Environments() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor={`item-icon-${env.id}`}>Icon (Optional)</Label>
+                          <Label htmlFor={`item-icon-${env.id}`}>Icon (Emoji)</Label>
                           <Input
                             id={`item-icon-${env.id}`}
                             data-testid="input-item-icon"
-                            placeholder="e.g., 🔧 or leave empty for 📦"
+                            placeholder="📦"
                             value={newItem.icon}
                             onChange={(e) => setNewItem({ ...newItem, icon: e.target.value })}
-                            maxLength={10}
+                            maxLength={2}
                           />
                         </div>
                         <div className="space-y-2">
@@ -367,7 +375,7 @@ export default function Environments() {
                               className="flex items-center justify-between border rounded-lg p-3 bg-white"
                             >
                               <div className="flex items-center gap-3">
-                                <span className="text-2xl">{item.icon || "📦"}</span>
+                                <span className="text-2xl">{item.icon}</span>
                                 <div>
                                   <div className="font-medium">{item.name}</div>
                                   <div className="text-sm text-gray-500">{item.description}</div>
