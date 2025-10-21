@@ -24,11 +24,11 @@ export default function Environments() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  const [selectedTab, setSelectedTab] = useState<"electrical" | "emergency_exit_light" | "fire_testing">("electrical");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingEnvironmentId, setEditingEnvironmentId] = useState<number | null>(null);
   const [newEnvironment, setNewEnvironment] = useState({
     name: "",
-    serviceType: "electrical" as "electrical" | "emergency_exit_light" | "fire_testing",
   });
   const [editItems, setEditItems] = useState<Item[]>([]);
   const [newItem, setNewItem] = useState({
@@ -50,7 +50,7 @@ export default function Environments() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/environments"] });
       setIsCreateDialogOpen(false);
-      setNewEnvironment({ name: "", serviceType: "electrical" });
+      setNewEnvironment({ name: "" });
       toast({
         title: "Success",
         description: "Environment created successfully",
@@ -118,7 +118,7 @@ export default function Environments() {
       });
       return;
     }
-    createMutation.mutate(newEnvironment);
+    createMutation.mutate({ ...newEnvironment, serviceType: selectedTab });
   };
 
   const handleEditEnvironment = (env: Environment) => {
@@ -231,13 +231,54 @@ export default function Environments() {
     );
   }
 
+  // Filter environments by selected tab
+  const filteredEnvironments = environments?.filter(env => env.serviceType === selectedTab) || [];
+
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Environments</h1>
-          <p className="text-gray-600 mt-1">Manage your custom item sets for different testing types</p>
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-2">Environments</h1>
+        <p className="text-gray-600">Manage your custom item sets for different testing types</p>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setSelectedTab("electrical")}
+            className={`px-6 py-2 rounded-full font-medium transition-all ${
+              selectedTab === "electrical"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+            data-testid="tab-electrical"
+          >
+            Electrical Testing
+          </button>
+          <button
+            onClick={() => setSelectedTab("emergency_exit_light")}
+            className={`px-6 py-2 rounded-full font-medium transition-all ${
+              selectedTab === "emergency_exit_light"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+            data-testid="tab-emergency"
+          >
+            Emergency Exit Light
+          </button>
+          <button
+            onClick={() => setSelectedTab("fire_testing")}
+            className={`px-6 py-2 rounded-full font-medium transition-all ${
+              selectedTab === "fire_testing"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+            data-testid="tab-fire"
+          >
+            Fire Testing
+          </button>
         </div>
+        
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-create-environment">
@@ -249,7 +290,7 @@ export default function Environments() {
             <DialogHeader>
               <DialogTitle>Create New Environment</DialogTitle>
               <DialogDescription>
-                Create a custom environment with your own set of items for testing.
+                Create a custom environment for {getServiceTypeLabel(selectedTab)}.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -264,24 +305,6 @@ export default function Environments() {
                     setNewEnvironment({ ...newEnvironment, name: e.target.value })
                   }
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="service-type">Testing Type</Label>
-                <Select
-                  value={newEnvironment.serviceType}
-                  onValueChange={(value: "electrical" | "emergency_exit_light" | "fire_testing") =>
-                    setNewEnvironment({ ...newEnvironment, serviceType: value })
-                  }
-                >
-                  <SelectTrigger data-testid="select-service-type">
-                    <SelectValue placeholder="Select testing type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="electrical">Electrical Testing</SelectItem>
-                    <SelectItem value="emergency_exit_light">Emergency Exit Light</SelectItem>
-                    <SelectItem value="fire_testing">Fire Testing</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             </div>
             <DialogFooter>
@@ -304,18 +327,18 @@ export default function Environments() {
         </Dialog>
       </div>
 
-      {!environments || environments.length === 0 ? (
+      {!filteredEnvironments || filteredEnvironments.length === 0 ? (
         <Card>
           <CardContent className="py-12">
             <div className="text-center text-gray-500">
-              <p className="text-lg mb-2">No environments yet</p>
+              <p className="text-lg mb-2">No environments for {getServiceTypeLabel(selectedTab)}</p>
               <p className="text-sm">Create your first environment to get started</p>
             </div>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-6">
-          {environments.map((env) => (
+          {filteredEnvironments.map((env) => (
             <Card key={env.id} data-testid={`card-environment-${env.id}`}>
               <CardHeader>
                 <div className="flex justify-between items-start">
