@@ -781,7 +781,7 @@ export default function ReportPreview() {
           <div className="text-gray-600">Technician: {sessionData?.session?.technicianName}</div>
           <div className="text-gray-600">Date: {formatDate(sessionData?.session?.testDate || '')}</div>
           <div className="text-gray-600">
-            Country: {sessionData?.session?.country === 'australia' ? 'Australia' : sessionData?.session?.country === 'newzealand' ? 'New Zealand' : 'National Client'}
+            Country: {sessionData?.session?.country === 'australia' ? 'Australia' : sessionData?.session?.country === 'newzealand' ? 'New Zealand' : 'ARA Compliance'}
           </div>
         </div>
       </div>

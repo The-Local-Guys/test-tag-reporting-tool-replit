@@ -120,7 +120,7 @@ export default function ItemSelection() {
     ? selectedEnvironment.items
     : defaultPredefinedItems;
 
-  // Filter national client items based on search query
+  // Filter ARA Compliance items based on search query
   const filteredNationalItems = nationalClientItems.filter(item => {
     const query = searchQuery.toLowerCase();
     return item.code.toLowerCase().includes(query) || 
@@ -137,7 +137,7 @@ export default function ItemSelection() {
 
   const handleCustomItemAdd = () => {
     if (customItemName.trim()) {
-      // Format custom items for National Client as "532 Other (custom_item_name)"
+      // Format custom items for ARA Compliance as "532 Other (custom_item_name)"
       const itemName = isNationalClient 
         ? `532 Other (${customItemName.trim()})`
         : customItemName.trim();
@@ -306,7 +306,7 @@ export default function ItemSelection() {
         </div>
       </div>
 
-      {/* Item Selection - National Client Search or Regular Grid */}
+      {/* Item Selection - ARA Compliance Search or Regular Grid */}
       {isNationalClient ? (
         <div className="p-4 pb-24">
           {/* Search Input */}
@@ -345,7 +345,7 @@ export default function ItemSelection() {
             )}
           </div>
 
-          {/* Custom Item Button for National Client */}
+          {/* Custom Item Button for ARA Compliance */}
           <button
             onClick={() => setIsCustomModalOpen(true)}
             className="w-full bg-gradient-to-br from-gray-100 to-gray-200 border-2 border-dashed border-gray-400 rounded-lg p-4 text-center hover:from-blue-50 hover:to-blue-100 hover:border-primary transition-all"

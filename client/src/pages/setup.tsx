@@ -245,7 +245,7 @@ export default function Setup() {
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="national_client" id="national_client" />
-                <Label htmlFor="national_client">National Client</Label>
+                <Label htmlFor="national_client">ARA Compliance</Label>
               </div>
             </RadioGroup>
           </div>

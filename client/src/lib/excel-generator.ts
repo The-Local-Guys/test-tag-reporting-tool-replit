@@ -237,10 +237,10 @@ export function generateExcelReport(data: ReportData): Blob {
     ['Compliance:', session.serviceType === 'emergency_exit_light' 
       ? 'This report complies with AS 2293.2:2019 emergency lighting standards.'
       : session.serviceType === 'fire_testing'
-      ? `This report complies with ${session.country === 'newzealand' ? 'NZS 4503:2005' : 'AS 1851'} fire equipment standards.` // Default to AS 1851 for Australia and National Client
+      ? `This report complies with ${session.country === 'newzealand' ? 'NZS 4503:2005' : 'AS 1851'} fire equipment standards.` // Default to AS 1851 for Australia and ARA Compliance
       : (session.country === 'newzealand' 
         ? 'This report complies with NZS 5262 electrical safety standards.'
-        : 'This report complies with AS/NZS 3760 electrical safety standards.')] // Default to AS/NZS 3760 for Australia and National Client
+        : 'This report complies with AS/NZS 3760 electrical safety standards.')] // Default to AS/NZS 3760 for Australia and ARA Compliance
   ];
   
   // Create worksheet

@@ -1967,7 +1967,7 @@ export default function AdminDashboard() {
               <SelectContent>
                 <SelectItem value="australia">Australia</SelectItem>
                 <SelectItem value="newzealand">New Zealand</SelectItem>
-                <SelectItem value="national_client">National Client</SelectItem>
+                <SelectItem value="national_client">ARA Compliance</SelectItem>
               </SelectContent>
             </Select>
           </div>
