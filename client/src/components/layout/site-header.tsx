@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { LogOut, User, Menu, X, Home, Settings, FileText, Shield, TestTube, ExternalLink } from "lucide-react";
+import { LogOut, User, Menu, X, Home, Settings, FileText, Shield, TestTube, ExternalLink, FolderTree } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMobileMenu } from "@/contexts/MobileMenuContext";
 import { useLocation } from "wouter";
@@ -41,6 +41,8 @@ export function SiteHeader() {
         return 'Failure Details';
       case '/report':
         return 'Report Preview';
+      case '/environments':
+        return 'Environments';
       default:
         if (location.startsWith('/admin')) {
           return 'Admin Dashboard';
@@ -72,6 +74,8 @@ export function SiteHeader() {
         return 'Document failure details';
       case '/report':
         return 'Review and generate reports';
+      case '/environments':
+        return 'Manage your custom item sets';
       default:
         return 'Professional Testing & Compliance';
     }
@@ -118,10 +122,25 @@ export function SiteHeader() {
               size="sm"
               onClick={() => navigate('/')} // Use conditional navigate
               className="text-white hover:bg-white/20 flex items-center gap-2"
+              data-testid="nav-testing"
             >
               <TestTube className="w-4 h-4" />
               <span>Testing</span>
             </Button>
+            
+            {/* Environments link - only in testing mode */}
+            {sessionStorage.getItem('loginMode') === 'testing' && (
+              <Button
+                variant="ghost" 
+                size="sm"
+                onClick={() => navigate('/environments')}
+                className="text-white hover:bg-white/20 flex items-center gap-2"
+                data-testid="nav-environments"
+              >
+                <FolderTree className="w-4 h-4" />
+                <span>Environments</span>
+              </Button>
+            )}
             
             {/* Show admin link for all authorized users */}
             {(typedUser?.role === 'super_admin' || typedUser?.role === 'support_center' || typedUser?.role === 'technician') && (
@@ -131,6 +150,7 @@ export function SiteHeader() {
                 size="sm"
                 onClick={() => navigate('/admin')} // Use conditional navigate
                 className="text-white hover:bg-white/20 flex items-center gap-2"
+                data-testid="nav-admin"
               >
                 <Shield className="w-4 h-4" />
                 <span>
@@ -145,6 +165,7 @@ export function SiteHeader() {
               size="sm"
               onClick={() => window.open('https://forms.monday.com/forms/761a950aa279edcb02d48257ced6ecc6?r=use1', '_blank')}
               className="text-white hover:bg-white/20 flex items-center gap-2"
+              data-testid="nav-feedback"
             >
               <ExternalLink className="w-4 h-4" />
               <span>Feedback</span>
