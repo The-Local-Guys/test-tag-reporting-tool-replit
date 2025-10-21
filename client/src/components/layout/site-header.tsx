@@ -128,20 +128,6 @@ export function SiteHeader() {
               <span>Testing</span>
             </Button>
             
-            {/* Environments link - only in testing mode */}
-            {sessionStorage.getItem('loginMode') === 'testing' && (
-              <Button
-                variant="ghost" 
-                size="sm"
-                onClick={() => navigate('/environments')}
-                className="text-white hover:bg-white/20 flex items-center gap-2"
-                data-testid="nav-environments"
-              >
-                <FolderTree className="w-4 h-4" />
-                <span>Environments</span>
-              </Button>
-            )}
-            
             {/* Show admin link for all authorized users */}
             {(typedUser?.role === 'super_admin' || typedUser?.role === 'support_center' || typedUser?.role === 'technician') && (
               // Replace Link with Button calling navigate
@@ -156,6 +142,20 @@ export function SiteHeader() {
                 <span>
                   {(typedUser?.role === 'super_admin' || typedUser?.role === 'support_center') ? 'Admin' : 'Reports'}
                 </span>
+              </Button>
+            )}
+            
+            {/* Environments link - only in testing mode */}
+            {sessionStorage.getItem('loginMode') === 'testing' && (
+              <Button
+                variant="ghost" 
+                size="sm"
+                onClick={() => navigate('/environments')}
+                className="text-white hover:bg-white/20 flex items-center gap-2"
+                data-testid="nav-environments"
+              >
+                <FolderTree className="w-4 h-4" />
+                <span>Environments</span>
               </Button>
             )}
             
