@@ -21,6 +21,7 @@ import FireTestDetails from "@/pages/fire-test-details";
 import FailureDetails from "@/pages/failure-details";
 import ReportPreview from "@/pages/report-preview";
 import AdminDashboard from "@/pages/admin-dashboard";
+import Environments from "@/pages/environments";
 
 import Login from "@/pages/login";
 import { ConditionalNavProvider } from "./contexts/ConditionalNavContext";
@@ -93,6 +94,7 @@ function Router() {
             <Route path="/fire-test" component={FireTestDetails} />
             <Route path="/failure" component={FailureDetails} />
             <Route path="/report" component={ReportPreview} />
+            <Route path="/environments" component={Environments} />
 
             <Route component={NotFound} />
           </Switch>

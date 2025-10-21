@@ -2,12 +2,15 @@ import {
   testSessions, 
   testResults,
   users,
+  environments,
   type TestSession, 
   type InsertTestSession,
   type TestResult,
   type InsertTestResult,
   type User,
-  type InsertUser
+  type InsertUser,
+  type Environment,
+  type InsertEnvironment
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte } from "drizzle-orm";
@@ -57,6 +60,13 @@ export interface IStorage {
     session: TestSession;
     results: TestResult[];
   } | undefined>;
+  
+  // Environments
+  createEnvironment(environment: InsertEnvironment): Promise<Environment>;
+  getEnvironmentsByUser(userId: number): Promise<Environment[]>;
+  getEnvironment(id: number): Promise<Environment | undefined>;
+  updateEnvironment(id: number, data: Partial<InsertEnvironment>): Promise<Environment>;
+  deleteEnvironment(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -656,6 +666,72 @@ export class DatabaseStorage implements IStorage {
     
     const results = await this.getTestResultsBySession(sessionId);
     return { session, results };
+  }
+
+  /**
+   * Creates a new environment for custom item sets
+   * Environments are account-specific and contain custom item lists per service type
+   * @param environment - Environment data with userId, name, serviceType, and items
+   * @returns Newly created environment object
+   */
+  async createEnvironment(environment: InsertEnvironment): Promise<Environment> {
+    const [env] = await db
+      .insert(environments)
+      .values(environment)
+      .returning();
+    return env;
+  }
+
+  /**
+   * Retrieves all environments for a specific user
+   * Used to show technicians their custom environment list
+   * @param userId - ID of the user whose environments to retrieve
+   * @returns Array of environments owned by the user
+   */
+  async getEnvironmentsByUser(userId: number): Promise<Environment[]> {
+    return await db
+      .select()
+      .from(environments)
+      .where(eq(environments.userId, userId))
+      .orderBy(desc(environments.createdAt));
+  }
+
+  /**
+   * Retrieves a specific environment by ID
+   * @param id - Environment ID to retrieve
+   * @returns Environment object if found, undefined otherwise
+   */
+  async getEnvironment(id: number): Promise<Environment | undefined> {
+    const [environment] = await db
+      .select()
+      .from(environments)
+      .where(eq(environments.id, id));
+    return environment;
+  }
+
+  /**
+   * Updates an existing environment
+   * @param id - Environment ID to update
+   * @param data - Partial environment data to update
+   * @returns Updated environment object
+   */
+  async updateEnvironment(id: number, data: Partial<InsertEnvironment>): Promise<Environment> {
+    const [environment] = await db
+      .update(environments)
+      .set(data)
+      .where(eq(environments.id, id))
+      .returning();
+    return environment;
+  }
+
+  /**
+   * Deletes an environment
+   * @param id - Environment ID to delete
+   */
+  async deleteEnvironment(id: number): Promise<void> {
+    await db
+      .delete(environments)
+      .where(eq(environments.id, id));
   }
 }
 

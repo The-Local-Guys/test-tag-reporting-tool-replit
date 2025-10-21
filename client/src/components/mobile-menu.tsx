@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { LogOut, User, Home, Settings, Lock, ExternalLink, TestTube, Users, FileText, ClipboardCheck } from "lucide-react";
+import { LogOut, User, Home, Settings, Lock, ExternalLink, TestTube, Users, FileText, ClipboardCheck, FolderTree } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMobileMenu } from "@/contexts/MobileMenuContext";
 import { useConditionalNav } from '@/contexts/ConditionalNavContext';
@@ -136,6 +136,21 @@ export function MobileMenu() {
                   <div className="text-sm opacity-75">
                     {hasAdminAccess ? 'Manage users & reports' : 'View your test reports'}
                 </div>
+                </div>
+              </Button>
+            )}
+
+            {/* Environments - Only show in testing mode */}
+            {isTestingMode && (
+              <Button
+                variant="ghost"
+                onClick={() => handleNavigation('/environments')}
+                className="w-full flex items-center justify-start gap-3 text-left"
+              >
+                <FolderTree className="w-5 h-5" />
+                <div>
+                  <div className="font-medium">Environments</div>
+                  <div className="text-sm opacity-75">Manage custom item sets</div>
                 </div>
               </Button>
             )}

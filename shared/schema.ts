@@ -87,12 +87,27 @@ export const testResults = pgTable("test_results", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Environments table for custom item sets per technician
+export const environments = pgTable("environments", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  name: text("name").notNull(),
+  serviceType: text("service_type").notNull(), // 'electrical', 'emergency_exit_light', or 'fire_testing'
+  items: jsonb("items").notNull().default('[]'), // Array of item objects
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertTestSessionSchema = createInsertSchema(testSessions).omit({
   id: true,
   createdAt: true,
 });
 
 export const insertTestResultSchema = createInsertSchema(testResults).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertEnvironmentSchema = createInsertSchema(environments).omit({
   id: true,
   createdAt: true,
 });
@@ -117,6 +132,8 @@ export type InsertTestSession = z.infer<typeof insertTestSessionSchema>;
 export type TestSession = typeof testSessions.$inferSelect;
 export type InsertTestResult = z.infer<typeof insertTestResultSchema>;
 export type TestResult = typeof testResults.$inferSelect;
+export type InsertEnvironment = z.infer<typeof insertEnvironmentSchema>;
+export type Environment = typeof environments.$inferSelect;
 
 // Define enum values for validation
 export const serviceTypes = ['electrical', 'emergency_exit_light', 'fire_testing'] as const;

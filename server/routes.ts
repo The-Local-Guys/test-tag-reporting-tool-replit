@@ -8,6 +8,7 @@ import {
   insertTestSessionSchema,
   insertTestResultSchema,
   insertUserSchema,
+  insertEnvironmentSchema,
   loginSchema,
   type User,
 } from "@shared/schema";
@@ -949,6 +950,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating report:", error);
       res.status(500).json({ error: "Failed to generate report" });
+    }
+  });
+
+  // Environment routes
+  // Create a new environment
+  app.post("/api/environments", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const environmentData = insertEnvironmentSchema.parse({
+        ...req.body,
+        userId, // Ensure environment is tied to the logged-in user
+      });
+
+      const environment = await storage.createEnvironment(environmentData);
+      res.json(environment);
+    } catch (error) {
+      console.error("Error creating environment:", error);
+      res.status(400).json({ error: "Failed to create environment" });
+    }
+  });
+
+  // Get all environments for the logged-in user
+  app.get("/api/environments", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const environments = await storage.getEnvironmentsByUser(userId);
+      res.json(environments);
+    } catch (error) {
+      console.error("Error fetching environments:", error);
+      res.status(500).json({ error: "Failed to fetch environments" });
+    }
+  });
+
+  // Get a specific environment
+  app.get("/api/environments/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.session.userId!;
+      const environment = await storage.getEnvironment(id);
+
+      if (!environment) {
+        return res.status(404).json({ error: "Environment not found" });
+      }
+
+      // Verify ownership
+      if (environment.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      res.json(environment);
+    } catch (error) {
+      console.error("Error fetching environment:", error);
+      res.status(500).json({ error: "Failed to fetch environment" });
+    }
+  });
+
+  // Update an environment
+  app.patch("/api/environments/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.session.userId!;
+      const environment = await storage.getEnvironment(id);
+
+      if (!environment) {
+        return res.status(404).json({ error: "Environment not found" });
+      }
+
+      // Verify ownership
+      if (environment.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Parse update data and remove userId to prevent ownership reassignment
+      const { userId: _, ...updateData } = insertEnvironmentSchema.partial().parse(req.body);
+      const updatedEnvironment = await storage.updateEnvironment(id, updateData);
+      res.json(updatedEnvironment);
+    } catch (error) {
+      console.error("Error updating environment:", error);
+      res.status(400).json({ error: "Failed to update environment" });
+    }
+  });
+
+  // Delete an environment
+  app.delete("/api/environments/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.session.userId!;
+      const environment = await storage.getEnvironment(id);
+
+      if (!environment) {
+        return res.status(404).json({ error: "Environment not found" });
+      }
+
+      // Verify ownership
+      if (environment.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      await storage.deleteEnvironment(id);
+      res.json({ success: true, message: "Environment deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting environment:", error);
+      res.status(500).json({ error: "Failed to delete environment" });
     }
   });
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Edit2, FileText, CheckCircle, Plus, RotateCcw, Trash2, Search } from 'lucide-react';
@@ -9,6 +10,8 @@ import { useSession } from '@/hooks/use-session';
 import { deleteResource } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
+import type { Environment } from '@shared/schema';
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
 import nationalClientItems from '@/data/national-client-items';
 
@@ -83,6 +86,7 @@ export default function ItemSelection() {
   const [showCancelSuccess, setShowCancelSuccess] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedEnvironmentId, setSelectedEnvironmentId] = useState<string>('default');
   const { sessionData, currentLocation, setCurrentLocation, clearSession, sessionId, isLoading: isLoadingSession } = useSession();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -101,8 +105,20 @@ export default function ItemSelection() {
   const country = sessionData?.session?.country;
   const isNationalClient = country === 'national_client';
   
-  const predefinedItems = selectedService === 'emergency_exit_light' ? emergencyItems : 
-                         selectedService === 'fire_testing' ? fireItems : electricalItems;
+  // Fetch environments for the current user filtered by service type
+  const { data: environments } = useQuery<Environment[]>({
+    queryKey: ["/api/environments"],
+    select: (data) => data.filter(env => env.serviceType === selectedService),
+  });
+
+  // Get items based on selected environment or default predefined items
+  const defaultPredefinedItems = selectedService === 'emergency_exit_light' ? emergencyItems : 
+                                  selectedService === 'fire_testing' ? fireItems : electricalItems;
+  
+  const selectedEnvironment = environments?.find(env => env.id.toString() === selectedEnvironmentId);
+  const predefinedItems = selectedEnvironment && Array.isArray(selectedEnvironment.items) && selectedEnvironment.items.length > 0
+    ? selectedEnvironment.items
+    : defaultPredefinedItems;
 
   // Filter national client items based on search query
   const filteredNationalItems = nationalClientItems.filter(item => {
@@ -260,15 +276,32 @@ export default function ItemSelection() {
         </div>
       </div>
 
-      {/* Current Location Display */}
+      {/* Environment Selection */}
       <div className="bg-blue-50 border-b border-blue-100 p-4">
-        <div className="text-center">
-          <div className="text-sm text-gray-600">Current Location:</div>
-          <div className="font-semibold text-gray-800">
-            {currentLocation || 'Set when testing items'}
-          </div>
-          <div className="text-xs text-gray-500 mt-1">
-            Location is set in the test details for each item
+        <div className="space-y-2">
+          <div className="text-sm text-gray-600 text-center">Select Environment:</div>
+          <Select
+            value={selectedEnvironmentId}
+            onValueChange={setSelectedEnvironmentId}
+          >
+            <SelectTrigger className="bg-white" data-testid="select-environment">
+              <SelectValue placeholder="Default Items" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="default" data-testid="option-default-environment">
+                Default Items
+              </SelectItem>
+              {environments && environments.length > 0 && environments.map((env) => (
+                <SelectItem key={env.id} value={env.id.toString()} data-testid={`option-environment-${env.id}`}>
+                  {env.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="text-xs text-gray-500 text-center">
+            {selectedEnvironmentId === 'default' 
+              ? 'Using default item list' 
+              : `Using "${selectedEnvironment?.name}" items`}
           </div>
         </div>
       </div>
