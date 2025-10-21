@@ -25,7 +25,7 @@ export default function Login() {
       await login({
         username: formData.username,
         password: formData.password,
-        loginMode: 'admin',
+        loginMode: 'testing',
       });
     } catch (error) {
       // Error is handled by the hook
