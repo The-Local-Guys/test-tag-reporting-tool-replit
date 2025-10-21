@@ -42,10 +42,7 @@ export default function Environments() {
   // Create environment mutation
   const createMutation = useMutation({
     mutationFn: async (data: { name: string; serviceType: string }) => {
-      return await apiRequest("/api/environments", {
-        method: "POST",
-        body: JSON.stringify({ ...data, items: [] }),
-      });
+      return await apiRequest("POST", "/api/environments", { ...data, items: [] });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/environments"] });
@@ -68,10 +65,7 @@ export default function Environments() {
   // Update environment mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Environment> }) => {
-      return await apiRequest(`/api/environments/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify(data),
-      });
+      return await apiRequest("PATCH", `/api/environments/${id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/environments"] });
@@ -94,9 +88,7 @@ export default function Environments() {
   // Delete environment mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest(`/api/environments/${id}`, {
-        method: "DELETE",
-      });
+      return await apiRequest("DELETE", `/api/environments/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/environments"] });
