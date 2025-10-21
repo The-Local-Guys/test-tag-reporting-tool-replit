@@ -26,6 +26,8 @@ export default function Environments() {
   const [, setLocation] = useLocation();
   const [selectedTab, setSelectedTab] = useState<"electrical" | "emergency_exit_light" | "fire_testing">("electrical");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [environmentToDelete, setEnvironmentToDelete] = useState<{ id: number; name: string } | null>(null);
   const [editingEnvironmentId, setEditingEnvironmentId] = useState<number | null>(null);
   const [newEnvironment, setNewEnvironment] = useState({
     name: "",
@@ -361,9 +363,8 @@ export default function Environments() {
                         variant="destructive"
                         size="sm"
                         onClick={() => {
-                          if (confirm(`Delete environment "${env.name}"?`)) {
-                            deleteMutation.mutate(env.id);
-                          }
+                          setEnvironmentToDelete({ id: env.id, name: env.name });
+                          setIsDeleteDialogOpen(true);
                         }}
                         data-testid={`button-delete-${env.id}`}
                       >
@@ -495,6 +496,44 @@ export default function Environments() {
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Environment</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{environmentToDelete?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                setEnvironmentToDelete(null);
+              }}
+              data-testid="button-cancel-delete"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (environmentToDelete) {
+                  deleteMutation.mutate(environmentToDelete.id);
+                  setIsDeleteDialogOpen(false);
+                  setEnvironmentToDelete(null);
+                }
+              }}
+              disabled={deleteMutation.isPending}
+              data-testid="button-confirm-delete"
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
