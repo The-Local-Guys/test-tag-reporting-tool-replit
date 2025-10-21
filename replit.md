@@ -26,7 +26,7 @@ Preferred communication style: Simple, everyday language.
 ### Database
 - **Provider**: Neon Database (PostgreSQL)
 - **Schema Management**: Drizzle Kit
-- **Core Entities**: Users, sessions, test_sessions, test_results
+- **Core Entities**: Users, sessions, test_sessions, test_results, environments
 
 ### Key Features
 - **Authentication**: Role-based access control (super_admin, support_center, technician), session-based.
@@ -38,6 +38,7 @@ Preferred communication style: Simple, everyday language.
 - **Mobile Navigation**: Persistent site-wide header with mobile-responsive hamburger menu, accessible from all pages with global sign out functionality.
 - **Session Cancellation**: Comprehensive cancel report functionality available on both item-selection and report-preview pages with database deletion, ownership verification, and proper cleanup of all associated test results.
 - **Single Page Application (SPA)**: True client-side routing with no full page reloads, custom loading screens with 500ms minimum display time, and seamless navigation between testing and admin modes. Uses wouter for routing with custom SPA navigation hooks for consistent loading states.
+- **Custom Environments**: Technicians can create and manage custom item sets per testing type. Each environment is account-specific (only visible to creator), filtered by service type (electrical, emergency exit light, fire testing). Environment dropdown in item selection page allows switching between default items and custom environments. Includes full CRUD operations with ownership verification and security against ownership reassignment.
 
 ## External Dependencies
 
