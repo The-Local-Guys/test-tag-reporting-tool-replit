@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Environment } from "@shared/schema";
@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Trash2, Edit, Plus, Save, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
 
 type Item = {
   type: string;
@@ -20,6 +22,8 @@ type Item = {
 
 export default function Environments() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingEnvironmentId, setEditingEnvironmentId] = useState<number | null>(null);
   const [newEnvironment, setNewEnvironment] = useState({
@@ -32,7 +36,7 @@ export default function Environments() {
     name: "",
     description: "",
   });
-
+  
   // Fetch environments
   const { data: environments, isLoading } = useQuery<Environment[]>({
     queryKey: ["/api/environments"],
@@ -198,6 +202,26 @@ export default function Environments() {
         return serviceType;
     }
   };
+  
+  // Type guard for user object
+  const typedUser = user as { fullName?: string; role?: string } | undefined;
+  
+  // Redirect non-technician users
+  useEffect(() => {
+    if (user && typedUser?.role !== 'technician') {
+      toast({
+        title: "Access Denied",
+        description: "Environments are only available for technician accounts",
+        variant: "destructive",
+      });
+      setLocation('/');
+    }
+  }, [user, typedUser?.role, setLocation, toast]);
+  
+  // Don't render anything if not a technician
+  if (!user || typedUser?.role !== 'technician') {
+    return null;
+  }
 
   if (isLoading) {
     return (
