@@ -27,10 +27,9 @@ export default function Environments() {
     serviceType: "electrical" as "electrical" | "emergency_exit_light" | "fire_testing",
   });
   const [editItems, setEditItems] = useState<Item[]>([]);
-  const [newItem, setNewItem] = useState<Item>({
+  const [newItem, setNewItem] = useState({
     type: "",
     name: "",
-    icon: "",
     description: "",
   });
 
@@ -133,10 +132,10 @@ export default function Environments() {
   const handleCancelEdit = () => {
     setEditingEnvironmentId(null);
     setEditItems([]);
-    setNewItem({ type: "", name: "", icon: "", description: "" });
+    setNewItem({ type: "", name: "", description: "" });
   };
 
-  const handleAddItem = () => {
+  const handleAddItem = async () => {
     if (!newItem.name.trim() || !newItem.type.trim()) {
       toast({
         title: "Error",
@@ -145,12 +144,46 @@ export default function Environments() {
       });
       return;
     }
-    setEditItems([...editItems, { ...newItem, icon: newItem.icon.trim() || "📦" }]);
-    setNewItem({ type: "", name: "", icon: "", description: "" });
+    
+    if (editingEnvironmentId === null) return;
+    
+    const newItemWithIcon = { ...newItem, icon: "📦" };
+    const updatedItems = [...editItems, newItemWithIcon];
+    
+    // Update local state
+    setEditItems(updatedItems);
+    setNewItem({ type: "", name: "", description: "" });
+    
+    // Auto-save to backend
+    try {
+      await updateMutation.mutateAsync({
+        id: editingEnvironmentId,
+        data: { items: updatedItems },
+      });
+    } catch (error) {
+      // Rollback on error
+      setEditItems(editItems);
+    }
   };
 
-  const handleRemoveItem = (index: number) => {
-    setEditItems(editItems.filter((_, i) => i !== index));
+  const handleRemoveItem = async (index: number) => {
+    if (editingEnvironmentId === null) return;
+    
+    const updatedItems = editItems.filter((_, i) => i !== index);
+    
+    // Update local state
+    setEditItems(updatedItems);
+    
+    // Auto-save to backend
+    try {
+      await updateMutation.mutateAsync({
+        id: editingEnvironmentId,
+        data: { items: updatedItems },
+      });
+    } catch (error) {
+      // Rollback on error
+      setEditItems(editItems);
+    }
   };
 
   const getServiceTypeLabel = (serviceType: string) => {
@@ -298,7 +331,7 @@ export default function Environments() {
                   <div className="space-y-4">
                     <div className="border rounded-lg p-4 bg-gray-50">
                       <h4 className="font-semibold mb-3">Add New Item</h4>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-3 gap-3">
                         <div className="space-y-2">
                           <Label htmlFor={`item-name-${env.id}`}>Item Name</Label>
                           <Input
@@ -322,17 +355,6 @@ export default function Environments() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor={`item-icon-${env.id}`}>Icon (Optional)</Label>
-                          <Input
-                            id={`item-icon-${env.id}`}
-                            data-testid="input-item-icon"
-                            placeholder="e.g., 🔧 or leave empty for 📦"
-                            value={newItem.icon}
-                            onChange={(e) => setNewItem({ ...newItem, icon: e.target.value })}
-                            maxLength={10}
-                          />
-                        </div>
-                        <div className="space-y-2">
                           <Label htmlFor={`item-description-${env.id}`}>Description</Label>
                           <Input
                             id={`item-description-${env.id}`}
@@ -348,14 +370,25 @@ export default function Environments() {
                         size="sm"
                         className="mt-3"
                         data-testid="button-add-item"
+                        disabled={updateMutation.isPending}
                       >
                         <Plus className="w-4 h-4 mr-1" />
-                        Add Item
+                        {updateMutation.isPending ? "Adding..." : "Add Item"}
                       </Button>
                     </div>
 
                     <div>
-                      <h4 className="font-semibold mb-3">Items ({editItems.length})</h4>
+                      <div className="flex justify-between items-center mb-3">
+                        <h4 className="font-semibold">Items ({editItems.length})</h4>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleCancelEdit}
+                          data-testid="button-done-edit"
+                        >
+                          Done
+                        </Button>
+                      </div>
                       {editItems.length === 0 ? (
                         <p className="text-gray-500 text-sm">No items added yet</p>
                       ) : (
@@ -378,6 +411,7 @@ export default function Environments() {
                                 size="sm"
                                 onClick={() => handleRemoveItem(index)}
                                 data-testid={`button-remove-item-${index}`}
+                                disabled={updateMutation.isPending}
                               >
                                 <Trash2 className="w-4 h-4 text-red-500" />
                               </Button>
@@ -385,25 +419,6 @@ export default function Environments() {
                           ))}
                         </div>
                       )}
-                    </div>
-
-                    <div className="flex gap-2 pt-4 border-t">
-                      <Button
-                        onClick={() => handleSaveEnvironment(env)}
-                        disabled={updateMutation.isPending}
-                        data-testid="button-save-environment"
-                      >
-                        <Save className="w-4 h-4 mr-2" />
-                        {updateMutation.isPending ? "Saving..." : "Save Environment"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={handleCancelEdit}
-                        data-testid="button-cancel-edit"
-                      >
-                        <X className="w-4 h-4 mr-2" />
-                        Cancel
-                      </Button>
                     </div>
                   </div>
                 ) : (
