@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { LogOut, User, Home, Settings, Lock, ExternalLink, TestTube, Users, FileText, ClipboardCheck, FolderTree } from "lucide-react";
+import { LogOut, User, Home, Settings, Lock, ExternalLink, TestTube, Users, FileText, ClipboardCheck, FolderTree, FileSpreadsheet } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMobileMenu } from "@/contexts/MobileMenuContext";
 import { useConditionalNav } from '@/contexts/ConditionalNavContext';
@@ -114,7 +114,7 @@ export function MobileMenu() {
             <Button
               variant="ghost"
               onClick={switchToTestingMode}
-              className={`w-full flex items-center justify-start gap-3 text-left ${isTestingMode && location !== '/environments' ? 'bg-blue-50 text-blue-700' : ''}`}
+              className={`w-full flex items-center justify-start gap-3 text-left ${isTestingMode && location !== '/environments' && location !== '/form-types' ? 'bg-blue-50 text-blue-700' : ''}`}
             >
               <TestTube className="w-5 h-5" />
               <div>
@@ -128,7 +128,7 @@ export function MobileMenu() {
               <Button
                 variant="ghost"
                 onClick={switchToAdminMode}
-                className={`w-full flex items-center justify-start gap-3 text-left ${isAdminMode && location !== '/environments' ? 'bg-blue-50 text-blue-700' : ''}`}
+                className={`w-full flex items-center justify-start gap-3 text-left ${isAdminMode && location !== '/environments' && location !== '/form-types' ? 'bg-blue-50 text-blue-700' : ''}`}
               >
                 <Settings className="w-5 h-5" />
                 <div>
@@ -157,7 +157,20 @@ export function MobileMenu() {
               </Button>
             )}
 
-
+            {/* Form Types - Only show for super_admin and support_center */}
+            {hasAdminAccess && (
+              <Button
+                variant="ghost"
+                onClick={() => handleNavigation('/form-types')}
+                className={`w-full flex items-center justify-start gap-3 text-left ${location === '/form-types' ? 'bg-blue-50 text-blue-700' : ''}`}
+              >
+                <FileSpreadsheet className="w-5 h-5" />
+                <div>
+                  <div className="font-medium">Form Types</div>
+                  <div className="text-sm opacity-75">Manage custom testing forms</div>
+                </div>
+              </Button>
+            )}
 
             {/* Admin Mode Info */}
             {isAdminMode && hasAdminAccess && (
