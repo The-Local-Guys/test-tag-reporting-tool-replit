@@ -3,6 +3,8 @@ import {
   testResults,
   users,
   environments,
+  customFormTypes,
+  customFormItems,
   type TestSession, 
   type InsertTestSession,
   type TestResult,
@@ -10,7 +12,11 @@ import {
   type User,
   type InsertUser,
   type Environment,
-  type InsertEnvironment
+  type InsertEnvironment,
+  type CustomFormType,
+  type InsertCustomFormType,
+  type CustomFormItem,
+  type InsertCustomFormItem
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte } from "drizzle-orm";
@@ -67,6 +73,19 @@ export interface IStorage {
   getEnvironment(id: number): Promise<Environment | undefined>;
   updateEnvironment(id: number, data: Partial<InsertEnvironment>): Promise<Environment>;
   deleteEnvironment(id: number): Promise<void>;
+  
+  // Custom Form Types
+  createCustomFormType(formType: InsertCustomFormType): Promise<CustomFormType>;
+  getAllCustomFormTypes(): Promise<CustomFormType[]>;
+  getCustomFormTypesByService(serviceType: string): Promise<CustomFormType[]>;
+  getCustomFormType(id: number): Promise<CustomFormType | undefined>;
+  updateCustomFormType(id: number, data: Partial<InsertCustomFormType>): Promise<CustomFormType>;
+  deleteCustomFormType(id: number): Promise<void>;
+  
+  // Custom Form Items
+  createCustomFormItems(items: InsertCustomFormItem[]): Promise<CustomFormItem[]>;
+  getCustomFormItems(formTypeId: number): Promise<CustomFormItem[]>;
+  deleteCustomFormItems(formTypeId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -732,6 +751,122 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(environments)
       .where(eq(environments.id, id));
+  }
+
+  /**
+   * Creates a new custom form type
+   * @param formType - Form type data with name, serviceType, and createdBy
+   * @returns Newly created custom form type object
+   */
+  async createCustomFormType(formType: InsertCustomFormType): Promise<CustomFormType> {
+    const [type] = await db
+      .insert(customFormTypes)
+      .values(formType)
+      .returning();
+    return type;
+  }
+
+  /**
+   * Retrieves all custom form types
+   * @returns Array of all custom form types
+   */
+  async getAllCustomFormTypes(): Promise<CustomFormType[]> {
+    return await db
+      .select()
+      .from(customFormTypes)
+      .where(eq(customFormTypes.isActive, true))
+      .orderBy(desc(customFormTypes.createdAt));
+  }
+
+  /**
+   * Retrieves custom form types by service type
+   * @param serviceType - Service type to filter by
+   * @returns Array of custom form types for the specified service
+   */
+  async getCustomFormTypesByService(serviceType: string): Promise<CustomFormType[]> {
+    return await db
+      .select()
+      .from(customFormTypes)
+      .where(and(
+        eq(customFormTypes.serviceType, serviceType),
+        eq(customFormTypes.isActive, true)
+      ))
+      .orderBy(customFormTypes.name);
+  }
+
+  /**
+   * Retrieves a specific custom form type by ID
+   * @param id - Form type ID to retrieve
+   * @returns Custom form type object if found, undefined otherwise
+   */
+  async getCustomFormType(id: number): Promise<CustomFormType | undefined> {
+    const [formType] = await db
+      .select()
+      .from(customFormTypes)
+      .where(eq(customFormTypes.id, id));
+    return formType;
+  }
+
+  /**
+   * Updates an existing custom form type
+   * @param id - Form type ID to update
+   * @param data - Partial form type data to update
+   * @returns Updated custom form type object
+   */
+  async updateCustomFormType(id: number, data: Partial<InsertCustomFormType>): Promise<CustomFormType> {
+    const [formType] = await db
+      .update(customFormTypes)
+      .set(data)
+      .where(eq(customFormTypes.id, id))
+      .returning();
+    return formType;
+  }
+
+  /**
+   * Deletes a custom form type (cascade deletes items)
+   * @param id - Form type ID to delete
+   */
+  async deleteCustomFormType(id: number): Promise<void> {
+    await db
+      .delete(customFormTypes)
+      .where(eq(customFormTypes.id, id));
+  }
+
+  /**
+   * Creates multiple custom form items
+   * @param items - Array of custom form items to create
+   * @returns Array of newly created custom form items
+   */
+  async createCustomFormItems(items: InsertCustomFormItem[]): Promise<CustomFormItem[]> {
+    if (items.length === 0) return [];
+    const createdItems = await db
+      .insert(customFormItems)
+      .values(items)
+      .returning();
+    return createdItems;
+  }
+
+  /**
+   * Retrieves all items for a specific custom form type
+   * @param formTypeId - Form type ID to get items for
+   * @returns Array of custom form items
+   */
+  async getCustomFormItems(formTypeId: number): Promise<CustomFormItem[]> {
+    return await db
+      .select()
+      .from(customFormItems)
+      .where(eq(customFormItems.formTypeId, formTypeId))
+      .orderBy(customFormItems.code);
+  }
+
+  /**
+   * Deletes all items for a specific custom form type
+   * @param formTypeId - Form type ID whose items to delete
+   */
+  async deleteCustomFormItems(formTypeId: number): Promise<void> {
+    await db
+      .delete(customFormItems)
+      .where(eq(customFormItems.formTypeId, formTypeId));
   }
 }
 

@@ -97,6 +97,25 @@ export const environments = pgTable("environments", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Custom form types table for admin-created dynamic forms
+export const customFormTypes = pgTable("custom_form_types", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(), // Display name in setup page
+  serviceType: text("service_type").notNull(), // 'electrical', 'emergency_exit_light', or 'fire_testing'
+  createdBy: integer("created_by").notNull().references(() => users.id),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Custom form items table for items in each custom form
+export const customFormItems = pgTable("custom_form_items", {
+  id: serial("id").primaryKey(),
+  formTypeId: integer("form_type_id").notNull().references(() => customFormTypes.id, { onDelete: 'cascade' }),
+  code: text("code").notNull(), // Item code (e.g., "1122")
+  itemName: text("item_name").notNull(), // Item name (e.g., "3D Printer")
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertTestSessionSchema = createInsertSchema(testSessions).omit({
   id: true,
   createdAt: true,
@@ -108,6 +127,16 @@ export const insertTestResultSchema = createInsertSchema(testResults).omit({
 });
 
 export const insertEnvironmentSchema = createInsertSchema(environments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCustomFormTypeSchema = createInsertSchema(customFormTypes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCustomFormItemSchema = createInsertSchema(customFormItems).omit({
   id: true,
   createdAt: true,
 });
@@ -134,6 +163,10 @@ export type InsertTestResult = z.infer<typeof insertTestResultSchema>;
 export type TestResult = typeof testResults.$inferSelect;
 export type InsertEnvironment = z.infer<typeof insertEnvironmentSchema>;
 export type Environment = typeof environments.$inferSelect;
+export type InsertCustomFormType = z.infer<typeof insertCustomFormTypeSchema>;
+export type CustomFormType = typeof customFormTypes.$inferSelect;
+export type InsertCustomFormItem = z.infer<typeof insertCustomFormItemSchema>;
+export type CustomFormItem = typeof customFormItems.$inferSelect;
 
 // Define enum values for validation
 export const serviceTypes = ['electrical', 'emergency_exit_light', 'fire_testing'] as const;
