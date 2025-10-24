@@ -101,16 +101,7 @@ export const environments = pgTable("environments", {
 export const customFormTypes = pgTable("custom_form_types", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(), // Display name in setup page
-  createdBy: integer("created_by").notNull().references(() => users.id),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Custom form items table for items in each custom form
-export const customFormItems = pgTable("custom_form_items", {
-  id: serial("id").primaryKey(),
-  formTypeId: integer("form_type_id").notNull().references(() => customFormTypes.id, { onDelete: 'cascade' }),
-  code: text("code").notNull(), // Item code (e.g., "1122")
-  itemName: text("item_name").notNull(), // Item name (e.g., "3D Printer")
+  csvData: text("csv_data").notNull(), // CSV data containing code,itemName pairs
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -130,11 +121,6 @@ export const insertEnvironmentSchema = createInsertSchema(environments).omit({
 });
 
 export const insertCustomFormTypeSchema = createInsertSchema(customFormTypes).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertCustomFormItemSchema = createInsertSchema(customFormItems).omit({
   id: true,
   createdAt: true,
 });
@@ -163,8 +149,6 @@ export type InsertEnvironment = z.infer<typeof insertEnvironmentSchema>;
 export type Environment = typeof environments.$inferSelect;
 export type InsertCustomFormType = z.infer<typeof insertCustomFormTypeSchema>;
 export type CustomFormType = typeof customFormTypes.$inferSelect;
-export type InsertCustomFormItem = z.infer<typeof insertCustomFormItemSchema>;
-export type CustomFormItem = typeof customFormItems.$inferSelect;
 
 // Define enum values for validation
 export const serviceTypes = ['electrical', 'emergency_exit_light', 'fire_testing'] as const;
