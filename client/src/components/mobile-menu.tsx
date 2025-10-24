@@ -5,12 +5,14 @@ import { LogOut, User, Home, Settings, Lock, ExternalLink, TestTube, Users, File
 import { useAuth } from "@/hooks/useAuth";
 import { useMobileMenu } from "@/contexts/MobileMenuContext";
 import { useConditionalNav } from '@/contexts/ConditionalNavContext';
+import { useLocation } from 'wouter';
 
 export function MobileMenu() {
   const { user, logout, isLoggingOut, hasUnsavedResults } = useAuth();
   const { isMobileMenuOpen, closeMobileMenu } = useMobileMenu();
   const { navigate } = useConditionalNav();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [location] = useLocation();
   
   // Type guard for user object
   const typedUser = user as { fullName?: string; role?: string } | undefined;
@@ -145,7 +147,7 @@ export function MobileMenu() {
               <Button
                 variant="ghost"
                 onClick={() => handleNavigation('/environments')}
-                className="w-full flex items-center justify-start gap-3 text-left"
+                className={`w-full flex items-center justify-start gap-3 text-left ${location === '/environments' ? 'bg-blue-50 text-blue-700' : ''}`}
               >
                 <FolderTree className="w-5 h-5" />
                 <div>
