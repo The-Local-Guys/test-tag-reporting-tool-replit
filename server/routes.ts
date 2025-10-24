@@ -9,6 +9,8 @@ import {
   insertTestResultSchema,
   insertUserSchema,
   insertEnvironmentSchema,
+  insertCustomFormTypeSchema,
+  insertCustomFormItemSchema,
   loginSchema,
   type User,
 } from "@shared/schema";
@@ -1053,6 +1055,157 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting environment:", error);
       res.status(500).json({ error: "Failed to delete environment" });
+    }
+  });
+
+  // Custom Form Types routes (Admin only)
+  
+  // Create a custom form type with CSV data
+  app.post("/api/custom-forms", requireAdmin, async (req, res) => {
+    try {
+      const { name, serviceType, csvData } = req.body;
+      const userId = req.session.userId!;
+
+      if (!name || !serviceType || !csvData) {
+        return res.status(400).json({ error: "Name, service type, and CSV data are required" });
+      }
+
+      // Parse CSV data - expects format: code,itemName
+      const lines = csvData.trim().split('\n');
+      const items: { code: string; itemName: string }[] = [];
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        const parts = line.split(',').map(part => part.trim());
+        if (parts.length < 2) {
+          return res.status(400).json({ 
+            error: `Invalid CSV format at line ${i + 1}. Expected format: code,itemName` 
+          });
+        }
+        
+        items.push({
+          code: parts[0],
+          itemName: parts.slice(1).join(',') // Handle item names with commas
+        });
+      }
+
+      if (items.length === 0) {
+        return res.status(400).json({ error: "CSV data must contain at least one item" });
+      }
+
+      // Create the form type
+      const formType = await storage.createCustomFormType({
+        name,
+        serviceType,
+        createdBy: userId,
+        isActive: true
+      });
+
+      // Create all items
+      const formItems = await storage.createCustomFormItems(
+        items.map(item => ({
+          formTypeId: formType.id,
+          code: item.code,
+          itemName: item.itemName
+        }))
+      );
+
+      res.json({ formType, itemsCount: formItems.length });
+    } catch (error) {
+      console.error("Error creating custom form:", error);
+      res.status(500).json({ error: "Failed to create custom form" });
+    }
+  });
+
+  // Get all custom form types
+  app.get("/api/custom-forms", requireAuth, async (req, res) => {
+    try {
+      const { serviceType } = req.query;
+      
+      let formTypes;
+      if (serviceType && typeof serviceType === 'string') {
+        formTypes = await storage.getCustomFormTypesByService(serviceType);
+      } else {
+        formTypes = await storage.getAllCustomFormTypes();
+      }
+      
+      res.json(formTypes);
+    } catch (error) {
+      console.error("Error fetching custom forms:", error);
+      res.status(500).json({ error: "Failed to fetch custom forms" });
+    }
+  });
+
+  // Get a specific custom form type with its items
+  app.get("/api/custom-forms/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const formType = await storage.getCustomFormType(id);
+      
+      if (!formType) {
+        return res.status(404).json({ error: "Form type not found" });
+      }
+      
+      const items = await storage.getCustomFormItems(id);
+      res.json({ ...formType, items });
+    } catch (error) {
+      console.error("Error fetching custom form:", error);
+      res.status(500).json({ error: "Failed to fetch custom form" });
+    }
+  });
+
+  // Get items for a custom form type
+  app.get("/api/custom-forms/:id/items", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const items = await storage.getCustomFormItems(id);
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching form items:", error);
+      res.status(500).json({ error: "Failed to fetch form items" });
+    }
+  });
+
+  // Update a custom form type
+  app.patch("/api/custom-forms/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { name, isActive } = req.body;
+      
+      const formType = await storage.getCustomFormType(id);
+      if (!formType) {
+        return res.status(404).json({ error: "Form type not found" });
+      }
+      
+      const updateData: any = {};
+      if (name !== undefined) updateData.name = name;
+      if (isActive !== undefined) updateData.isActive = isActive;
+      
+      const updatedFormType = await storage.updateCustomFormType(id, updateData);
+      res.json(updatedFormType);
+    } catch (error) {
+      console.error("Error updating custom form:", error);
+      res.status(500).json({ error: "Failed to update custom form" });
+    }
+  });
+
+  // Delete a custom form type (cascades to items)
+  app.delete("/api/custom-forms/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const formType = await storage.getCustomFormType(id);
+      
+      if (!formType) {
+        return res.status(404).json({ error: "Form type not found" });
+      }
+      
+      await storage.deleteCustomFormType(id);
+      res.json({ success: true, message: "Form type deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting custom form:", error);
+      res.status(500).json({ error: "Failed to delete custom form" });
     }
   });
 
