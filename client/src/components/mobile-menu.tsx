@@ -140,8 +140,8 @@ export function MobileMenu() {
               </Button>
             )}
 
-            {/* Environments - Only show in testing mode */}
-            {isTestingMode && (
+            {/* Environments - Only show for technicians */}
+            {hasTechnicianAccess && (
               <Button
                 variant="ghost"
                 onClick={() => handleNavigation('/environments')}
