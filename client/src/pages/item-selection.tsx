@@ -11,7 +11,7 @@ import { deleteResource } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
-import type { Environment } from '@shared/schema';
+import type { Environment, CustomFormItem } from '@shared/schema';
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
 import nationalClientItems from '@/data/national-client-items';
 
@@ -105,6 +105,22 @@ export default function ItemSelection() {
   const country = sessionData?.session?.country;
   const isNationalClient = country === 'national_client';
   
+  // Check if country is a custom form type (format: "custom_123")
+  const isCustomFormType = country?.startsWith('custom_');
+  const customFormTypeId = isCustomFormType ? parseInt(country.replace('custom_', '')) : null;
+  
+  // Fetch custom form items if custom form type is selected
+  const { data: customFormItems } = useQuery<CustomFormItem[]>({
+    queryKey: ['/api/custom-forms', customFormTypeId, 'items'],
+    queryFn: async () => {
+      if (!customFormTypeId) return [];
+      const response = await fetch(`/api/custom-forms/${customFormTypeId}/items`);
+      if (!response.ok) throw new Error('Failed to fetch custom form items');
+      return response.json();
+    },
+    enabled: !!customFormTypeId,
+  });
+  
   // Fetch environments for the current user filtered by service type
   const { data: environments } = useQuery<Environment[]>({
     queryKey: ["/api/environments"],
@@ -126,6 +142,13 @@ export default function ItemSelection() {
     return item.code.toLowerCase().includes(query) || 
            item.name.toLowerCase().includes(query);
   });
+  
+  // Filter custom form items based on search query
+  const filteredCustomFormItems = customFormItems?.filter(item => {
+    const query = searchQuery.toLowerCase();
+    return item.code.toLowerCase().includes(query) || 
+           item.itemName.toLowerCase().includes(query);
+  }) || [];
 
   const handleItemSelect = (itemType: string, itemName: string) => {
     // Route to different test pages based on service type
@@ -137,8 +160,8 @@ export default function ItemSelection() {
 
   const handleCustomItemAdd = () => {
     if (customItemName.trim()) {
-      // Format custom items for ARA Compliance as "532 Other (custom_item_name)"
-      const itemName = isNationalClient 
+      // Format custom items for ARA Compliance and custom forms as "532 Other (custom_item_name)"
+      const itemName = (isNationalClient || isCustomFormType)
         ? `532 Other (${customItemName.trim()})`
         : customItemName.trim();
       
@@ -276,8 +299,8 @@ export default function ItemSelection() {
         </div>
       </div>
 
-      {/* Environment Selection - Hidden for ARA Compliance */}
-      {!isNationalClient && (
+      {/* Environment Selection - Hidden for ARA Compliance and Custom Forms */}
+      {!isNationalClient && !isCustomFormType && (
         <div className="bg-blue-50 border-b border-blue-100 p-4">
           <div className="space-y-2">
             <div className="text-sm text-gray-600 text-center">Select Environment:</div>
@@ -308,8 +331,8 @@ export default function ItemSelection() {
         </div>
       )}
 
-      {/* Item Selection - ARA Compliance Search or Regular Grid */}
-      {isNationalClient ? (
+      {/* Item Selection - ARA Compliance/Custom Form Search or Regular Grid */}
+      {isNationalClient || isCustomFormType ? (
         <div className="p-4 pb-24">
           {/* Search Input */}
           <div className="mb-4">
@@ -327,7 +350,7 @@ export default function ItemSelection() {
 
           {/* Search Results */}
           <div className="space-y-2 max-h-[40vh] overflow-y-auto mb-4">
-            {filteredNationalItems.length > 0 ? (
+            {isNationalClient && filteredNationalItems.length > 0 ? (
               filteredNationalItems.slice(0, 50).map((item) => (
                 <button
                   key={item.code}
@@ -340,6 +363,19 @@ export default function ItemSelection() {
                   </div>
                 </button>
               ))
+            ) : isCustomFormType && filteredCustomFormItems.length > 0 ? (
+              filteredCustomFormItems.map((item) => (
+                <button
+                  key={`${item.code}-${item.itemName}`}
+                  onClick={() => handleItemSelect('custom_form', `${item.code} - ${item.itemName}`)}
+                  className="w-full bg-white border border-gray-200 rounded-lg p-3 text-left hover:border-primary hover:bg-blue-50 transition-all"
+                  data-testid={`button-custom-form-item-${item.code}`}
+                >
+                  <div className="font-medium text-gray-800">
+                    {item.code} - {item.itemName}
+                  </div>
+                </button>
+              ))
             ) : (
               <div className="text-center py-8 text-gray-500">
                 {searchQuery ? 'No items found' : 'Start typing to search...'}
@@ -347,7 +383,7 @@ export default function ItemSelection() {
             )}
           </div>
 
-          {/* Custom Item Button for ARA Compliance */}
+          {/* Custom Item Button for ARA Compliance and Custom Forms */}
           <button
             onClick={() => setIsCustomModalOpen(true)}
             className="w-full bg-gradient-to-br from-gray-100 to-gray-200 border-2 border-dashed border-gray-400 rounded-lg p-4 text-center hover:from-blue-50 hover:to-blue-100 hover:border-primary transition-all"

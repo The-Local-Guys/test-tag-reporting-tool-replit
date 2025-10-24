@@ -24,6 +24,7 @@ import AdminDashboard from "@/pages/admin-dashboard";
 import Environments from "@/pages/environments";
 
 import Login from "@/pages/login";
+import FormTypes from "@/pages/form-types";
 import { ConditionalNavProvider } from "./contexts/ConditionalNavContext";
 
 function Router() {
@@ -95,6 +96,7 @@ function Router() {
             <Route path="/failure" component={FailureDetails} />
             <Route path="/report" component={ReportPreview} />
             <Route path="/environments" component={Environments} />
+            <Route path="/form-types" component={FormTypes} />
 
             <Route component={NotFound} />
           </Switch>

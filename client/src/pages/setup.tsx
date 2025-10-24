@@ -15,7 +15,8 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useSession } from '@/hooks/use-session';
 import { useAuth } from '@/hooks/useAuth';
 import { useSpaNavigation } from '@/hooks/useSpaNavigation';
-import type { InsertTestSession } from '@shared/schema';
+import { useQuery } from '@tanstack/react-query';
+import type { InsertTestSession, CustomFormType } from '@shared/schema';
 import logoPath from '@assets/The Local Guys - with plug wide boarder - png seek.png';
 
 /**
@@ -28,6 +29,19 @@ export default function Setup() {
   const { user } = useAuth();
   const { navigate } = useSpaNavigation();
   const [isNavigating, setIsNavigating] = useState(false);
+  
+  // Get selected service type
+  const selectedService = sessionStorage.getItem('selectedService') || 'electrical';
+  
+  // Fetch custom form types for this service type
+  const { data: customFormTypes } = useQuery<CustomFormType[]>({
+    queryKey: ['/api/custom-forms', { serviceType: selectedService }],
+    queryFn: async () => {
+      const response = await fetch(`/api/custom-forms?serviceType=${selectedService}`);
+      if (!response.ok) throw new Error('Failed to fetch custom forms');
+      return response.json();
+    },
+  });
   
   // Get current date in Australian Central Time
   const getAustralianDate = () => {
@@ -247,6 +261,14 @@ export default function Setup() {
                 <RadioGroupItem value="national_client" id="national_client" />
                 <Label htmlFor="national_client">ARA Compliance</Label>
               </div>
+              
+              {/* Custom Form Types */}
+              {customFormTypes && customFormTypes.map((formType) => (
+                <div key={formType.id} className="flex items-center space-x-2">
+                  <RadioGroupItem value={`custom_${formType.id}`} id={`custom_${formType.id}`} />
+                  <Label htmlFor={`custom_${formType.id}`}>{formType.name}</Label>
+                </div>
+              ))}
             </RadioGroup>
           </div>
 
