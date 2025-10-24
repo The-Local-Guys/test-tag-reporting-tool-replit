@@ -15,7 +15,7 @@ import {
   type CustomFormType,
   type InsertCustomFormType
 } from "@shared/schema";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { eq, desc, and, gte } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
@@ -746,15 +746,22 @@ export class DatabaseStorage implements IStorage {
 
   /**
    * Creates a new custom form type
-   * @param formType - Form type data with name and createdBy
+   * @param formType - Form type data with name and csvData
    * @returns Newly created custom form type object
    */
   async createCustomFormType(formType: InsertCustomFormType): Promise<CustomFormType> {
-    const [type] = await db
-      .insert(customFormTypes)
-      .values(formType)
-      .returning();
-    return type;
+    console.log('[DEBUG] Creating custom form type:', formType);
+    try {
+      const [type] = await db
+        .insert(customFormTypes)
+        .values(formType)
+        .returning();
+      console.log('[DEBUG] Custom form type created successfully:', type);
+      return type;
+    } catch (error) {
+      console.error('[DEBUG] Error creating custom form type:', error);
+      throw error;
+    }
   }
 
   /**
@@ -762,10 +769,25 @@ export class DatabaseStorage implements IStorage {
    * @returns Array of all custom form types
    */
   async getAllCustomFormTypes(): Promise<CustomFormType[]> {
-    return await db
-      .select()
-      .from(customFormTypes)
-      .orderBy(desc(customFormTypes.createdAt));
+    console.log('[DEBUG] Fetching all custom form types');
+    try {
+      // Check what tables exist in the connected database
+      const tables = await pool.query(`
+        SELECT table_name FROM information_schema.tables 
+        WHERE table_schema = 'public' ORDER BY table_name
+      `);
+      console.log('[DEBUG] Tables in connected database:', tables.rows.map((r: any) => r.table_name));
+      
+      const result = await db
+        .select()
+        .from(customFormTypes)
+        .orderBy(desc(customFormTypes.createdAt));
+      console.log('[DEBUG] Fetched custom form types:', result);
+      return result;
+    } catch (error) {
+      console.error('[DEBUG] Error fetching custom form types:', error);
+      throw error;
+    }
   }
 
   /**

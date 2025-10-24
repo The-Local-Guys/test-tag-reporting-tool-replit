@@ -1070,53 +1070,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Name and CSV data are required" });
       }
 
-      // Parse CSV data - expects format: code,itemName
+      // Validate CSV data format (expects code,itemName per line)
       const lines = csvData.trim().split('\n');
-      const items: { code: string; itemName: string }[] = [];
-      
-      // Skip header row if it exists
-      let startIndex = 0;
-      if (lines[0] && lines[0].toLowerCase().includes('code')) {
-        startIndex = 1;
-      }
-      
-      for (let i = startIndex; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-        
-        const parts = line.split(',').map((part: string) => part.trim());
-        if (parts.length < 2) {
-          return res.status(400).json({ 
-            error: `Invalid CSV format at line ${i + 1}. Expected format: code,itemName` 
-          });
-        }
-        
-        items.push({
-          code: parts[0],
-          itemName: parts.slice(1).join(',') // Handle item names with commas
-        });
+      if (lines.length === 0) {
+        return res.status(400).json({ error: "CSV data cannot be empty" });
       }
 
-      if (items.length === 0) {
-        return res.status(400).json({ error: "CSV data must contain at least one item" });
-      }
-
-      // Create the form type
+      // Create the form type with CSV data stored directly
       const formType = await storage.createCustomFormType({
         name,
-        createdBy: userId
+        csvData
       });
 
-      // Create all items
-      const formItems = await storage.createCustomFormItems(
-        items.map(item => ({
-          formTypeId: formType.id,
-          code: item.code,
-          itemName: item.itemName
-        }))
-      );
-
-      res.json({ formType, itemsCount: formItems.length });
+      res.status(201).json(formType);
     } catch (error) {
       console.error("Error creating custom form:", error);
       res.status(500).json({ error: "Failed to create custom form" });
@@ -1134,7 +1100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get a specific custom form type with its items
+  // Get a specific custom form type
   app.get("/api/custom-forms/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -1144,19 +1110,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Form type not found" });
       }
       
-      const items = await storage.getCustomFormItems(id);
-      res.json({ ...formType, items });
+      res.json(formType);
     } catch (error) {
       console.error("Error fetching custom form:", error);
       res.status(500).json({ error: "Failed to fetch custom form" });
     }
   });
 
-  // Get items for a custom form type
+  // Get items for a custom form type (parsed from CSV)
   app.get("/api/custom-forms/:id/items", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const items = await storage.getCustomFormItems(id);
+      const formType = await storage.getCustomFormType(id);
+      
+      if (!formType) {
+        return res.status(404).json({ error: "Form type not found" });
+      }
+
+      // Parse CSV data to return items
+      const lines = formType.csvData.trim().split('\n');
+      const items: { code: string; itemName: string }[] = [];
+      
+      // Skip header row if it exists
+      let startIndex = 0;
+      if (lines[0] && lines[0].toLowerCase().includes('code')) {
+        startIndex = 1;
+      }
+      
+      for (let i = startIndex; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        const parts = line.split(',').map((part: string) => part.trim());
+        if (parts.length >= 2) {
+          items.push({
+            code: parts[0],
+            itemName: parts.slice(1).join(',') // Handle item names with commas
+          });
+        }
+      }
+
       res.json(items);
     } catch (error) {
       console.error("Error fetching form items:", error);

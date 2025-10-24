@@ -38,6 +38,22 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Ensure custom_form_types table exists in the connected database
+  try {
+    const { pool } = await import("./db");
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS custom_form_types (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        csv_data TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    log('[INIT] custom_form_types table created/verified');
+  } catch (error) {
+    console.error('[INIT] Error ensuring custom_form_types table:', error);
+  }
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
