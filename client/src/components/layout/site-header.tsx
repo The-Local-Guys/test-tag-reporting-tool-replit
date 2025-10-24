@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { LogOut, User, Menu, X, Home, Settings, FileText, Shield, TestTube, ExternalLink, FolderTree } from "lucide-react";
+import { LogOut, User, Menu, X, Home, Settings, FileText, Shield, TestTube, ExternalLink, FolderTree, FileSpreadsheet } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMobileMenu } from "@/contexts/MobileMenuContext";
 import { useLocation } from "wouter";
@@ -43,6 +43,8 @@ export function SiteHeader() {
         return 'Report Preview';
       case '/environments':
         return 'Environments';
+      case '/form-types':
+        return 'Custom Form Types';
       default:
         if (location.startsWith('/admin')) {
           return 'Admin Dashboard';
@@ -76,6 +78,8 @@ export function SiteHeader() {
         return 'Review and generate reports';
       case '/environments':
         return 'Manage your custom item sets';
+      case '/form-types':
+        return 'Manage custom testing forms';
       default:
         return 'Professional Testing & Compliance';
     }
@@ -156,6 +160,20 @@ export function SiteHeader() {
               >
                 <FolderTree className="w-4 h-4" />
                 <span>Environments</span>
+              </Button>
+            )}
+            
+            {/* Form Types link - only for super_admin and support_center */}
+            {(typedUser?.role === 'super_admin' || typedUser?.role === 'support_center') && (
+              <Button
+                variant="ghost" 
+                size="sm"
+                onClick={() => navigate('/form-types')}
+                className="text-white hover:bg-white/20 flex items-center gap-2"
+                data-testid="nav-form-types"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                <span>Form Types</span>
               </Button>
             )}
             
