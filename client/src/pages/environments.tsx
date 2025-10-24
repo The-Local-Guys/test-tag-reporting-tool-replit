@@ -349,13 +349,12 @@ export default function Environments() {
                     <CardDescription className="text-sm">{getServiceTypeLabel(env.serviceType)}</CardDescription>
                   </div>
                   {editingEnvironmentId !== env.id && (
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 shrink-0">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleEditEnvironment(env)}
                         data-testid={`button-edit-${env.id}`}
-                        className="flex-1 sm:flex-none"
                       >
                         <Edit className="w-4 h-4 sm:mr-1" />
                         <span className="hidden sm:inline">Edit Items</span>
