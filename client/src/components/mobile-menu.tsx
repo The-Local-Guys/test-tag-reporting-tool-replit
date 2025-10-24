@@ -114,7 +114,7 @@ export function MobileMenu() {
             <Button
               variant="ghost"
               onClick={switchToTestingMode}
-              className={`w-full flex items-center justify-start gap-3 text-left ${isTestingMode ? 'bg-blue-50 text-blue-700' : ''}`}
+              className={`w-full flex items-center justify-start gap-3 text-left ${isTestingMode && location !== '/environments' ? 'bg-blue-50 text-blue-700' : ''}`}
             >
               <TestTube className="w-5 h-5" />
               <div>
@@ -128,7 +128,7 @@ export function MobileMenu() {
               <Button
                 variant="ghost"
                 onClick={switchToAdminMode}
-                className={`w-full flex items-center justify-start gap-3 text-left ${isAdminMode ? 'bg-blue-50 text-blue-700' : ''}`}
+                className={`w-full flex items-center justify-start gap-3 text-left ${isAdminMode && location !== '/environments' ? 'bg-blue-50 text-blue-700' : ''}`}
               >
                 <Settings className="w-5 h-5" />
                 <div>
