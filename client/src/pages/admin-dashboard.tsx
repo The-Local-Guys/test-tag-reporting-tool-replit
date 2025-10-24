@@ -189,6 +189,11 @@ export default function AdminDashboard() {
     refetchIntervalInBackground:true
   });
 
+  // Fetch custom form types
+  const { data: customFormTypes } = useQuery<any[]>({
+    queryKey: ['/api/custom-forms'],
+  });
+
   // Force refresh data when component mounts or when navigating to admin
   useEffect(() => {
     console.log('Admin dashboard mounted, refreshing data...');
@@ -1954,20 +1959,25 @@ export default function AdminDashboard() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="editCountry">Country</Label>
+            <Label htmlFor="editCountry">Country / Form Type</Label>
             <Select
               value={editSessionData.country}
-              onValueChange={(value: "australia" | "newzealand" | "national_client") =>
-                setEditSessionData((prev) => ({ ...prev, country: value }))
+              onValueChange={(value: string) =>
+                setEditSessionData((prev) => ({ ...prev, country: value as any }))
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select country" />
+                <SelectValue placeholder="Select country or form type" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="australia">Australia</SelectItem>
                 <SelectItem value="newzealand">New Zealand</SelectItem>
                 <SelectItem value="national_client">ARA Compliance</SelectItem>
+                {customFormTypes && customFormTypes.map((formType) => (
+                  <SelectItem key={formType.id} value={`custom_${formType.id}`}>
+                    {formType.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

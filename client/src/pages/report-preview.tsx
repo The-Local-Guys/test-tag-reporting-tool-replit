@@ -18,6 +18,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { insertTestResultSchema, type TestResult, type InsertTestResult, failureReasons, emergencyFailureReasons, fireFailureReasons } from '@shared/schema';
 import { cn } from '@/lib/utils';
 import { useConditionalNav } from '@/contexts/ConditionalNavContext';
+import { useQuery } from '@tanstack/react-query';
 
 /**
  * Report preview and generation interface
@@ -42,6 +43,11 @@ export default function ReportPreview() {
   
   
   const { navigate, showConfirm, confirmNavigation, cancelNavigation } = useConditionalNav();
+
+  // Fetch custom form types
+  const { data: customFormTypes } = useQuery<any[]>({
+    queryKey: ['/api/custom-forms'],
+  });
 
 
   // Edit form state with manual asset number tracking
@@ -73,6 +79,23 @@ export default function ReportPreview() {
       default:
         return failureReasons; // electrical testing
     }
+  };
+
+  // Helper function to get country display name
+  const getCountryDisplayName = (country: string | undefined) => {
+    if (!country) return 'Unknown';
+    if (country === 'australia') return 'Australia';
+    if (country === 'newzealand') return 'New Zealand';
+    if (country === 'national_client') return 'ARA Compliance';
+    
+    // Check if it's a custom form type (format: "custom_123")
+    if (country.startsWith('custom_')) {
+      const formId = parseInt(country.replace('custom_', ''));
+      const formType = customFormTypes?.find(f => f.id === formId);
+      return formType?.name || country;
+    }
+    
+    return country;
   };
 
   // Helper function to convert snake_case to display labels
@@ -781,7 +804,7 @@ export default function ReportPreview() {
           <div className="text-gray-600">Technician: {sessionData?.session?.technicianName}</div>
           <div className="text-gray-600">Date: {formatDate(sessionData?.session?.testDate || '')}</div>
           <div className="text-gray-600">
-            Country: {sessionData?.session?.country === 'australia' ? 'Australia' : sessionData?.session?.country === 'newzealand' ? 'New Zealand' : 'ARA Compliance'}
+            Country: {getCountryDisplayName(sessionData?.session?.country)}
           </div>
         </div>
       </div>
