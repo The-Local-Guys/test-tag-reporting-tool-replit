@@ -47,10 +47,7 @@ export default function FormTypes() {
   // Create mutation
   const createMutation = useMutation({
     mutationFn: async (data: { name: string; serviceType: string; csvData: string }) => {
-      return await apiRequest('/api/custom-forms', {
-        method: 'POST',
-        body: JSON.stringify(data)
-      });
+      return await apiRequest('POST', '/api/custom-forms', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/custom-forms'] });
@@ -73,9 +70,7 @@ export default function FormTypes() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest(`/api/custom-forms/${id}`, {
-        method: 'DELETE'
-      });
+      return await apiRequest('DELETE', `/api/custom-forms/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/custom-forms'] });
