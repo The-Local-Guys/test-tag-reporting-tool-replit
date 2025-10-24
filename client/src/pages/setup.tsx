@@ -30,17 +30,9 @@ export default function Setup() {
   const { navigate } = useSpaNavigation();
   const [isNavigating, setIsNavigating] = useState(false);
   
-  // Get selected service type
-  const selectedService = sessionStorage.getItem('selectedService') || 'electrical';
-  
-  // Fetch custom form types for this service type
+  // Fetch custom form types (available for all service types)
   const { data: customFormTypes } = useQuery<CustomFormType[]>({
-    queryKey: ['/api/custom-forms', { serviceType: selectedService }],
-    queryFn: async () => {
-      const response = await fetch(`/api/custom-forms?serviceType=${selectedService}`);
-      if (!response.ok) throw new Error('Failed to fetch custom forms');
-      return response.json();
-    },
+    queryKey: ['/api/custom-forms'],
   });
   
   // Get current date in Australian Central Time

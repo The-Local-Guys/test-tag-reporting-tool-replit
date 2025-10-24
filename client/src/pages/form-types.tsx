@@ -26,7 +26,7 @@ export default function FormTypes() {
   
   // Form state
   const [formName, setFormName] = useState('');
-  const [serviceType, setServiceType] = useState<string>('');
+  const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvData, setCsvData] = useState('');
   
   // Type guard for user
@@ -46,7 +46,7 @@ export default function FormTypes() {
   
   // Create mutation
   const createMutation = useMutation({
-    mutationFn: async (data: { name: string; serviceType: string; csvData: string }) => {
+    mutationFn: async (data: { name: string; csvData: string }) => {
       return await apiRequest('POST', '/api/custom-forms', data);
     },
     onSuccess: () => {
@@ -92,21 +92,50 @@ export default function FormTypes() {
   
   const resetForm = () => {
     setFormName('');
-    setServiceType('');
+    setCsvFile(null);
     setCsvData('');
   };
   
-  const handleCreate = () => {
-    if (!formName || !serviceType || !csvData) {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setCsvFile(null);
+      setCsvData('');
+      return;
+    }
+    
+    // Validate file type
+    if (!file.name.endsWith('.csv')) {
       toast({
-        title: 'Validation Error',
-        description: 'Please fill in all fields',
+        title: 'Invalid File',
+        description: 'Please upload a CSV file',
         variant: 'destructive',
       });
       return;
     }
     
-    createMutation.mutate({ name: formName, serviceType, csvData });
+    setCsvFile(file);
+    
+    // Read file content
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      setCsvData(text);
+    };
+    reader.readAsText(file);
+  };
+  
+  const handleCreate = () => {
+    if (!formName || !csvData) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please provide form name and upload a CSV file',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    createMutation.mutate({ name: formName, csvData });
   };
   
   const handleDelete = (formType: CustomFormType) => {
@@ -117,15 +146,6 @@ export default function FormTypes() {
   const confirmDelete = () => {
     if (formToDelete) {
       deleteMutation.mutate(formToDelete.id);
-    }
-  };
-  
-  const getServiceTypeLabel = (type: string) => {
-    switch (type) {
-      case 'electrical': return 'Electrical Testing';
-      case 'emergency_exit_light': return 'Emergency Exit Light';
-      case 'fire_testing': return 'Fire Equipment';
-      default: return type;
     }
   };
   
@@ -166,8 +186,6 @@ export default function FormTypes() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Service Type</TableHead>
-                    <TableHead>Status</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -176,12 +194,6 @@ export default function FormTypes() {
                   {formTypes.map((formType) => (
                     <TableRow key={formType.id} data-testid={`row-form-${formType.id}`}>
                       <TableCell className="font-medium">{formType.name}</TableCell>
-                      <TableCell>{getServiceTypeLabel(formType.serviceType)}</TableCell>
-                      <TableCell>
-                        <Badge variant={formType.isActive ? 'default' : 'secondary'}>
-                          {formType.isActive ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </TableCell>
                       <TableCell>
                         {formType.createdAt ? new Date(formType.createdAt).toLocaleDateString() : 'N/A'}
                       </TableCell>
@@ -248,33 +260,24 @@ export default function FormTypes() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="serviceType">Service Type</Label>
-              <Select value={serviceType} onValueChange={setServiceType}>
-                <SelectTrigger data-testid="select-service-type">
-                  <SelectValue placeholder="Select service type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="electrical">Electrical Testing</SelectItem>
-                  <SelectItem value="emergency_exit_light">Emergency Exit Light</SelectItem>
-                  <SelectItem value="fire_testing">Fire Equipment</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="csvData">CSV Data</Label>
-              <Textarea
-                id="csvData"
-                placeholder="1122,3D Printer&#10;1123,Air Conditioner&#10;1124,Coffee Machine"
-                value={csvData}
-                onChange={(e) => setCsvData(e.target.value)}
-                rows={10}
-                className="font-mono text-sm"
-                data-testid="textarea-csv"
+              <Label htmlFor="csvFile">CSV File</Label>
+              <Input
+                id="csvFile"
+                type="file"
+                accept=".csv"
+                onChange={handleFileChange}
+                className="cursor-pointer"
+                data-testid="input-csv-file"
               />
               <p className="text-xs text-gray-600">
-                Format: code,itemName (one item per line). Example: 1122,3D Printer
+                Upload a CSV file with format: code,itemName (one item per line)
               </p>
+              {csvFile && (
+                <p className="text-sm text-green-600 flex items-center gap-2">
+                  <Upload className="w-4 h-4" />
+                  {csvFile.name} selected
+                </p>
+              )}
             </div>
           </div>
           

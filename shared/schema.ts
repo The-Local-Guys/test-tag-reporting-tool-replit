@@ -101,9 +101,7 @@ export const environments = pgTable("environments", {
 export const customFormTypes = pgTable("custom_form_types", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(), // Display name in setup page
-  serviceType: text("service_type").notNull(), // 'electrical', 'emergency_exit_light', or 'fire_testing'
   createdBy: integer("created_by").notNull().references(() => users.id),
-  isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

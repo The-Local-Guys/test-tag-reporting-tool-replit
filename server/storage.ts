@@ -33,7 +33,7 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   updateUserStatus(userId: number, isActive: boolean): Promise<User>;
   updateUser(userId: number, data: Partial<InsertUser>): Promise<User>;
-  getAllTestSessions(): Promise<(TestSession & { technicianFullName?: string })[]>;
+  getAllTestSessions(): Promise<(TestSession & { technicianFullName?: string | null })[]>;
   getSessionsByUser(userId: number): Promise<TestSession[]>;
   updateTestSession(sessionId: number, data: Partial<InsertTestSession>): Promise<TestSession>;
   deleteTestSession(sessionId: number): Promise<void>;
@@ -77,7 +77,6 @@ export interface IStorage {
   // Custom Form Types
   createCustomFormType(formType: InsertCustomFormType): Promise<CustomFormType>;
   getAllCustomFormTypes(): Promise<CustomFormType[]>;
-  getCustomFormTypesByService(serviceType: string): Promise<CustomFormType[]>;
   getCustomFormType(id: number): Promise<CustomFormType | undefined>;
   updateCustomFormType(id: number, data: Partial<InsertCustomFormType>): Promise<CustomFormType>;
   deleteCustomFormType(id: number): Promise<void>;
@@ -755,7 +754,7 @@ export class DatabaseStorage implements IStorage {
 
   /**
    * Creates a new custom form type
-   * @param formType - Form type data with name, serviceType, and createdBy
+   * @param formType - Form type data with name and createdBy
    * @returns Newly created custom form type object
    */
   async createCustomFormType(formType: InsertCustomFormType): Promise<CustomFormType> {
@@ -774,24 +773,7 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(customFormTypes)
-      .where(eq(customFormTypes.isActive, true))
       .orderBy(desc(customFormTypes.createdAt));
-  }
-
-  /**
-   * Retrieves custom form types by service type
-   * @param serviceType - Service type to filter by
-   * @returns Array of custom form types for the specified service
-   */
-  async getCustomFormTypesByService(serviceType: string): Promise<CustomFormType[]> {
-    return await db
-      .select()
-      .from(customFormTypes)
-      .where(and(
-        eq(customFormTypes.serviceType, serviceType),
-        eq(customFormTypes.isActive, true)
-      ))
-      .orderBy(customFormTypes.name);
   }
 
   /**

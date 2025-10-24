@@ -1063,22 +1063,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a custom form type with CSV data
   app.post("/api/custom-forms", requireAdmin, async (req, res) => {
     try {
-      const { name, serviceType, csvData } = req.body;
+      const { name, csvData } = req.body;
       const userId = req.session.userId!;
 
-      if (!name || !serviceType || !csvData) {
-        return res.status(400).json({ error: "Name, service type, and CSV data are required" });
+      if (!name || !csvData) {
+        return res.status(400).json({ error: "Name and CSV data are required" });
       }
 
       // Parse CSV data - expects format: code,itemName
       const lines = csvData.trim().split('\n');
       const items: { code: string; itemName: string }[] = [];
       
-      for (let i = 0; i < lines.length; i++) {
+      // Skip header row if it exists
+      let startIndex = 0;
+      if (lines[0] && lines[0].toLowerCase().includes('code')) {
+        startIndex = 1;
+      }
+      
+      for (let i = startIndex; i < lines.length; i++) {
         const line = lines[i].trim();
         if (!line) continue;
         
-        const parts = line.split(',').map(part => part.trim());
+        const parts = line.split(',').map((part: string) => part.trim());
         if (parts.length < 2) {
           return res.status(400).json({ 
             error: `Invalid CSV format at line ${i + 1}. Expected format: code,itemName` 
@@ -1098,9 +1104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create the form type
       const formType = await storage.createCustomFormType({
         name,
-        serviceType,
-        createdBy: userId,
-        isActive: true
+        createdBy: userId
       });
 
       // Create all items
@@ -1122,15 +1126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all custom form types
   app.get("/api/custom-forms", requireAuth, async (req, res) => {
     try {
-      const { serviceType } = req.query;
-      
-      let formTypes;
-      if (serviceType && typeof serviceType === 'string') {
-        formTypes = await storage.getCustomFormTypesByService(serviceType);
-      } else {
-        formTypes = await storage.getAllCustomFormTypes();
-      }
-      
+      const formTypes = await storage.getAllCustomFormTypes();
       res.json(formTypes);
     } catch (error) {
       console.error("Error fetching custom forms:", error);
@@ -1172,7 +1168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/custom-forms/:id", requireAdmin, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { name, isActive } = req.body;
+      const { name } = req.body;
       
       const formType = await storage.getCustomFormType(id);
       if (!formType) {
@@ -1181,7 +1177,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const updateData: any = {};
       if (name !== undefined) updateData.name = name;
-      if (isActive !== undefined) updateData.isActive = isActive;
       
       const updatedFormType = await storage.updateCustomFormType(id, updateData);
       res.json(updatedFormType);
