@@ -364,18 +364,22 @@ export default function ItemSelection() {
                 </button>
               ))
             ) : isCustomFormType && filteredCustomFormItems.length > 0 ? (
-              filteredCustomFormItems.map((item) => (
-                <button
-                  key={`${item.code}-${item.itemName}`}
-                  onClick={() => handleItemSelect('custom_form', `${item.code} - ${item.itemName}`)}
-                  className="w-full bg-white border border-gray-200 rounded-lg p-3 text-left hover:border-primary hover:bg-blue-50 transition-all"
-                  data-testid={`button-custom-form-item-${item.code}`}
-                >
-                  <div className="font-medium text-gray-800">
-                    {item.code} - {item.itemName}
-                  </div>
-                </button>
-              ))
+              filteredCustomFormItems.map((item) => {
+                // Convert item name to lowercase and replace spaces with dashes for itemType
+                const itemType = item.itemName.toLowerCase().replace(/\s+/g, '-');
+                return (
+                  <button
+                    key={`${item.code}-${item.itemName}`}
+                    onClick={() => handleItemSelect(itemType, `${item.code} - ${item.itemName}`)}
+                    className="w-full bg-white border border-gray-200 rounded-lg p-3 text-left hover:border-primary hover:bg-blue-50 transition-all"
+                    data-testid={`button-custom-form-item-${item.code}`}
+                  >
+                    <div className="font-medium text-gray-800">
+                      {item.code} - {item.itemName}
+                    </div>
+                  </button>
+                );
+              })
             ) : (
               <div className="text-center py-8 text-gray-500">
                 {searchQuery ? 'No items found' : 'Start typing to search...'}
