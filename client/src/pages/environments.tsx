@@ -237,18 +237,18 @@ export default function Environments() {
   const filteredEnvironments = environments?.filter(env => env.serviceType === selectedTab) || [];
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Environments</h1>
-        <p className="text-gray-600">Manage your custom item sets for different testing types</p>
+    <div className="container mx-auto px-4 py-4 sm:py-8">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2">Environments</h1>
+        <p className="text-sm sm:text-base text-gray-600">Manage your custom item sets for different testing types</p>
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setSelectedTab("electrical")}
-            className={`px-6 py-2 rounded-full font-medium transition-all ${
+            className={`px-3 sm:px-6 py-2 rounded-full font-medium text-xs sm:text-sm transition-all ${
               selectedTab === "electrical"
                 ? "bg-blue-600 text-white"
                 : "bg-gray-200 text-gray-700 hover:bg-gray-300"
@@ -259,7 +259,7 @@ export default function Environments() {
           </button>
           <button
             onClick={() => setSelectedTab("emergency_exit_light")}
-            className={`px-6 py-2 rounded-full font-medium transition-all ${
+            className={`px-3 sm:px-6 py-2 rounded-full font-medium text-xs sm:text-sm transition-all ${
               selectedTab === "emergency_exit_light"
                 ? "bg-blue-600 text-white"
                 : "bg-gray-200 text-gray-700 hover:bg-gray-300"
@@ -270,7 +270,7 @@ export default function Environments() {
           </button>
           <button
             onClick={() => setSelectedTab("fire_testing")}
-            className={`px-6 py-2 rounded-full font-medium transition-all ${
+            className={`px-3 sm:px-6 py-2 rounded-full font-medium text-xs sm:text-sm transition-all ${
               selectedTab === "fire_testing"
                 ? "bg-blue-600 text-white"
                 : "bg-gray-200 text-gray-700 hover:bg-gray-300"
@@ -283,7 +283,7 @@ export default function Environments() {
         
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button data-testid="button-create-environment">
+            <Button className="w-full sm:w-auto" data-testid="button-create-environment">
               <Plus className="w-4 h-4 mr-2" />
               Create Environment
             </Button>
@@ -343,10 +343,10 @@ export default function Environments() {
           {filteredEnvironments.map((env) => (
             <Card key={env.id} data-testid={`card-environment-${env.id}`}>
               <CardHeader>
-                <div className="flex justify-between items-start">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
                   <div>
-                    <CardTitle>{env.name}</CardTitle>
-                    <CardDescription>{getServiceTypeLabel(env.serviceType)}</CardDescription>
+                    <CardTitle className="text-lg sm:text-xl">{env.name}</CardTitle>
+                    <CardDescription className="text-sm">{getServiceTypeLabel(env.serviceType)}</CardDescription>
                   </div>
                   {editingEnvironmentId !== env.id && (
                     <div className="flex gap-2">
@@ -355,9 +355,10 @@ export default function Environments() {
                         size="sm"
                         onClick={() => handleEditEnvironment(env)}
                         data-testid={`button-edit-${env.id}`}
+                        className="flex-1 sm:flex-none"
                       >
-                        <Edit className="w-4 h-4 mr-1" />
-                        Edit Items
+                        <Edit className="w-4 h-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Edit Items</span>
                       </Button>
                       <Button
                         variant="destructive"
@@ -377,21 +378,22 @@ export default function Environments() {
               <CardContent>
                 {editingEnvironmentId === env.id ? (
                   <div className="space-y-4">
-                    <div className="border rounded-lg p-4 bg-gray-50">
-                      <h4 className="font-semibold mb-3">Add New Item</h4>
-                      <div className="grid grid-cols-3 gap-3">
+                    <div className="border rounded-lg p-3 sm:p-4 bg-gray-50">
+                      <h4 className="font-semibold mb-3 text-sm sm:text-base">Add New Item</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div className="space-y-2">
-                          <Label htmlFor={`item-name-${env.id}`}>Item Name</Label>
+                          <Label htmlFor={`item-name-${env.id}`} className="text-sm">Item Name</Label>
                           <Input
                             id={`item-name-${env.id}`}
                             data-testid="input-item-name"
                             placeholder="e.g., Drill, Lamp"
                             value={newItem.name}
                             onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                            className="text-sm"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor={`item-type-${env.id}`}>Item Type</Label>
+                          <Label htmlFor={`item-type-${env.id}`} className="text-sm">Item Type</Label>
                           <Input
                             id={`item-type-${env.id}`}
                             data-testid="input-item-type"
@@ -400,16 +402,18 @@ export default function Environments() {
                             onChange={(e) =>
                               setNewItem({ ...newItem, type: e.target.value.toLowerCase().replace(/\s+/g, '-') })
                             }
+                            className="text-sm"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor={`item-description-${env.id}`}>Description</Label>
+                          <Label htmlFor={`item-description-${env.id}`} className="text-sm">Description</Label>
                           <Input
                             id={`item-description-${env.id}`}
                             data-testid="input-item-description"
                             placeholder="e.g., Power Tool"
                             value={newItem.description}
                             onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                            className="text-sm"
                           />
                         </div>
                       </div>
@@ -474,7 +478,7 @@ export default function Environments() {
                     {!env.items || (Array.isArray(env.items) && env.items.length === 0) ? (
                       <p className="text-gray-500 text-sm">No items configured yet. Click "Edit Items" to add items.</p>
                     ) : (
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                         {(Array.isArray(env.items) ? env.items : []).map((item: Item, index: number) => (
                           <div
                             key={index}
