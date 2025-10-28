@@ -92,10 +92,18 @@ export default function ItemSelection() {
   const [showCancelSuccess, setShowCancelSuccess] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedEnvironmentId, setSelectedEnvironmentId] = useState<string>('default');
   const { sessionData, currentLocation, setCurrentLocation, clearSession, sessionId, isLoading: isLoadingSession } = useSession();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  // Initialize environment selection from localStorage or default
+  const [selectedEnvironmentId, setSelectedEnvironmentId] = useState<string>(() => {
+    if (sessionId) {
+      const stored = localStorage.getItem(`selectedEnvironment_${sessionId}`);
+      return stored || 'default';
+    }
+    return 'default';
+  });
 
   // Set initial loading to false after a brief delay to ensure smooth transition
   useEffect(() => {
@@ -105,6 +113,23 @@ export default function ItemSelection() {
     
     return () => clearTimeout(timer);
   }, []);
+
+  // Load selected environment from localStorage when sessionId changes
+  useEffect(() => {
+    if (sessionId) {
+      const stored = localStorage.getItem(`selectedEnvironment_${sessionId}`);
+      if (stored) {
+        setSelectedEnvironmentId(stored);
+      }
+    }
+  }, [sessionId]);
+
+  // Save selected environment to localStorage whenever it changes
+  useEffect(() => {
+    if (sessionId && selectedEnvironmentId) {
+      localStorage.setItem(`selectedEnvironment_${sessionId}`, selectedEnvironmentId);
+    }
+  }, [sessionId, selectedEnvironmentId]);
 
   // Get the selected service type and country
   const selectedService = sessionData?.session?.serviceType || sessionStorage.getItem('selectedService') || 'electrical';
@@ -210,6 +235,9 @@ export default function ItemSelection() {
       // Clear current session data
       clearSession();
       localStorage.removeItem('currentSession');
+      
+      // Clear environment selection for this session
+      localStorage.removeItem(`selectedEnvironment_${currentSessionId}`);
       
       // Show success feedback for 1 second
       setIsCancelling(false);
