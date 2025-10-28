@@ -24,7 +24,8 @@ export default function Environments() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
-  const [selectedTab, setSelectedTab] = useState<"electrical" | "emergency_exit_light" | "fire_testing">("electrical");
+  // Environments are only for electrical testing
+  const selectedTab = "electrical";
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [environmentToDelete, setEnvironmentToDelete] = useState<{ id: number; name: string } | null>(null);
@@ -193,16 +194,8 @@ export default function Environments() {
   };
 
   const getServiceTypeLabel = (serviceType: string) => {
-    switch (serviceType) {
-      case "electrical":
-        return "Electrical Testing";
-      case "emergency_exit_light":
-        return "Emergency Exit Light";
-      case "fire_testing":
-        return "Fire Testing";
-      default:
-        return serviceType;
-    }
+    // Environments are only for electrical testing
+    return "Electrical Testing";
   };
   
   // Type guard for user object
@@ -243,42 +236,12 @@ export default function Environments() {
         <p className="text-sm sm:text-base text-gray-600">Manage your custom item sets for different testing types</p>
       </div>
 
-      {/* Tabs */}
+      {/* Header - Environments are only for Electrical Testing */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setSelectedTab("electrical")}
-            className={`px-3 sm:px-6 py-2 rounded-full font-medium text-xs sm:text-sm transition-all ${
-              selectedTab === "electrical"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            }`}
-            data-testid="tab-electrical"
-          >
-            Electrical Testing
-          </button>
-          <button
-            onClick={() => setSelectedTab("emergency_exit_light")}
-            className={`px-3 sm:px-6 py-2 rounded-full font-medium text-xs sm:text-sm transition-all ${
-              selectedTab === "emergency_exit_light"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            }`}
-            data-testid="tab-emergency"
-          >
-            Emergency Exit Light
-          </button>
-          <button
-            onClick={() => setSelectedTab("fire_testing")}
-            className={`px-3 sm:px-6 py-2 rounded-full font-medium text-xs sm:text-sm transition-all ${
-              selectedTab === "fire_testing"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            }`}
-            data-testid="tab-fire"
-          >
-            Fire Testing
-          </button>
+        <div className="flex items-center">
+          <div className="px-4 py-2 bg-blue-100 text-blue-800 rounded-full font-medium text-sm">
+            Electrical Testing Only
+          </div>
         </div>
         
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
