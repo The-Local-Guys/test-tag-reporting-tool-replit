@@ -11,8 +11,14 @@ import { deleteResource } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
-import type { Environment, CustomFormItem } from '@shared/schema';
+import type { Environment } from '@shared/schema';
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
+
+// Type for custom form items parsed from CSV
+type CustomFormItem = {
+  code: string;
+  itemName: string;
+};
 import nationalClientItems from '@/data/national-client-items';
 
 // Custom SVG component for fire hose reel icon - matches the provided design
@@ -107,7 +113,7 @@ export default function ItemSelection() {
   
   // Check if country is a custom form type (format: "custom_123")
   const isCustomFormType = country?.startsWith('custom_');
-  const customFormTypeId = isCustomFormType ? parseInt(country.replace('custom_', '')) : null;
+  const customFormTypeId = isCustomFormType && country ? parseInt(country.replace('custom_', '')) : null;
   
   // Fetch custom form items if custom form type is selected
   const { data: customFormItems } = useQuery<CustomFormItem[]>({
@@ -299,8 +305,8 @@ export default function ItemSelection() {
         </div>
       </div>
 
-      {/* Environment Selection - Hidden for ARA Compliance and Custom Forms */}
-      {!isNationalClient && !isCustomFormType && (
+      {/* Environment Selection - Only for Electrical Testing */}
+      {!isNationalClient && !isCustomFormType && selectedService === 'electrical' && (
         <div className="bg-blue-50 border-b border-blue-100 p-4">
           <div className="space-y-2">
             <div className="text-sm text-gray-600 text-center">Select Environment:</div>
