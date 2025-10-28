@@ -102,13 +102,9 @@ export default function ItemSelection() {
   const typedUser = user as { fullName?: string; role?: string } | undefined;
   const userRole = typedUser?.role;
 
-  // Initialize environment selection from localStorage or default
+  // Initialize environment selection from localStorage (global, like frequency)
   const [selectedEnvironmentId, setSelectedEnvironmentId] = useState<string>(() => {
-    if (sessionId) {
-      const stored = localStorage.getItem(`selectedEnvironment_${sessionId}`);
-      return stored || 'default';
-    }
-    return 'default';
+    return localStorage.getItem('lastSelectedEnvironment') || 'default';
   });
 
   // Set initial loading to false after a brief delay to ensure smooth transition
@@ -120,22 +116,12 @@ export default function ItemSelection() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Load selected environment from localStorage when sessionId changes
+  // Save selected environment to localStorage whenever it changes (global persistence)
   useEffect(() => {
-    if (sessionId) {
-      const stored = localStorage.getItem(`selectedEnvironment_${sessionId}`);
-      if (stored) {
-        setSelectedEnvironmentId(stored);
-      }
+    if (selectedEnvironmentId) {
+      localStorage.setItem('lastSelectedEnvironment', selectedEnvironmentId);
     }
-  }, [sessionId]);
-
-  // Save selected environment to localStorage whenever it changes
-  useEffect(() => {
-    if (sessionId && selectedEnvironmentId) {
-      localStorage.setItem(`selectedEnvironment_${sessionId}`, selectedEnvironmentId);
-    }
-  }, [sessionId, selectedEnvironmentId]);
+  }, [selectedEnvironmentId]);
 
   // Get the selected service type and country
   const selectedService = sessionData?.session?.serviceType || sessionStorage.getItem('selectedService') || 'electrical';
@@ -242,8 +228,7 @@ export default function ItemSelection() {
       clearSession();
       localStorage.removeItem('currentSession');
       
-      // Clear environment selection for this session
-      localStorage.removeItem(`selectedEnvironment_${currentSessionId}`);
+      // Note: We keep lastSelectedEnvironment in localStorage (it persists globally like frequency)
       
       // Show success feedback for 1 second
       setIsCancelling(false);
