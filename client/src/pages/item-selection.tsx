@@ -11,6 +11,7 @@ import { deleteResource } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
 import type { Environment } from '@shared/schema';
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
 
@@ -95,6 +96,11 @@ export default function ItemSelection() {
   const { sessionData, currentLocation, setCurrentLocation, clearSession, sessionId, isLoading: isLoadingSession } = useSession();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
+  
+  // Type guard for user object
+  const typedUser = user as { fullName?: string; role?: string } | undefined;
+  const userRole = typedUser?.role;
 
   // Initialize environment selection from localStorage or default
   const [selectedEnvironmentId, setSelectedEnvironmentId] = useState<string>(() => {
@@ -333,8 +339,8 @@ export default function ItemSelection() {
         </div>
       </div>
 
-      {/* Environment Selection - Only for Electrical Testing */}
-      {!isNationalClient && !isCustomFormType && selectedService === 'electrical' && (
+      {/* Environment Selection - Only for Electrical Testing and Technician Role */}
+      {!isNationalClient && !isCustomFormType && selectedService === 'electrical' && userRole === 'technician' && (
         <div className="bg-blue-50 border-b border-blue-100 p-4">
           <div className="space-y-2">
             <div className="text-sm text-gray-600 text-center">Select Environment:</div>
