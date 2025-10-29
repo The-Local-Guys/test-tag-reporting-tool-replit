@@ -597,7 +597,14 @@ export default function Environments() {
                     <div className="border rounded-lg p-3 sm:p-4 bg-gray-50">
                       <h4 className="font-semibold mb-3 text-sm sm:text-base">Add New Item</h4>
                       <div className="space-y-3">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr_1fr] gap-3">
+                          <div className="space-y-2">
+                            <Label className="text-sm block">Icon</Label>
+                            <IconPicker
+                              selectedIcon={newItem.icon}
+                              onSelectIcon={(icon) => setNewItem({ ...newItem, icon })}
+                            />
+                          </div>
                           <div className="space-y-2">
                             <Label htmlFor={`item-name-${env.id}`} className="text-sm">Item Name</Label>
                             <Input
@@ -623,25 +630,16 @@ export default function Environments() {
                             />
                           </div>
                         </div>
-                        <div className="grid grid-cols-[auto_1fr] gap-3">
-                          <div className="space-y-2">
-                            <Label className="text-sm block">Icon</Label>
-                            <IconPicker
-                              selectedIcon={newItem.icon}
-                              onSelectIcon={(icon) => setNewItem({ ...newItem, icon })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor={`item-description-${env.id}`} className="text-sm block">Description</Label>
-                            <Input
-                              id={`item-description-${env.id}`}
-                              data-testid="input-item-description"
-                              placeholder="e.g., Power Tool"
-                              value={newItem.description}
-                              onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
-                              className="text-sm"
-                            />
-                          </div>
+                        <div className="space-y-2">
+                          <Label htmlFor={`item-description-${env.id}`} className="text-sm block">Description</Label>
+                          <Input
+                            id={`item-description-${env.id}`}
+                            data-testid="input-item-description"
+                            placeholder="e.g., Power Tool"
+                            value={newItem.description}
+                            onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                            className="text-sm"
+                          />
                         </div>
                       </div>
                       <Button
