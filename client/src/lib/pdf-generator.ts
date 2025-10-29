@@ -561,7 +561,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         const notesLabel = '• Additional Notes: ';
         doc.text(notesLabel, margin + 5, yPosition);
         
-        const maxNotesWidth = pageWidth - (2 * margin) - 10;
+        const maxNotesWidth = pageWidth - (2 * margin) - 25; // Add more space to the right
         const notesLines = doc.splitTextToSize(result.notes, maxNotesWidth);
         const labelWidth = doc.getTextWidth(notesLabel);
         
@@ -665,7 +665,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         const notesLabel = '• Additional Notes: ';
         doc.text(notesLabel, margin + 5, yPosition);
         
-        const maxNotesWidth = pageWidth - (2 * margin) - 10;
+        const maxNotesWidth = pageWidth - (2 * margin) - 25; // Add more space to the right
         const notesLines = doc.splitTextToSize(remainingNotes, maxNotesWidth);
         const labelWidth = doc.getTextWidth(notesLabel);
         
@@ -774,6 +774,9 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         
         // Display comments first if they exist
         if (hasComments) {
+          doc.text('Comments:', margin, yPosition);
+          yPosition += 6;
+          
           const maxCommentWidth = pageWidth - (2 * margin);
           const commentLines = doc.splitTextToSize(commentsPart, maxCommentWidth);
           commentLines.forEach((line: string) => {
@@ -836,6 +839,9 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         }
       } else if (result.notes) {
         // For non-fire testing, display as comments
+        doc.text('Comments:', margin, yPosition);
+        yPosition += 6;
+        
         const maxCommentWidth = pageWidth - (2 * margin);
         const commentLines = doc.splitTextToSize(result.notes, maxCommentWidth);
         commentLines.forEach((line: string) => {
