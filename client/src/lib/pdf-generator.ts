@@ -380,7 +380,12 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       });
       
       doc.text(getFrequencyLabel(result.frequency), margin + 122, rowStartY);
-      doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 140, rowStartY);
+      // Wrap Due Date to prevent overlap
+      const dueDateText = calculateNextDueDate(session.testDate, result.frequency, result.result);
+      const dueDateLines = doc.splitTextToSize(dueDateText, 17);
+      dueDateLines.forEach((line: string, i: number) => {
+        doc.text(line, margin + 140, rowStartY + (i * lineHeight));
+      });
     } else {
       // For regular electrical testing, show classification/type with word wrapping
       typeLines.forEach((line: string, i: number) => {
@@ -425,7 +430,11 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         } else if (failureReason !== 'Not specified') {
           displayFailureReason = failureReason.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         }
-        doc.text(displayFailureReason, margin + 142, rowStartY);
+        // Wrap Failure Reason to prevent overlap
+        const failureLinesEmergency = doc.splitTextToSize(displayFailureReason, 25);
+        failureLinesEmergency.forEach((line: string, i: number) => {
+          doc.text(line, margin + 142, rowStartY + (i * lineHeight));
+        });
       } else if (session.serviceType === 'fire_testing') {
         // Fire equipment failure reasons
         if (failureReason === 'physical_damage') {
@@ -445,7 +454,11 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         } else if (failureReason !== 'Not specified') {
           displayFailureReason = failureReason.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         }
-        doc.text(displayFailureReason, margin + 142, rowStartY);
+        // Wrap Failure Reason to prevent overlap
+        const failureLinesFire = doc.splitTextToSize(displayFailureReason, 25);
+        failureLinesFire.forEach((line: string, i: number) => {
+          doc.text(line, margin + 158, rowStartY + (i * lineHeight));
+        });
       } else {
         // Standard electrical testing failure reasons
         if (failureReason === 'vision') {
@@ -683,33 +696,111 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
       doc.text(`Asset #${result.assetNumber} - ${result.itemName}`, margin, yPosition);
-      yPosition += 7;
+      yPosition += 8;
       
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      doc.text(`Location: ${result.location} | Failure: ${result.failureReason}`, margin, yPosition);
-      yPosition += 7;
       
-      // Add action taken
+      // Display Location on separate line
+      doc.text(`Location: ${result.location}`, margin, yPosition);
+      yPosition += 6;
+      
+      // Display Failure Reason on separate line
+      const failureReasonDisplay = result.failureReason 
+        ? result.failureReason.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
+        : 'Not specified';
+      doc.text(`Failure Reason: ${failureReasonDisplay}`, margin, yPosition);
+      yPosition += 6;
+      
+      // Add action taken on separate line
       if (result.actionTaken) {
         const actionDisplay = result.actionTaken === 'given' ? 'Given to Site Contact' : 'Removed from Site';
         doc.text(`Action Taken: ${actionDisplay}`, margin, yPosition);
-        yPosition += 7;
+        yPosition += 6;
       }
       
-      // Add notes if available with text wrapping
-      if (result.notes) {
-        doc.text('Comments: ', margin, yPosition);
-        const maxCommentWidth = pageWidth - (2 * margin);
+      // Parse and display detailed information from notes if available
+      if (result.notes && session.serviceType === 'fire_testing') {
+        // Parse fire testing specific fields from notes
+        const notes = result.notes;
+        const equipmentTypeMatch = notes.match(/Equipment Type: ([^|]+)/);
+        const extinguisherTypeMatch = notes.match(/Extinguisher Type: ([^|]+)/);
+        const netSizeMatch = notes.match(/Net Size: ([^|]+)/);
+        const grossWeightMatch = notes.match(/Gross Weight: ([^|]+)/);
+        const visualInspectionMatch = notes.match(/Visual Inspection: ([^|]+)/);
+        const operationalTestMatch = notes.match(/Operational Test: ([^|]+)/);
+        const pressureTestMatch = notes.match(/Pressure Test: ([^|]+)/);
+        const accessibilityCheckMatch = notes.match(/Accessibility Check: ([^|]+)/);
+        const signageCheckMatch = notes.match(/Signage Check: ([^|]+)/);
+        
+        yPosition += 2; // Add small space before detailed info
+        doc.setFont('helvetica', 'bold');
+        doc.text('Test Details:', margin, yPosition);
+        yPosition += 6;
+        doc.setFont('helvetica', 'normal');
+        
+        if (equipmentTypeMatch) {
+          const equipmentType = equipmentTypeMatch[1].trim().replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+          doc.text(`Equipment Type: ${equipmentType}`, margin + 5, yPosition);
+          yPosition += 5;
+        }
+        
+        if (extinguisherTypeMatch) {
+          const extinguisherType = extinguisherTypeMatch[1].trim().replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+          doc.text(`Extinguisher Type: ${extinguisherType}`, margin + 5, yPosition);
+          yPosition += 5;
+        }
+        
+        if (netSizeMatch) {
+          doc.text(`Net Size: ${netSizeMatch[1].trim()}`, margin + 5, yPosition);
+          yPosition += 5;
+        }
+        
+        if (grossWeightMatch) {
+          doc.text(`Gross Weight: ${grossWeightMatch[1].trim()}`, margin + 5, yPosition);
+          yPosition += 5;
+        }
+        
+        if (visualInspectionMatch) {
+          doc.text(`Visual Inspection: ${visualInspectionMatch[1].trim()}`, margin + 5, yPosition);
+          yPosition += 5;
+        }
+        
+        if (operationalTestMatch) {
+          doc.text(`Operational Test: ${operationalTestMatch[1].trim()}`, margin + 5, yPosition);
+          yPosition += 5;
+        }
+        
+        if (pressureTestMatch) {
+          doc.text(`Pressure Test: ${pressureTestMatch[1].trim()}`, margin + 5, yPosition);
+          yPosition += 5;
+        }
+        
+        if (accessibilityCheckMatch) {
+          doc.text(`Accessibility Check: ${accessibilityCheckMatch[1].trim()}`, margin + 5, yPosition);
+          yPosition += 5;
+        }
+        
+        if (signageCheckMatch) {
+          doc.text(`Signage Check: ${signageCheckMatch[1].trim()}`, margin + 5, yPosition);
+          yPosition += 5;
+        }
+      } else if (result.notes) {
+        // For non-fire testing or if notes don't match the pattern, display as comments
+        doc.setFont('helvetica', 'bold');
+        doc.text('Comments:', margin, yPosition);
+        yPosition += 6;
+        doc.setFont('helvetica', 'normal');
+        
+        const maxCommentWidth = pageWidth - (2 * margin) - 5;
         const commentLines = doc.splitTextToSize(result.notes, maxCommentWidth);
-        yPosition += 7;
         commentLines.forEach((line: string) => {
           // Check if we need a new page
           if (yPosition > doc.internal.pageSize.height - 30) {
             doc.addPage();
             yPosition = margin + 20;
           }
-          doc.text(line, margin, yPosition);
+          doc.text(line, margin + 5, yPosition);
           yPosition += 5;
         });
       }
