@@ -60,6 +60,7 @@ function IconPicker({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [customEmoji, setCustomEmoji] = useState("");
+  const { toast } = useToast();
 
   const handleCustomEmojiSubmit = () => {
     if (customEmoji.trim()) {
@@ -69,15 +70,69 @@ function IconPicker({
     }
   };
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid File",
+        description: "Please upload an image file (PNG, JPG, GIF, etc.)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 500KB)
+    if (file.size > 500 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: "Please upload an image smaller than 500KB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64String = e.target?.result as string;
+      onSelectIcon(base64String);
+      setIsOpen(false);
+      // Reset the input
+      event.target.value = '';
+    };
+    reader.onerror = () => {
+      toast({
+        title: "Upload Failed",
+        description: "Failed to read the image file",
+        variant: "destructive",
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Check if icon is a base64 image
+  const isBase64Image = selectedIcon?.startsWith('data:image/');
+
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className="h-10 w-16 text-2xl p-0"
+          className="h-10 w-16 p-0 overflow-hidden"
           data-testid="button-select-icon"
         >
-          {selectedIcon || "📦"}
+          {isBase64Image ? (
+            <img 
+              src={selectedIcon} 
+              alt="Custom icon" 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span className="text-2xl">{selectedIcon || "📦"}</span>
+          )}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[320px] sm:w-[400px] max-h-[400px] overflow-y-auto p-4" align="start">
@@ -94,6 +149,24 @@ function IconPicker({
             </Button>
           </div>
           
+          {/* Custom Image Upload */}
+          <div className="border-b pb-3">
+            <Label htmlFor="custom-image" className="text-xs font-medium text-gray-600 mb-2 block">
+              Upload Custom Image
+            </Label>
+            <div className="space-y-2">
+              <Input
+                id="custom-image"
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="text-sm"
+                data-testid="input-custom-image"
+              />
+              <p className="text-xs text-gray-500">Max 500KB • PNG, JPG, GIF supported</p>
+            </div>
+          </div>
+
           {/* Custom Emoji Input */}
           <div className="border-b pb-3">
             <Label htmlFor="custom-emoji" className="text-xs font-medium text-gray-600 mb-2 block">
@@ -593,7 +666,9 @@ export default function Environments() {
                         <p className="text-gray-500 text-sm">No items added yet</p>
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {editItems.map((item, index) => (
+                          {editItems.map((item, index) => {
+                            const isBase64Image = item.icon?.startsWith('data:image/');
+                            return (
                             <div
                               key={index}
                               data-testid={`item-${index}`}
@@ -603,16 +678,84 @@ export default function Environments() {
                                 <Popover>
                                   <PopoverTrigger asChild>
                                     <button
-                                      className="text-2xl hover:bg-gray-100 rounded p-1 transition-colors"
+                                      className="hover:bg-gray-100 rounded p-1 transition-colors overflow-hidden"
                                       data-testid={`button-edit-icon-${index}`}
                                     >
-                                      {item.icon || "📦"}
+                                      {isBase64Image ? (
+                                        <img 
+                                          src={item.icon} 
+                                          alt="Custom icon" 
+                                          className="w-8 h-8 object-cover rounded"
+                                        />
+                                      ) : (
+                                        <span className="text-2xl">{item.icon || "📦"}</span>
+                                      )}
                                     </button>
                                   </PopoverTrigger>
                                   <PopoverContent className="w-[320px] sm:w-[400px] max-h-[400px] overflow-y-auto p-4" align="start">
                                     <div className="space-y-4">
                                       <div className="flex items-center justify-between mb-2">
                                         <h4 className="font-semibold text-sm">Change Icon</h4>
+                                      </div>
+                                      
+                                      {/* Custom Image Upload */}
+                                      <div className="border-b pb-3">
+                                        <Label className="text-xs font-medium text-gray-600 mb-2 block">
+                                          Upload Custom Image
+                                        </Label>
+                                        <div className="space-y-2">
+                                          <Input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => {
+                                              const file = e.target.files?.[0];
+                                              if (!file) return;
+                                              if (!file.type.startsWith('image/')) {
+                                                toast({
+                                                  title: "Invalid File",
+                                                  description: "Please upload an image file",
+                                                  variant: "destructive",
+                                                });
+                                                return;
+                                              }
+                                              if (file.size > 500 * 1024) {
+                                                toast({
+                                                  title: "File Too Large",
+                                                  description: "Max 500KB",
+                                                  variant: "destructive",
+                                                });
+                                                return;
+                                              }
+                                              const reader = new FileReader();
+                                              reader.onload = (event) => {
+                                                handleEditItemIcon(index, event.target?.result as string);
+                                              };
+                                              reader.readAsDataURL(file);
+                                              e.target.value = '';
+                                            }}
+                                            className="text-sm"
+                                          />
+                                          <p className="text-xs text-gray-500">Max 500KB</p>
+                                        </div>
+                                      </div>
+
+                                      {/* Custom Emoji Input */}
+                                      <div className="border-b pb-3">
+                                        <Label className="text-xs font-medium text-gray-600 mb-2 block">
+                                          Custom Emoji
+                                        </Label>
+                                        <div className="flex gap-2">
+                                          <Input
+                                            placeholder="Paste emoji..."
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                                                handleEditItemIcon(index, e.currentTarget.value.trim());
+                                                e.currentTarget.value = '';
+                                              }
+                                            }}
+                                            className="text-xl text-center"
+                                          />
+                                        </div>
                                       </div>
                                       
                                       {Object.entries(ICON_LIBRARY).map(([category, icons]) => (
@@ -654,7 +797,8 @@ export default function Environments() {
                                 <Trash2 className="w-4 h-4 text-red-500" />
                               </Button>
                             </div>
-                          ))}
+                          );
+                          })}
                         </div>
                       )}
                     </div>
@@ -665,18 +809,29 @@ export default function Environments() {
                       <p className="text-gray-500 text-sm">No items configured yet. Click "Edit Items" to add items.</p>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                        {(Array.isArray(env.items) ? env.items : []).map((item: Item, index: number) => (
+                        {(Array.isArray(env.items) ? env.items : []).map((item: Item, index: number) => {
+                          const isBase64Image = item.icon?.startsWith('data:image/');
+                          return (
                           <div
                             key={index}
                             className="flex items-center gap-2 border rounded-lg p-2 bg-gray-50"
                           >
-                            <span className="text-xl">{item.icon}</span>
+                            {isBase64Image ? (
+                              <img 
+                                src={item.icon} 
+                                alt="Custom icon" 
+                                className="w-8 h-8 object-cover rounded flex-shrink-0"
+                              />
+                            ) : (
+                              <span className="text-xl flex-shrink-0">{item.icon}</span>
+                            )}
                             <div className="text-sm">
                               <div className="font-medium">{item.name}</div>
                               <div className="text-gray-500 text-xs">{item.description}</div>
                             </div>
                           </div>
-                        ))}
+                        );
+                        })}
                       </div>
                     )}
                   </div>
