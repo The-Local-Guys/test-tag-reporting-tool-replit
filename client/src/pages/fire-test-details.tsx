@@ -70,7 +70,7 @@ export default function FireTestDetails() {
       weight: '',
       visionInspection: true,
       operationalTest: true,
-      pressureTest: false,
+      pressureTest: true,
       accessibilityCheck: true,
       signageCheck: true,
       notes: '',
