@@ -436,7 +436,15 @@ export default function ItemSelection() {
               >
                 <div className="flex justify-center items-center mb-2 h-12" data-testid={`icon-item-${item.type}`}>
                   {typeof item.icon === 'string' ? (
-                    <span className="text-3xl">{item.icon || "📦"}</span>
+                    item.icon?.startsWith('data:image/') ? (
+                      <img 
+                        src={item.icon} 
+                        alt={item.name} 
+                        className="w-12 h-12 object-cover rounded"
+                      />
+                    ) : (
+                      <span className="text-3xl">{item.icon || "📦"}</span>
+                    )
                   ) : (
                     item.icon
                   )}
