@@ -275,8 +275,28 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     const itemNameLines = doc.splitTextToSize(result.itemName, itemNameWidth);
     const locationLines = doc.splitTextToSize(result.location, locationWidth);
     
+    // For fire testing, also calculate size/weight lines
+    let sizeWeightLines: string[] = [];
+    let manufacturerLines: string[] = [];
+    if (session.serviceType === 'fire_testing') {
+      const notes = result.notes || '';
+      const sizeMatch = notes.match(/Net Size: ([^|]+)/);
+      const weightMatch = notes.match(/Gross Weight: ([^|]+)/);
+      const sizeWeight = [sizeMatch?.[1]?.trim(), weightMatch?.[1]?.trim()].filter(Boolean).join(' / ') || 'N/A';
+      const sizeWeightWidth = 20; // Width for size/weight column
+      sizeWeightLines = doc.splitTextToSize(sizeWeight, sizeWeightWidth);
+      
+      // Add word wrapping for manufacturer info
+      const manufacturerWidth = 20; // Width for manufacturer column
+      manufacturerLines = doc.splitTextToSize(result.manufacturerInfo || 'N/A', manufacturerWidth);
+    } else if (session.serviceType === 'emergency_exit_light') {
+      // Add word wrapping for manufacturer info in emergency exit light
+      const manufacturerWidth = 20;
+      manufacturerLines = doc.splitTextToSize(result.manufacturerInfo || 'N/A', manufacturerWidth);
+    }
+    
     // Calculate row height based on maximum lines needed
-    const maxLines = Math.max(itemNameLines.length, locationLines.length);
+    const maxLines = Math.max(itemNameLines.length, locationLines.length, sizeWeightLines.length, manufacturerLines.length);
     const lineHeight = 4; // Height per line
     const rowHeight = maxLines * lineHeight;
     
@@ -313,8 +333,10 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       }
       doc.setTextColor(0, 0, 0); // Reset to black
       
-      // Show manufacturer and installation date for emergency exit light testing
-      doc.text(result.manufacturerInfo || 'N/A', margin + 62, rowStartY);
+      // Show manufacturer with word wrapping and installation date for emergency exit light testing
+      manufacturerLines.forEach((line: string, i: number) => {
+        doc.text(line, margin + 62, rowStartY + (i * lineHeight));
+      });
       doc.text(result.installationDate || 'N/A', margin + 84, rowStartY);
       doc.text(getFrequencyLabel(result.frequency), margin + 106, rowStartY);
       doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 124, rowStartY);
@@ -331,14 +353,17 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         doc.text('FAIL', margin + 62, rowStartY);
       }
       doc.setTextColor(0, 0, 0); // Reset to black
-      // Parse fire equipment details from notes field
-      const notes = result.notes || '';
-      const sizeMatch = notes.match(/Size: ([^|]+)/);
-      const weightMatch = notes.match(/Weight: ([^|]+)/);
-      const sizeWeight = [sizeMatch?.[1]?.trim(), weightMatch?.[1]?.trim()].filter(Boolean).join(' / ') || 'N/A';
       
-      doc.text(sizeWeight, margin + 78, rowStartY);
-      doc.text(result.manufacturerInfo || 'N/A', margin + 100, rowStartY);
+      // Draw size/weight with word wrapping (already calculated earlier)
+      sizeWeightLines.forEach((line: string, i: number) => {
+        doc.text(line, margin + 78, rowStartY + (i * lineHeight));
+      });
+      
+      // Draw manufacturer with word wrapping (already calculated earlier)
+      manufacturerLines.forEach((line: string, i: number) => {
+        doc.text(line, margin + 100, rowStartY + (i * lineHeight));
+      });
+      
       doc.text(getFrequencyLabel(result.frequency), margin + 122, rowStartY);
       doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 140, rowStartY);
     } else {
@@ -576,14 +601,14 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       }
       
       // Show equipment details if available
-      const sizeMatch = notes.match(/Size: ([^|]+)/);
-      const weightMatch = notes.match(/Weight: ([^|]+)/);
+      const sizeMatch = notes.match(/Net Size: ([^|]+)/);
+      const weightMatch = notes.match(/Gross Weight: ([^|]+)/);
       if (sizeMatch?.[1]) {
-        doc.text(`• Size: ${sizeMatch[1]}`, margin + 5, yPosition);
+        doc.text(`• Net Size: ${sizeMatch[1]}`, margin + 5, yPosition);
         yPosition += 6;
       }
       if (weightMatch?.[1]) {
-        doc.text(`• Weight: ${weightMatch[1]}`, margin + 5, yPosition);
+        doc.text(`• Gross Weight: ${weightMatch[1]}`, margin + 5, yPosition);
         yPosition += 6;
       }
       
