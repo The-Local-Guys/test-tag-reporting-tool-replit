@@ -59,6 +59,15 @@ function IconPicker({
   onSelectIcon: (icon: string) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [customEmoji, setCustomEmoji] = useState("");
+
+  const handleCustomEmojiSubmit = () => {
+    if (customEmoji.trim()) {
+      onSelectIcon(customEmoji.trim());
+      setCustomEmoji("");
+      setIsOpen(false);
+    }
+  };
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -83,6 +92,36 @@ function IconPicker({
             >
               <X className="h-4 w-4" />
             </Button>
+          </div>
+          
+          {/* Custom Emoji Input */}
+          <div className="border-b pb-3">
+            <Label htmlFor="custom-emoji" className="text-xs font-medium text-gray-600 mb-2 block">
+              Custom Emoji
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                id="custom-emoji"
+                placeholder="Paste emoji here..."
+                value={customEmoji}
+                onChange={(e) => setCustomEmoji(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleCustomEmojiSubmit();
+                  }
+                }}
+                className="text-xl text-center"
+                data-testid="input-custom-emoji"
+              />
+              <Button
+                size="sm"
+                onClick={handleCustomEmojiSubmit}
+                disabled={!customEmoji.trim()}
+                data-testid="button-use-custom-emoji"
+              >
+                Use
+              </Button>
+            </div>
           </div>
           
           {Object.entries(ICON_LIBRARY).map(([category, icons]) => (
