@@ -723,6 +723,11 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       if (result.notes && session.serviceType === 'fire_testing') {
         // Parse fire testing specific fields from notes
         const notes = result.notes;
+        
+        // Extract comments (text before the first "|" separator)
+        const commentsPart = notes.split('|')[0].trim();
+        const hasComments = commentsPart && commentsPart.length > 0;
+        
         const equipmentTypeMatch = notes.match(/Equipment Type: ([^|]+)/);
         const extinguisherTypeMatch = notes.match(/Extinguisher Type: ([^|]+)/);
         const netSizeMatch = notes.match(/Net Size: ([^|]+)/);
@@ -733,66 +738,81 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         const accessibilityCheckMatch = notes.match(/Accessibility Check: ([^|]+)/);
         const signageCheckMatch = notes.match(/Signage Check: ([^|]+)/);
         
-        yPosition += 2; // Add small space before detailed info
-        doc.setFont('helvetica', 'bold');
-        doc.text('Test Details:', margin, yPosition);
-        yPosition += 6;
-        doc.setFont('helvetica', 'normal');
+        // Display comments first if they exist
+        if (hasComments) {
+          doc.setFont('helvetica', 'bold');
+          doc.text('Comments:', margin, yPosition);
+          yPosition += 6;
+          doc.setFont('helvetica', 'normal');
+          
+          const maxCommentWidth = pageWidth - (2 * margin) - 5;
+          const commentLines = doc.splitTextToSize(commentsPart, maxCommentWidth);
+          commentLines.forEach((line: string) => {
+            if (yPosition > doc.internal.pageSize.height - 30) {
+              doc.addPage();
+              yPosition = margin + 20;
+            }
+            doc.text(line, margin, yPosition);
+            yPosition += 5;
+          });
+          yPosition += 2;
+        }
         
+        // Display parsed fields without heading
         if (equipmentTypeMatch) {
           const equipmentType = equipmentTypeMatch[1].trim().replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
-          doc.text(`Equipment Type: ${equipmentType}`, margin + 5, yPosition);
+          doc.text(`Equipment Type: ${equipmentType}`, margin, yPosition);
           yPosition += 5;
         }
         
         if (extinguisherTypeMatch) {
           const extinguisherType = extinguisherTypeMatch[1].trim().replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
-          doc.text(`Extinguisher Type: ${extinguisherType}`, margin + 5, yPosition);
+          doc.text(`Extinguisher Type: ${extinguisherType}`, margin, yPosition);
           yPosition += 5;
         }
         
         if (netSizeMatch) {
-          doc.text(`Net Size: ${netSizeMatch[1].trim()}`, margin + 5, yPosition);
+          doc.text(`Net Size: ${netSizeMatch[1].trim()}`, margin, yPosition);
           yPosition += 5;
         }
         
         if (grossWeightMatch) {
-          doc.text(`Gross Weight: ${grossWeightMatch[1].trim()}`, margin + 5, yPosition);
+          doc.text(`Gross Weight: ${grossWeightMatch[1].trim()}`, margin, yPosition);
           yPosition += 5;
         }
         
         if (visualInspectionMatch) {
-          doc.text(`Visual Inspection: ${visualInspectionMatch[1].trim()}`, margin + 5, yPosition);
+          doc.text(`Visual Inspection: ${visualInspectionMatch[1].trim()}`, margin, yPosition);
           yPosition += 5;
         }
         
         if (operationalTestMatch) {
-          doc.text(`Operational Test: ${operationalTestMatch[1].trim()}`, margin + 5, yPosition);
+          doc.text(`Operational Test: ${operationalTestMatch[1].trim()}`, margin, yPosition);
           yPosition += 5;
         }
         
         if (pressureTestMatch) {
-          doc.text(`Pressure Test: ${pressureTestMatch[1].trim()}`, margin + 5, yPosition);
+          doc.text(`Pressure Test: ${pressureTestMatch[1].trim()}`, margin, yPosition);
           yPosition += 5;
         }
         
         if (accessibilityCheckMatch) {
-          doc.text(`Accessibility Check: ${accessibilityCheckMatch[1].trim()}`, margin + 5, yPosition);
+          doc.text(`Accessibility Check: ${accessibilityCheckMatch[1].trim()}`, margin, yPosition);
           yPosition += 5;
         }
         
         if (signageCheckMatch) {
-          doc.text(`Signage Check: ${signageCheckMatch[1].trim()}`, margin + 5, yPosition);
+          doc.text(`Signage Check: ${signageCheckMatch[1].trim()}`, margin, yPosition);
           yPosition += 5;
         }
       } else if (result.notes) {
-        // For non-fire testing or if notes don't match the pattern, display as comments
+        // For non-fire testing, display as comments
         doc.setFont('helvetica', 'bold');
         doc.text('Comments:', margin, yPosition);
         yPosition += 6;
         doc.setFont('helvetica', 'normal');
         
-        const maxCommentWidth = pageWidth - (2 * margin) - 5;
+        const maxCommentWidth = pageWidth - (2 * margin);
         const commentLines = doc.splitTextToSize(result.notes, maxCommentWidth);
         commentLines.forEach((line: string) => {
           // Check if we need a new page
@@ -800,7 +820,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
             doc.addPage();
             yPosition = margin + 20;
           }
-          doc.text(line, margin + 5, yPosition);
+          doc.text(line, margin, yPosition);
           yPosition += 5;
         });
       }
