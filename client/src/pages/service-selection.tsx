@@ -2,16 +2,23 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Zap, ShieldAlert, ArrowRight, FileText, Plus, Flame } from "lucide-react";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
+import { Zap, ShieldAlert, ArrowRight, FileText, Plus, Flame, Trash2, CheckCircle } from "lucide-react";
 import { useSpaNavigation } from "@/hooks/useSpaNavigation";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
 
 export default function ServiceSelection() {
   const { navigate } = useSpaNavigation();
+  const { toast } = useToast();
   const [showUnfinishedDialog, setShowUnfinishedDialog] = useState(false);
   const [unfinishedSessionId, setUnfinishedSessionId] = useState<string | null>(null);
   const [unfinishedResults, setUnfinishedResults] = useState<any[]>([]);
   const [isCheckingUnfinished, setIsCheckingUnfinished] = useState(true);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [showCancelSuccess, setShowCancelSuccess] = useState(false);
 
   // Check for unfinished reports when component mounts
   useEffect(() => {
@@ -101,6 +108,60 @@ export default function ServiceSelection() {
     setShowUnfinishedDialog(false);
   };
 
+  const handleCancelReport = () => {
+    setShowCancelConfirm(true);
+  };
+
+  const confirmCancelReport = async () => {
+    if (!unfinishedSessionId) {
+      toast({
+        title: "Error",
+        description: "No session to cancel",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsCancelling(true);
+
+    try {
+      // Delete the session from the database
+      await apiRequest('DELETE', `/api/sessions/${unfinishedSessionId}`);
+
+      // Clear localStorage data for this session
+      localStorage.removeItem(`batchedResults_${unfinishedSessionId}`);
+      localStorage.removeItem(`monthlyCounter_${unfinishedSessionId}`);
+      localStorage.removeItem(`fiveYearlyCounter_${unfinishedSessionId}`);
+      localStorage.removeItem('unfinished');
+      localStorage.removeItem('unfinishedSessionId');
+      localStorage.removeItem('unfinishedId');
+      localStorage.removeItem('currentSessionId');
+
+      // Show success feedback
+      setIsCancelling(false);
+      setShowCancelSuccess(true);
+      
+      toast({
+        title: "Report Cancelled",
+        description: "The unfinished report has been permanently deleted.",
+      });
+
+      setTimeout(() => {
+        setShowCancelConfirm(false);
+        setShowUnfinishedDialog(false);
+        setShowCancelSuccess(false);
+      }, 1000);
+
+    } catch (error) {
+      setIsCancelling(false);
+      toast({
+        title: "Error",
+        description: "Failed to cancel the report. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const selectService = (serviceType: 'electrical' | 'emergency_exit_light' | 'fire_testing') => {
     // Store the selected service type
     sessionStorage.setItem('selectedService', serviceType);
@@ -149,9 +210,49 @@ export default function ServiceSelection() {
               <Plus className="w-4 h-4 mr-2" />
               Start New Report
             </Button>
+            <Button 
+              onClick={handleCancelReport} 
+              variant="destructive" 
+              className="w-full" 
+              size="lg"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Cancel Report
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Cancel Report Confirmation Dialog */}
+      <AlertDialog open={showCancelConfirm} onOpenChange={setShowCancelConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Report?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the unfinished report and all {unfinishedResults.length} test items from the database. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isCancelling}>
+              Keep Report
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmCancelReport}
+              disabled={isCancelling}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {showCancelSuccess ? (
+                <>
+                  <CheckCircle className="mr-2 h-4 w-4 text-green-400" />
+                  Report Cancelled
+                </>
+              ) : (
+                "Yes, Cancel Report"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="max-w-4xl mx-auto p-6">
       <div className="text-center mb-8">
