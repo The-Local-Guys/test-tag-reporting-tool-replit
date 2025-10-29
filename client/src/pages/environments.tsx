@@ -596,15 +596,8 @@ export default function Environments() {
                   <div className="space-y-4">
                     <div className="border rounded-lg p-3 sm:p-4 bg-gray-50">
                       <h4 className="font-semibold mb-3 text-sm sm:text-base">Add New Item</h4>
-                      <div className="grid grid-cols-1 gap-3">
-                        <div className="grid grid-cols-[auto_1fr] sm:grid-cols-[auto_1fr_1fr] gap-3">
-                          <div className="space-y-2">
-                            <Label className="text-sm">Icon</Label>
-                            <IconPicker
-                              selectedIcon={newItem.icon}
-                              onSelectIcon={(icon) => setNewItem({ ...newItem, icon })}
-                            />
-                          </div>
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div className="space-y-2">
                             <Label htmlFor={`item-name-${env.id}`} className="text-sm">Item Name</Label>
                             <Input
@@ -616,7 +609,7 @@ export default function Environments() {
                               className="text-sm"
                             />
                           </div>
-                          <div className="space-y-2 col-span-2 sm:col-span-1">
+                          <div className="space-y-2">
                             <Label htmlFor={`item-type-${env.id}`} className="text-sm">Item Type</Label>
                             <Input
                               id={`item-type-${env.id}`}
@@ -630,16 +623,25 @@ export default function Environments() {
                             />
                           </div>
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor={`item-description-${env.id}`} className="text-sm">Description</Label>
-                          <Input
-                            id={`item-description-${env.id}`}
-                            data-testid="input-item-description"
-                            placeholder="e.g., Power Tool"
-                            value={newItem.description}
-                            onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
-                            className="text-sm"
-                          />
+                        <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-3 sm:items-end">
+                          <div className="space-y-2">
+                            <Label className="text-sm">Icon</Label>
+                            <IconPicker
+                              selectedIcon={newItem.icon}
+                              onSelectIcon={(icon) => setNewItem({ ...newItem, icon })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor={`item-description-${env.id}`} className="text-sm">Description</Label>
+                            <Input
+                              id={`item-description-${env.id}`}
+                              data-testid="input-item-description"
+                              placeholder="e.g., Power Tool"
+                              value={newItem.description}
+                              onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                              className="text-sm"
+                            />
+                          </div>
                         </div>
                       </div>
                       <Button
