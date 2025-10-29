@@ -244,7 +244,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   } else if (session.serviceType === 'fire_testing') {
     doc.text('Type', margin + 48, yPosition);
     doc.text('Result', margin + 62, yPosition);
-    doc.text('Size/Weight', margin + 78, yPosition);
+    doc.text('Net Size/Gross Weight', margin + 78, yPosition);
     doc.text('Manufacturer', margin + 100, yPosition);
     doc.text('Frequency', margin + 122, yPosition);
     doc.text('Due Date', margin + 140, yPosition);
@@ -275,9 +275,10 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     const itemNameLines = doc.splitTextToSize(result.itemName, itemNameWidth);
     const locationLines = doc.splitTextToSize(result.location, locationWidth);
     
-    // For fire testing, also calculate size/weight lines
+    // For fire testing, also calculate size/weight lines and type lines
     let sizeWeightLines: string[] = [];
     let manufacturerLines: string[] = [];
+    let typeLines: string[] = [];
     if (session.serviceType === 'fire_testing') {
       const notes = result.notes || '';
       const sizeMatch = notes.match(/Net Size: ([^|]+)/);
@@ -289,14 +290,22 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       // Add word wrapping for manufacturer info
       const manufacturerWidth = 20; // Width for manufacturer column
       manufacturerLines = doc.splitTextToSize(result.manufacturerInfo || 'N/A', manufacturerWidth);
+      
+      // Add word wrapping for type/classification
+      const typeWidth = 13; // Width for type column
+      typeLines = doc.splitTextToSize(result.classification.toUpperCase(), typeWidth);
     } else if (session.serviceType === 'emergency_exit_light') {
       // Add word wrapping for manufacturer info in emergency exit light
       const manufacturerWidth = 20;
       manufacturerLines = doc.splitTextToSize(result.manufacturerInfo || 'N/A', manufacturerWidth);
+    } else {
+      // For electrical testing, add word wrapping for type/classification
+      const typeWidth = 13; // Width for type column
+      typeLines = doc.splitTextToSize(result.classification.toUpperCase(), typeWidth);
     }
     
     // Calculate row height based on maximum lines needed
-    const maxLines = Math.max(itemNameLines.length, locationLines.length, sizeWeightLines.length, manufacturerLines.length);
+    const maxLines = Math.max(itemNameLines.length, locationLines.length, sizeWeightLines.length, manufacturerLines.length, typeLines.length);
     const lineHeight = 4; // Height per line
     const rowHeight = maxLines * lineHeight;
     
@@ -341,8 +350,10 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       doc.text(getFrequencyLabel(result.frequency), margin + 106, rowStartY);
       doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 124, rowStartY);
     } else if (session.serviceType === 'fire_testing') {
-      // For fire testing, show classification/type
-      doc.text(result.classification.toUpperCase(), margin + 48, rowStartY);
+      // For fire testing, show classification/type with word wrapping
+      typeLines.forEach((line: string, i: number) => {
+        doc.text(line, margin + 48, rowStartY + (i * lineHeight));
+      });
       
       // Color code the result
       if (result.result === 'pass') {
@@ -367,8 +378,10 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       doc.text(getFrequencyLabel(result.frequency), margin + 122, rowStartY);
       doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 140, rowStartY);
     } else {
-      // For regular electrical testing, show classification/type
-      doc.text(result.classification.toUpperCase(), margin + 48, rowStartY);
+      // For regular electrical testing, show classification/type with word wrapping
+      typeLines.forEach((line: string, i: number) => {
+        doc.text(line, margin + 48, rowStartY + (i * lineHeight));
+      });
       
       // Color code the result
       if (result.result === 'pass') {
