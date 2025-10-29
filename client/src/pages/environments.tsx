@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Trash2, Edit, Plus, Save, X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Trash2, Edit, Plus, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
@@ -19,6 +20,100 @@ type Item = {
   icon: string;
   description: string;
 };
+
+// Predefined icon library organized by category
+const ICON_LIBRARY = {
+  "Electrical Equipment": [
+    "⚡", "🔌", "💡", "🔦", "🪫", "🔋", "⚙️", "🔧", "🔨", "🪛",
+  ],
+  "Appliances": [
+    "🖥️", "💻", "⌨️", "🖱️", "🖨️", "📱", "☎️", "📠", "📺", "📻",
+    "🎙️", "🎚️", "🎛️", "📡", "📟",
+  ],
+  "Kitchen & Home": [
+    "🍳", "☕", "🫖", "🧊", "🌡️", "🧯", "🚿", "🛁", "🚽", "🧴",
+    "🧹", "🧺", "🪣", "🪠", "🧼",
+  ],
+  "Power Tools": [
+    "🔩", "🪚", "⛏️", "🪓", "⚒️", "🛠️", "🪢", "⛓️", "🪝", "🧲",
+  ],
+  "Office Equipment": [
+    "🖇️", "📎", "✂️", "📏", "📐", "📌", "📍", "🖊️", "✏️", "📝",
+    "📋", "📁", "📂", "🗂️", "📇", "📞",
+  ],
+  "Lighting": [
+    "💡", "🔦", "🕯️", "🪔", "🏮", "💫", "✨", "⭐", "🌟", "💥",
+  ],
+  "Other": [
+    "📦", "📮", "🎁", "🎀", "🎈", "🎊", "🎉", "🪅", "🧰", "🎒",
+    "👜", "🎯", "🔑", "🔒", "🔓", "🛡️", "⚠️", "🚨", "📢", "🔔",
+  ],
+};
+
+// Icon Picker Component
+function IconPicker({ 
+  selectedIcon, 
+  onSelectIcon 
+}: { 
+  selectedIcon: string; 
+  onSelectIcon: (icon: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className="h-10 w-16 text-2xl p-0"
+          data-testid="button-select-icon"
+        >
+          {selectedIcon || "📦"}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[320px] sm:w-[400px] max-h-[400px] overflow-y-auto p-4" align="start">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="font-semibold text-sm">Select Icon</h4>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsOpen(false)}
+              className="h-6 w-6 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          {Object.entries(ICON_LIBRARY).map(([category, icons]) => (
+            <div key={category}>
+              <h5 className="text-xs font-medium text-gray-600 mb-2">{category}</h5>
+              <div className="grid grid-cols-8 sm:grid-cols-10 gap-1">
+                {icons.map((icon) => (
+                  <button
+                    key={icon}
+                    onClick={() => {
+                      onSelectIcon(icon);
+                      setIsOpen(false);
+                    }}
+                    className={`
+                      h-10 w-10 rounded-md text-xl hover:bg-gray-100 transition-colors
+                      flex items-center justify-center
+                      ${selectedIcon === icon ? 'bg-blue-100 ring-2 ring-blue-500' : ''}
+                    `}
+                    data-testid={`icon-option-${icon}`}
+                  >
+                    {icon}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 export default function Environments() {
   const { toast } = useToast();
@@ -38,6 +133,7 @@ export default function Environments() {
     type: "",
     name: "",
     description: "",
+    icon: "📦",
   });
   
   // Fetch environments
@@ -68,7 +164,7 @@ export default function Environments() {
     },
   });
 
-  // Update environment mutation
+  // Update environment mutation (for final save/done action)
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Environment> }) => {
       return await apiRequest("PATCH", `/api/environments/${id}`, data);
@@ -86,6 +182,24 @@ export default function Environments() {
       toast({
         title: "Error",
         description: "Failed to update environment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Auto-save mutation (for incremental changes without closing edit mode)
+  const autoSaveMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<Environment> }) => {
+      return await apiRequest("PATCH", `/api/environments/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/environments"] });
+      // Don't reset editing state - keep user in edit mode
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save changes",
         variant: "destructive",
       });
     },
@@ -139,7 +253,7 @@ export default function Environments() {
   const handleCancelEdit = () => {
     setEditingEnvironmentId(null);
     setEditItems([]);
-    setNewItem({ type: "", name: "", description: "" });
+    setNewItem({ type: "", name: "", description: "", icon: "📦" });
   };
 
   const handleAddItem = async () => {
@@ -154,28 +268,30 @@ export default function Environments() {
     
     if (editingEnvironmentId === null) return;
     
-    const newItemWithIcon = { ...newItem, icon: "📦" };
-    const updatedItems = [...editItems, newItemWithIcon];
+    const savedNewItem = { ...newItem };
+    const updatedItems = [...editItems, savedNewItem];
     
     // Update local state
     setEditItems(updatedItems);
-    setNewItem({ type: "", name: "", description: "" });
+    setNewItem({ type: "", name: "", description: "", icon: "📦" });
     
     // Auto-save to backend
     try {
-      await updateMutation.mutateAsync({
+      await autoSaveMutation.mutateAsync({
         id: editingEnvironmentId,
         data: { items: updatedItems },
       });
     } catch (error) {
-      // Rollback on error
+      // Rollback on error - restore previous state and preserve form values
       setEditItems(editItems);
+      setNewItem(savedNewItem);
     }
   };
 
   const handleRemoveItem = async (index: number) => {
     if (editingEnvironmentId === null) return;
     
+    const removedItem = editItems[index];
     const updatedItems = editItems.filter((_, i) => i !== index);
     
     // Update local state
@@ -183,13 +299,35 @@ export default function Environments() {
     
     // Auto-save to backend
     try {
-      await updateMutation.mutateAsync({
+      await autoSaveMutation.mutateAsync({
+        id: editingEnvironmentId,
+        data: { items: updatedItems },
+      });
+    } catch (error) {
+      // Rollback on error - restore the removed item
+      setEditItems(editItems);
+    }
+  };
+
+  const handleEditItemIcon = async (index: number, newIcon: string) => {
+    if (editingEnvironmentId === null || autoSaveMutation.isPending) return;
+    
+    const previousItems = [...editItems];
+    const updatedItems = [...editItems];
+    updatedItems[index] = { ...updatedItems[index], icon: newIcon };
+    
+    // Update local state
+    setEditItems(updatedItems);
+    
+    // Auto-save to backend
+    try {
+      await autoSaveMutation.mutateAsync({
         id: editingEnvironmentId,
         data: { items: updatedItems },
       });
     } catch (error) {
       // Rollback on error
-      setEditItems(editItems);
+      setEditItems(previousItems);
     }
   };
 
@@ -342,30 +480,39 @@ export default function Environments() {
                   <div className="space-y-4">
                     <div className="border rounded-lg p-3 sm:p-4 bg-gray-50">
                       <h4 className="font-semibold mb-3 text-sm sm:text-base">Add New Item</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div className="space-y-2">
-                          <Label htmlFor={`item-name-${env.id}`} className="text-sm">Item Name</Label>
-                          <Input
-                            id={`item-name-${env.id}`}
-                            data-testid="input-item-name"
-                            placeholder="e.g., Drill, Lamp"
-                            value={newItem.name}
-                            onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-                            className="text-sm"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor={`item-type-${env.id}`} className="text-sm">Item Type</Label>
-                          <Input
-                            id={`item-type-${env.id}`}
-                            data-testid="input-item-type"
-                            placeholder="e.g., drill, lamp"
-                            value={newItem.type}
-                            onChange={(e) =>
-                              setNewItem({ ...newItem, type: e.target.value.toLowerCase().replace(/\s+/g, '-') })
-                            }
-                            className="text-sm"
-                          />
+                      <div className="grid grid-cols-1 gap-3">
+                        <div className="grid grid-cols-[auto_1fr] sm:grid-cols-[auto_1fr_1fr] gap-3">
+                          <div className="space-y-2">
+                            <Label className="text-sm">Icon</Label>
+                            <IconPicker
+                              selectedIcon={newItem.icon}
+                              onSelectIcon={(icon) => setNewItem({ ...newItem, icon })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor={`item-name-${env.id}`} className="text-sm">Item Name</Label>
+                            <Input
+                              id={`item-name-${env.id}`}
+                              data-testid="input-item-name"
+                              placeholder="e.g., Drill, Lamp"
+                              value={newItem.name}
+                              onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                              className="text-sm"
+                            />
+                          </div>
+                          <div className="space-y-2 col-span-2 sm:col-span-1">
+                            <Label htmlFor={`item-type-${env.id}`} className="text-sm">Item Type</Label>
+                            <Input
+                              id={`item-type-${env.id}`}
+                              data-testid="input-item-type"
+                              placeholder="e.g., drill, lamp"
+                              value={newItem.type}
+                              onChange={(e) =>
+                                setNewItem({ ...newItem, type: e.target.value.toLowerCase().replace(/\s+/g, '-') })
+                              }
+                              className="text-sm"
+                            />
+                          </div>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor={`item-description-${env.id}`} className="text-sm">Description</Label>
@@ -384,10 +531,10 @@ export default function Environments() {
                         size="sm"
                         className="mt-3"
                         data-testid="button-add-item"
-                        disabled={updateMutation.isPending}
+                        disabled={autoSaveMutation.isPending}
                       >
                         <Plus className="w-4 h-4 mr-1" />
-                        {updateMutation.isPending ? "Adding..." : "Add Item"}
+                        {autoSaveMutation.isPending ? "Adding..." : "Add Item"}
                       </Button>
                     </div>
 
@@ -414,7 +561,45 @@ export default function Environments() {
                               className="flex items-center justify-between border rounded-lg p-3 bg-white"
                             >
                               <div className="flex items-center gap-3">
-                                <span className="text-2xl">{item.icon || "📦"}</span>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <button
+                                      className="text-2xl hover:bg-gray-100 rounded p-1 transition-colors"
+                                      data-testid={`button-edit-icon-${index}`}
+                                    >
+                                      {item.icon || "📦"}
+                                    </button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-[320px] sm:w-[400px] max-h-[400px] overflow-y-auto p-4" align="start">
+                                    <div className="space-y-4">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <h4 className="font-semibold text-sm">Change Icon</h4>
+                                      </div>
+                                      
+                                      {Object.entries(ICON_LIBRARY).map(([category, icons]) => (
+                                        <div key={category}>
+                                          <h5 className="text-xs font-medium text-gray-600 mb-2">{category}</h5>
+                                          <div className="grid grid-cols-8 sm:grid-cols-10 gap-1">
+                                            {icons.map((icon) => (
+                                              <button
+                                                key={icon}
+                                                onClick={() => handleEditItemIcon(index, icon)}
+                                                className={`
+                                                  h-10 w-10 rounded-md text-xl hover:bg-gray-100 transition-colors
+                                                  flex items-center justify-center
+                                                  ${item.icon === icon ? 'bg-blue-100 ring-2 ring-blue-500' : ''}
+                                                `}
+                                                data-testid={`edit-icon-option-${icon}`}
+                                              >
+                                                {icon}
+                                              </button>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
                                 <div>
                                   <div className="font-medium">{item.name}</div>
                                   <div className="text-sm text-gray-500">{item.description}</div>
@@ -425,7 +610,7 @@ export default function Environments() {
                                 size="sm"
                                 onClick={() => handleRemoveItem(index)}
                                 data-testid={`button-remove-item-${index}`}
-                                disabled={updateMutation.isPending}
+                                disabled={autoSaveMutation.isPending}
                               >
                                 <Trash2 className="w-4 h-4 text-red-500" />
                               </Button>
