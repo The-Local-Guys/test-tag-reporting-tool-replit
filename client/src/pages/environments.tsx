@@ -623,16 +623,16 @@ export default function Environments() {
                             />
                           </div>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-3 sm:items-end">
+                        <div className="grid grid-cols-1 sm:grid-cols-[100px_1fr] gap-3">
                           <div className="space-y-2">
-                            <Label className="text-sm">Icon</Label>
+                            <Label className="text-sm block">Icon</Label>
                             <IconPicker
                               selectedIcon={newItem.icon}
                               onSelectIcon={(icon) => setNewItem({ ...newItem, icon })}
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor={`item-description-${env.id}`} className="text-sm">Description</Label>
+                            <Label htmlFor={`item-description-${env.id}`} className="text-sm block">Description</Label>
                             <Input
                               id={`item-description-${env.id}`}
                               data-testid="input-item-description"
