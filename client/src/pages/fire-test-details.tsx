@@ -129,8 +129,8 @@ export default function FireTestDetails() {
         data.notes,
         `Equipment Type: ${data.equipmentType}`,
         data.extinguisherType ? `Extinguisher Type: ${data.extinguisherType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}` : '',
-        data.size ? `Size: ${data.size}` : '',
-        data.weight ? `Weight: ${data.weight}` : '',
+        data.size ? `Net Size: ${data.size}` : '',
+        data.weight ? `Gross Weight: ${data.weight}` : '',
         `Visual Inspection: ${data.visionInspection ? 'Pass' : 'Fail'}`,
         `Operational Test: ${data.operationalTest ? 'Pass' : 'Fail'}`,
         data.equipmentType === 'fire_extinguisher' ? `Pressure Test: ${data.pressureTest ? 'Pass' : 'Fail'}` : '',
@@ -314,7 +314,7 @@ export default function FireTestDetails() {
             {watchEquipmentType === 'fire_extinguisher' && (
               <>
                 <div>
-                  <Label htmlFor="size">Size</Label>
+                  <Label htmlFor="size">Net Size</Label>
                   <Input
                     id="size"
                     {...form.register('size')}
@@ -324,7 +324,7 @@ export default function FireTestDetails() {
                 </div>
 
                 <div>
-                  <Label htmlFor="weight">Weight</Label>
+                  <Label htmlFor="weight">Gross Weight</Label>
                   <Input
                     id="weight"
                     {...form.register('weight')}
