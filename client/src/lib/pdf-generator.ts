@@ -244,7 +244,11 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   } else if (session.serviceType === 'fire_testing') {
     doc.text('Type', margin + 48, yPosition);
     doc.text('Result', margin + 62, yPosition);
-    doc.text('Net Size/Gross Weight', margin + 78, yPosition);
+    // Wrap "Net Size/Gross Weight" header to prevent overlap
+    const sizeWeightHeaderLines = doc.splitTextToSize('Net Size/Gross Weight', 20);
+    sizeWeightHeaderLines.forEach((line: string, i: number) => {
+      doc.text(line, margin + 78, yPosition + (i * 3));
+    });
     doc.text('Manufacturer', margin + 100, yPosition);
     doc.text('Frequency', margin + 122, yPosition);
     doc.text('Due Date', margin + 140, yPosition);
@@ -693,10 +697,21 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         yPosition += 7;
       }
       
-      // Add notes if available
+      // Add notes if available with text wrapping
       if (result.notes) {
-        doc.text(`Comments: ${result.notes}`, margin, yPosition);
+        doc.text('Comments: ', margin, yPosition);
+        const maxCommentWidth = pageWidth - (2 * margin);
+        const commentLines = doc.splitTextToSize(result.notes, maxCommentWidth);
         yPosition += 7;
+        commentLines.forEach((line: string) => {
+          // Check if we need a new page
+          if (yPosition > doc.internal.pageSize.height - 30) {
+            doc.addPage();
+            yPosition = margin + 20;
+          }
+          doc.text(line, margin, yPosition);
+          yPosition += 5;
+        });
       }
       
       // Add photo if available
