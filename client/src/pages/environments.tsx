@@ -74,21 +74,22 @@ function IconPicker({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
+    // Validate file type - only JPG and PNG
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowedTypes.includes(file.type.toLowerCase())) {
       toast({
-        title: "Invalid File",
-        description: "Please upload an image file (PNG, JPG, GIF, etc.)",
+        title: "Invalid File Type",
+        description: "Please upload a JPG or PNG image only",
         variant: "destructive",
       });
       return;
     }
 
-    // Validate file size (max 500KB)
-    if (file.size > 500 * 1024) {
+    // Validate file size (max 200KB to account for base64 expansion)
+    if (file.size > 200 * 1024) {
       toast({
         title: "File Too Large",
-        description: "Please upload an image smaller than 500KB",
+        description: "Please upload an image smaller than 200KB",
         variant: "destructive",
       });
       return;
@@ -158,12 +159,12 @@ function IconPicker({
               <Input
                 id="custom-image"
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/jpg,image/png"
                 onChange={handleImageUpload}
                 className="text-sm"
                 data-testid="input-custom-image"
               />
-              <p className="text-xs text-gray-500">Max 500KB • PNG, JPG, GIF supported</p>
+              <p className="text-xs text-gray-500">Max 200KB • JPG and PNG only</p>
             </div>
           </div>
 
@@ -706,22 +707,23 @@ export default function Environments() {
                                         <div className="space-y-2">
                                           <Input
                                             type="file"
-                                            accept="image/*"
+                                            accept="image/jpeg,image/jpg,image/png"
                                             onChange={(e) => {
                                               const file = e.target.files?.[0];
                                               if (!file) return;
-                                              if (!file.type.startsWith('image/')) {
+                                              const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+                                              if (!allowedTypes.includes(file.type.toLowerCase())) {
                                                 toast({
-                                                  title: "Invalid File",
-                                                  description: "Please upload an image file",
+                                                  title: "Invalid File Type",
+                                                  description: "Please upload JPG or PNG only",
                                                   variant: "destructive",
                                                 });
                                                 return;
                                               }
-                                              if (file.size > 500 * 1024) {
+                                              if (file.size > 200 * 1024) {
                                                 toast({
                                                   title: "File Too Large",
-                                                  description: "Max 500KB",
+                                                  description: "Max 200KB",
                                                   variant: "destructive",
                                                 });
                                                 return;
@@ -735,7 +737,7 @@ export default function Environments() {
                                             }}
                                             className="text-sm"
                                           />
-                                          <p className="text-xs text-gray-500">Max 500KB</p>
+                                          <p className="text-xs text-gray-500">Max 200KB • JPG/PNG only</p>
                                         </div>
                                       </div>
 
