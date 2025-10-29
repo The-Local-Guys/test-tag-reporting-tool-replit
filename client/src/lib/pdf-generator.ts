@@ -556,10 +556,27 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         yPosition += 6;
       }
       
-      // Show notes if any
+      // Show notes if any with text wrapping
       if (result.notes) {
-        doc.text(`• Additional Notes: ${result.notes}`, margin + 5, yPosition);
-        yPosition += 6;
+        const notesLabel = '• Additional Notes: ';
+        doc.text(notesLabel, margin + 5, yPosition);
+        
+        const maxNotesWidth = pageWidth - (2 * margin) - 10;
+        const notesLines = doc.splitTextToSize(result.notes, maxNotesWidth);
+        const labelWidth = doc.getTextWidth(notesLabel);
+        
+        notesLines.forEach((line: string, i: number) => {
+          if (yPosition > doc.internal.pageSize.height - 30) {
+            doc.addPage();
+            yPosition = margin + 20;
+          }
+          if (i === 0) {
+            doc.text(line, margin + 5 + labelWidth, yPosition);
+          } else {
+            doc.text(line, margin + 5, yPosition);
+          }
+          yPosition += 6;
+        });
       }
       
       yPosition += 6; // Space between items
@@ -642,11 +659,28 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         yPosition += 6;
       }
       
-      // Show notes if any (excluding the parsed fields)
+      // Show notes if any (excluding the parsed fields) with text wrapping
       const remainingNotes = notes.split('|')[0]?.trim(); // Get first part before equipment details
       if (remainingNotes && remainingNotes !== notes) {
-        doc.text(`• Additional Notes: ${remainingNotes}`, margin + 5, yPosition);
-        yPosition += 6;
+        const notesLabel = '• Additional Notes: ';
+        doc.text(notesLabel, margin + 5, yPosition);
+        
+        const maxNotesWidth = pageWidth - (2 * margin) - 10;
+        const notesLines = doc.splitTextToSize(remainingNotes, maxNotesWidth);
+        const labelWidth = doc.getTextWidth(notesLabel);
+        
+        notesLines.forEach((line: string, i: number) => {
+          if (yPosition > doc.internal.pageSize.height - 30) {
+            doc.addPage();
+            yPosition = margin + 20;
+          }
+          if (i === 0) {
+            doc.text(line, margin + 5 + labelWidth, yPosition);
+          } else {
+            doc.text(line, margin + 5, yPosition);
+          }
+          yPosition += 6;
+        });
       }
       
       yPosition += 6; // Space between items
@@ -740,12 +774,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         
         // Display comments first if they exist
         if (hasComments) {
-          doc.setFont('helvetica', 'bold');
-          doc.text('Comments:', margin, yPosition);
-          yPosition += 6;
-          doc.setFont('helvetica', 'normal');
-          
-          const maxCommentWidth = pageWidth - (2 * margin) - 5;
+          const maxCommentWidth = pageWidth - (2 * margin);
           const commentLines = doc.splitTextToSize(commentsPart, maxCommentWidth);
           commentLines.forEach((line: string) => {
             if (yPosition > doc.internal.pageSize.height - 30) {
@@ -755,7 +784,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
             doc.text(line, margin, yPosition);
             yPosition += 5;
           });
-          yPosition += 2;
+          yPosition += 3;
         }
         
         // Display parsed fields without heading
@@ -807,11 +836,6 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         }
       } else if (result.notes) {
         // For non-fire testing, display as comments
-        doc.setFont('helvetica', 'bold');
-        doc.text('Comments:', margin, yPosition);
-        yPosition += 6;
-        doc.setFont('helvetica', 'normal');
-        
         const maxCommentWidth = pageWidth - (2 * margin);
         const commentLines = doc.splitTextToSize(result.notes, maxCommentWidth);
         commentLines.forEach((line: string) => {
