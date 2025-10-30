@@ -411,10 +411,33 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       }
       doc.setTextColor(0, 0, 0); // Reset to black
       
-      // Show test results with proper null handling
-      const toTestText = (value: boolean | null | undefined) => value == null ? 'N/A' : (value ? 'PASS' : 'FAIL');
-      doc.text(toTestText((result as any).pushButtonTest), margin + 92, rowStartY);
-      doc.text(toTestText((result as any).injectionTimedTest), margin + 115, rowStartY);
+      // Show test results with proper null handling and color coding
+      const pushButtonValue = (result as any).pushButtonTest;
+      const injectionTimedValue = (result as any).injectionTimedTest;
+      
+      // Push Button Test
+      if (pushButtonValue === true) {
+        doc.setTextColor(0, 128, 0); // Green
+        doc.text('PASS', margin + 92, rowStartY);
+      } else if (pushButtonValue === false) {
+        doc.setTextColor(255, 0, 0); // Red
+        doc.text('FAIL', margin + 92, rowStartY);
+      } else {
+        doc.text('N/A', margin + 92, rowStartY);
+      }
+      doc.setTextColor(0, 0, 0); // Reset to black
+      
+      // Injection/Timed Test
+      if (injectionTimedValue === true) {
+        doc.setTextColor(0, 128, 0); // Green
+        doc.text('PASS', margin + 115, rowStartY);
+      } else if (injectionTimedValue === false) {
+        doc.setTextColor(255, 0, 0); // Red
+        doc.text('FAIL', margin + 115, rowStartY);
+      } else {
+        doc.text('N/A', margin + 115, rowStartY);
+      }
+      doc.setTextColor(0, 0, 0); // Reset to black
       
       // Show notes with word wrapping
       const notesText = result.notes || '-';
