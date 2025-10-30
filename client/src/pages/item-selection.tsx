@@ -85,6 +85,11 @@ const fireItems: Item[] = [
   { type: 'fire-hose-reel', name: 'Fire Hose Reel', icon: <HoseReelIcon className="h-8 w-8 text-red-600 dark:text-red-400" />, description: 'Fire Hose Reel' },
 ];
 
+const rcdItems: Item[] = [
+  { type: 'fixed-rcd', name: 'Fixed RCD', icon: '⚡', description: 'Fixed Residual Current Device' },
+  { type: 'portable-rcd', name: 'Portable RCD', icon: '🔌', description: 'Portable Residual Current Device' },
+];
+
 export default function ItemSelection() {
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [customItemName, setCustomItemName] = useState('');
@@ -152,7 +157,8 @@ export default function ItemSelection() {
 
   // Get items based on selected environment or default predefined items
   const defaultPredefinedItems = selectedService === 'emergency_exit_light' ? emergencyItems : 
-                                  selectedService === 'fire_testing' ? fireItems : electricalItems;
+                                  selectedService === 'fire_testing' ? fireItems :
+                                  selectedService === 'rcd_reporting' ? rcdItems : electricalItems;
   
   const selectedEnvironment = environments?.find(env => env.id.toString() === selectedEnvironmentId);
   const predefinedItems = selectedEnvironment && Array.isArray(selectedEnvironment.items) && selectedEnvironment.items.length > 0
@@ -176,7 +182,8 @@ export default function ItemSelection() {
   const handleItemSelect = (itemType: string, itemName: string) => {
     // Route to different test pages based on service type
     const testRoute = selectedService === 'emergency_exit_light' ? '/emergency-test' : 
-                     selectedService === 'fire_testing' ? '/fire-test' : '/test';
+                     selectedService === 'fire_testing' ? '/fire-test' :
+                     selectedService === 'rcd_reporting' ? '/rcd-test' : '/test';
     
     setLocation(`${testRoute}?item=${encodeURIComponent(itemName)}&type=${itemType}`);
   };
