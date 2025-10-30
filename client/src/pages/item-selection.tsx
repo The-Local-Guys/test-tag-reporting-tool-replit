@@ -460,15 +460,18 @@ export default function ItemSelection() {
               </button>
             ))}
 
-            <button
-              onClick={() => setIsCustomModalOpen(true)}
-              className="bg-gradient-to-br from-gray-100 to-gray-200 border-2 border-dashed border-gray-400 rounded-xl p-4 text-center hover:from-blue-50 hover:to-blue-100 hover:border-primary transition-all touch-button"
-            >
-              <div className="text-3xl mb-2">
-                <Plus className="h-8 w-8 mx-auto text-gray-600" />
-              </div>
-              <div className="font-medium text-gray-800">Other</div>
-            </button>
+            {/* Hide "Other" button for RCD Reporting */}
+            {selectedService !== 'rcd_reporting' && (
+              <button
+                onClick={() => setIsCustomModalOpen(true)}
+                className="bg-gradient-to-br from-gray-100 to-gray-200 border-2 border-dashed border-gray-400 rounded-xl p-4 text-center hover:from-blue-50 hover:to-blue-100 hover:border-primary transition-all touch-button"
+              >
+                <div className="text-3xl mb-2">
+                  <Plus className="h-8 w-8 mx-auto text-gray-600" />
+                </div>
+                <div className="font-medium text-gray-800">Other</div>
+              </button>
+            )}
           </div>
         </div>
       )}
