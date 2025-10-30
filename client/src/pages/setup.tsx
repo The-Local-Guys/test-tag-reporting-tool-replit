@@ -71,7 +71,7 @@ export default function Setup() {
     
     createSession({
       ...data,
-      serviceType: selectedService as 'electrical' | 'emergency_exit_light' | 'fire_testing',
+      serviceType: selectedService as 'electrical' | 'emergency_exit_light' | 'fire_testing' | 'rcd_reporting',
       country: data.country,
       // Fire testing specific fields
       ...(selectedService === 'fire_testing' && {
@@ -141,6 +141,7 @@ export default function Setup() {
                 const service = sessionStorage.getItem('selectedService');
                 if (service === 'emergency_exit_light') return 'Emergency Exit Light Testing';
                 if (service === 'fire_testing') return 'Fire Equipment Testing';
+                if (service === 'rcd_reporting') return 'RCD Reporting';
                 return 'Electrical Test & Tag';
               })()}
             </h1>

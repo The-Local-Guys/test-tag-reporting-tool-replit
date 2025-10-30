@@ -114,6 +114,8 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     ? 'Emergency Exit Light Testing Report'
     : session.serviceType === 'fire_testing'
     ? 'Fire Equipment Testing Report'
+    : session.serviceType === 'rcd_reporting'
+    ? 'RCD Testing Report'
     : 'Electrical Safety Testing Report';
   
   // Page setup
@@ -253,6 +255,12 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     doc.text('Frequency', margin + 122, yPosition);
     doc.text('Due Date', margin + 140, yPosition);
     doc.text('Failure Reason', margin + 158, yPosition);
+  } else if (session.serviceType === 'rcd_reporting') {
+    doc.text('Equipment Type', margin + 48, yPosition);
+    doc.text('Result', margin + 75, yPosition);
+    doc.text('Push Button', margin + 92, yPosition);
+    doc.text('Injection/Timed', margin + 115, yPosition);
+    doc.text('Notes', margin + 145, yPosition);
   } else {
     doc.text('Type', margin + 48, yPosition);
     doc.text('Result', margin + 62, yPosition);
@@ -302,6 +310,8 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       // Add word wrapping for manufacturer info in emergency exit light
       const manufacturerWidth = 20;
       manufacturerLines = doc.splitTextToSize(result.manufacturerInfo || 'N/A', manufacturerWidth);
+    } else if (session.serviceType === 'rcd_reporting') {
+      // For RCD reporting, no special word wrapping needed (notes handled in render section)
     } else {
       // For electrical testing, add word wrapping for type/classification
       const typeWidth = 13; // Width for type column
@@ -385,6 +395,32 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       const dueDateLines = doc.splitTextToSize(dueDateText, 17);
       dueDateLines.forEach((line: string, i: number) => {
         doc.text(line, margin + 140, rowStartY + (i * lineHeight));
+      });
+    } else if (session.serviceType === 'rcd_reporting') {
+      // For RCD reporting, show equipment type
+      const equipmentTypeDisplay = result.classification === 'fixed-rcd' ? 'Fixed RCD' : 'Portable RCD';
+      doc.text(equipmentTypeDisplay, margin + 48, rowStartY);
+      
+      // Color code the result
+      if (result.result === 'pass') {
+        doc.setTextColor(0, 128, 0); // Green
+        doc.text('PASS', margin + 75, rowStartY);
+      } else {
+        doc.setTextColor(255, 0, 0); // Red
+        doc.text('FAIL', margin + 75, rowStartY);
+      }
+      doc.setTextColor(0, 0, 0); // Reset to black
+      
+      // Show test results with proper null handling
+      const toTestText = (value: boolean | null | undefined) => value == null ? 'N/A' : (value ? 'PASS' : 'FAIL');
+      doc.text(toTestText((result as any).pushButtonTest), margin + 92, rowStartY);
+      doc.text(toTestText((result as any).injectionTimedTest), margin + 115, rowStartY);
+      
+      // Show notes with word wrapping
+      const notesText = result.notes || '-';
+      const notesLines = doc.splitTextToSize(notesText, 30);
+      notesLines.forEach((line: string, i: number) => {
+        doc.text(line, margin + 145, rowStartY + (i * lineHeight));
       });
     } else {
       // For regular electrical testing, show classification/type with word wrapping
@@ -485,6 +521,8 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         doc.text('-', margin + 142, rowStartY);
       } else if (session.serviceType === 'fire_testing') {
         doc.text('-', margin + 158, rowStartY);
+      } else if (session.serviceType === 'rcd_reporting') {
+        // RCD reporting doesn't display failure reasons in the table (it has notes column instead)
       } else {
         doc.text('-', margin + 135, rowStartY);
         doc.text('-', margin + 158, rowStartY);

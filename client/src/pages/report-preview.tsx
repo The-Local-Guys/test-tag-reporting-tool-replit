@@ -293,6 +293,9 @@ export default function ReportPreview() {
         manufacturerInfo: result.manufacturerInfo || null,
         installationDate: result.installationDate || null,
         globeType: result.globeType || null,
+        // RCD testing specific fields
+        pushButtonTest: result.pushButtonTest || false,
+        injectionTimedTest: result.injectionTimedTest || false,
       }));
 
       if (!sessionData?.session) {
@@ -351,6 +354,9 @@ export default function ReportPreview() {
         visionInspection: result.visionInspection,
         electricalTest: result.electricalTest,
         createdAt: new Date(result.timestamp),
+        // RCD testing specific fields
+        pushButtonTest: result.pushButtonTest || false,
+        injectionTimedTest: result.injectionTimedTest || false,
         maintenanceType: result.maintenanceType || null,
         dischargeTest: result.dischargeTest || false,
         switchingTest: result.switchingTest || false,
