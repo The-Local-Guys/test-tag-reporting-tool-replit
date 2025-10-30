@@ -39,21 +39,34 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Ensure custom_form_types table exists in the connected database
-  try {
-    const { pool } = await import("./db");
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS custom_form_types (
-        id SERIAL PRIMARY KEY,
-        name TEXT NOT NULL UNIQUE,
-        csv_data TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-    log('[INIT] custom_form_types table created/verified');
-  } catch (error) {
-    console.error('[INIT] Error ensuring custom_form_types table:', error);
-  }
+  // Ensure custom_form_types table exists in the connected database with retry logic
+  const initCustomFormTypesTable = async (retries = 3, delay = 1000) => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const { pool } = await import("./db");
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS custom_form_types (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL UNIQUE,
+            csv_data TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT NOW()
+          )
+        `);
+        log('[INIT] custom_form_types table created/verified');
+        return;
+      } catch (error: any) {
+        if (i === retries - 1) {
+          console.error('[INIT] Error ensuring custom_form_types table after retries:', error);
+        } else {
+          log(`[INIT] Retrying table creation in ${delay}ms (attempt ${i + 1}/${retries})...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 2; // Exponential backoff
+        }
+      }
+    }
+  };
+
+  await initCustomFormTypesTable();
   
   const server = await registerRoutes(app);
 
