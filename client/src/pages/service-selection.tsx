@@ -269,7 +269,7 @@ export default function ServiceSelection() {
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid md:grid-cols-2 gap-6">
           {/* Electrical Test and Tag */}
           <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-blue-500">
             <CardHeader className="text-center">
