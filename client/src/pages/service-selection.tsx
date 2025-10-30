@@ -162,7 +162,7 @@ export default function ServiceSelection() {
     }
   };
 
-  const selectService = (serviceType: 'electrical' | 'emergency_exit_light' | 'fire_testing') => {
+  const selectService = (serviceType: 'electrical' | 'emergency_exit_light' | 'fire_testing' | 'rcd_reporting') => {
     // Store the selected service type
     sessionStorage.setItem('selectedService', serviceType);
     // Navigate to setup page
@@ -269,7 +269,7 @@ export default function ServiceSelection() {
         </p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Electrical Test and Tag */}
           <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-blue-500">
             <CardHeader className="text-center">
@@ -359,6 +359,36 @@ export default function ServiceSelection() {
                 size="lg"
               >
                 Select Fire Testing
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* RCD Reporting */}
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-purple-500">
+            <CardHeader className="text-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-purple-100 rounded-full flex items-center justify-center">
+                <Zap className="w-8 h-8 text-purple-600" />
+              </div>
+              <CardTitle className="text-xl">RCD Reporting</CardTitle>
+              <CardDescription className="text-base">
+                Residual Current Device testing for electrical safety compliance
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="text-sm text-gray-600 space-y-2 mb-6">
+                <li>• Fixed RCD testing</li>
+                <li>• Portable RCD testing</li>
+                <li>• Push button test</li>
+                <li>• Injection/Timed test</li>
+                <li>• Compliance documentation</li>
+              </ul>
+              <Button 
+                onClick={() => selectService('rcd_reporting')}
+                className="w-full bg-purple-600 hover:bg-purple-700"
+                size="lg"
+              >
+                Select RCD Reporting
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </CardContent>
