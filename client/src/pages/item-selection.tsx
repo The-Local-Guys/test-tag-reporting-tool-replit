@@ -98,7 +98,7 @@ export default function ItemSelection() {
   const [showCancelSuccess, setShowCancelSuccess] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const { sessionData, currentLocation, setCurrentLocation, clearSession, sessionId, isLoading: isLoadingSession } = useSession();
+  const { sessionData, currentLocation, setCurrentLocation, clearSession, sessionId, isLoading: isLoadingSession, submitBatch, isSubmittingBatch } = useSession();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -255,6 +255,19 @@ export default function ItemSelection() {
     }
     
     setShowNewReportConfirm(false);
+  };
+
+  const handleViewReport = async () => {
+    try {
+      await submitBatch();
+      setLocation('/report');
+    } catch (error) {
+      toast({
+        title: "Submission Failed",
+        description: "Failed to submit test results. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const summary = sessionData?.summary || {
@@ -481,10 +494,11 @@ export default function ItemSelection() {
         <div className="flex gap-3">
           <Button 
             className="flex-1 bg-success py-3 hover:bg-green-600" 
-            onClick={() => setLocation('/report')}
+            onClick={handleViewReport}
+            disabled={isSubmittingBatch}
           >
             <FileText className="mr-2 h-4 w-4" />
-            View Report
+            {isSubmittingBatch ? 'Submitting...' : 'View Report'}
           </Button>
         </div>
         <Button 
