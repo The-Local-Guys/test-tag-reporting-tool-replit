@@ -250,18 +250,24 @@ export default function Setup() {
                 <RadioGroupItem value="newzealand" id="newzealand" />
                 <Label htmlFor="newzealand">New Zealand (NZS 4503:2005)</Label>
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="national_client" id="national_client" />
-                <Label htmlFor="national_client">ARA Compliance</Label>
-              </div>
               
-              {/* Custom Form Types */}
-              {customFormTypes && customFormTypes.map((formType) => (
-                <div key={formType.id} className="flex items-center space-x-2">
-                  <RadioGroupItem value={`custom_${formType.id}`} id={`custom_${formType.id}`} />
-                  <Label htmlFor={`custom_${formType.id}`}>{formType.name}</Label>
-                </div>
-              ))}
+              {/* Hide ARA Compliance and Custom Form Types for RCD Reporting */}
+              {sessionStorage.getItem('selectedService') !== 'rcd_reporting' && (
+                <>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="national_client" id="national_client" />
+                    <Label htmlFor="national_client">ARA Compliance</Label>
+                  </div>
+                  
+                  {/* Custom Form Types */}
+                  {customFormTypes && customFormTypes.map((formType) => (
+                    <div key={formType.id} className="flex items-center space-x-2">
+                      <RadioGroupItem value={`custom_${formType.id}`} id={`custom_${formType.id}`} />
+                      <Label htmlFor={`custom_${formType.id}`}>{formType.name}</Label>
+                    </div>
+                  ))}
+                </>
+              )}
             </RadioGroup>
           </div>
 
