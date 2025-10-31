@@ -454,13 +454,21 @@ export default function ReportPreview() {
     setShowFinishSuccess(false);
     
     try {
-      // Submit batched results to database before starting new job
-      console.log('Submitting batch results before finishing job...');
-      await submitBatch();
+      // Only submit batch if there are results and an active session
+      // (batch may have already been submitted when clicking "View Report")
+      if (sessionId && batchedResults.length > 0) {
+        console.log('Submitting batch results before finishing job...');
+        await submitBatch();
+        
+        // Wait a moment to ensure localStorage cleanup completes
+        console.log('Waiting for localStorage cleanup to complete...');
+        await new Promise(resolve => setTimeout(resolve, 2500));
+      } else {
+        console.log('Batch already submitted, skipping submission step');
+        // Still wait a bit for consistent UX
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
       
-      // Wait a moment to ensure localStorage cleanup completes
-      console.log('Waiting for localStorage cleanup to complete...');
-      await new Promise(resolve => setTimeout(resolve, 2500));
       // Show success animation
       setShowFinishSuccess(true);
       
