@@ -441,9 +441,9 @@ export default function ItemSelection() {
       ) : (
         <div className="p-4 pb-24">
           <div className="grid grid-cols-2 gap-3">
-            {predefinedItems.map((item) => (
+            {predefinedItems.map((item, index) => (
               <button
-                key={item.type}
+                key={`${item.type}-${index}`}
                 onClick={() => handleItemSelect(item.type, item.name)}
                 className="bg-white border-2 border-gray-200 rounded-xl p-4 text-center hover:border-primary hover:bg-blue-50 transition-all touch-button"
                 data-testid={`button-item-${item.type}`}
