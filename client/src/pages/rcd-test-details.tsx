@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useToast } from '@/hooks/use-toast';
@@ -191,17 +192,32 @@ export default function RCDTestDetails() {
             </div>
 
             <div>
-              <Label>Equipment Type</Label>
-              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                <div className="text-sm font-medium text-gray-700">
-                  {form.watch('equipmentType') === 'fixed-rcd' ? 'Fixed RCD' : 'Portable RCD'}
-                </div>
-                <div className="text-xs text-gray-500 mt-1">
-                  {form.watch('equipmentType') === 'fixed-rcd' 
-                    ? 'Permanent installation residual current device'
-                    : 'Portable residual current device'}
-                </div>
-              </div>
+              <Label htmlFor="equipmentType">Equipment Type *</Label>
+              <Select
+                value={form.watch('equipmentType')}
+                onValueChange={(value) => form.setValue('equipmentType', value as 'fixed-rcd' | 'portable-rcd')}
+              >
+                <SelectTrigger className="text-base" data-testid="select-equipment-type">
+                  <SelectValue placeholder="Select equipment type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fixed-rcd">
+                    <div>
+                      <div className="font-medium">Fixed RCD</div>
+                      <div className="text-xs text-gray-500">Permanent installation residual current device</div>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="portable-rcd">
+                    <div>
+                      <div className="font-medium">Portable RCD</div>
+                      <div className="text-xs text-gray-500">Portable residual current device</div>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              {form.formState.errors.equipmentType && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.equipmentType.message}</p>
+              )}
             </div>
           </CardContent>
         </Card>
