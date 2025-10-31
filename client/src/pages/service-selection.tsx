@@ -381,6 +381,7 @@ export default function ServiceSelection() {
                 <li>• Portable RCD testing</li>
                 <li>• Push button test (6 monthly)</li>
                 <li>• Injection/Timed test (12 monthly)</li>
+                <li>• Distribution board tracking</li>
                 <li>• Compliance certification</li>
               </ul>
               <Button 
