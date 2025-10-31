@@ -22,11 +22,14 @@ Preferred communication style: Simple, everyday language.
 - **Database ORM**: Drizzle ORM (PostgreSQL dialect)
 - **Session Management**: Express sessions with PostgreSQL storage
 - **Authentication**: Password-based with bcrypt hashing
+- **Performance**: Optimized database queries using SQL aggregates to prevent N+1 query problems
 
 ### Database
 - **Provider**: Neon Database (PostgreSQL)
 - **Schema Management**: Drizzle Kit
 - **Core Entities**: Users, sessions, test_sessions, test_results, environments, custom_form_types
+- **Schema Synchronization**: Both development (DEV_DATABASE_URL) and production (DATABASE_URL) databases maintain identical schemas with synchronized structure
+- **Query Optimization**: Admin dashboard queries use efficient SQL JOINs and aggregates to count test items, eliminating N+1 query problems for large datasets
 
 ### Key Features
 - **Authentication**: Role-based access control (super_admin, support_center, technician), session-based.
@@ -40,7 +43,7 @@ Preferred communication style: Simple, everyday language.
 - **Single Page Application (SPA)**: True client-side routing with no full page reloads, custom loading screens with 500ms minimum display time, and seamless navigation between testing and admin modes. Uses wouter for routing with custom SPA navigation hooks for consistent loading states.
 - **Custom Environments**: Technicians can create and manage custom item sets per testing type. Each environment is account-specific (only visible to creator), filtered by service type (electrical, emergency exit light, fire testing). Environment dropdown in item selection page allows switching between default items and custom environments. Includes full CRUD operations with ownership verification and security against ownership reassignment.
 - **Custom Form Types**: Admin and support-center roles can create dynamic custom form types via CSV file upload. Custom forms appear as country/form selection options in the setup page alongside standard country selections (Australia, New Zealand). Available for all service types (electrical, emergency exit light, fire testing, RCD reporting) without filtering. Features CSV file upload interface, validation, and CRUD operations for managing custom test item sets. Implementation: Single-table design (custom_form_types) with CSV data stored in csvData column. Table automatically created on server startup using raw SQL to ensure compatibility across environments.
-- **RCD Reporting**: Dedicated testing workflow for Residual Current Devices (RCDs) with support for both Fixed RCD and Portable RCD testing. Features manual asset number entry, location tracking, equipment type identification (with automatic item name synchronization), distribution board number field (Fixed RCD only), and comprehensive test completion tracking (Push Button Test and Injection/Timed Test). Includes test result recording (Pass/Fail) with failure handling (RCD-specific failure reasons, action taken, notes, and photo documentation). Distribution board numbers display in report preview and PDF reports as "Fixed RCD (DB-1)" format. Data stored with RCD-specific fields (pushButtonTest, injectionTimedTest, distributionBoardNumber, failureReason, actionTaken, notes, photoData) in test_results table. Report generation includes smart batch submission handling to prevent "No active session" errors when finishing jobs. AS/NZS 3760 compliance testing standard.
+- **RCD Reporting**: Dedicated testing workflow for Residual Current Devices (RCDs) with support for both Fixed RCD and Portable RCD testing. Features manual asset number entry, location tracking, equipment type identification (with automatic item name synchronization), distribution board number field (Fixed RCD only), and comprehensive test completion tracking (Push Button Test and Injection/Timed Test). Includes test result recording (Pass/Fail) with failure handling (RCD-specific failure reasons, action taken, notes, and photo documentation). Distribution board numbers display in report preview and PDF reports as "Fixed RCD (DB-1)" format. Data stored with RCD-specific fields (pushButtonTest, injectionTimedTest, distributionBoardNumber, failureReason, actionTaken, notes, photoData) in test_results table. The distribution_board_number column is synchronized across both development and production databases. Report generation includes smart batch submission handling to prevent "No active session" errors when finishing jobs. AS/NZS 3760 compliance testing standard.
 
 ## External Dependencies
 

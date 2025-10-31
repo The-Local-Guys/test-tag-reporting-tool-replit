@@ -1,0 +1,36 @@
+Hello! My application is timing out with the error Error fetching sessions: Error: timeout exceeded when trying to connect. This happens on pages that need to load a large list of test sessions.
+
+  The root cause is an inefficient database query pattern in the server/storage.ts file. The getAllTestSessions and getSessionsByUser functions are fetching a list of sessions and then looping through each one to make a separate database call to get item counts. This is known as an "N+1 query problem" and
+  it's overwhelming the database.
+
+  Please fix this by refactoring those two functions to use a single, efficient query for each.
+
+  Here are the steps:
+
+   1. Open the file `server/storage.ts`.
+
+   2. Refactor `getAllTestSessions`:
+       * Replace the current implementation, which uses Promise.all to map over sessions, with a single Drizzle ORM query.
+       * The new query should join testSessions with testResults.
+       * Use SQL aggregate functions to count the total and failed items directly in the database. The query should look something like this:
+
+    1         const sessionsWithCounts = await db
+    2           .select({
+    3             // ... all fields from testSessions
+    4             technicianFullName: users.fullName,
+    5             totalItems: sql<number>`count(${testResults.id})`.mapWith(Number),
+    6             failedItems: sql<number>`count(case when ${testResults.result} = 'fail' then 1 end)`.mapWith(Number),
+    7           })
+    8           .from(testSessions)
+    9           .leftJoin(users, eq(testSessions.userId, users.id))
+   10           .leftJoin(testResults, eq(testSessions.id, testResults.sessionId))
+   11           .groupBy(testSessions.id, users.fullName)
+   12           .orderBy(desc(testSessions.testDate));
+
+   3. Refactor `getSessionsByUser`:
+       * Apply the exact same pattern to this function. The only difference is that you will need to add a .where(eq(testSessions.userId, userId)) clause to filter the sessions for the specified user.
+
+   4. Add a missing import:
+       * At the top of server/storage.ts, find the import from drizzle-orm and add sql to it. The line should look like this:
+
+   1         import { eq, desc, and, gte, sql } from "drizzle-orm";

@@ -16,7 +16,7 @@ import {
   type InsertCustomFormType
 } from "@shared/schema";
 import { db, pool } from "./db";
-import { eq, desc, and, gte } from "drizzle-orm";
+import { eq, desc, and, gte, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 export interface IStorage {
@@ -203,7 +203,7 @@ export class DatabaseStorage implements IStorage {
    * @returns Array of test sessions with enriched data for management overview
    */
   async getAllTestSessions(): Promise<(TestSession & { technicianFullName?: string | null; totalItems?: number; failedItems?: number })[]> {
-    const sessions = await db
+    const sessionsWithCounts = await db
       .select({
         id: testSessions.id,
         serviceType: testSessions.serviceType,
@@ -219,32 +219,14 @@ export class DatabaseStorage implements IStorage {
         complianceStandard: testSessions.complianceStandard,
         createdAt: testSessions.createdAt,
         technicianFullName: users.fullName,
+        totalItems: sql<number>`count(${testResults.id})`.mapWith(Number),
+        failedItems: sql<number>`count(case when ${testResults.result} = 'fail' then 1 end)`.mapWith(Number),
       })
       .from(testSessions)
       .leftJoin(users, eq(testSessions.userId, users.id))
+      .leftJoin(testResults, eq(testSessions.id, testResults.sessionId))
+      .groupBy(testSessions.id, users.fullName)
       .orderBy(desc(testSessions.testDate));
-    
-    // Add item counts for each session using simple count query
-    const sessionsWithCounts = await Promise.all(
-      sessions.map(async (session) => {
-        const results = await db
-          .select({
-            id: testResults.id,
-            result: testResults.result,
-          })
-          .from(testResults)
-          .where(eq(testResults.sessionId, session.id));
-        
-        const totalItems = results.length;
-        const failedItems = results.filter(result => result.result === 'fail').length;
-        
-        return {
-          ...session,
-          totalItems,
-          failedItems,
-        };
-      })
-    );
     
     return sessionsWithCounts;
   }
@@ -256,33 +238,29 @@ export class DatabaseStorage implements IStorage {
    * @returns Array of test sessions with item count statistics
    */
   async getSessionsByUser(userId: number): Promise<(TestSession & { totalItems?: number; failedItems?: number })[]> {
-    const sessions = await db
-      .select()
-      .from(testSessions)
-      .where(eq(testSessions.userId, userId))
-      .orderBy(desc(testSessions.testDate));
-    
-    // Add item counts for each session
-    const sessionsWithCounts = await Promise.all(
-      sessions.map(async (session) => {
-        const results = await db
-          .select({
-            id: testResults.id,
-            result: testResults.result,
-          })
-          .from(testResults)
-          .where(eq(testResults.sessionId, session.id));
-        
-        const totalItems = results.length;
-        const failedItems = results.filter(result => result.result === 'fail').length;
-        
-        return {
-          ...session,
-          totalItems,
-          failedItems,
-        };
+    const sessionsWithCounts = await db
+      .select({
+        id: testSessions.id,
+        serviceType: testSessions.serviceType,
+        testDate: testSessions.testDate,
+        technicianName: testSessions.technicianName,
+        clientName: testSessions.clientName,
+        siteContact: testSessions.siteContact,
+        address: testSessions.address,
+        country: testSessions.country,
+        userId: testSessions.userId,
+        startingAssetNumber: testSessions.startingAssetNumber,
+        technicianLicensed: testSessions.technicianLicensed,
+        complianceStandard: testSessions.complianceStandard,
+        createdAt: testSessions.createdAt,
+        totalItems: sql<number>`count(${testResults.id})`.mapWith(Number),
+        failedItems: sql<number>`count(case when ${testResults.result} = 'fail' then 1 end)`.mapWith(Number),
       })
-    );
+      .from(testSessions)
+      .leftJoin(testResults, eq(testSessions.id, testResults.sessionId))
+      .where(eq(testSessions.userId, userId))
+      .groupBy(testSessions.id)
+      .orderBy(desc(testSessions.testDate));
     
     return sessionsWithCounts;
   }
