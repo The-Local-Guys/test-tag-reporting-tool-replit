@@ -426,10 +426,10 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       // Push Button Test
       if (pushButtonValue === true) {
         doc.setTextColor(0, 128, 0); // Green
-        doc.text('PASS', margin + 92, rowStartY);
+        doc.text('Yes', margin + 92, rowStartY);
       } else if (pushButtonValue === false) {
-        doc.setTextColor(255, 0, 0); // Red
-        doc.text('FAIL', margin + 92, rowStartY);
+        doc.setTextColor(0, 0, 0); // Black
+        doc.text('No', margin + 92, rowStartY);
       } else {
         doc.text('N/A', margin + 92, rowStartY);
       }
@@ -438,10 +438,10 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       // Injection/Timed Test
       if (injectionTimedValue === true) {
         doc.setTextColor(0, 128, 0); // Green
-        doc.text('PASS', margin + 115, rowStartY);
+        doc.text('Yes', margin + 115, rowStartY);
       } else if (injectionTimedValue === false) {
-        doc.setTextColor(255, 0, 0); // Red
-        doc.text('FAIL', margin + 115, rowStartY);
+        doc.setTextColor(0, 0, 0); // Black
+        doc.text('No', margin + 115, rowStartY);
       } else {
         doc.text('N/A', margin + 115, rowStartY);
       }
