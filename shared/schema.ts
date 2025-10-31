@@ -28,7 +28,7 @@ export const sessions = pgTable(
 
 export const testSessions = pgTable("test_sessions", {
   id: serial("id").primaryKey(),
-  serviceType: text("service_type").notNull().default("electrical"), // 'electrical', 'emergency_exit_light', 'fire_testing', or 'rcd_reporting'
+  serviceType: text("service_type").notNull().default("electrical"), // 'electrical', 'emergency_exit_light', or 'fire_testing'
   testDate: text("test_date").notNull(),
   technicianName: text("technician_name").notNull(),
   clientName: text("client_name").notNull(),
@@ -84,9 +84,6 @@ export const testResults = pgTable("test_results", {
   signageCheck: boolean("signage_check"), // Proper signage verification
   operationalTest: boolean("operational_test"), // Equipment operation check
   pressureTest: boolean("pressure_test"), // Pressure gauge check (for extinguishers)
-  // RCD testing specific fields
-  pushButtonTest: boolean("push_button_test"), // Push button test completed
-  injectionTimedTest: boolean("injection_timed_test"), // Injection/Timed test completed
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -154,7 +151,7 @@ export type InsertCustomFormType = z.infer<typeof insertCustomFormTypeSchema>;
 export type CustomFormType = typeof customFormTypes.$inferSelect;
 
 // Define enum values for validation
-export const serviceTypes = ['electrical', 'emergency_exit_light', 'fire_testing', 'rcd_reporting'] as const;
+export const serviceTypes = ['electrical', 'emergency_exit_light', 'fire_testing'] as const;
 export const equipmentClassifications = ['class1', 'class2', 'epod', 'rcd', '3phase'] as const;
 export const emergencyClassifications = ['emergency_exit_sign', 'emergency_light_downlight', 'combination_unit', 'emergency_spotlight', 'floor_path_light', 'emergency_bulkhead'] as const;
 export const fireEquipmentTypes = ['fire_extinguisher', 'fire_blanket', 'fire_hose_reel'] as const;

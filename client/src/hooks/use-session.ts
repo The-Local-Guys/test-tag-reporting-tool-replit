@@ -42,10 +42,6 @@ export interface BatchedTestResult {
   luxTest?: boolean;
   luxReading?: number;
   luxCompliant?: boolean;
-  // RCD testing fields
-  pushButtonTest?: boolean;
-  injectionTimedTest?: boolean;
-  distributionBoardNumber?: string;
 }
 
 /**
@@ -360,12 +356,8 @@ export function useSession() {
     }
     
     // Find next available asset number
-    // For RCD reporting, use the manually entered asset number if provided
     let assetNumber: string;
-    if ((cleanData as any).assetNumber) {
-      // Use the manually entered asset number (for RCD reporting)
-      assetNumber = (cleanData as any).assetNumber;
-    } else if (isFiveYearly) {
+    if (isFiveYearly) {
       // For 5-yearly items, start from current counter + 1 (continue sequence)
       let candidate = Math.max(10001, fiveYearlyAssetCounter + 1);
       while (usedNumbers.has(candidate)) {
@@ -414,10 +406,6 @@ export function useSession() {
       luxCompliant: cleanData.luxCompliant || undefined,
       manufacturerInfo: cleanData.manufacturerInfo || undefined,
       installationDate: cleanData.installationDate || undefined,
-      // RCD-specific fields
-      pushButtonTest: (cleanData as any).pushButtonTest ?? undefined,
-      injectionTimedTest: (cleanData as any).injectionTimedTest ?? undefined,
-      distributionBoardNumber: (cleanData as any).distributionBoardNumber || undefined,
     };
     
     // Add to batched results
@@ -459,8 +447,7 @@ export function useSession() {
       
       return response.json();
     },
-    onSuccess: (data: any) => {
-      const submittedResults = data.savedResults || [];
+    onSuccess: (submittedResults: TestResult[]) => {
       console.log(`Successfully submitted ${submittedResults.length} results to server`);
       
       // Clear ALL unfinished report indicators since report is now completed

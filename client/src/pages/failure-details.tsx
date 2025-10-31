@@ -7,20 +7,11 @@ import { useSession } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
 import type { InsertTestResult } from '@shared/schema';
 
-const electricalFailureReasons = [
+const failureReasons = [
   { value: 'vision', label: 'Visual Inspection', icon: '👁️' },
   { value: 'earth', label: 'Earth Continuity', icon: '🔌' },
   { value: 'insulation', label: 'Insulation Resistance', icon: '🛡️' },
   { value: 'polarity', label: 'Polarity', icon: '🔄' },
-  { value: 'other', label: 'Other', icon: '❓' },
-];
-
-const rcdFailureReasons = [
-  { value: 'push_button', label: 'Push Button Test Failed', icon: '🔴' },
-  { value: 'injection_timed', label: 'Injection/Timed Test Failed', icon: '⏱️' },
-  { value: 'tripping_time', label: 'Incorrect Tripping Time', icon: '⚡' },
-  { value: 'no_trip', label: 'Failed to Trip', icon: '❌' },
-  { value: 'visual', label: 'Visual Damage/Defect', icon: '👁️' },
   { value: 'other', label: 'Other', icon: '❓' },
 ];
 
@@ -39,11 +30,7 @@ export default function FailureDetails() {
   const [, setLocation] = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Detect if this is RCD testing
-  const isRCDTest = testData?.classification === 'fixed-rcd' || testData?.classification === 'portable-rcd';
-  
-  // Select appropriate failure reasons based on test type
-  const failureReasons = isRCDTest ? rcdFailureReasons : electricalFailureReasons;
+  // No need to prevent navigation since we're using local storage batching
 
   useEffect(() => {
     const stored = sessionStorage.getItem('pendingTestResult');
@@ -132,13 +119,7 @@ export default function FailureDetails() {
 
     addToBatch(completeTestData);
     sessionStorage.removeItem('pendingTestResult');
-    
-    // Navigate back to appropriate page based on test type
-    if (isRCDTest) {
-      setLocation('/rcd-test-details');
-    } else {
-      setLocation('/items');
-    }
+    setLocation('/items');
   };
 
   if (!testData) {
@@ -157,7 +138,7 @@ export default function FailureDetails() {
       <div className="bg-error text-white p-4 sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <button 
-            onClick={() => setLocation(isRCDTest ? '/rcd-test-details' : `/test?item=${encodeURIComponent(testData.itemName)}&type=${testData.itemType}`)}
+            onClick={() => setLocation(`/test?item=${encodeURIComponent(testData.itemName)}&type=${testData.itemType}`)}
             className="text-white hover:text-red-200 p-1 rounded-lg hover:bg-red-700 transition-colors"
           >
             <ArrowLeft className="h-6 w-6" />

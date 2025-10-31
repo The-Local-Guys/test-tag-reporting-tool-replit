@@ -103,8 +103,6 @@ export function generateExcelReport(data: ReportData): Blob {
     ? ['Asset #', 'Item Name', 'Location', 'Result', 'Manufacturer', 'Install Date', 'Frequency', 'Next Due Date', 'Failure Reason', 'Notes', 'Visual Inspection', 'Discharge Test', 'Switching Test', 'Charging Test', 'Maintenance Type', 'Globe Type']
     : session.serviceType === 'fire_testing'
     ? ['Asset #', 'Item Name', 'Location', 'Type', 'Result', 'Size/Weight', 'Manufacturer', 'Frequency', 'Next Due Date', 'Failure Reason', 'Notes', 'Visual Inspection', 'Accessibility', 'Signage', 'Operational Test', 'Pressure Test']
-    : session.serviceType === 'rcd_reporting'
-    ? ['Asset #', 'Item Name', 'Location', 'Equipment Type', 'Result', 'Push Button Test', 'Injection/Timed Test', 'Notes']
     : ['Asset #', 'Item Name', 'Location', 'Classification', 'Result', 'Vision Inspection', 'Electrical Test', 'Frequency', 'Next Due Date', 'Failure Reason', 'Action Taken', 'Notes'];
   
   // Test results data - different structure for emergency exit light testing
@@ -201,21 +199,6 @@ export function generateExcelReport(data: ReportData): Blob {
         toTestCell((result as any).operationalTest),
         pressureTestResult
       ];
-    } else if (session.serviceType === 'rcd_reporting') {
-      // RCD reporting specific format
-      const equipmentTypeDisplay = result.classification === 'fixed-rcd' ? 'Fixed RCD' : 'Portable RCD';
-      const toTestCell = (value: boolean | null | undefined) => value == null ? 'N/A' : (value ? 'PASS' : 'FAIL');
-      
-      return [
-        result.assetNumber, // Asset number
-        result.itemName,
-        result.location,
-        equipmentTypeDisplay,
-        result.result.toUpperCase(),
-        toTestCell((result as any).pushButtonTest),
-        toTestCell((result as any).injectionTimedTest),
-        result.notes || ''
-      ];
     } else {
       // Format action taken for display
       let displayActionTaken = result.actionTaken || '';
@@ -255,8 +238,6 @@ export function generateExcelReport(data: ReportData): Blob {
       ? 'This report complies with AS 2293.2:2019 emergency lighting standards.'
       : session.serviceType === 'fire_testing'
       ? `This report complies with ${session.country === 'newzealand' ? 'NZS 4503:2005' : 'AS 1851'} fire equipment standards.` // Default to AS 1851 for Australia and ARA Compliance
-      : session.serviceType === 'rcd_reporting'
-      ? 'This report complies with AS/NZS 3760 RCD testing standards.'
       : (session.country === 'newzealand' 
         ? 'This report complies with NZS 5262 electrical safety standards.'
         : 'This report complies with AS/NZS 3760 electrical safety standards.')] // Default to AS/NZS 3760 for Australia and ARA Compliance
@@ -305,18 +286,6 @@ export function generateExcelReport(data: ReportData): Blob {
       { wch: 10 }, // Signage
       { wch: 12 }, // Operational Test
       { wch: 12 }  // Pressure Test
-    ];
-  } else if (session.serviceType === 'rcd_reporting') {
-    // RCD reporting
-    columnWidths = [
-      { wch: 10 }, // Asset #
-      { wch: 20 }, // Item Name
-      { wch: 15 }, // Location
-      { wch: 15 }, // Equipment Type
-      { wch: 8 },  // Result
-      { wch: 15 }, // Push Button Test
-      { wch: 18 }, // Injection/Timed Test
-      { wch: 25 }  // Notes
     ];
   } else {
     // Electrical testing

@@ -85,11 +85,6 @@ const fireItems: Item[] = [
   { type: 'fire-hose-reel', name: 'Fire Hose Reel', icon: <HoseReelIcon className="h-8 w-8 text-red-600 dark:text-red-400" />, description: 'Fire Hose Reel' },
 ];
 
-const rcdItems: Item[] = [
-  { type: 'fixed-rcd', name: 'Fixed RCD', icon: '⚡', description: 'Fixed Residual Current Device' },
-  { type: 'portable-rcd', name: 'Portable RCD', icon: '🔌', description: 'Portable Residual Current Device' },
-];
-
 export default function ItemSelection() {
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [customItemName, setCustomItemName] = useState('');
@@ -98,7 +93,7 @@ export default function ItemSelection() {
   const [showCancelSuccess, setShowCancelSuccess] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const { sessionData, currentLocation, setCurrentLocation, clearSession, sessionId, isLoading: isLoadingSession, submitBatch, isSubmittingBatch } = useSession();
+  const { sessionData, currentLocation, setCurrentLocation, clearSession, sessionId, isLoading: isLoadingSession } = useSession();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -157,8 +152,7 @@ export default function ItemSelection() {
 
   // Get items based on selected environment or default predefined items
   const defaultPredefinedItems = selectedService === 'emergency_exit_light' ? emergencyItems : 
-                                  selectedService === 'fire_testing' ? fireItems :
-                                  selectedService === 'rcd_reporting' ? rcdItems : electricalItems;
+                                  selectedService === 'fire_testing' ? fireItems : electricalItems;
   
   const selectedEnvironment = environments?.find(env => env.id.toString() === selectedEnvironmentId);
   const predefinedItems = selectedEnvironment && Array.isArray(selectedEnvironment.items) && selectedEnvironment.items.length > 0
@@ -182,8 +176,7 @@ export default function ItemSelection() {
   const handleItemSelect = (itemType: string, itemName: string) => {
     // Route to different test pages based on service type
     const testRoute = selectedService === 'emergency_exit_light' ? '/emergency-test' : 
-                     selectedService === 'fire_testing' ? '/fire-test' :
-                     selectedService === 'rcd_reporting' ? '/rcd-test' : '/test';
+                     selectedService === 'fire_testing' ? '/fire-test' : '/test';
     
     setLocation(`${testRoute}?item=${encodeURIComponent(itemName)}&type=${itemType}`);
   };
@@ -255,13 +248,6 @@ export default function ItemSelection() {
     }
     
     setShowNewReportConfirm(false);
-  };
-
-  const handleViewReport = () => {
-    // Navigate to report preview without submitting batch
-    // This allows users to preview the report, download PDF, and return to add more results
-    // Batch submission only happens when clicking "Finish Job" on the report preview page
-    setLocation('/report');
   };
 
   const summary = sessionData?.summary || {
@@ -467,18 +453,15 @@ export default function ItemSelection() {
               </button>
             ))}
 
-            {/* Hide "Other" button for RCD Reporting */}
-            {selectedService !== 'rcd_reporting' && (
-              <button
-                onClick={() => setIsCustomModalOpen(true)}
-                className="bg-gradient-to-br from-gray-100 to-gray-200 border-2 border-dashed border-gray-400 rounded-xl p-4 text-center hover:from-blue-50 hover:to-blue-100 hover:border-primary transition-all touch-button"
-              >
-                <div className="text-3xl mb-2">
-                  <Plus className="h-8 w-8 mx-auto text-gray-600" />
-                </div>
-                <div className="font-medium text-gray-800">Other</div>
-              </button>
-            )}
+            <button
+              onClick={() => setIsCustomModalOpen(true)}
+              className="bg-gradient-to-br from-gray-100 to-gray-200 border-2 border-dashed border-gray-400 rounded-xl p-4 text-center hover:from-blue-50 hover:to-blue-100 hover:border-primary transition-all touch-button"
+            >
+              <div className="text-3xl mb-2">
+                <Plus className="h-8 w-8 mx-auto text-gray-600" />
+              </div>
+              <div className="font-medium text-gray-800">Other</div>
+            </button>
           </div>
         </div>
       )}
@@ -488,7 +471,7 @@ export default function ItemSelection() {
         <div className="flex gap-3">
           <Button 
             className="flex-1 bg-success py-3 hover:bg-green-600" 
-            onClick={handleViewReport}
+            onClick={() => setLocation('/report')}
           >
             <FileText className="mr-2 h-4 w-4" />
             View Report

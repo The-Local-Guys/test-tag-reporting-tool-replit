@@ -293,11 +293,7 @@ export default function ReportPreview() {
         manufacturerInfo: result.manufacturerInfo || null,
         installationDate: result.installationDate || null,
         globeType: result.globeType || null,
-        // RCD testing specific fields
-        pushButtonTest: result.pushButtonTest || false,
-        injectionTimedTest: result.injectionTimedTest || false,
-        distributionBoardNumber: (result as any).distributionBoardNumber || null,
-      } as any));
+      }));
 
       if (!sessionData?.session) {
         throw new Error('Session data is not available');
@@ -355,10 +351,6 @@ export default function ReportPreview() {
         visionInspection: result.visionInspection,
         electricalTest: result.electricalTest,
         createdAt: new Date(result.timestamp),
-        // RCD testing specific fields
-        pushButtonTest: result.pushButtonTest || false,
-        injectionTimedTest: result.injectionTimedTest || false,
-        distributionBoardNumber: (result as any).distributionBoardNumber || null,
         maintenanceType: result.maintenanceType || null,
         dischargeTest: result.dischargeTest || false,
         switchingTest: result.switchingTest || false,
@@ -369,7 +361,7 @@ export default function ReportPreview() {
         manufacturerInfo: result.manufacturerInfo || null,
         installationDate: result.installationDate || null,
         globeType: result.globeType || null,
-      } as any));
+      }));
 
       if (!sessionData?.session) {
         throw new Error('Session data is not available');
@@ -456,21 +448,13 @@ export default function ReportPreview() {
     setShowFinishSuccess(false);
     
     try {
-      // Only submit batch if there are results and an active session
-      // (batch may have already been submitted when clicking "View Report")
-      if (sessionId && batchedResults.length > 0) {
-        console.log('Submitting batch results before finishing job...');
-        await submitBatch();
-        
-        // Wait a moment to ensure localStorage cleanup completes
-        console.log('Waiting for localStorage cleanup to complete...');
-        await new Promise(resolve => setTimeout(resolve, 2500));
-      } else {
-        console.log('Batch already submitted, skipping submission step');
-        // Still wait a bit for consistent UX
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
+      // Submit batched results to database before starting new job
+      console.log('Submitting batch results before finishing job...');
+      await submitBatch();
       
+      // Wait a moment to ensure localStorage cleanup completes
+      console.log('Waiting for localStorage cleanup to complete...');
+      await new Promise(resolve => setTimeout(resolve, 2500));
       // Show success animation
       setShowFinishSuccess(true);
       
@@ -834,13 +818,7 @@ export default function ReportPreview() {
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="font-medium text-gray-800">
-                    #{result.assetNumber || 'TBD'} - {
-                      result.itemCode && session?.country === 'national_client' 
-                        ? `${result.itemCode} - ${result.itemName}` 
-                        : session?.serviceType === 'rcd_reporting' && result.classification === 'fixed-rcd' && (result as any).distributionBoardNumber
-                          ? `${result.itemName} (${(result as any).distributionBoardNumber})`
-                          : result.itemName
-                    }
+                    #{result.assetNumber || 'TBD'} - {result.itemCode && session?.country === 'national_client' ? `${result.itemCode} - ${result.itemName}` : result.itemName}
                   </div>
                   <div className="text-sm text-gray-500">
                     {result.location} • {result.classification.toUpperCase()}

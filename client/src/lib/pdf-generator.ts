@@ -114,8 +114,6 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     ? 'Emergency Exit Light Testing Report'
     : session.serviceType === 'fire_testing'
     ? 'Fire Equipment Testing Report'
-    : session.serviceType === 'rcd_reporting'
-    ? 'RCD Testing Report'
     : 'Electrical Safety Testing Report';
   
   // Page setup
@@ -233,18 +231,8 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   doc.setFontSize(6);
   doc.setFont('helvetica', 'bold');
   doc.text('Asset#', margin, yPosition);
-  
-  // For RCD reporting, change "Item" to "Distribution Board"
-  if (session.serviceType === 'rcd_reporting') {
-    doc.text('Distribution Board', margin + 12, yPosition);
-  } else {
-    doc.text('Item', margin + 12, yPosition);
-  }
-  
-  // Location header (skip for RCD reporting - it's in a different position)
-  if (session.serviceType !== 'rcd_reporting') {
-    doc.text('Location', margin + 30, yPosition);
-  }
+  doc.text('Item', margin + 12, yPosition);
+  doc.text('Location', margin + 30, yPosition);
   
   if (session.serviceType === 'emergency_exit_light') {
     doc.text('Result', margin + 48, yPosition);
@@ -265,20 +253,6 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     doc.text('Frequency', margin + 122, yPosition);
     doc.text('Due Date', margin + 140, yPosition);
     doc.text('Failure Reason', margin + 158, yPosition);
-  } else if (session.serviceType === 'rcd_reporting') {
-    // New order: Asset# < Distribution Board > Push Button > Timed Test > Result > Location > Comments
-    
-    // Push Button header in 2 lines
-    doc.text('Push Button', margin + 48, yPosition);
-    doc.text('( 6 monthly )', margin + 48, yPosition + 3);
-    
-    // Timed Test header in 2 lines
-    doc.text('Timed Test', margin + 70, yPosition);
-    doc.text('( 12 Monthly )', margin + 70, yPosition + 3);
-    
-    doc.text('Result', margin + 95, yPosition);
-    doc.text('Location', margin + 110, yPosition);
-    doc.text('Comments', margin + 145, yPosition);
   } else {
     doc.text('Type', margin + 48, yPosition);
     doc.text('Result', margin + 62, yPosition);
@@ -301,16 +275,8 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     const itemNameWidth = 17; // Width for item name column
     const locationWidth = 17; // Width for location column
     
-    // For Fixed RCD, include distribution board number with item name if available
-    let displayItemName = result.itemName;
-    if (session.serviceType === 'rcd_reporting' && 
-        result.classification === 'fixed-rcd' && 
-        (result as any).distributionBoardNumber) {
-      displayItemName = `${result.itemName} (${(result as any).distributionBoardNumber})`;
-    }
-    
     // Split text to fit column widths
-    const itemNameLines = doc.splitTextToSize(displayItemName, itemNameWidth);
+    const itemNameLines = doc.splitTextToSize(result.itemName, itemNameWidth);
     const locationLines = doc.splitTextToSize(result.location, locationWidth);
     
     // For fire testing, also calculate size/weight lines and type lines
@@ -336,8 +302,6 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       // Add word wrapping for manufacturer info in emergency exit light
       const manufacturerWidth = 20;
       manufacturerLines = doc.splitTextToSize(result.manufacturerInfo || 'N/A', manufacturerWidth);
-    } else if (session.serviceType === 'rcd_reporting') {
-      // For RCD reporting, no special word wrapping needed (notes handled in render section)
     } else {
       // For electrical testing, add word wrapping for type/classification
       const typeWidth = 13; // Width for type column
@@ -366,12 +330,10 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       doc.text(line, margin + 12, rowStartY + (i * lineHeight));
     });
     
-    // Draw location with word wrapping (skip for RCD reporting - it's rendered in custom position)
-    if (session.serviceType !== 'rcd_reporting') {
-      locationLines.forEach((line: string, i: number) => {
-        doc.text(line, margin + 30, rowStartY + (i * lineHeight));
-      });
-    }
+    // Draw location with word wrapping
+    locationLines.forEach((line: string, i: number) => {
+      doc.text(line, margin + 30, rowStartY + (i * lineHeight));
+    });
     
     if (session.serviceType === 'emergency_exit_light') {
       // Color code the result for emergency exit light
@@ -423,58 +385,6 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       const dueDateLines = doc.splitTextToSize(dueDateText, 17);
       dueDateLines.forEach((line: string, i: number) => {
         doc.text(line, margin + 140, rowStartY + (i * lineHeight));
-      });
-    } else if (session.serviceType === 'rcd_reporting') {
-      // New order: Asset# < Distribution Board > Push Button > Timed Test > Result > Location > Comments
-      
-      // Show test results with proper null handling and color coding
-      const pushButtonValue = (result as any).pushButtonTest;
-      const injectionTimedValue = (result as any).injectionTimedTest;
-      
-      // Push Button Test (margin + 48)
-      if (pushButtonValue === true) {
-        doc.setTextColor(0, 128, 0); // Green
-        doc.text('Yes', margin + 48, rowStartY);
-      } else if (pushButtonValue === false) {
-        doc.setTextColor(0, 0, 0); // Black
-        doc.text('No', margin + 48, rowStartY);
-      } else {
-        doc.text('N/A', margin + 48, rowStartY);
-      }
-      doc.setTextColor(0, 0, 0); // Reset to black
-      
-      // Injection/Timed Test (margin + 70)
-      if (injectionTimedValue === true) {
-        doc.setTextColor(0, 128, 0); // Green
-        doc.text('Yes', margin + 70, rowStartY);
-      } else if (injectionTimedValue === false) {
-        doc.setTextColor(0, 0, 0); // Black
-        doc.text('No', margin + 70, rowStartY);
-      } else {
-        doc.text('N/A', margin + 70, rowStartY);
-      }
-      doc.setTextColor(0, 0, 0); // Reset to black
-      
-      // Color code the result (margin + 95)
-      if (result.result === 'pass') {
-        doc.setTextColor(0, 128, 0); // Green
-        doc.text('PASS', margin + 95, rowStartY);
-      } else {
-        doc.setTextColor(255, 0, 0); // Red
-        doc.text('FAIL', margin + 95, rowStartY);
-      }
-      doc.setTextColor(0, 0, 0); // Reset to black
-      
-      // Show location with word wrapping (margin + 110)
-      locationLines.forEach((line: string, i: number) => {
-        doc.text(line, margin + 110, rowStartY + (i * lineHeight));
-      });
-      
-      // Show comments with word wrapping (margin + 145)
-      const commentsText = result.notes || '-';
-      const commentsLines = doc.splitTextToSize(commentsText, 30);
-      commentsLines.forEach((line: string, i: number) => {
-        doc.text(line, margin + 145, rowStartY + (i * lineHeight));
       });
     } else {
       // For regular electrical testing, show classification/type with word wrapping
@@ -549,8 +459,6 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         failureLinesFire.forEach((line: string, i: number) => {
           doc.text(line, margin + 158, rowStartY + (i * lineHeight));
         });
-      } else if (session.serviceType === 'rcd_reporting') {
-        // RCD reporting doesn't display failure reasons or action taken in the main table (it has notes column instead)
       } else {
         // Standard electrical testing failure reasons
         if (failureReason === 'vision') {
@@ -577,8 +485,6 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         doc.text('-', margin + 142, rowStartY);
       } else if (session.serviceType === 'fire_testing') {
         doc.text('-', margin + 158, rowStartY);
-      } else if (session.serviceType === 'rcd_reporting') {
-        // RCD reporting doesn't display failure reasons in the table (it has notes column instead)
       } else {
         doc.text('-', margin + 135, rowStartY);
         doc.text('-', margin + 158, rowStartY);

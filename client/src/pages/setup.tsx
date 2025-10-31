@@ -71,7 +71,7 @@ export default function Setup() {
     
     createSession({
       ...data,
-      serviceType: selectedService as 'electrical' | 'emergency_exit_light' | 'fire_testing' | 'rcd_reporting',
+      serviceType: selectedService as 'electrical' | 'emergency_exit_light' | 'fire_testing',
       country: data.country,
       // Fire testing specific fields
       ...(selectedService === 'fire_testing' && {
@@ -141,7 +141,6 @@ export default function Setup() {
                 const service = sessionStorage.getItem('selectedService');
                 if (service === 'emergency_exit_light') return 'Emergency Exit Light Testing';
                 if (service === 'fire_testing') return 'Fire Equipment Testing';
-                if (service === 'rcd_reporting') return 'RCD Reporting';
                 return 'Electrical Test & Tag';
               })()}
             </h1>
@@ -250,24 +249,18 @@ export default function Setup() {
                 <RadioGroupItem value="newzealand" id="newzealand" />
                 <Label htmlFor="newzealand">New Zealand (NZS 4503:2005)</Label>
               </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="national_client" id="national_client" />
+                <Label htmlFor="national_client">ARA Compliance</Label>
+              </div>
               
-              {/* Hide ARA Compliance and Custom Form Types for RCD Reporting */}
-              {sessionStorage.getItem('selectedService') !== 'rcd_reporting' && (
-                <>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="national_client" id="national_client" />
-                    <Label htmlFor="national_client">ARA Compliance</Label>
-                  </div>
-                  
-                  {/* Custom Form Types */}
-                  {customFormTypes && customFormTypes.map((formType) => (
-                    <div key={formType.id} className="flex items-center space-x-2">
-                      <RadioGroupItem value={`custom_${formType.id}`} id={`custom_${formType.id}`} />
-                      <Label htmlFor={`custom_${formType.id}`}>{formType.name}</Label>
-                    </div>
-                  ))}
-                </>
-              )}
+              {/* Custom Form Types */}
+              {customFormTypes && customFormTypes.map((formType) => (
+                <div key={formType.id} className="flex items-center space-x-2">
+                  <RadioGroupItem value={`custom_${formType.id}`} id={`custom_${formType.id}`} />
+                  <Label htmlFor={`custom_${formType.id}`}>{formType.name}</Label>
+                </div>
+              ))}
             </RadioGroup>
           </div>
 
