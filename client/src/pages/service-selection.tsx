@@ -269,7 +269,7 @@ export default function ServiceSelection() {
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
           {/* Electrical Test and Tag */}
           <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-blue-500">
             <CardHeader className="text-center">
@@ -363,8 +363,10 @@ export default function ServiceSelection() {
               </Button>
             </CardContent>
           </Card>
+        </div>
 
-          {/* RCD Reporting */}
+        {/* RCD Reporting - Bottom Row */}
+        <div className="max-w-md mx-auto">
           <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-purple-500">
             <CardHeader className="text-center">
               <div className="w-16 h-16 mx-auto mb-4 bg-purple-100 rounded-full flex items-center justify-center">
