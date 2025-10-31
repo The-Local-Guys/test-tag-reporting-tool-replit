@@ -95,7 +95,9 @@ function Router() {
             <Route path="/emergency-test" component={EmergencyTestDetails} />
             <Route path="/fire-test" component={FireTestDetails} />
             <Route path="/rcd-test" component={RCDTestDetails} />
+            <Route path="/rcd-test-details" component={RCDTestDetails} />
             <Route path="/failure" component={FailureDetails} />
+            <Route path="/failure-details" component={FailureDetails} />
             <Route path="/report" component={ReportPreview} />
             <Route path="/environments" component={Environments} />
             <Route path="/form-types" component={FormTypes} />

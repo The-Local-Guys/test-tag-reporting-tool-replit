@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useToast } from '@/hooks/use-toast';
+import type { InsertTestResult } from '@shared/schema';
 
 // RCD Test Schema
 const rcdTestSchema = z.object({
@@ -104,7 +105,30 @@ export default function RCDTestDetails() {
         injectionTimedTest: data.injectionTimedTest,
       });
 
-      // Add to batch storage
+      // If failed, navigate to failure details page
+      if (data.result === 'fail') {
+        const pendingTestData: Omit<InsertTestResult, 'sessionId'> = {
+          itemName: currentItemName,
+          itemType: currentItemType,
+          location: data.location,
+          assetNumber: data.assetNumber,
+          classification: data.equipmentType,
+          result: data.result,
+          frequency: 'annually',
+          pushButtonTest: data.pushButtonTest,
+          injectionTimedTest: data.injectionTimedTest,
+          distributionBoardNumber: data.distributionBoardNumber || null,
+          notes: data.notes || null,
+          visionInspection: false,
+          electricalTest: false,
+        } as any;
+
+        sessionStorage.setItem('pendingTestResult', JSON.stringify(pendingTestData));
+        setLocation('/failure-details');
+        return;
+      }
+
+      // If passed, add directly to batch
       addToBatch({
         itemName: currentItemName,
         itemType: currentItemType,
