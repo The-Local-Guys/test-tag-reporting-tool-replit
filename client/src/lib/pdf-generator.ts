@@ -233,7 +233,14 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   doc.setFontSize(6);
   doc.setFont('helvetica', 'bold');
   doc.text('Asset#', margin, yPosition);
-  doc.text('Item', margin + 12, yPosition);
+  
+  // For RCD reporting, change "Item" to "Distribution Board"
+  if (session.serviceType === 'rcd_reporting') {
+    doc.text('Distribution Board', margin + 12, yPosition);
+  } else {
+    doc.text('Item', margin + 12, yPosition);
+  }
+  
   doc.text('Location', margin + 30, yPosition);
   
   if (session.serviceType === 'emergency_exit_light') {
@@ -258,8 +265,15 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   } else if (session.serviceType === 'rcd_reporting') {
     doc.text('Equipment Type', margin + 48, yPosition);
     doc.text('Result', margin + 75, yPosition);
+    
+    // Push Button header in 2 lines
     doc.text('Push Button', margin + 92, yPosition);
-    doc.text('Injection/Timed', margin + 115, yPosition);
+    doc.text('( 6 monthly )', margin + 92, yPosition + 3);
+    
+    // Timed Test header in 2 lines
+    doc.text('Timed Test', margin + 115, yPosition);
+    doc.text('( 12 Monthly )', margin + 115, yPosition + 3);
+    
     doc.text('Notes', margin + 145, yPosition);
   } else {
     doc.text('Type', margin + 48, yPosition);
