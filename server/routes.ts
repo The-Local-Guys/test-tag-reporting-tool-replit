@@ -10,6 +10,7 @@ import {
   insertUserSchema,
   insertEnvironmentSchema,
   insertCustomFormTypeSchema,
+  insertCustomFormItemSchema,
   loginSchema,
   type User,
 } from "@shared/schema";
