@@ -317,55 +317,52 @@ export default function RCDTestDetails() {
           </CardContent>
         </Card>
 
-        {/* Notes */}
+        {/* Test Result */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Notes (Optional)</CardTitle>
+            <CardTitle className="text-lg">Test Result</CardTitle>
           </CardHeader>
-          <CardContent>
-            <Textarea
-              id="notes"
-              {...form.register('notes')}
-              placeholder="Add any additional notes about the test..."
-              className="text-base min-h-[100px]"
-              data-testid="textarea-notes"
-            />
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="notes">Notes (Optional)</Label>
+              <Textarea
+                id="notes"
+                {...form.register('notes')}
+                placeholder="Add any additional notes about the test..."
+                className="text-base min-h-[100px]"
+                data-testid="textarea-notes"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Button
+                type="button"
+                onClick={() => {
+                  form.setValue('result', 'pass');
+                  form.handleSubmit(onSubmit)();
+                }}
+                className="bg-success hover:bg-green-600 text-white p-6 h-auto text-lg font-semibold flex flex-col items-center justify-center touch-button"
+                data-testid="button-pass"
+              >
+                <CheckCircle className="h-8 w-8 mb-2" />
+                PASS
+              </Button>
+
+              <Button
+                type="button"
+                onClick={() => {
+                  form.setValue('result', 'fail');
+                  form.handleSubmit(onSubmit)();
+                }}
+                className="bg-error text-white p-6 h-auto text-lg font-semibold flex flex-col items-center justify-center hover:bg-red-600 touch-button"
+                data-testid="button-fail"
+              >
+                <XCircle className="h-8 w-8 mb-2" />
+                FAIL
+              </Button>
+            </div>
           </CardContent>
         </Card>
-
-        {/* Test Result */}
-        <div className="space-y-3">
-          <Label className="flex items-center text-sm font-medium text-gray-700">
-            ✅ Test Result
-          </Label>
-          <div className="grid grid-cols-2 gap-4">
-            <Button
-              type="button"
-              onClick={() => {
-                form.setValue('result', 'pass');
-                form.handleSubmit(onSubmit)();
-              }}
-              className="bg-success hover:bg-green-600 text-white p-6 h-auto text-lg font-semibold flex flex-col items-center justify-center touch-button"
-              data-testid="button-pass"
-            >
-              <CheckCircle className="h-8 w-8 mb-2" />
-              PASS
-            </Button>
-
-            <Button
-              type="button"
-              onClick={() => {
-                form.setValue('result', 'fail');
-                form.handleSubmit(onSubmit)();
-              }}
-              className="bg-error text-white p-6 h-auto text-lg font-semibold flex flex-col items-center justify-center hover:bg-red-600 touch-button"
-              data-testid="button-fail"
-            >
-              <XCircle className="h-8 w-8 mb-2" />
-              FAIL
-            </Button>
-          </div>
-        </div>
       </form>
     </div>
   );
