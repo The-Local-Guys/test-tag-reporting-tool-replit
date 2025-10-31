@@ -87,6 +87,7 @@ export const testResults = pgTable("test_results", {
   // RCD testing specific fields
   pushButtonTest: boolean("push_button_test"), // Push button test completed
   injectionTimedTest: boolean("injection_timed_test"), // Injection/Timed test completed
+  distributionBoardNumber: text("distribution_board_number"), // Distribution board number for Fixed RCD
   createdAt: timestamp("created_at").defaultNow(),
 });
 
