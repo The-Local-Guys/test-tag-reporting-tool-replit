@@ -372,16 +372,16 @@ export default function ServiceSelection() {
               </div>
               <CardTitle className="text-xl">RCD Reporting</CardTitle>
               <CardDescription className="text-base">
-                Residual Current Device testing for electrical safety compliance
+                Residual Current Device testing for electrical safety compliance with AS/NZS 3760
               </CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="text-sm text-gray-600 space-y-2 mb-6">
                 <li>• Fixed RCD testing</li>
                 <li>• Portable RCD testing</li>
-                <li>• Push button test</li>
-                <li>• Injection/Timed test</li>
-                <li>• Compliance documentation</li>
+                <li>• Push button test (6 monthly)</li>
+                <li>• Injection/Timed test (12 monthly)</li>
+                <li>• Compliance certification</li>
               </ul>
               <Button 
                 onClick={() => selectService('rcd_reporting')}
