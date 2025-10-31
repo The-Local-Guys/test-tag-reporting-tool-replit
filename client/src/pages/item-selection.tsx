@@ -257,17 +257,11 @@ export default function ItemSelection() {
     setShowNewReportConfirm(false);
   };
 
-  const handleViewReport = async () => {
-    try {
-      await submitBatch();
-      setLocation('/report');
-    } catch (error) {
-      toast({
-        title: "Submission Failed",
-        description: "Failed to submit test results. Please try again.",
-        variant: "destructive",
-      });
-    }
+  const handleViewReport = () => {
+    // Navigate to report preview without submitting batch
+    // This allows users to preview the report, download PDF, and return to add more results
+    // Batch submission only happens when clicking "Finish Job" on the report preview page
+    setLocation('/report');
   };
 
   const summary = sessionData?.summary || {
@@ -495,10 +489,9 @@ export default function ItemSelection() {
           <Button 
             className="flex-1 bg-success py-3 hover:bg-green-600" 
             onClick={handleViewReport}
-            disabled={isSubmittingBatch}
           >
             <FileText className="mr-2 h-4 w-4" />
-            {isSubmittingBatch ? 'Submitting...' : 'View Report'}
+            View Report
           </Button>
         </div>
         <Button 
