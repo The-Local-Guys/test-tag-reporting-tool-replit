@@ -296,7 +296,8 @@ export default function ReportPreview() {
         // RCD testing specific fields
         pushButtonTest: result.pushButtonTest || false,
         injectionTimedTest: result.injectionTimedTest || false,
-      }));
+        distributionBoardNumber: (result as any).distributionBoardNumber || null,
+      } as any));
 
       if (!sessionData?.session) {
         throw new Error('Session data is not available');
@@ -357,6 +358,7 @@ export default function ReportPreview() {
         // RCD testing specific fields
         pushButtonTest: result.pushButtonTest || false,
         injectionTimedTest: result.injectionTimedTest || false,
+        distributionBoardNumber: (result as any).distributionBoardNumber || null,
         maintenanceType: result.maintenanceType || null,
         dischargeTest: result.dischargeTest || false,
         switchingTest: result.switchingTest || false,
@@ -367,7 +369,7 @@ export default function ReportPreview() {
         manufacturerInfo: result.manufacturerInfo || null,
         installationDate: result.installationDate || null,
         globeType: result.globeType || null,
-      }));
+      } as any));
 
       if (!sessionData?.session) {
         throw new Error('Session data is not available');
