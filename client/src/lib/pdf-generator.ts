@@ -283,8 +283,16 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     const itemNameWidth = 17; // Width for item name column
     const locationWidth = 17; // Width for location column
     
+    // For Fixed RCD, include distribution board number with item name if available
+    let displayItemName = result.itemName;
+    if (session.serviceType === 'rcd_reporting' && 
+        result.classification === 'fixed-rcd' && 
+        (result as any).distributionBoardNumber) {
+      displayItemName = `${result.itemName} (${(result as any).distributionBoardNumber})`;
+    }
+    
     // Split text to fit column widths
-    const itemNameLines = doc.splitTextToSize(result.itemName, itemNameWidth);
+    const itemNameLines = doc.splitTextToSize(displayItemName, itemNameWidth);
     const locationLines = doc.splitTextToSize(result.location, locationWidth);
     
     // For fire testing, also calculate size/weight lines and type lines

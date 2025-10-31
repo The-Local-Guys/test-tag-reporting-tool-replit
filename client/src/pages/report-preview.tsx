@@ -824,7 +824,13 @@ export default function ReportPreview() {
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="font-medium text-gray-800">
-                    #{result.assetNumber || 'TBD'} - {result.itemCode && session?.country === 'national_client' ? `${result.itemCode} - ${result.itemName}` : result.itemName}
+                    #{result.assetNumber || 'TBD'} - {
+                      result.itemCode && session?.country === 'national_client' 
+                        ? `${result.itemCode} - ${result.itemName}` 
+                        : session?.serviceType === 'rcd_reporting' && result.classification === 'fixed-rcd' && (result as any).distributionBoardNumber
+                          ? `${result.itemName} (${(result as any).distributionBoardNumber})`
+                          : result.itemName
+                    }
                   </div>
                   <div className="text-sm text-gray-500">
                     {result.location} • {result.classification.toUpperCase()}

@@ -45,6 +45,7 @@ export interface BatchedTestResult {
   // RCD testing fields
   pushButtonTest?: boolean;
   injectionTimedTest?: boolean;
+  distributionBoardNumber?: string;
 }
 
 /**
@@ -416,6 +417,7 @@ export function useSession() {
       // RCD-specific fields
       pushButtonTest: (cleanData as any).pushButtonTest ?? undefined,
       injectionTimedTest: (cleanData as any).injectionTimedTest ?? undefined,
+      distributionBoardNumber: (cleanData as any).distributionBoardNumber || undefined,
     };
     
     // Add to batched results

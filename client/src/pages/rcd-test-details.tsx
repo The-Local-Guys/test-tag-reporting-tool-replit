@@ -19,6 +19,7 @@ const rcdTestSchema = z.object({
   location: z.string().min(1, 'Location is required'),
   assetNumber: z.string().min(1, 'Asset number is required'),
   equipmentType: z.enum(['fixed-rcd', 'portable-rcd']),
+  distributionBoardNumber: z.string().optional(), // Only for Fixed RCD
   pushButtonTest: z.boolean().default(true),
   injectionTimedTest: z.boolean().default(true),
   result: z.enum(['pass', 'fail']),
@@ -61,6 +62,7 @@ export default function RCDTestDetails() {
       location: '',
       assetNumber: '',
       equipmentType: getEquipmentType(initialItemType),
+      distributionBoardNumber: '',
       pushButtonTest: true,
       injectionTimedTest: true,
       result: 'pass',
@@ -113,6 +115,7 @@ export default function RCDTestDetails() {
         frequency: 'annually', // Default frequency for RCD testing
         pushButtonTest: data.pushButtonTest,
         injectionTimedTest: data.injectionTimedTest,
+        distributionBoardNumber: data.distributionBoardNumber || null,
         notes: data.notes || null,
         // RCD testing doesn't require vision/electrical test flags
         visionInspection: false,
@@ -236,6 +239,23 @@ export default function RCDTestDetails() {
                 <p className="text-red-500 text-sm mt-1">{form.formState.errors.equipmentType.message}</p>
               )}
             </div>
+
+            {/* Distribution Board Number - Only for Fixed RCD */}
+            {watchEquipmentType === 'fixed-rcd' && (
+              <div>
+                <Label htmlFor="distributionBoardNumber">Distribution Board Number</Label>
+                <Input
+                  id="distributionBoardNumber"
+                  {...form.register('distributionBoardNumber')}
+                  placeholder="e.g., DB-1, Main Board"
+                  className="text-base"
+                  data-testid="input-distribution-board-number"
+                />
+                {form.formState.errors.distributionBoardNumber && (
+                  <p className="text-red-500 text-sm mt-1">{form.formState.errors.distributionBoardNumber.message}</p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
