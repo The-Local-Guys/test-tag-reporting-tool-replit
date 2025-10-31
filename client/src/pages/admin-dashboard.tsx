@@ -1668,11 +1668,19 @@ export default function AdminDashboard() {
                               className={
                                 session.serviceType === "emergency_exit_light"
                                   ? "bg-red-50 text-red-700"
+                                  : session.serviceType === "fire_testing"
+                                  ? "bg-orange-50 text-orange-700"
+                                  : session.serviceType === "rcd_reporting"
+                                  ? "bg-purple-50 text-purple-700"
                                   : "bg-blue-50 text-blue-700"
                               }
                             >
                               {session.serviceType === "emergency_exit_light"
                                 ? "Emergency Exit Light"
+                                : session.serviceType === "fire_testing"
+                                ? "Fire Testing"
+                                : session.serviceType === "rcd_reporting"
+                                ? "RCD Reporting"
                                 : "Electrical Test & Tag"}
                             </Badge>
                           </TableCell>
