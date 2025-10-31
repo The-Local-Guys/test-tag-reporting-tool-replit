@@ -822,18 +822,21 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       doc.text(`Location: ${result.location}`, margin, yPosition);
       yPosition += 6;
       
-      // Display Failure Reason on separate line
-      const failureReasonDisplay = result.failureReason 
-        ? result.failureReason.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
-        : 'Not specified';
-      doc.text(`Failure Reason: ${failureReasonDisplay}`, margin, yPosition);
-      yPosition += 6;
-      
-      // Add action taken on separate line
-      if (result.actionTaken) {
-        const actionDisplay = result.actionTaken === 'given' ? 'Given to Site Contact' : 'Removed from Site';
-        doc.text(`Action Taken: ${actionDisplay}`, margin, yPosition);
+      // Display Failure Reason and Action Taken (skip for RCD reporting)
+      if (session.serviceType !== 'rcd_reporting') {
+        // Display Failure Reason on separate line
+        const failureReasonDisplay = result.failureReason 
+          ? result.failureReason.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
+          : 'Not specified';
+        doc.text(`Failure Reason: ${failureReasonDisplay}`, margin, yPosition);
         yPosition += 6;
+        
+        // Add action taken on separate line
+        if (result.actionTaken) {
+          const actionDisplay = result.actionTaken === 'given' ? 'Given to Site Contact' : 'Removed from Site';
+          doc.text(`Action Taken: ${actionDisplay}`, margin, yPosition);
+          yPosition += 6;
+        }
       }
       
       // Parse and display detailed information from notes if available
