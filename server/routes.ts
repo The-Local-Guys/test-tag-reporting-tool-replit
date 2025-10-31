@@ -596,6 +596,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             chargingTest: batchedResult.chargingTest || false,
             manufacturerInfo: batchedResult.manufacturerInfo || null,
             installationDate: batchedResult.installationDate || null,
+            // Map RCD test fields from batch data
+            pushButtonTest: batchedResult.pushButtonTest ?? null,
+            injectionTimedTest: batchedResult.injectionTimedTest ?? null,
           };
 
           console.log('Attempting to insert test result:', resultData);

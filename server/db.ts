@@ -18,5 +18,11 @@ if (!databaseUrl) {
 
 console.log(`Using ${isDevelopment ? 'development' : 'production'} database`);
 
-export const pool = new Pool({ connectionString: databaseUrl });
+// Configure pool with lower limits for Neon database
+export const pool = new Pool({ 
+  connectionString: databaseUrl,
+  max: 3, // Reduce max connections to avoid overwhelming Neon
+  idleTimeoutMillis: 30000, // Close idle connections after 30 seconds
+  connectionTimeoutMillis: 10000 // Timeout after 10 seconds
+});
 export const db = drizzle({ client: pool, schema });
