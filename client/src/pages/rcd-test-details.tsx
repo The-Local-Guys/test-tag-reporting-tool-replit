@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -38,8 +38,7 @@ export default function RCDTestDetails() {
 
   // Get URL parameters
   const urlParams = new URLSearchParams(window.location.search);
-  const itemName = urlParams.get('item') || 'RCD Device';
-  const itemType = urlParams.get('type') || 'fixed-rcd';
+  const initialItemType = urlParams.get('type') || 'fixed-rcd';
 
   // Determine equipment type from item type
   const getEquipmentType = (type: string): 'fixed-rcd' | 'portable-rcd' => {
@@ -47,12 +46,21 @@ export default function RCDTestDetails() {
     return 'fixed-rcd';
   };
 
+  // Helper to get item name from equipment type
+  const getItemNameFromType = (equipmentType: 'fixed-rcd' | 'portable-rcd'): string => {
+    return equipmentType === 'fixed-rcd' ? 'Fixed RCD' : 'Portable RCD';
+  };
+
+  // State to track current item name and type (will update when equipment type changes)
+  const [currentItemName, setCurrentItemName] = useState(getItemNameFromType(getEquipmentType(initialItemType)));
+  const [currentItemType, setCurrentItemType] = useState(getEquipmentType(initialItemType));
+
   const form = useForm<RCDTestForm>({
     resolver: zodResolver(rcdTestSchema),
     defaultValues: {
       location: '',
       assetNumber: '',
-      equipmentType: getEquipmentType(itemType),
+      equipmentType: getEquipmentType(initialItemType),
       pushButtonTest: true,
       injectionTimedTest: true,
       result: 'pass',
@@ -61,6 +69,15 @@ export default function RCDTestDetails() {
   });
 
   const watchResult = form.watch('result');
+  const watchEquipmentType = form.watch('equipmentType');
+
+  // Update item name and type when equipment type changes
+  useEffect(() => {
+    const newItemName = getItemNameFromType(watchEquipmentType);
+    const newItemType = watchEquipmentType;
+    setCurrentItemName(newItemName);
+    setCurrentItemType(newItemType);
+  }, [watchEquipmentType]);
 
   const onSubmit = async (data: RCDTestForm) => {
     if (!sessionData?.session?.id) {
@@ -75,8 +92,8 @@ export default function RCDTestDetails() {
     try {
       console.log('Submitting RCD test result:', {
         assetNumber: data.assetNumber,
-        itemName: itemName,
-        itemType: itemType,
+        itemName: currentItemName,
+        itemType: currentItemType,
         location: data.location,
         equipmentType: data.equipmentType,
         result: data.result,
@@ -87,8 +104,8 @@ export default function RCDTestDetails() {
 
       // Add to batch storage
       addToBatch({
-        itemName,
-        itemType,
+        itemName: currentItemName,
+        itemType: currentItemType,
         location: data.location,
         assetNumber: data.assetNumber,
         classification: data.equipmentType, // Use equipment type as classification
@@ -104,7 +121,7 @@ export default function RCDTestDetails() {
 
       toast({
         title: 'RCD Test Recorded',
-        description: `${itemName} has been added to the report`,
+        description: `${currentItemName} has been added to the report`,
       });
 
       // Navigate back to items page
@@ -151,7 +168,7 @@ export default function RCDTestDetails() {
       {/* Item Info */}
       <div className="bg-purple-50 border-b border-purple-100 p-4">
         <div className="text-center">
-          <h2 className="text-lg font-semibold text-gray-800">{itemName}</h2>
+          <h2 className="text-lg font-semibold text-gray-800">{currentItemName}</h2>
           <p className="text-sm text-gray-600">RCD Testing</p>
         </div>
       </div>
