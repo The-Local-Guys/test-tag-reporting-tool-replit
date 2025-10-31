@@ -241,7 +241,10 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     doc.text('Item', margin + 12, yPosition);
   }
   
-  doc.text('Location', margin + 30, yPosition);
+  // Location header (skip for RCD reporting - it's in a different position)
+  if (session.serviceType !== 'rcd_reporting') {
+    doc.text('Location', margin + 30, yPosition);
+  }
   
   if (session.serviceType === 'emergency_exit_light') {
     doc.text('Result', margin + 48, yPosition);
@@ -263,18 +266,19 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     doc.text('Due Date', margin + 140, yPosition);
     doc.text('Failure Reason', margin + 158, yPosition);
   } else if (session.serviceType === 'rcd_reporting') {
-    doc.text('Equipment Type', margin + 48, yPosition);
-    doc.text('Result', margin + 75, yPosition);
+    // New order: Asset# < Distribution Board > Push Button > Timed Test > Result > Location > Comments
     
     // Push Button header in 2 lines
-    doc.text('Push Button', margin + 92, yPosition);
-    doc.text('( 6 monthly )', margin + 92, yPosition + 3);
+    doc.text('Push Button', margin + 48, yPosition);
+    doc.text('( 6 monthly )', margin + 48, yPosition + 3);
     
     // Timed Test header in 2 lines
-    doc.text('Timed Test', margin + 115, yPosition);
-    doc.text('( 12 Monthly )', margin + 115, yPosition + 3);
+    doc.text('Timed Test', margin + 70, yPosition);
+    doc.text('( 12 Monthly )', margin + 70, yPosition + 3);
     
-    doc.text('Notes', margin + 145, yPosition);
+    doc.text('Result', margin + 95, yPosition);
+    doc.text('Location', margin + 110, yPosition);
+    doc.text('Comments', margin + 145, yPosition);
   } else {
     doc.text('Type', margin + 48, yPosition);
     doc.text('Result', margin + 62, yPosition);
@@ -362,10 +366,12 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       doc.text(line, margin + 12, rowStartY + (i * lineHeight));
     });
     
-    // Draw location with word wrapping
-    locationLines.forEach((line: string, i: number) => {
-      doc.text(line, margin + 30, rowStartY + (i * lineHeight));
-    });
+    // Draw location with word wrapping (skip for RCD reporting - it's rendered in custom position)
+    if (session.serviceType !== 'rcd_reporting') {
+      locationLines.forEach((line: string, i: number) => {
+        doc.text(line, margin + 30, rowStartY + (i * lineHeight));
+      });
+    }
     
     if (session.serviceType === 'emergency_exit_light') {
       // Color code the result for emergency exit light
@@ -419,52 +425,55 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         doc.text(line, margin + 140, rowStartY + (i * lineHeight));
       });
     } else if (session.serviceType === 'rcd_reporting') {
-      // For RCD reporting, show equipment type
-      const equipmentTypeDisplay = result.classification === 'fixed-rcd' ? 'Fixed RCD' : 'Portable RCD';
-      doc.text(equipmentTypeDisplay, margin + 48, rowStartY);
-      
-      // Color code the result
-      if (result.result === 'pass') {
-        doc.setTextColor(0, 128, 0); // Green
-        doc.text('PASS', margin + 75, rowStartY);
-      } else {
-        doc.setTextColor(255, 0, 0); // Red
-        doc.text('FAIL', margin + 75, rowStartY);
-      }
-      doc.setTextColor(0, 0, 0); // Reset to black
+      // New order: Asset# < Distribution Board > Push Button > Timed Test > Result > Location > Comments
       
       // Show test results with proper null handling and color coding
       const pushButtonValue = (result as any).pushButtonTest;
       const injectionTimedValue = (result as any).injectionTimedTest;
       
-      // Push Button Test
+      // Push Button Test (margin + 48)
       if (pushButtonValue === true) {
         doc.setTextColor(0, 128, 0); // Green
-        doc.text('Yes', margin + 92, rowStartY);
+        doc.text('Yes', margin + 48, rowStartY);
       } else if (pushButtonValue === false) {
         doc.setTextColor(0, 0, 0); // Black
-        doc.text('No', margin + 92, rowStartY);
+        doc.text('No', margin + 48, rowStartY);
       } else {
-        doc.text('N/A', margin + 92, rowStartY);
+        doc.text('N/A', margin + 48, rowStartY);
       }
       doc.setTextColor(0, 0, 0); // Reset to black
       
-      // Injection/Timed Test
+      // Injection/Timed Test (margin + 70)
       if (injectionTimedValue === true) {
         doc.setTextColor(0, 128, 0); // Green
-        doc.text('Yes', margin + 115, rowStartY);
+        doc.text('Yes', margin + 70, rowStartY);
       } else if (injectionTimedValue === false) {
         doc.setTextColor(0, 0, 0); // Black
-        doc.text('No', margin + 115, rowStartY);
+        doc.text('No', margin + 70, rowStartY);
       } else {
-        doc.text('N/A', margin + 115, rowStartY);
+        doc.text('N/A', margin + 70, rowStartY);
       }
       doc.setTextColor(0, 0, 0); // Reset to black
       
-      // Show notes with word wrapping
-      const notesText = result.notes || '-';
-      const notesLines = doc.splitTextToSize(notesText, 30);
-      notesLines.forEach((line: string, i: number) => {
+      // Color code the result (margin + 95)
+      if (result.result === 'pass') {
+        doc.setTextColor(0, 128, 0); // Green
+        doc.text('PASS', margin + 95, rowStartY);
+      } else {
+        doc.setTextColor(255, 0, 0); // Red
+        doc.text('FAIL', margin + 95, rowStartY);
+      }
+      doc.setTextColor(0, 0, 0); // Reset to black
+      
+      // Show location with word wrapping (margin + 110)
+      locationLines.forEach((line: string, i: number) => {
+        doc.text(line, margin + 110, rowStartY + (i * lineHeight));
+      });
+      
+      // Show comments with word wrapping (margin + 145)
+      const commentsText = result.notes || '-';
+      const commentsLines = doc.splitTextToSize(commentsText, 30);
+      commentsLines.forEach((line: string, i: number) => {
         doc.text(line, margin + 145, rowStartY + (i * lineHeight));
       });
     } else {
