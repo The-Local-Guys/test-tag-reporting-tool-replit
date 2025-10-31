@@ -298,7 +298,7 @@ export default function RCDTestDetails() {
                   data-testid="checkbox-push-button-test"
                 />
                 <Label htmlFor="pushButtonTest" className="text-sm">
-                  Push Button Test (Manual test button operation)
+                  Push Button Test
                 </Label>
               </div>
 
@@ -310,7 +310,7 @@ export default function RCDTestDetails() {
                   data-testid="checkbox-injection-timed-test"
                 />
                 <Label htmlFor="injectionTimedTest" className="text-sm">
-                  Injection/Timed Test (Measured trip time and current)
+                  Injection/Timed Test
                 </Label>
               </div>
             </div>
