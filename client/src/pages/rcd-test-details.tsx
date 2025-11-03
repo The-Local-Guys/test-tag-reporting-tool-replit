@@ -36,7 +36,7 @@ type RCDTestForm = z.infer<typeof rcdTestSchema>;
 export default function RCDTestDetails() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { sessionData, addToBatch } = useSession();
+  const { sessionData, addToBatch, currentLocation } = useSession();
 
   // Get URL parameters
   const urlParams = new URLSearchParams(window.location.search);
@@ -60,7 +60,7 @@ export default function RCDTestDetails() {
   const form = useForm<RCDTestForm>({
     resolver: zodResolver(rcdTestSchema),
     defaultValues: {
-      location: '',
+      location: currentLocation,
       assetNumber: '',
       equipmentType: getEquipmentType(initialItemType),
       distributionBoardNumber: '',
@@ -73,6 +73,13 @@ export default function RCDTestDetails() {
 
   const watchResult = form.watch('result');
   const watchEquipmentType = form.watch('equipmentType');
+
+  // Update location field when currentLocation changes
+  useEffect(() => {
+    if (currentLocation) {
+      form.setValue('location', currentLocation);
+    }
+  }, [currentLocation, form]);
 
   // Update item name and type when equipment type changes
   useEffect(() => {
