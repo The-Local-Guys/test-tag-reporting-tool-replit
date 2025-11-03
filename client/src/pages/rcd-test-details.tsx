@@ -18,7 +18,7 @@ import type { InsertTestResult } from '@shared/schema';
 // RCD Test Schema
 const rcdTestSchema = z.object({
   location: z.string().min(1, 'Location is required'),
-  assetNumber: z.string().min(1, 'Asset number is required'),
+  assetNumber: z.string().optional(), // Auto-generated
   equipmentType: z.enum(['fixed-rcd', 'portable-rcd']),
   distributionBoardNumber: z.string().optional(), // Only for Fixed RCD
   pushButtonTest: z.boolean().default(true),
@@ -36,7 +36,7 @@ type RCDTestForm = z.infer<typeof rcdTestSchema>;
 export default function RCDTestDetails() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { sessionData, addToBatch, currentLocation } = useSession();
+  const { sessionData, addToBatch, currentLocation, rcdAssetCounter } = useSession();
 
   // Get URL parameters
   const urlParams = new URLSearchParams(window.location.search);
@@ -57,11 +57,13 @@ export default function RCDTestDetails() {
   const [currentItemName, setCurrentItemName] = useState(getItemNameFromType(getEquipmentType(initialItemType)));
   const [currentItemType, setCurrentItemType] = useState(getEquipmentType(initialItemType));
 
+  const nextAssetNumber = rcdAssetCounter + 1;
+
   const form = useForm<RCDTestForm>({
     resolver: zodResolver(rcdTestSchema),
     defaultValues: {
       location: currentLocation,
-      assetNumber: '',
+      assetNumber: nextAssetNumber.toString(),
       equipmentType: getEquipmentType(initialItemType),
       distributionBoardNumber: '',
       pushButtonTest: false,
@@ -229,17 +231,17 @@ export default function RCDTestDetails() {
             </div>
 
             <div>
-              <Label htmlFor="assetNumber">Asset Number *</Label>
-              <Input
-                id="assetNumber"
-                {...form.register('assetNumber')}
-                placeholder="e.g., RCD-001"
-                className="text-base"
-                data-testid="input-asset-number"
-              />
-              {form.formState.errors.assetNumber && (
-                <p className="text-red-500 text-sm mt-1">{form.formState.errors.assetNumber.message}</p>
-              )}
+              <Label className="flex items-center text-sm font-medium text-gray-700">
+                🏷️ Asset Number
+              </Label>
+              <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
+                <div className="text-sm text-purple-800">
+                  <div className="font-medium">Next asset number will be:</div>
+                  <div className="text-purple-600 mt-1 text-lg font-semibold">
+                    #{nextAssetNumber}
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div>

@@ -119,6 +119,12 @@ export function useSession() {
     return stored ? parseInt(stored) : 10000;
   });
 
+  const [rcdAssetCounter, setRcdAssetCounter] = useState<number>(() => {
+    if (!sessionId) return 0;
+    const stored = localStorage.getItem(`rcdCounter_${sessionId}`);
+    return stored ? parseInt(stored) : 0;
+  });
+
   // Batched results stored in local storage
   const [batchedResults, setBatchedResults] = useState<BatchedTestResult[]>(() => {
     if (!sessionId) return [];
@@ -360,11 +366,19 @@ export function useSession() {
     }
     
     // Find next available asset number
-    // For RCD reporting, use the manually entered asset number if provided
     let assetNumber: string;
-    if ((cleanData as any).assetNumber) {
-      // Use the manually entered asset number (for RCD reporting)
-      assetNumber = (cleanData as any).assetNumber;
+    const isRCD = cleanData.classification === 'rcd' || sessionData?.session?.serviceType === 'rcd_reporting';
+    
+    if (isRCD) {
+      // For RCD reporting, use simple sequential numbering starting from 1
+      let candidate = Math.max(1, rcdAssetCounter + 1);
+      while (usedNumbers.has(candidate)) {
+        candidate++;
+      }
+      assetNumber = candidate.toString();
+      // Update counter to this number
+      setRcdAssetCounter(candidate);
+      localStorage.setItem(`rcdCounter_${sessionId}`, candidate.toString());
     } else if (isFiveYearly) {
       // For 5-yearly items, start from current counter + 1 (continue sequence)
       let candidate = Math.max(10001, fiveYearlyAssetCounter + 1);
@@ -712,6 +726,7 @@ export function useSession() {
       localStorage.removeItem(`batchedResults_${sessionId}`);
       localStorage.removeItem(`monthlyCounter_${sessionId}`);
       localStorage.removeItem(`fiveYearlyCounter_${sessionId}`);
+      localStorage.removeItem(`rcdCounter_${sessionId}`);
     }
     // Clear unfinished flags
     localStorage.removeItem('unfinished');
@@ -721,6 +736,7 @@ export function useSession() {
     setBatchedResults([]);
     setMonthlyAssetCounter(0);
     setFiveYearlyAssetCounter(10000);
+    setRcdAssetCounter(0);
     setAssetCounts({ monthly: 0, fiveYearly: 0 });
     localStorage.removeItem('currentSessionId');
     localStorage.removeItem('currentLocation');
@@ -749,6 +765,7 @@ export function useSession() {
     // Local asset progress
     assetProgress: getLocalAssetProgress(),
     assetCounts,
+    rcdAssetCounter,
     
     // Session operations
     createSession: createSessionMutation.mutate,
