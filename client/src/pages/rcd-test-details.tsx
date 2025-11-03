@@ -36,7 +36,7 @@ type RCDTestForm = z.infer<typeof rcdTestSchema>;
 export default function RCDTestDetails() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { sessionData, addToBatch, currentLocation, rcdAssetCounter } = useSession();
+  const { sessionData, addToBatch, currentLocation, rcdAssetCounter, currentDistributionBoardNumber } = useSession();
 
   // Get URL parameters
   const urlParams = new URLSearchParams(window.location.search);
@@ -65,7 +65,7 @@ export default function RCDTestDetails() {
       location: currentLocation,
       assetNumber: nextAssetNumber.toString(),
       equipmentType: getEquipmentType(initialItemType),
-      distributionBoardNumber: '',
+      distributionBoardNumber: getEquipmentType(initialItemType) === 'fixed-rcd' ? currentDistributionBoardNumber : '',
       pushButtonTest: false,
       injectionTimedTest: false,
       result: 'pass',
@@ -82,6 +82,19 @@ export default function RCDTestDetails() {
       form.setValue('location', currentLocation);
     }
   }, [currentLocation, form]);
+
+  // Update distribution board number field when currentDistributionBoardNumber changes or equipment type changes
+  useEffect(() => {
+    if (watchEquipmentType === 'fixed-rcd') {
+      // Set to remembered value for Fixed RCD
+      if (currentDistributionBoardNumber) {
+        form.setValue('distributionBoardNumber', currentDistributionBoardNumber);
+      }
+    } else {
+      // Clear for Portable RCD
+      form.setValue('distributionBoardNumber', '');
+    }
+  }, [currentDistributionBoardNumber, watchEquipmentType, form]);
 
   // Update item name and type when equipment type changes
   useEffect(() => {

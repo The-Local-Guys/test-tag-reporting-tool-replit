@@ -90,6 +90,10 @@ export function useSession() {
     return localStorage.getItem('currentLocation') || '';
   });
 
+  const [currentDistributionBoardNumber, setCurrentDistributionBoardNumber] = useState<string>(() => {
+    return localStorage.getItem('currentDistributionBoardNumber') || '';
+  });
+
   // Asset count state for tracking current counts
   const [assetCounts, setAssetCounts] = useState<{ monthly: number; fiveYearly: number }>(() => {
     if (!sessionId) return { monthly: 0, fiveYearly: 0 };
@@ -451,6 +455,15 @@ export function useSession() {
     setCurrentLocation(cleanData.location);
     localStorage.setItem('currentLocation', cleanData.location);
     
+    // Update current distribution board number (for RCD reporting - Fixed RCD only)
+    // Only save if this is a Fixed RCD test with a distribution board number
+    const isFixedRcd = cleanData.itemName?.toLowerCase().includes('fixed rcd');
+    if (isFixedRcd && (cleanData as any).distributionBoardNumber) {
+      setCurrentDistributionBoardNumber((cleanData as any).distributionBoardNumber);
+      localStorage.setItem('currentDistributionBoardNumber', (cleanData as any).distributionBoardNumber);
+    }
+    // Note: We don't clear when adding Portable RCD - we only clear when switching equipment type in the form
+    
     console.log(`Added result to batch: ${cleanData.itemName} at ${cleanData.location} -> Asset #${assetNumber}`);
     return newResult;
   };
@@ -733,6 +746,7 @@ export function useSession() {
     localStorage.removeItem('unfinishedSessionId');
     setSessionId(null);
     setCurrentLocation('');
+    setCurrentDistributionBoardNumber('');
     setBatchedResults([]);
     setMonthlyAssetCounter(0);
     setFiveYearlyAssetCounter(10000);
@@ -740,6 +754,7 @@ export function useSession() {
     setAssetCounts({ monthly: 0, fiveYearly: 0 });
     localStorage.removeItem('currentSessionId');
     localStorage.removeItem('currentLocation');
+    localStorage.removeItem('currentDistributionBoardNumber');
     localStorage.removeItem('lastSelectedFrequency');
     queryClient.clear();
   };
@@ -750,6 +765,8 @@ export function useSession() {
     sessionData,
     currentLocation,
     setCurrentLocation,
+    currentDistributionBoardNumber,
+    setCurrentDistributionBoardNumber,
     isLoading,
     
     // Batched results
