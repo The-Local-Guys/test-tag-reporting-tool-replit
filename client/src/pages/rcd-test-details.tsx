@@ -219,7 +219,7 @@ export default function RCDTestDetails() {
               <Input
                 id="location"
                 {...form.register('location')}
-                placeholder="e.g., Main Switchboard, Workshop"
+                placeholder="e.g., Workshop, Kitchen, Reception Area"
                 className="text-base"
                 data-testid="input-location"
               />
