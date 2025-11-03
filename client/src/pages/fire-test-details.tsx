@@ -65,7 +65,7 @@ export default function FireTestDetails() {
       equipmentType: getEquipmentType(itemType),
       extinguisherType: undefined,
       result: 'pass',
-      frequency: 'sixmonthly',
+      frequency: sessionData?.session?.country === 'newzealand' ? 'annually' : 'sixmonthly',
       size: '',
       weight: '',
       visionInspection: true,
