@@ -24,9 +24,14 @@ const rcdFailureReasons = [
   { value: 'other', label: 'Other', icon: '❓' },
 ];
 
-const actionOptions = [
+const rcdActionOptions = [
   { value: 'notified', label: 'Site Contact Notified', icon: '📞' },
   { value: 'off_position', label: 'RCD left in off position', icon: '🔌' },
+];
+
+const standardActionOptions = [
+  { value: 'given', label: 'Given to Site Contact', icon: '👤' },
+  { value: 'removed', label: 'Removed from Site', icon: '🚫' },
 ];
 
 export default function FailureDetails() {
@@ -42,8 +47,9 @@ export default function FailureDetails() {
   // Detect if this is RCD testing
   const isRCDTest = testData?.classification === 'fixed-rcd' || testData?.classification === 'portable-rcd';
   
-  // Select appropriate failure reasons based on test type
+  // Select appropriate failure reasons and action options based on test type
   const failureReasons = isRCDTest ? rcdFailureReasons : electricalFailureReasons;
+  const actionOptions = isRCDTest ? rcdActionOptions : standardActionOptions;
 
   useEffect(() => {
     const stored = sessionStorage.getItem('pendingTestResult');
@@ -113,19 +119,31 @@ export default function FailureDetails() {
   };
 
   const toggleReason = (reasonValue: string) => {
-    setSelectedReasons(prev => 
-      prev.includes(reasonValue)
-        ? prev.filter(r => r !== reasonValue)
-        : [...prev, reasonValue]
-    );
+    if (isRCDTest) {
+      // RCD: Multiple selection
+      setSelectedReasons(prev => 
+        prev.includes(reasonValue)
+          ? prev.filter(r => r !== reasonValue)
+          : [...prev, reasonValue]
+      );
+    } else {
+      // Non-RCD: Single selection
+      setSelectedReasons([reasonValue]);
+    }
   };
 
   const toggleAction = (actionValue: string) => {
-    setSelectedActions(prev => 
-      prev.includes(actionValue)
-        ? prev.filter(a => a !== actionValue)
-        : [...prev, actionValue]
-    );
+    if (isRCDTest) {
+      // RCD: Multiple selection
+      setSelectedActions(prev => 
+        prev.includes(actionValue)
+          ? prev.filter(a => a !== actionValue)
+          : [...prev, actionValue]
+      );
+    } else {
+      // Non-RCD: Single selection
+      setSelectedActions([actionValue]);
+    }
   };
 
   const handleSaveFailure = () => {
@@ -207,7 +225,7 @@ export default function FailureDetails() {
         <div className="space-y-3">
           <Label className="flex items-center text-sm font-medium text-gray-700">
             <AlertCircle className="mr-2 h-4 w-4" />
-            Reason for Failure (Select all that apply)
+            {isRCDTest ? 'Reason for Failure (Select all that apply)' : 'Reason for Failure'}
           </Label>
           <div className="space-y-2">
             {failureReasons.map((reason) => (
@@ -234,7 +252,7 @@ export default function FailureDetails() {
         {/* Action Taken */}
         <div className="space-y-3">
           <Label className="flex items-center text-sm font-medium text-gray-700">
-            📋 Action Taken (Select all that apply)
+            📋 {isRCDTest ? 'Action Taken (Select all that apply)' : 'Action Taken'}
           </Label>
           <div className="space-y-2">
             {actionOptions.map((action) => (
