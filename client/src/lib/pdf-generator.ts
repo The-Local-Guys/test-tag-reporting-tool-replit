@@ -843,14 +843,25 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       doc.text(`Location: ${result.location}`, margin, yPosition);
       yPosition += 6;
       
-      // Display Failure Reason on separate line
+      // Display Failure Reason with header for RCD reports
       const failureReasonDisplay = result.failureReason 
         ? result.failureReason.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
         : 'Not specified';
-      doc.text(`Failure Reason: ${failureReasonDisplay}`, margin, yPosition);
-      yPosition += 6;
       
-      // Add action taken on separate line
+      if (session.serviceType === 'rcd_reporting') {
+        doc.setFont('helvetica', 'bold');
+        doc.text('Failure Reason:', margin, yPosition);
+        doc.setFont('helvetica', 'normal');
+        yPosition += 6;
+        doc.text(failureReasonDisplay, margin, yPosition);
+        yPosition += 6;
+      } else {
+        // Non-RCD: Display inline
+        doc.text(`Failure Reason: ${failureReasonDisplay}`, margin, yPosition);
+        yPosition += 6;
+      }
+      
+      // Add action taken with header for RCD reports
       if (result.actionTaken) {
         // Handle both old and new action values
         let actionDisplay = result.actionTaken;
@@ -878,8 +889,17 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
             .join(', ');
         }
         
-        doc.text(`Action Taken: ${actionDisplay}`, margin, yPosition);
-        yPosition += 6;
+        if (session.serviceType === 'rcd_reporting') {
+          doc.setFont('helvetica', 'bold');
+          doc.text('Action Taken:', margin, yPosition);
+          doc.setFont('helvetica', 'normal');
+          yPosition += 6;
+          doc.text(actionDisplay, margin, yPosition);
+          yPosition += 6;
+        } else {
+          doc.text(`Action Taken: ${actionDisplay}`, margin, yPosition);
+          yPosition += 6;
+        }
       }
       
       // Display notes for RCD reports
