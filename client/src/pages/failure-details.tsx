@@ -25,8 +25,8 @@ const rcdFailureReasons = [
 ];
 
 const actionOptions = [
-  { value: 'given', label: 'Given to Site Contact', icon: '👤' },
-  { value: 'removed', label: 'Removed from Site', icon: '🗑️' },
+  { value: 'notified', label: 'Site Contact Notified', icon: '📞' },
+  { value: 'off_position', label: 'RCD left in off position', icon: '🔌' },
 ];
 
 export default function FailureDetails() {
