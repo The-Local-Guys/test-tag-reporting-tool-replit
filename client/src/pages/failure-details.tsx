@@ -30,8 +30,8 @@ const actionOptions = [
 ];
 
 export default function FailureDetails() {
-  const [selectedReason, setSelectedReason] = useState<string>('');
-  const [selectedAction, setSelectedAction] = useState<string>('');
+  const [selectedReasons, setSelectedReasons] = useState<string[]>([]);
+  const [selectedActions, setSelectedActions] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [testData, setTestData] = useState<Omit<InsertTestResult, 'sessionId'> | null>(null);
@@ -112,15 +112,31 @@ export default function FailureDetails() {
     }
   };
 
+  const toggleReason = (reasonValue: string) => {
+    setSelectedReasons(prev => 
+      prev.includes(reasonValue)
+        ? prev.filter(r => r !== reasonValue)
+        : [...prev, reasonValue]
+    );
+  };
+
+  const toggleAction = (actionValue: string) => {
+    setSelectedActions(prev => 
+      prev.includes(actionValue)
+        ? prev.filter(a => a !== actionValue)
+        : [...prev, actionValue]
+    );
+  };
+
   const handleSaveFailure = () => {
-    if (!testData || !selectedReason || !selectedAction) return;
+    if (!testData || selectedReasons.length === 0 || selectedActions.length === 0) return;
 
     // No need to check for in-progress since using local storage
 
     const completeTestData: Omit<InsertTestResult, 'sessionId'> = {
       ...testData,
-      failureReason: selectedReason,
-      actionTaken: selectedAction,
+      failureReason: selectedReasons.join(', '),
+      actionTaken: selectedActions.join(', '),
       notes: notes.trim() || null,
       photoData: capturedPhoto,
     };
@@ -191,22 +207,25 @@ export default function FailureDetails() {
         <div className="space-y-3">
           <Label className="flex items-center text-sm font-medium text-gray-700">
             <AlertCircle className="mr-2 h-4 w-4" />
-            Reason for Failure
+            Reason for Failure (Select all that apply)
           </Label>
           <div className="space-y-2">
             {failureReasons.map((reason) => (
               <button
                 key={reason.value}
                 type="button"
-                onClick={() => setSelectedReason(reason.value)}
+                onClick={() => toggleReason(reason.value)}
                 className={`w-full p-3 border-2 rounded-lg font-medium text-left transition-all touch-button ${
-                  selectedReason === reason.value
+                  selectedReasons.includes(reason.value)
                     ? 'border-primary bg-primary text-white'
                     : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 <span className="mr-2">{reason.icon}</span>
                 {reason.label}
+                {selectedReasons.includes(reason.value) && (
+                  <span className="float-right">✓</span>
+                )}
               </button>
             ))}
           </div>
@@ -215,22 +234,25 @@ export default function FailureDetails() {
         {/* Action Taken */}
         <div className="space-y-3">
           <Label className="flex items-center text-sm font-medium text-gray-700">
-            📋 Action Taken
+            📋 Action Taken (Select all that apply)
           </Label>
           <div className="space-y-2">
             {actionOptions.map((action) => (
               <button
                 key={action.value}
                 type="button"
-                onClick={() => setSelectedAction(action.value)}
+                onClick={() => toggleAction(action.value)}
                 className={`w-full p-3 border-2 rounded-lg font-medium text-left transition-all touch-button ${
-                  selectedAction === action.value
+                  selectedActions.includes(action.value)
                     ? 'border-warning bg-warning text-white'
                     : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 <span className="mr-2">{action.icon}</span>
                 {action.label}
+                {selectedActions.includes(action.value) && (
+                  <span className="float-right">✓</span>
+                )}
               </button>
             ))}
           </div>
@@ -310,7 +332,7 @@ export default function FailureDetails() {
         <Button 
           onClick={handleSaveFailure}
           className="w-full bg-primary text-white py-4 text-lg font-semibold touch-button"
-          disabled={!selectedReason || !selectedAction}
+          disabled={selectedReasons.length === 0 || selectedActions.length === 0}
         >
           <Save className="mr-2 h-5 w-5" />
           Save & Continue
