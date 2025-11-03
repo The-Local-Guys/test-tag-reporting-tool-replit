@@ -41,7 +41,7 @@ type FireTestForm = z.infer<typeof fireTestSchema>;
 export default function FireTestDetails() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { sessionData, addToBatch, assetProgress } = useSession();
+  const { sessionData, addToBatch, assetProgress, currentLocation } = useSession();
   const [photoData, setPhotoData] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
 
@@ -61,7 +61,7 @@ export default function FireTestDetails() {
   const form = useForm<FireTestForm>({
     resolver: zodResolver(fireTestSchema),
     defaultValues: {
-      location: '',
+      location: currentLocation,
       equipmentType: getEquipmentType(itemType),
       extinguisherType: undefined,
       result: 'pass',
@@ -76,6 +76,13 @@ export default function FireTestDetails() {
       notes: '',
     },
   });
+
+  // Update location field when currentLocation changes
+  useEffect(() => {
+    if (currentLocation) {
+      form.setValue('location', currentLocation);
+    }
+  }, [currentLocation, form]);
 
   const watchResult = form.watch('result');
   const watchEquipmentType = form.watch('equipmentType');
