@@ -167,12 +167,8 @@ export default function FailureDetails() {
     addToBatch(completeTestData);
     sessionStorage.removeItem('pendingTestResult');
     
-    // Navigate back to appropriate page based on test type
-    if (isRCDTest) {
-      setLocation('/rcd-test-details');
-    } else {
-      setLocation('/items');
-    }
+    // Navigate back to items page for all test types
+    setLocation('/items');
   };
 
   if (!testData) {
@@ -191,7 +187,7 @@ export default function FailureDetails() {
       <div className="bg-error text-white p-4 sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <button 
-            onClick={() => setLocation(isRCDTest ? '/rcd-test-details' : `/test?item=${encodeURIComponent(testData.itemName)}&type=${testData.itemType}`)}
+            onClick={() => setLocation('/items')}
             className="text-white hover:text-red-200 p-1 rounded-lg hover:bg-red-700 transition-colors"
           >
             <ArrowLeft className="h-6 w-6" />
