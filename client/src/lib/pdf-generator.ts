@@ -266,7 +266,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     doc.text('Due Date', margin + 140, yPosition);
     doc.text('Failure Reason', margin + 158, yPosition);
   } else if (session.serviceType === 'rcd_reporting') {
-    // New order: Asset# < Distribution Board > Push Button > Timed Test > Result > Location > Comments
+    // New order: Asset# < Distribution Board > Push Button > Timed Test > Result > Location > Comments > Failure Reason > Action Taken
     
     // Push Button header in 2 lines
     doc.text('Push Button', margin + 48, yPosition);
@@ -278,7 +278,9 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     
     doc.text('Result', margin + 95, yPosition);
     doc.text('Location', margin + 110, yPosition);
-    doc.text('Comments', margin + 145, yPosition);
+    doc.text('Comments', margin + 130, yPosition);
+    doc.text('Failure Reason', margin + 150, yPosition);
+    doc.text('Action Taken', margin + 170, yPosition);
   } else {
     doc.text('Type', margin + 48, yPosition);
     doc.text('Result', margin + 62, yPosition);
@@ -337,15 +339,68 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       const manufacturerWidth = 20;
       manufacturerLines = doc.splitTextToSize(result.manufacturerInfo || 'N/A', manufacturerWidth);
     } else if (session.serviceType === 'rcd_reporting') {
-      // For RCD reporting, no special word wrapping needed (notes handled in render section)
+      // For RCD reporting, calculate wrapped lines for comments, failure reason, and action taken
+      // This is needed for row height calculation
     } else {
       // For electrical testing, add word wrapping for type/classification
       const typeWidth = 13; // Width for type column
       typeLines = doc.splitTextToSize(result.classification.toUpperCase(), typeWidth);
     }
     
+    // For RCD reporting, pre-calculate wrapped text for row height
+    let commentsLines: string[] = [];
+    let failureReasonLines: string[] = [];
+    let actionTakenLines: string[] = [];
+    
+    if (session.serviceType === 'rcd_reporting') {
+      // Comments
+      const commentsText = result.notes || '-';
+      commentsLines = doc.splitTextToSize(commentsText, 18);
+      
+      // Failure reason (only for failed items)
+      if (result.result === 'fail') {
+        const failureReason = result.failureReason || 'Not specified';
+        const reasons = failureReason.split(', ').map(reason => {
+          if (reason === 'push_button') return 'Push Button Test Failed';
+          if (reason === 'injection_timed') return 'Injection/Timed Test Failed';
+          if (reason === 'tripping_time') return 'Incorrect Tripping Time';
+          if (reason === 'no_trip') return 'Failed to Trip';
+          if (reason === 'visual') return 'Visual Damage/Defect';
+          if (reason === 'other') return 'Other';
+          return reason.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        });
+        const displayFailureReason = reasons.join(', ');
+        failureReasonLines = doc.splitTextToSize(displayFailureReason, 18);
+        
+        // Action taken
+        const actionTaken = result.actionTaken || 'Not specified';
+        const actions = actionTaken.split(', ').map(action => {
+          if (action === 'notified') return 'Site Contact Notified';
+          if (action === 'off_position') return 'RCD left in off position';
+          if (action === 'given') return 'Given to Site Contact';
+          if (action === 'removed') return 'Removed from Site';
+          return action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        });
+        const displayActionTaken = actions.join(', ');
+        actionTakenLines = doc.splitTextToSize(displayActionTaken, 18);
+      } else {
+        // For passed items, just a single line with "-"
+        failureReasonLines = ['-'];
+        actionTakenLines = ['-'];
+      }
+    }
+    
     // Calculate row height based on maximum lines needed
-    const maxLines = Math.max(itemNameLines.length, locationLines.length, sizeWeightLines.length, manufacturerLines.length, typeLines.length);
+    const maxLines = Math.max(
+      itemNameLines.length, 
+      locationLines.length, 
+      sizeWeightLines.length, 
+      manufacturerLines.length, 
+      typeLines.length,
+      commentsLines.length,
+      failureReasonLines.length,
+      actionTakenLines.length
+    );
     const lineHeight = 4; // Height per line
     const rowHeight = maxLines * lineHeight;
     
@@ -470,11 +525,9 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         doc.text(line, margin + 110, rowStartY + (i * lineHeight));
       });
       
-      // Show comments with word wrapping (margin + 145)
-      const commentsText = result.notes || '-';
-      const commentsLines = doc.splitTextToSize(commentsText, 30);
+      // Show comments with word wrapping (margin + 130) - use pre-calculated lines
       commentsLines.forEach((line: string, i: number) => {
-        doc.text(line, margin + 145, rowStartY + (i * lineHeight));
+        doc.text(line, margin + 130, rowStartY + (i * lineHeight));
       });
     } else {
       // For regular electrical testing, show classification/type with word wrapping
@@ -550,7 +603,14 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
           doc.text(line, margin + 158, rowStartY + (i * lineHeight));
         });
       } else if (session.serviceType === 'rcd_reporting') {
-        // RCD reporting doesn't display failure reasons or action taken in the main table (it has notes column instead)
+        // RCD reporting - use pre-calculated wrapped lines
+        failureReasonLines.forEach((line: string, i: number) => {
+          doc.text(line, margin + 150, rowStartY + (i * lineHeight));
+        });
+        
+        actionTakenLines.forEach((line: string, i: number) => {
+          doc.text(line, margin + 170, rowStartY + (i * lineHeight));
+        });
       } else {
         // Standard electrical testing failure reasons
         if (failureReason === 'vision') {
@@ -578,7 +638,9 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       } else if (session.serviceType === 'fire_testing') {
         doc.text('-', margin + 158, rowStartY);
       } else if (session.serviceType === 'rcd_reporting') {
-        // RCD reporting doesn't display failure reasons in the table (it has notes column instead)
+        // RCD reporting - show dash for passed items
+        doc.text('-', margin + 150, rowStartY);
+        doc.text('-', margin + 170, rowStartY);
       } else {
         doc.text('-', margin + 135, rowStartY);
         doc.text('-', margin + 158, rowStartY);
