@@ -242,18 +242,23 @@ export default function Setup() {
               defaultValue="australia"
               onValueChange={(value) => form.setValue('country', value as 'australia' | 'newzealand' | 'national_client')}
             >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="australia" id="australia" />
-                <Label htmlFor="australia">Australia (AS 1851)</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="newzealand" id="newzealand" />
-                <Label htmlFor="newzealand">New Zealand (NZS 4503:2005)</Label>
-              </div>
-              
-              {/* Hide ARA Compliance and Custom Form Types for RCD Reporting */}
-              {sessionStorage.getItem('selectedService') !== 'rcd_reporting' && (
+              {/* RCD Reporting: Only show AS/NZS 3760 */}
+              {sessionStorage.getItem('selectedService') === 'rcd_reporting' ? (
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="australia" id="australia" />
+                  <Label htmlFor="australia">AS/NZS 3760</Label>
+                </div>
+              ) : (
                 <>
+                  {/* Other service types: Show full country selection */}
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="australia" id="australia" />
+                    <Label htmlFor="australia">Australia (AS 1851)</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="newzealand" id="newzealand" />
+                    <Label htmlFor="newzealand">New Zealand (NZS 4503:2005)</Label>
+                  </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="national_client" id="national_client" />
                     <Label htmlFor="national_client">ARA Compliance</Label>
