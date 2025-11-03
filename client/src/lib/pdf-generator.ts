@@ -790,16 +790,23 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       
       // Equipment-specific tests
       const equipmentType = equipmentTypeMatch?.[1] || result.classification;
+      
+      // Operational Test - show for all equipment types with appropriate description
       if (equipmentType === 'fire_extinguisher') {
-        doc.text(`• Pressure Gauge Check (Pressure within operating range): ${pressureTestMatch?.[1] || 'N/A'}`, margin + 5, yPosition);
-        yPosition += 6;
         doc.text(`• Operational Test (Trigger mechanism, hose, nozzle): ${operationalTestMatch?.[1] || 'N/A'}`, margin + 5, yPosition);
+        yPosition += 6;
+        // Pressure Gauge Check - only for fire extinguishers
+        doc.text(`• Pressure Gauge Check (Pressure within operating range): ${pressureTestMatch?.[1] || 'N/A'}`, margin + 5, yPosition);
         yPosition += 6;
       } else if (equipmentType === 'fire_hose_reel') {
         doc.text(`• Operational Test (Hose reel operation, water flow): ${operationalTestMatch?.[1] || 'N/A'}`, margin + 5, yPosition);
         yPosition += 6;
       } else if (equipmentType === 'fire_blanket') {
         doc.text(`• Operational Test (Easy removal, blanket condition): ${operationalTestMatch?.[1] || 'N/A'}`, margin + 5, yPosition);
+        yPosition += 6;
+      } else {
+        // Generic operational test for any other equipment type
+        doc.text(`• Operational Test: ${operationalTestMatch?.[1] || 'N/A'}`, margin + 5, yPosition);
         yPosition += 6;
       }
       
