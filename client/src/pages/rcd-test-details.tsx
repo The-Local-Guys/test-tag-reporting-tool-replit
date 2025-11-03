@@ -133,7 +133,7 @@ export default function RCDTestDetails() {
           itemName: currentItemName,
           itemType: currentItemType,
           location: data.location,
-          assetNumber: nextAssetNumber.toString(), // Use auto-generated asset number
+          assetNumber: data.assetNumber,
           classification: data.equipmentType,
           result: data.result,
           frequency: 'annually',
@@ -155,7 +155,7 @@ export default function RCDTestDetails() {
         itemName: currentItemName,
         itemType: currentItemType,
         location: data.location,
-        assetNumber: nextAssetNumber.toString(), // Use auto-generated asset number
+        assetNumber: data.assetNumber,
         classification: data.equipmentType, // Use equipment type as classification
         result: data.result,
         frequency: 'annually', // Default frequency for RCD testing
