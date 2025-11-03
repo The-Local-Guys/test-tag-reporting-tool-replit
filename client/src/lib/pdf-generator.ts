@@ -798,9 +798,19 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   );
 
   // Add failed items details section
-  const failedItemsWithDetails = results.filter(result => 
-    result.result === 'fail' && (result.notes || result.photoData)
-  );
+  // For RCD reports, show all failed items (they always have failure reasons and actions)
+  // For other reports, only show failed items with notes or photos
+  const failedItemsWithDetails = results.filter(result => {
+    if (result.result !== 'fail') return false;
+    
+    // RCD reports: show all failed items
+    if (session.serviceType === 'rcd_reporting') {
+      return true;
+    }
+    
+    // Other reports: only show if there are notes or photos
+    return result.notes || result.photoData;
+  });
   
   if (failedItemsWithDetails.length > 0) {
     // Add new page for failed items details
@@ -842,9 +852,52 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       
       // Add action taken on separate line
       if (result.actionTaken) {
-        const actionDisplay = result.actionTaken === 'given' ? 'Given to Site Contact' : 'Removed from Site';
+        // Handle both old and new action values
+        let actionDisplay = result.actionTaken;
+        
+        // Map old values for backward compatibility
+        if (result.actionTaken === 'given') {
+          actionDisplay = 'Given to Site Contact';
+        } else if (result.actionTaken === 'removed') {
+          actionDisplay = 'Removed from Site';
+        } else if (result.actionTaken === 'notified') {
+          actionDisplay = 'Site Contact Notified';
+        } else if (result.actionTaken === 'off_position') {
+          actionDisplay = 'RCD left in off position';
+        } else {
+          // For comma-separated multiple selections, format each value
+          actionDisplay = result.actionTaken
+            .split(', ')
+            .map(action => {
+              if (action === 'notified') return 'Site Contact Notified';
+              if (action === 'off_position') return 'RCD left in off position';
+              if (action === 'given') return 'Given to Site Contact';
+              if (action === 'removed') return 'Removed from Site';
+              return action;
+            })
+            .join(', ');
+        }
+        
         doc.text(`Action Taken: ${actionDisplay}`, margin, yPosition);
         yPosition += 6;
+      }
+      
+      // Display notes for RCD reports
+      if (result.notes && session.serviceType === 'rcd_reporting') {
+        doc.text('Additional Comments:', margin, yPosition);
+        yPosition += 6;
+        
+        const maxCommentWidth = pageWidth - (2 * margin);
+        const commentLines = doc.splitTextToSize(result.notes, maxCommentWidth);
+        for (const line of commentLines) {
+          if (yPosition > doc.internal.pageSize.height - 30) {
+            doc.addPage();
+            yPosition = await addLetterheadToPage(doc, margin, pageWidth);
+          }
+          doc.text(line, margin, yPosition);
+          yPosition += 5;
+        }
+        yPosition += 3;
       }
       
       // Parse and display detailed information from notes if available
