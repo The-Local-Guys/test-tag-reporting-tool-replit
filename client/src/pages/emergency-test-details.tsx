@@ -65,7 +65,7 @@ export default function EmergencyTestDetails() {
       manufacturerInfo: '',
       installationDate: '',
       maintenanceType: 'maintained',
-      globeType: 'led',
+      globeType: 'fluorescent',
       visualInspection: false,
       dischargeTest: false,
       switchingTest: false,
