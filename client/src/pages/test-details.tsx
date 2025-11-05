@@ -53,6 +53,7 @@ export default function TestDetails() {
   const [showCamera, setShowCamera] = useState(false);
   const [visionInspection, setVisionInspection] = useState(true);
   const [electricalTest, setElectricalTest] = useState(true);
+  const [hasManuallyEditedAssetNumber, setHasManuallyEditedAssetNumber] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -94,14 +95,15 @@ export default function TestDetails() {
   }, [currentLocation, form]);
 
   // Update asset number field when assetProgress or frequency changes
+  // Only auto-update if user hasn't manually edited the field
   useEffect(() => {
-    if (assetProgress) {
+    if (assetProgress && !hasManuallyEditedAssetNumber) {
       const nextAssetNumber = selectedFrequency === 'fiveyearly' 
         ? assetProgress.nextFiveYearly 
         : assetProgress.nextMonthly;
       form.setValue('assetNumber', nextAssetNumber.toString());
     }
-  }, [assetProgress, selectedFrequency, form]);
+  }, [assetProgress, selectedFrequency, form, hasManuallyEditedAssetNumber]);
 
   // Camera functions
   const startCamera = async () => {
@@ -280,7 +282,11 @@ export default function TestDetails() {
             id="assetNumber"
             type="text"
             placeholder="Asset number"
-            {...form.register('assetNumber')}
+            {...form.register('assetNumber', {
+              onChange: () => {
+                setHasManuallyEditedAssetNumber(true);
+              }
+            })}
             className={`text-base ${form.formState.errors.assetNumber ? 'border-red-500' : ''}`}
             data-testid="input-asset-number"
           />
