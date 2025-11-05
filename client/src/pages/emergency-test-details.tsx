@@ -25,7 +25,7 @@ const emergencyTestSchema = z.object({
   installationDate: z.string().optional(),
   maintenanceType: z.enum(['maintained', 'non_maintained']).optional(),
   globeType: z.enum(['led', 'fluorescent']).optional(),
-  visualInspection: z.boolean().default(true),
+  visualInspection: z.boolean().default(false),
   dischargeTest: z.boolean().default(false),
   switchingTest: z.boolean().default(false),
   chargingTest: z.boolean().default(false),
@@ -46,7 +46,7 @@ type EmergencyTestForm = z.infer<typeof emergencyTestSchema>;
 export default function EmergencyTestDetails() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { sessionData, addToBatch, assetProgress } = useSession();
+  const { sessionData, addToBatch, assetProgress, currentLocation } = useSession();
   const [photoData, setPhotoData] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
 
@@ -58,18 +58,18 @@ export default function EmergencyTestDetails() {
   const form = useForm<EmergencyTestForm>({
     resolver: zodResolver(emergencyTestSchema),
     defaultValues: {
-      location: '',
+      location: currentLocation,
       classification: 'emergency_equipment',
       result: 'pass',
       frequency: 'sixmonthly',
       manufacturerInfo: '',
       installationDate: '',
       maintenanceType: 'maintained',
-      globeType: 'led',
-      visualInspection: true,
-      dischargeTest: true,
-      switchingTest: true,
-      chargingTest: true,
+      globeType: 'fluorescent',
+      visualInspection: false,
+      dischargeTest: false,
+      switchingTest: false,
+      chargingTest: false,
       luxTest: false,
       luxReading: undefined,
       luxCompliant: false,
@@ -78,6 +78,13 @@ export default function EmergencyTestDetails() {
   });
 
   const watchResult = form.watch('result');
+
+  // Update location field when currentLocation changes
+  useEffect(() => {
+    if (currentLocation) {
+      form.setValue('location', currentLocation);
+    }
+  }, [currentLocation, form]);
 
   // Asset numbers are now auto-generated on server side
 
