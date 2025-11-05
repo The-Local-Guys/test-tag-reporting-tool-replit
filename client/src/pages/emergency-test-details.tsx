@@ -46,7 +46,7 @@ type EmergencyTestForm = z.infer<typeof emergencyTestSchema>;
 export default function EmergencyTestDetails() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { sessionData, addToBatch, assetProgress } = useSession();
+  const { sessionData, addToBatch, assetProgress, currentLocation } = useSession();
   const [photoData, setPhotoData] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
 
@@ -58,7 +58,7 @@ export default function EmergencyTestDetails() {
   const form = useForm<EmergencyTestForm>({
     resolver: zodResolver(emergencyTestSchema),
     defaultValues: {
-      location: '',
+      location: currentLocation,
       classification: 'emergency_equipment',
       result: 'pass',
       frequency: 'sixmonthly',
@@ -78,6 +78,13 @@ export default function EmergencyTestDetails() {
   });
 
   const watchResult = form.watch('result');
+
+  // Update location field when currentLocation changes
+  useEffect(() => {
+    if (currentLocation) {
+      form.setValue('location', currentLocation);
+    }
+  }, [currentLocation, form]);
 
   // Asset numbers are now auto-generated on server side
 
