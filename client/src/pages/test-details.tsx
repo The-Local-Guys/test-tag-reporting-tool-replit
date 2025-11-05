@@ -34,7 +34,6 @@ const frequencyOptions = [
 
 const testDetailsSchema = z.object({
   location: z.string().min(1, "Location is required"),
-  assetNumber: z.string().min(1, "Asset number is required"),
 });
 
 /**
@@ -53,7 +52,6 @@ export default function TestDetails() {
   const [showCamera, setShowCamera] = useState(false);
   const [visionInspection, setVisionInspection] = useState(true);
   const [electricalTest, setElectricalTest] = useState(true);
-  const [hasManuallyEditedAssetNumber, setHasManuallyEditedAssetNumber] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -77,11 +75,10 @@ export default function TestDetails() {
     }
   }, [search]);
 
-  const form = useForm<{location: string, assetNumber: string}>({
+  const form = useForm<{location: string}>({
     resolver: zodResolver(testDetailsSchema),
     defaultValues: {
       location: currentLocation,
-      assetNumber: '1',
     },
   });
 
@@ -93,17 +90,6 @@ export default function TestDetails() {
       form.setValue('location', currentLocation);
     }
   }, [currentLocation, form]);
-
-  // Update asset number field when assetProgress or frequency changes
-  // Only auto-update if user hasn't manually edited the field
-  useEffect(() => {
-    if (assetProgress && !hasManuallyEditedAssetNumber) {
-      const nextAssetNumber = selectedFrequency === 'fiveyearly' 
-        ? assetProgress.nextFiveYearly 
-        : assetProgress.nextMonthly;
-      form.setValue('assetNumber', nextAssetNumber.toString());
-    }
-  }, [assetProgress, selectedFrequency, form, hasManuallyEditedAssetNumber]);
 
   // Camera functions
   const startCamera = async () => {
@@ -166,7 +152,7 @@ export default function TestDetails() {
     const formValues = form.getValues();
     
     const testData: Omit<InsertTestResult, 'sessionId'> = {
-      assetNumber: formValues.assetNumber,
+      assetNumber: '', // Will be auto-generated on server side
       itemName: currentItem.name,
       itemType: currentItem.type,
       location: formValues.location,
@@ -273,34 +259,33 @@ export default function TestDetails() {
           </div>
         </div>
 
-        {/* Asset Number Input */}
+        {/* Asset Number Info */}
         <div className="space-y-2">
-          <Label htmlFor="assetNumber" className="flex items-center text-sm font-medium text-gray-700">
-            🏷️ Asset Number <span className="text-red-500 ml-1">*</span>
+          <Label className="flex items-center text-sm font-medium text-gray-700">
+            🏷️ Asset Number
           </Label>
-          <Input
-            id="assetNumber"
-            type="text"
-            placeholder="Asset number"
-            {...form.register('assetNumber', {
-              onChange: () => {
-                setHasManuallyEditedAssetNumber(true);
-              }
-            })}
-            className={`text-base ${form.formState.errors.assetNumber ? 'border-red-500' : ''}`}
-            data-testid="input-asset-number"
-          />
-          {form.formState.errors.assetNumber && (
-            <div className="text-red-500 text-xs">
-              {form.formState.errors.assetNumber.message}
+          <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+            <div className="text-sm text-blue-800">
+              <div className="font-medium">Next asset number will be:</div>
+              <div className="text-blue-600 mt-1 text-lg font-semibold">
+                {assetProgress ? (
+                  selectedFrequency === 'fiveyearly' ? 
+                    `#${assetProgress.nextFiveYearly}` : 
+                    `#${assetProgress.nextMonthly}`
+                ) : (
+                  'Loading...'
+                )}
+              </div>
+              <div className="text-xs text-blue-600 mt-1">
+                {assetProgress ? (
+                  selectedFrequency === 'fiveyearly' ? 
+                    `5-yearly items: ${assetProgress.fiveYearlyCount} tested` : 
+                    `Monthly items: ${assetProgress.monthlyCount} tested`
+                ) : (
+                  'Loading progress...'
+                )}
+              </div>
             </div>
-          )}
-          <div className="text-xs text-gray-500">
-            {assetProgress && (
-              selectedFrequency === 'fiveyearly' ? 
-                `Auto-incremented from ${assetProgress.fiveYearlyCount} tested (5-yearly items start at 10,001)` : 
-                `Auto-incremented from ${assetProgress.monthlyCount} tested (monthly items start at 1)`
-            )}
           </div>
         </div>
 

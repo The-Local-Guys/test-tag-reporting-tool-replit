@@ -326,10 +326,10 @@ export function useSession() {
   /**
    * Adds test result to local batch storage with proper asset numbering
    * Results are stored locally until final report submission
-   * Now accepts manually entered asset numbers from the test details form
+   * Now checks for manually entered asset numbers to prevent conflicts
    * Includes defensive sanitization to strip any legacy/unexpected fields
    */
-  const addToBatch = (data: Omit<InsertTestResult, 'sessionId'>) => {
+  const addToBatch = (data: Omit<InsertTestResult, 'sessionId' | 'assetNumber'>) => {
     if (!sessionId) throw new Error('No active session');
     
     // Defensive sanitization: strip itemCode and any other unexpected fields from incoming data
@@ -369,67 +369,40 @@ export function useSession() {
       }
     }
     
-    // Use provided asset number or auto-generate
+    // Find next available asset number
     let assetNumber: string;
     const isRCD = cleanData.classification === 'rcd' || sessionData?.session?.serviceType === 'rcd_reporting';
     
-    // If asset number is provided, use it and update counters accordingly
-    if (cleanData.assetNumber && cleanData.assetNumber.trim() !== '') {
-      assetNumber = cleanData.assetNumber.trim();
-      const assetNum = parseInt(assetNumber);
-      
-      // Update the appropriate counter if this number is higher
-      if (!isNaN(assetNum)) {
-        if (isRCD) {
-          if (assetNum > rcdAssetCounter) {
-            setRcdAssetCounter(assetNum);
-            localStorage.setItem(`rcdCounter_${sessionId}`, assetNum.toString());
-          }
-        } else if (isFiveYearly) {
-          if (assetNum > fiveYearlyAssetCounter) {
-            setFiveYearlyAssetCounter(assetNum);
-            localStorage.setItem(`fiveYearlyCounter_${sessionId}`, assetNum.toString());
-          }
-        } else {
-          if (assetNum > monthlyAssetCounter) {
-            setMonthlyAssetCounter(assetNum);
-            localStorage.setItem(`monthlyCounter_${sessionId}`, assetNum.toString());
-          }
-        }
+    if (isRCD) {
+      // For RCD reporting, use simple sequential numbering starting from 1
+      let candidate = Math.max(1, rcdAssetCounter + 1);
+      while (usedNumbers.has(candidate)) {
+        candidate++;
       }
+      assetNumber = candidate.toString();
+      // Update counter to this number
+      setRcdAssetCounter(candidate);
+      localStorage.setItem(`rcdCounter_${sessionId}`, candidate.toString());
+    } else if (isFiveYearly) {
+      // For 5-yearly items, start from current counter + 1 (continue sequence)
+      let candidate = Math.max(10001, fiveYearlyAssetCounter + 1);
+      while (usedNumbers.has(candidate)) {
+        candidate++;
+      }
+      assetNumber = candidate.toString();
+      // Update counter to this number
+      setFiveYearlyAssetCounter(candidate);
+      localStorage.setItem(`fiveYearlyCounter_${sessionId}`, candidate.toString());
     } else {
-      // Auto-generate asset number
-      if (isRCD) {
-        // For RCD reporting, use simple sequential numbering starting from 1
-        let candidate = Math.max(1, rcdAssetCounter + 1);
-        while (usedNumbers.has(candidate)) {
-          candidate++;
-        }
-        assetNumber = candidate.toString();
-        // Update counter to this number
-        setRcdAssetCounter(candidate);
-        localStorage.setItem(`rcdCounter_${sessionId}`, candidate.toString());
-      } else if (isFiveYearly) {
-        // For 5-yearly items, start from current counter + 1 (continue sequence)
-        let candidate = Math.max(10001, fiveYearlyAssetCounter + 1);
-        while (usedNumbers.has(candidate)) {
-          candidate++;
-        }
-        assetNumber = candidate.toString();
-        // Update counter to this number
-        setFiveYearlyAssetCounter(candidate);
-        localStorage.setItem(`fiveYearlyCounter_${sessionId}`, candidate.toString());
-      } else {
-        // For monthly items, start from current counter + 1 (continue sequence)
-        let candidate = Math.max(1, monthlyAssetCounter + 1);
-        while (usedNumbers.has(candidate)) {
-          candidate++;
-        }
-        assetNumber = candidate.toString();
-        // Update counter to this number  
-        setMonthlyAssetCounter(candidate);
-        localStorage.setItem(`monthlyCounter_${sessionId}`, candidate.toString());
+      // For monthly items, start from current counter + 1 (continue sequence)
+      let candidate = Math.max(1, monthlyAssetCounter + 1);
+      while (usedNumbers.has(candidate)) {
+        candidate++;
       }
+      assetNumber = candidate.toString();
+      // Update counter to this number  
+      setMonthlyAssetCounter(candidate);
+      localStorage.setItem(`monthlyCounter_${sessionId}`, candidate.toString());
     }
     
     const newResult: BatchedTestResult = {

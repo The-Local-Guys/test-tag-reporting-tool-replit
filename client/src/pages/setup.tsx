@@ -255,8 +255,8 @@ export default function Setup() {
                 </Label>
               </div>
               
-              {/* Show ARA Compliance and Custom Form Types only for Electrical Testing */}
-              {sessionStorage.getItem('selectedService') === 'electrical' && (
+              {/* Hide ARA Compliance and Custom Form Types for RCD Reporting */}
+              {sessionStorage.getItem('selectedService') !== 'rcd_reporting' && (
                 <>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="national_client" id="national_client" />
