@@ -65,11 +65,11 @@ function formatAssetNumberWithFrequency(assetNumber: string, frequency: string, 
   }
   
   const frequencyMap: Record<string, string> = {
-    'monthly': 'M',
-    'threemonthly': '3',
-    'sixmonthly': '6',
-    'twelvemonthly': '12',
-    'twentyfourmonthly': '24',
+    'monthly': '1M',
+    'threemonthly': '3M',
+    'sixmonthly': '6M',
+    'twelvemonthly': '12M',
+    'twentyfourmonthly': '24M',
     'fiveyearly': '5Y',
   };
   
