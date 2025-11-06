@@ -75,9 +75,9 @@ const getNextAvailableAssetNumber = (usedNumbers: Set<number>, start: number): n
 };
 
 /**
- * Default starting asset numbers for each frequency
+ * Default starting asset numbers for each frequency (Electrical Test & Tag only)
  */
-export const DEFAULT_STARTING_NUMBERS = {
+export const DEFAULT_STARTING_NUMBERS_ELECTRICAL = {
   twelvemonthly: 1,
   sixmonthly: 10001,
   fiveyearly: 20001,
@@ -86,7 +86,33 @@ export const DEFAULT_STARTING_NUMBERS = {
   monthly: 50001,
 };
 
+/**
+ * Default starting asset numbers for non-electrical service types
+ * (Emergency Exit Light, Fire Testing, RCD Reporting)
+ */
+const DEFAULT_STARTING_NUMBERS_OTHER = {
+  twelvemonthly: 1,
+  sixmonthly: 1,
+  fiveyearly: 1,
+  twentyfourmonthly: 1,
+  threemonthly: 1,
+  monthly: 1,
+};
+
+export const DEFAULT_STARTING_NUMBERS = DEFAULT_STARTING_NUMBERS_ELECTRICAL;
 export type CustomStartingNumbers = typeof DEFAULT_STARTING_NUMBERS;
+
+/**
+ * Get default starting numbers based on service type
+ * @param serviceType - The service type (electrical, emergency_exit_light, fire_testing, rcd_reporting)
+ * @returns Default starting numbers for that service type
+ */
+const getDefaultStartingNumbers = (serviceType?: string): typeof DEFAULT_STARTING_NUMBERS => {
+  if (serviceType === 'electrical') {
+    return DEFAULT_STARTING_NUMBERS_ELECTRICAL;
+  }
+  return DEFAULT_STARTING_NUMBERS_OTHER;
+};
 
 /**
  * Helper function to get starting asset number for each frequency
@@ -164,13 +190,24 @@ export function useSession() {
 
   // Helper to get starting number from pending or session-specific custom numbers
   const getInitialStartNumber = (frequency: keyof CustomStartingNumbers, sessionIdParam: number | null): number => {
+    // Get service type from localStorage to determine correct defaults
+    let serviceType = 'electrical'; // default to electrical for backwards compatibility
+    if (sessionIdParam) {
+      const storedServiceType = localStorage.getItem(`session_${sessionIdParam}_serviceType`);
+      if (storedServiceType) {
+        serviceType = storedServiceType;
+      }
+    }
+    
+    const defaults = getDefaultStartingNumbers(serviceType);
+    
     // Check for session-specific custom numbers first
     if (sessionIdParam) {
       const sessionCustom = localStorage.getItem(`customStartingNumbers_${sessionIdParam}`);
       if (sessionCustom) {
         try {
           const custom = JSON.parse(sessionCustom);
-          return (custom[frequency] ?? DEFAULT_STARTING_NUMBERS[frequency]) - 1;
+          return (custom[frequency] ?? defaults[frequency]) - 1;
         } catch {
           // Fall through to default
         }
@@ -182,14 +219,14 @@ export function useSession() {
     if (pendingCustom) {
       try {
         const custom = JSON.parse(pendingCustom);
-        return (custom[frequency] ?? DEFAULT_STARTING_NUMBERS[frequency]) - 1;
+        return (custom[frequency] ?? defaults[frequency]) - 1;
       } catch {
         // Fall through to default
       }
     }
     
-    // Use default
-    return DEFAULT_STARTING_NUMBERS[frequency] - 1;
+    // Use default based on service type
+    return defaults[frequency] - 1;
   };
 
   // Asset number counters - separate counter for each frequency
@@ -327,12 +364,15 @@ export function useSession() {
       const threemonthlyAssets = loadedResults.filter(r => r.frequency === 'threemonthly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n));
       const monthlyAssets = loadedResults.filter(r => r.frequency === 'monthly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n));
       
-      const maxTwelvemonthly = twelvemonthlyAssets.length > 0 ? Math.max(...twelvemonthlyAssets) : 0;
-      const maxSixmonthly = sixmonthlyAssets.length > 0 ? Math.max(...sixmonthlyAssets) : 10000;
-      const maxFiveyearly = fiveyearlyAssets.length > 0 ? Math.max(...fiveyearlyAssets) : 20000;
-      const maxTwentyfourmonthly = twentyfourmonthlyAssets.length > 0 ? Math.max(...twentyfourmonthlyAssets) : 30000;
-      const maxThreemonthly = threemonthlyAssets.length > 0 ? Math.max(...threemonthlyAssets) : 40000;
-      const maxMonthly = monthlyAssets.length > 0 ? Math.max(...monthlyAssets) : 50000;
+      // Get service-type-aware defaults for fallback values
+      const serviceTypeDefaults = session ? getDefaultStartingNumbers(session.serviceType) : DEFAULT_STARTING_NUMBERS_ELECTRICAL;
+      
+      const maxTwelvemonthly = twelvemonthlyAssets.length > 0 ? Math.max(...twelvemonthlyAssets) : (serviceTypeDefaults.twelvemonthly - 1);
+      const maxSixmonthly = sixmonthlyAssets.length > 0 ? Math.max(...sixmonthlyAssets) : (serviceTypeDefaults.sixmonthly - 1);
+      const maxFiveyearly = fiveyearlyAssets.length > 0 ? Math.max(...fiveyearlyAssets) : (serviceTypeDefaults.fiveyearly - 1);
+      const maxTwentyfourmonthly = twentyfourmonthlyAssets.length > 0 ? Math.max(...twentyfourmonthlyAssets) : (serviceTypeDefaults.twentyfourmonthly - 1);
+      const maxThreemonthly = threemonthlyAssets.length > 0 ? Math.max(...threemonthlyAssets) : (serviceTypeDefaults.threemonthly - 1);
+      const maxMonthly = monthlyAssets.length > 0 ? Math.max(...monthlyAssets) : (serviceTypeDefaults.monthly - 1);
       
       setTwelvemonthlyCounter(maxTwelvemonthly);
       setSixmonthlyCounter(maxSixmonthly);
@@ -379,9 +419,11 @@ export function useSession() {
       });
     }
 
-    // Get minimum starting numbers (custom or default)
+    // Get minimum starting numbers (custom or default based on service type)
+    const serviceType = session?.serviceType || 'electrical';
+    const defaults = getDefaultStartingNumbers(serviceType);
     const getMinStartNumber = (freq: keyof typeof DEFAULT_STARTING_NUMBERS) => {
-      return customStartingNumbers[freq] ?? DEFAULT_STARTING_NUMBERS[freq];
+      return customStartingNumbers[freq] ?? defaults[freq];
     };
 
     // Find next available numbers for each frequency range
@@ -442,6 +484,8 @@ export function useSession() {
       console.log('Session created successfully:', session.id);
       setSessionId(session.id);
       localStorage.setItem('currentSessionId', session.id.toString());
+      // Store service type for this session
+      localStorage.setItem(`session_${session.id}_serviceType`, session.serviceType);
       // Mark session as unfinished
       localStorage.setItem('unfinished', 'true');
       localStorage.setItem('unfinishedSessionId', session.id.toString());
@@ -449,19 +493,23 @@ export function useSession() {
       // Clear any existing batched results for this session
       setBatchedResults([]);
       localStorage.removeItem(`batchedResults_${session.id}`);
+      
+      // Get default starting numbers based on service type
+      const defaults = getDefaultStartingNumbers(session.serviceType);
+      
       // Reset all frequency-specific asset counters for new session
-      setTwelvemonthlyCounter(0);
-      setSixmonthlyCounter(10000);
-      setFiveyearlyCounter(20000);
-      setTwentyfourmonthlyCounter(30000);
-      setThreemonthlyCounter(40000);
-      setMonthlyCounter(50000);
-      localStorage.setItem(`twelvemonthlyCounter_${session.id}`, '0');
-      localStorage.setItem(`sixmonthlyCounter_${session.id}`, '10000');
-      localStorage.setItem(`fiveyearlyCounter_${session.id}`, '20000');
-      localStorage.setItem(`twentyfourmonthlyCounter_${session.id}`, '30000');
-      localStorage.setItem(`threemonthlyCounter_${session.id}`, '40000');
-      localStorage.setItem(`monthlyCounter_${session.id}`, '50000');
+      setTwelvemonthlyCounter(defaults.twelvemonthly - 1);
+      setSixmonthlyCounter(defaults.sixmonthly - 1);
+      setFiveyearlyCounter(defaults.fiveyearly - 1);
+      setTwentyfourmonthlyCounter(defaults.twentyfourmonthly - 1);
+      setThreemonthlyCounter(defaults.threemonthly - 1);
+      setMonthlyCounter(defaults.monthly - 1);
+      localStorage.setItem(`twelvemonthlyCounter_${session.id}`, (defaults.twelvemonthly - 1).toString());
+      localStorage.setItem(`sixmonthlyCounter_${session.id}`, (defaults.sixmonthly - 1).toString());
+      localStorage.setItem(`fiveyearlyCounter_${session.id}`, (defaults.fiveyearly - 1).toString());
+      localStorage.setItem(`twentyfourmonthlyCounter_${session.id}`, (defaults.twentyfourmonthly - 1).toString());
+      localStorage.setItem(`threemonthlyCounter_${session.id}`, (defaults.threemonthly - 1).toString());
+      localStorage.setItem(`monthlyCounter_${session.id}`, (defaults.monthly - 1).toString());
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/sessions'] });
     },
