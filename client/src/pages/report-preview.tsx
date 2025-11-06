@@ -22,14 +22,29 @@ import { useQuery } from '@tanstack/react-query';
 
 /**
  * Helper function to format asset number with frequency for Electrical Test & Tag
+ * Only shows frequency code if multiple items share the same asset number
  * @param assetNumber - The asset number
  * @param frequency - The test frequency
  * @param serviceType - The service type
- * @returns Formatted asset number (e.g., "2 - 6" for asset 2 with 6 monthly frequency)
+ * @param allResults - All test results to check for duplicate asset numbers
+ * @returns Formatted asset number (e.g., "2 - 6M" if duplicates exist, otherwise just "2")
  */
-function formatAssetNumberWithFrequency(assetNumber: string, frequency: string, serviceType?: string): string {
+function formatAssetNumberWithFrequency(
+  assetNumber: string, 
+  frequency: string, 
+  serviceType?: string,
+  allResults?: Array<{ assetNumber: string }>
+): string {
   // Only apply formatting for Electrical Test & Tag
   if (serviceType !== 'electrical') {
+    return assetNumber;
+  }
+  
+  // Check if there are multiple items with the same asset number
+  const hasDuplicates = allResults && allResults.filter(r => r.assetNumber === assetNumber).length > 1;
+  
+  // If no duplicates, return just the asset number
+  if (!hasDuplicates) {
     return assetNumber;
   }
   
@@ -860,7 +875,7 @@ export default function ReportPreview() {
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="font-medium text-gray-800">
-                    #{formatAssetNumberWithFrequency(result.assetNumber || 'TBD', result.frequency, session?.serviceType)} - {
+                    #{formatAssetNumberWithFrequency(result.assetNumber || 'TBD', result.frequency, session?.serviceType, results)} - {
                       result.itemCode && session?.country === 'national_client' 
                         ? `${result.itemCode} - ${result.itemName}` 
                         : session?.serviceType === 'rcd_reporting' && result.classification === 'fixed-rcd' && (result as any).distributionBoardNumber

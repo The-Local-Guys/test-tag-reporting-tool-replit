@@ -58,9 +58,22 @@ function getFrequencyLabel(frequency: string): string {
   }
 }
 
-function formatAssetNumberWithFrequency(assetNumber: string, frequency: string, serviceType?: string): string {
+function formatAssetNumberWithFrequency(
+  assetNumber: string, 
+  frequency: string, 
+  serviceType?: string,
+  allResults?: Array<{ assetNumber: string }>
+): string {
   // Only apply formatting for Electrical Test & Tag
   if (serviceType !== 'electrical') {
+    return assetNumber;
+  }
+  
+  // Check if there are multiple items with the same asset number
+  const hasDuplicates = allResults && allResults.filter(r => r.assetNumber === assetNumber).length > 1;
+  
+  // If no duplicates, return just the asset number
+  if (!hasDuplicates) {
     return assetNumber;
   }
   
@@ -247,7 +260,7 @@ export function generateExcelReport(data: ReportData): Blob {
       }
 
       return [
-        formatAssetNumberWithFrequency(result.assetNumber, result.frequency, session.serviceType), // Asset number with frequency
+        formatAssetNumberWithFrequency(result.assetNumber, result.frequency, session.serviceType, results), // Asset number with frequency
         result.itemName,
         result.location,
         result.classification.toUpperCase(),

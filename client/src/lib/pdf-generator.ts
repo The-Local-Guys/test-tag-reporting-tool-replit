@@ -60,9 +60,22 @@ function getFrequencyLabel(frequency: string): string {
   }
 }
 
-function formatAssetNumberWithFrequency(assetNumber: string, frequency: string, serviceType?: string): string {
+function formatAssetNumberWithFrequency(
+  assetNumber: string, 
+  frequency: string, 
+  serviceType?: string,
+  allResults?: Array<{ assetNumber: string }>
+): string {
   // Only apply formatting for Electrical Test & Tag
   if (serviceType !== 'electrical') {
+    return assetNumber;
+  }
+  
+  // Check if there are multiple items with the same asset number
+  const hasDuplicates = allResults && allResults.filter(r => r.assetNumber === assetNumber).length > 1;
+  
+  // If no duplicates, return just the asset number
+  if (!hasDuplicates) {
     return assetNumber;
   }
   
@@ -433,7 +446,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     const rowStartY = yPosition;
 
     // Use the actual asset number from the database with frequency
-    doc.text(formatAssetNumberWithFrequency(result.assetNumber.toString(), result.frequency, data.session.serviceType), margin, rowStartY);
+    doc.text(formatAssetNumberWithFrequency(result.assetNumber.toString(), result.frequency, data.session.serviceType, results), margin, rowStartY);
     
     // Draw item name with word wrapping
     itemNameLines.forEach((line: string, i: number) => {
@@ -698,7 +711,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       }
       
       doc.setFont('helvetica', 'bold');
-      doc.text(`Asset #${formatAssetNumberWithFrequency(result.assetNumber.toString(), result.frequency, data.session.serviceType)} - ${result.itemName} (${result.location})`, margin, yPosition);
+      doc.text(`Asset #${formatAssetNumberWithFrequency(result.assetNumber.toString(), result.frequency, data.session.serviceType, results)} - ${result.itemName} (${result.location})`, margin, yPosition);
       yPosition += 8;
       
       doc.setFont('helvetica', 'normal');
@@ -787,7 +800,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       }
       
       doc.setFont('helvetica', 'bold');
-      doc.text(`Asset #${formatAssetNumberWithFrequency(result.assetNumber.toString(), result.frequency, data.session.serviceType)} - ${result.itemName} (${result.location})`, margin, yPosition);
+      doc.text(`Asset #${formatAssetNumberWithFrequency(result.assetNumber.toString(), result.frequency, data.session.serviceType, results)} - ${result.itemName} (${result.location})`, margin, yPosition);
       yPosition += 8;
       
       // Parse test details from notes
@@ -914,7 +927,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       // Item header
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text(`Asset #${formatAssetNumberWithFrequency(result.assetNumber.toString(), result.frequency, data.session.serviceType)} - ${result.itemName}`, margin, yPosition);
+      doc.text(`Asset #${formatAssetNumberWithFrequency(result.assetNumber.toString(), result.frequency, data.session.serviceType, results)} - ${result.itemName}`, margin, yPosition);
       yPosition += 8;
       
       doc.setFontSize(10);
