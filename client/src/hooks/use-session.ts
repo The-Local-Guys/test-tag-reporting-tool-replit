@@ -184,6 +184,36 @@ export function useSession() {
     return stored ? parseInt(stored) : 0;
   });
 
+  // Custom Asset Number Starting Points (per session, only for Electrical Test & Tag)
+  const [customAssetStarts, setCustomAssetStarts] = useState<{
+    twelvemonthly: number;
+    sixmonthly: number;
+    fiveyearly: number;
+    twentyfourmonthly: number;
+    threemonthly: number;
+    monthly: number;
+  }>(() => {
+    if (!sessionId) {
+      return {
+        twelvemonthly: 1,
+        sixmonthly: 10001,
+        fiveyearly: 20001,
+        twentyfourmonthly: 30001,
+        threemonthly: 40001,
+        monthly: 50001,
+      };
+    }
+    const stored = localStorage.getItem(`customAssetStarts_${sessionId}`);
+    return stored ? JSON.parse(stored) : {
+      twelvemonthly: 1,
+      sixmonthly: 10001,
+      fiveyearly: 20001,
+      twentyfourmonthly: 30001,
+      threemonthly: 40001,
+      monthly: 50001,
+    };
+  });
+
   // Batched results stored in local storage
   const [batchedResults, setBatchedResults] = useState<BatchedTestResult[]>(() => {
     if (!sessionId) return [];
