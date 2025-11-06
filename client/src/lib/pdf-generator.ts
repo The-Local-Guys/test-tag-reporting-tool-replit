@@ -332,6 +332,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     const result = results[index];
 
     // Calculate column widths for word wrapping
+    const assetNumberWidth = 11; // Width for asset number column
     const itemNameWidth = 17; // Width for item name column
     const locationWidth = 17; // Width for location column
     
@@ -344,6 +345,8 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     }
     
     // Split text to fit column widths
+    const assetNumberText = formatAssetNumberWithFrequency(result.assetNumber.toString(), result.frequency, data.session.serviceType, results);
+    const assetNumberLines = doc.splitTextToSize(assetNumberText, assetNumberWidth);
     const itemNameLines = doc.splitTextToSize(displayItemName, itemNameWidth);
     const locationLines = doc.splitTextToSize(result.location, locationWidth);
     
@@ -424,6 +427,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     
     // Calculate row height based on maximum lines needed
     const maxLines = Math.max(
+      assetNumberLines.length,
       itemNameLines.length, 
       locationLines.length, 
       sizeWeightLines.length, 
@@ -445,8 +449,10 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     // Store starting Y position for this row
     const rowStartY = yPosition;
 
-    // Use the actual asset number from the database with frequency
-    doc.text(formatAssetNumberWithFrequency(result.assetNumber.toString(), result.frequency, data.session.serviceType, results), margin, rowStartY);
+    // Draw asset number with word wrapping
+    assetNumberLines.forEach((line: string, i: number) => {
+      doc.text(line, margin, rowStartY + (i * lineHeight));
+    });
     
     // Draw item name with word wrapping
     itemNameLines.forEach((line: string, i: number) => {
