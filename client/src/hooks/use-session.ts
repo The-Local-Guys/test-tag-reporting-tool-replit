@@ -60,7 +60,7 @@ function sanitizeBatchedResult(result: any): BatchedTestResult {
 /**
  * Helper function to find the next available asset number within a range
  * @param usedNumbers - Set of asset numbers already in use
- * @param start - Starting number for the range (1 for monthly, 10001 for 5-yearly)
+ * @param start - Starting number for the range
  * @returns Next available asset number in the specified range
  */
 const getNextAvailableAssetNumber = (usedNumbers: Set<number>, start: number): number => {
@@ -72,6 +72,30 @@ const getNextAvailableAssetNumber = (usedNumbers: Set<number>, start: number): n
   }
   
   return candidate;
+};
+
+/**
+ * Helper function to get starting asset number for each frequency
+ * @param frequency - The test frequency (twelvemonthly, sixmonthly, etc.)
+ * @returns Starting asset number for that frequency range
+ */
+const getStartingAssetNumber = (frequency: string): number => {
+  switch (frequency) {
+    case 'twelvemonthly':
+      return 1;
+    case 'sixmonthly':
+      return 10001;
+    case 'fiveyearly':
+      return 20001;
+    case 'twentyfourmonthly':
+      return 30001;
+    case 'threemonthly':
+      return 40001;
+    case 'monthly':
+      return 50001;
+    default:
+      return 1; // Default to twelvemonthly range
+  }
 };
 
 /**
@@ -110,19 +134,50 @@ export function useSession() {
     return { monthly: 0, fiveYearly: 0 };
   });
 
-  // Asset number counters - start fresh for each session
-  const [monthlyAssetCounter, setMonthlyAssetCounter] = useState<number>(() => {
+  // Asset number counters - separate counter for each frequency
+  // 12 Monthly: 1-10,000
+  const [twelvemonthlyCounter, setTwelvemonthlyCounter] = useState<number>(() => {
     if (!sessionId) return 0;
-    const stored = localStorage.getItem(`monthlyCounter_${sessionId}`);
+    const stored = localStorage.getItem(`twelvemonthlyCounter_${sessionId}`);
     return stored ? parseInt(stored) : 0;
   });
 
-  const [fiveYearlyAssetCounter, setFiveYearlyAssetCounter] = useState<number>(() => {
+  // 6 Monthly: 10,001-20,000
+  const [sixmonthlyCounter, setSixmonthlyCounter] = useState<number>(() => {
     if (!sessionId) return 10000;
-    const stored = localStorage.getItem(`fiveYearlyCounter_${sessionId}`);
+    const stored = localStorage.getItem(`sixmonthlyCounter_${sessionId}`);
     return stored ? parseInt(stored) : 10000;
   });
 
+  // 5 Yearly: 20,001-30,000
+  const [fiveyearlyCounter, setFiveyearlyCounter] = useState<number>(() => {
+    if (!sessionId) return 20000;
+    const stored = localStorage.getItem(`fiveyearlyCounter_${sessionId}`);
+    return stored ? parseInt(stored) : 20000;
+  });
+
+  // 24 Monthly: 30,001-40,000
+  const [twentyfourmonthlyCounter, setTwentyfourmonthlyCounter] = useState<number>(() => {
+    if (!sessionId) return 30000;
+    const stored = localStorage.getItem(`twentyfourmonthlyCounter_${sessionId}`);
+    return stored ? parseInt(stored) : 30000;
+  });
+
+  // 3 Monthly: 40,001-50,000
+  const [threemonthlyCounter, setThreemonthlyCounter] = useState<number>(() => {
+    if (!sessionId) return 40000;
+    const stored = localStorage.getItem(`threemonthlyCounter_${sessionId}`);
+    return stored ? parseInt(stored) : 40000;
+  });
+
+  // Monthly: 50,001+
+  const [monthlyCounter, setMonthlyCounter] = useState<number>(() => {
+    if (!sessionId) return 50000;
+    const stored = localStorage.getItem(`monthlyCounter_${sessionId}`);
+    return stored ? parseInt(stored) : 50000;
+  });
+
+  // RCD Asset Counter (separate for RCD reporting)
   const [rcdAssetCounter, setRcdAssetCounter] = useState<number>(() => {
     if (!sessionId) return 0;
     const stored = localStorage.getItem(`rcdCounter_${sessionId}`);
@@ -206,28 +261,37 @@ export function useSession() {
       setAssetCounts({ monthly: monthlyCount, fiveYearly: fiveYearlyCount });
       
       // Set counters to continue from where they left off
-      // Find the highest asset numbers to continue sequence
-      const monthlyAssets = loadedResults
-        .filter(r => r.frequency !== 'fiveyearly')
-        .map(r => parseInt(r.assetNumber || '0'))
-        .filter(n => !isNaN(n) && n > 0);
+      // Find the highest asset numbers for each frequency to continue sequence
+      const twelvemonthlyAssets = loadedResults.filter(r => r.frequency === 'twelvemonthly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n));
+      const sixmonthlyAssets = loadedResults.filter(r => r.frequency === 'sixmonthly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n));
+      const fiveyearlyAssets = loadedResults.filter(r => r.frequency === 'fiveyearly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n));
+      const twentyfourmonthlyAssets = loadedResults.filter(r => r.frequency === 'twentyfourmonthly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n));
+      const threemonthlyAssets = loadedResults.filter(r => r.frequency === 'threemonthly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n));
+      const monthlyAssets = loadedResults.filter(r => r.frequency === 'monthly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n));
       
-      const fiveYearlyAssets = loadedResults
-        .filter(r => r.frequency === 'fiveyearly')
-        .map(r => parseInt(r.assetNumber || '10000'))
-        .filter(n => !isNaN(n) && n >= 10000);
+      const maxTwelvemonthly = twelvemonthlyAssets.length > 0 ? Math.max(...twelvemonthlyAssets) : 0;
+      const maxSixmonthly = sixmonthlyAssets.length > 0 ? Math.max(...sixmonthlyAssets) : 10000;
+      const maxFiveyearly = fiveyearlyAssets.length > 0 ? Math.max(...fiveyearlyAssets) : 20000;
+      const maxTwentyfourmonthly = twentyfourmonthlyAssets.length > 0 ? Math.max(...twentyfourmonthlyAssets) : 30000;
+      const maxThreemonthly = threemonthlyAssets.length > 0 ? Math.max(...threemonthlyAssets) : 40000;
+      const maxMonthly = monthlyAssets.length > 0 ? Math.max(...monthlyAssets) : 50000;
       
-      const maxMonthly = monthlyAssets.length > 0 ? Math.max(...monthlyAssets) : 0;
-      const maxFiveYearly = fiveYearlyAssets.length > 0 ? Math.max(...fiveYearlyAssets) : 10000;
-      
-      setMonthlyAssetCounter(maxMonthly);
-      setFiveYearlyAssetCounter(maxFiveYearly);
+      setTwelvemonthlyCounter(maxTwelvemonthly);
+      setSixmonthlyCounter(maxSixmonthly);
+      setFiveyearlyCounter(maxFiveyearly);
+      setTwentyfourmonthlyCounter(maxTwentyfourmonthly);
+      setThreemonthlyCounter(maxThreemonthly);
+      setMonthlyCounter(maxMonthly);
       
       // Store counters in localStorage
+      localStorage.setItem(`twelvemonthlyCounter_${sessionId}`, maxTwelvemonthly.toString());
+      localStorage.setItem(`sixmonthlyCounter_${sessionId}`, maxSixmonthly.toString());
+      localStorage.setItem(`fiveyearlyCounter_${sessionId}`, maxFiveyearly.toString());
+      localStorage.setItem(`twentyfourmonthlyCounter_${sessionId}`, maxTwentyfourmonthly.toString());
+      localStorage.setItem(`threemonthlyCounter_${sessionId}`, maxThreemonthly.toString());
       localStorage.setItem(`monthlyCounter_${sessionId}`, maxMonthly.toString());
-      localStorage.setItem(`fiveYearlyCounter_${sessionId}`, maxFiveYearly.toString());
       
-      console.log(`Updated asset counters: monthly=${maxMonthly}, fiveYearly=${maxFiveYearly}`);
+      console.log(`Updated asset counters: 12M=${maxTwelvemonthly}, 6M=${maxSixmonthly}, 5Y=${maxFiveyearly}, 24M=${maxTwentyfourmonthly}, 3M=${maxThreemonthly}, M=${maxMonthly}`);
     }
   }, [existingResults, batchedResults.length, sessionId]);
 
@@ -257,26 +321,35 @@ export function useSession() {
       });
     }
 
-    // Find next available numbers using sequence continuation (not gap-filling)
-    // This respects the real-world workflow where manually changed labels shouldn't be reused
-    const nextMonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(1, monthlyAssetCounter + 1));
-    const nextFiveYearly = getNextAvailableAssetNumber(usedNumbers, Math.max(10001, fiveYearlyAssetCounter + 1));
+    // Find next available numbers for each frequency range
+    const nextTwelvemonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(1, twelvemonthlyCounter + 1));
+    const nextSixmonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(10001, sixmonthlyCounter + 1));
+    const nextFiveyearly = getNextAvailableAssetNumber(usedNumbers, Math.max(20001, fiveyearlyCounter + 1));
+    const nextTwentyfourmonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(30001, twentyfourmonthlyCounter + 1));
+    const nextThreemonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(40001, threemonthlyCounter + 1));
+    const nextMonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(50001, monthlyCounter + 1));
     
-    // Count items by frequency category
-    const monthlyCount = batchedResults.filter(r => 
-      r.frequency === 'threemonthly' || 
-      r.frequency === 'sixmonthly' || 
-      r.frequency === 'twelvemonthly' || 
-      r.frequency === 'twentyfourmonthly'
-    ).length;
-    
-    const fiveYearlyCount = batchedResults.filter(r => r.frequency === 'fiveyearly').length;
+    // Count items by frequency
+    const twelvemonthlyCount = batchedResults.filter(r => r.frequency === 'twelvemonthly').length;
+    const sixmonthlyCount = batchedResults.filter(r => r.frequency === 'sixmonthly').length;
+    const fiveyearlyCount = batchedResults.filter(r => r.frequency === 'fiveyearly').length;
+    const twentyfourmonthlyCount = batchedResults.filter(r => r.frequency === 'twentyfourmonthly').length;
+    const threemonthlyCount = batchedResults.filter(r => r.frequency === 'threemonthly').length;
+    const monthlyCount = batchedResults.filter(r => r.frequency === 'monthly').length;
     
     return {
+      nextTwelvemonthly,
+      nextSixmonthly,
+      nextFiveyearly,
+      nextTwentyfourmonthly,
+      nextThreemonthly,
       nextMonthly,
-      nextFiveYearly,
+      twelvemonthlyCount,
+      sixmonthlyCount,
+      fiveyearlyCount,
+      twentyfourmonthlyCount,
+      threemonthlyCount,
       monthlyCount,
-      fiveYearlyCount,
     };
   };
 
@@ -313,11 +386,19 @@ export function useSession() {
       // Clear any existing batched results for this session
       setBatchedResults([]);
       localStorage.removeItem(`batchedResults_${session.id}`);
-      // Reset asset counters for new session
-      setMonthlyAssetCounter(0);
-      setFiveYearlyAssetCounter(10000);
-      localStorage.setItem(`monthlyCounter_${session.id}`, '0');
-      localStorage.setItem(`fiveYearlyCounter_${session.id}`, '10000');
+      // Reset all frequency-specific asset counters for new session
+      setTwelvemonthlyCounter(0);
+      setSixmonthlyCounter(10000);
+      setFiveyearlyCounter(20000);
+      setTwentyfourmonthlyCounter(30000);
+      setThreemonthlyCounter(40000);
+      setMonthlyCounter(50000);
+      localStorage.setItem(`twelvemonthlyCounter_${session.id}`, '0');
+      localStorage.setItem(`sixmonthlyCounter_${session.id}`, '10000');
+      localStorage.setItem(`fiveyearlyCounter_${session.id}`, '20000');
+      localStorage.setItem(`twentyfourmonthlyCounter_${session.id}`, '30000');
+      localStorage.setItem(`threemonthlyCounter_${session.id}`, '40000');
+      localStorage.setItem(`monthlyCounter_${session.id}`, '50000');
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/sessions'] });
     },
@@ -335,8 +416,7 @@ export function useSession() {
     // Defensive sanitization: strip itemCode and any other unexpected fields from incoming data
     const { itemCode, ...cleanData } = data as any;
     
-    // Determine if this is a 5-yearly frequency
-    const isFiveYearly = cleanData.frequency === 'fiveyearly';
+    const frequency = cleanData.frequency;
     
     // Collect all existing asset numbers to avoid conflicts
     const usedNumbers = new Set<number>();
@@ -385,20 +465,50 @@ export function useSession() {
             setRcdAssetCounter(assetNum);
             localStorage.setItem(`rcdCounter_${sessionId}`, assetNum.toString());
           }
-        } else if (isFiveYearly) {
-          if (assetNum > fiveYearlyAssetCounter) {
-            setFiveYearlyAssetCounter(assetNum);
-            localStorage.setItem(`fiveYearlyCounter_${sessionId}`, assetNum.toString());
-          }
         } else {
-          if (assetNum > monthlyAssetCounter) {
-            setMonthlyAssetCounter(assetNum);
-            localStorage.setItem(`monthlyCounter_${sessionId}`, assetNum.toString());
+          // Update the appropriate frequency counter
+          switch (frequency) {
+            case 'twelvemonthly':
+              if (assetNum > twelvemonthlyCounter) {
+                setTwelvemonthlyCounter(assetNum);
+                localStorage.setItem(`twelvemonthlyCounter_${sessionId}`, assetNum.toString());
+              }
+              break;
+            case 'sixmonthly':
+              if (assetNum > sixmonthlyCounter) {
+                setSixmonthlyCounter(assetNum);
+                localStorage.setItem(`sixmonthlyCounter_${sessionId}`, assetNum.toString());
+              }
+              break;
+            case 'fiveyearly':
+              if (assetNum > fiveyearlyCounter) {
+                setFiveyearlyCounter(assetNum);
+                localStorage.setItem(`fiveyearlyCounter_${sessionId}`, assetNum.toString());
+              }
+              break;
+            case 'twentyfourmonthly':
+              if (assetNum > twentyfourmonthlyCounter) {
+                setTwentyfourmonthlyCounter(assetNum);
+                localStorage.setItem(`twentyfourmonthlyCounter_${sessionId}`, assetNum.toString());
+              }
+              break;
+            case 'threemonthly':
+              if (assetNum > threemonthlyCounter) {
+                setThreemonthlyCounter(assetNum);
+                localStorage.setItem(`threemonthlyCounter_${sessionId}`, assetNum.toString());
+              }
+              break;
+            case 'monthly':
+              if (assetNum > monthlyCounter) {
+                setMonthlyCounter(assetNum);
+                localStorage.setItem(`monthlyCounter_${sessionId}`, assetNum.toString());
+              }
+              break;
           }
         }
       }
     } else {
-      // Auto-generate asset number
+      // Auto-generate asset number based on frequency
       if (isRCD) {
         // For RCD reporting, use simple sequential numbering starting from 1
         let candidate = Math.max(1, rcdAssetCounter + 1);
@@ -406,29 +516,83 @@ export function useSession() {
           candidate++;
         }
         assetNumber = candidate.toString();
-        // Update counter to this number
         setRcdAssetCounter(candidate);
         localStorage.setItem(`rcdCounter_${sessionId}`, candidate.toString());
-      } else if (isFiveYearly) {
-        // For 5-yearly items, start from current counter + 1 (continue sequence)
-        let candidate = Math.max(10001, fiveYearlyAssetCounter + 1);
-        while (usedNumbers.has(candidate)) {
-          candidate++;
-        }
-        assetNumber = candidate.toString();
-        // Update counter to this number
-        setFiveYearlyAssetCounter(candidate);
-        localStorage.setItem(`fiveYearlyCounter_${sessionId}`, candidate.toString());
       } else {
-        // For monthly items, start from current counter + 1 (continue sequence)
-        let candidate = Math.max(1, monthlyAssetCounter + 1);
-        while (usedNumbers.has(candidate)) {
-          candidate++;
+        // For Electrical Test & Tag, use frequency-specific ranges
+        let candidate: number;
+        
+        switch (frequency) {
+          case 'twelvemonthly':
+            candidate = Math.max(1, twelvemonthlyCounter + 1);
+            while (usedNumbers.has(candidate)) {
+              candidate++;
+            }
+            assetNumber = candidate.toString();
+            setTwelvemonthlyCounter(candidate);
+            localStorage.setItem(`twelvemonthlyCounter_${sessionId}`, candidate.toString());
+            break;
+            
+          case 'sixmonthly':
+            candidate = Math.max(10001, sixmonthlyCounter + 1);
+            while (usedNumbers.has(candidate)) {
+              candidate++;
+            }
+            assetNumber = candidate.toString();
+            setSixmonthlyCounter(candidate);
+            localStorage.setItem(`sixmonthlyCounter_${sessionId}`, candidate.toString());
+            break;
+            
+          case 'fiveyearly':
+            candidate = Math.max(20001, fiveyearlyCounter + 1);
+            while (usedNumbers.has(candidate)) {
+              candidate++;
+            }
+            assetNumber = candidate.toString();
+            setFiveyearlyCounter(candidate);
+            localStorage.setItem(`fiveyearlyCounter_${sessionId}`, candidate.toString());
+            break;
+            
+          case 'twentyfourmonthly':
+            candidate = Math.max(30001, twentyfourmonthlyCounter + 1);
+            while (usedNumbers.has(candidate)) {
+              candidate++;
+            }
+            assetNumber = candidate.toString();
+            setTwentyfourmonthlyCounter(candidate);
+            localStorage.setItem(`twentyfourmonthlyCounter_${sessionId}`, candidate.toString());
+            break;
+            
+          case 'threemonthly':
+            candidate = Math.max(40001, threemonthlyCounter + 1);
+            while (usedNumbers.has(candidate)) {
+              candidate++;
+            }
+            assetNumber = candidate.toString();
+            setThreemonthlyCounter(candidate);
+            localStorage.setItem(`threemonthlyCounter_${sessionId}`, candidate.toString());
+            break;
+            
+          case 'monthly':
+            candidate = Math.max(50001, monthlyCounter + 1);
+            while (usedNumbers.has(candidate)) {
+              candidate++;
+            }
+            assetNumber = candidate.toString();
+            setMonthlyCounter(candidate);
+            localStorage.setItem(`monthlyCounter_${sessionId}`, candidate.toString());
+            break;
+            
+          default:
+            // Fallback to twelvemonthly range
+            candidate = Math.max(1, twelvemonthlyCounter + 1);
+            while (usedNumbers.has(candidate)) {
+              candidate++;
+            }
+            assetNumber = candidate.toString();
+            setTwelvemonthlyCounter(candidate);
+            localStorage.setItem(`twelvemonthlyCounter_${sessionId}`, candidate.toString());
         }
-        assetNumber = candidate.toString();
-        // Update counter to this number  
-        setMonthlyAssetCounter(candidate);
-        localStorage.setItem(`monthlyCounter_${sessionId}`, candidate.toString());
       }
     }
     
@@ -469,10 +633,11 @@ export function useSession() {
     const updatedResults = [...batchedResults, newResult];
     setBatchedResults(updatedResults);
     
-    // Update asset counts state
+    // Update asset counts state (simplified for all frequencies)
+    const freq = cleanData.frequency;
     setAssetCounts(prevCounts => ({
       ...prevCounts,
-      [isFiveYearly ? 'fiveYearly' : 'monthly']: prevCounts[isFiveYearly ? 'fiveYearly' : 'monthly'] + 1,
+      [freq === 'fiveyearly' ? 'fiveYearly' : 'monthly']: prevCounts[freq === 'fiveyearly' ? 'fiveYearly' : 'monthly'] + 1,
     }));
     
     // Save to localStorage
@@ -531,9 +696,13 @@ export function useSession() {
         localStorage.removeItem(`fiveYearlyCounter_${sessionId}`);
       }
       
-      // Reset asset counters and counts for next session
-      setMonthlyAssetCounter(0);
-      setFiveYearlyAssetCounter(10000);
+      // Reset all asset counters and counts for next session
+      setTwelvemonthlyCounter(0);
+      setSixmonthlyCounter(10000);
+      setFiveyearlyCounter(20000);
+      setTwentyfourmonthlyCounter(30000);
+      setThreemonthlyCounter(40000);
+      setMonthlyCounter(50000);
       setAssetCounts({ monthly: 0, fiveYearly: 0 });
       
       // Clear session ID to ensure no unfinished detection
@@ -594,12 +763,12 @@ export function useSession() {
   const removeBatchedResult = (id: string) => {
     const resultToRemove = batchedResults.find(result => result.id === id);
     if (resultToRemove) {
-      const isFiveYearly = resultToRemove.frequency === 'fiveyearly';
+      const freq = resultToRemove.frequency;
       
       // Update asset counts state
       setAssetCounts(prevCounts => ({
         ...prevCounts,
-        [isFiveYearly ? 'fiveYearly' : 'monthly']: Math.max(0, prevCounts[isFiveYearly ? 'fiveYearly' : 'monthly'] - 1),
+        [freq === 'fiveyearly' ? 'fiveYearly' : 'monthly']: Math.max(0, prevCounts[freq === 'fiveyearly' ? 'fiveYearly' : 'monthly'] - 1),
       }));
     }
     
@@ -669,15 +838,8 @@ export function useSession() {
       fiveYearly: fiveYearlyCount
     });
 
-    // Update counters based on new counts
-    setMonthlyAssetCounter(monthlyCount);
-    setFiveYearlyAssetCounter(10000 + fiveYearlyCount);
-    
-    // Save counters to localStorage
-    if (sessionId) {
-      localStorage.setItem(`monthlyCounter_${sessionId}`, monthlyCount.toString());
-      localStorage.setItem(`fiveYearlyCounter_${sessionId}`, (10000 + fiveYearlyCount).toString());
-    }
+    // Note: Counters are managed individually per frequency now
+    // They are updated automatically when adding/removing results
 
     // Save updated results to localStorage
     if (sessionId) {
@@ -775,8 +937,13 @@ export function useSession() {
     setCurrentLocation('');
     setCurrentDistributionBoardNumber('');
     setBatchedResults([]);
-    setMonthlyAssetCounter(0);
-    setFiveYearlyAssetCounter(10000);
+    // Reset all frequency-specific counters
+    setTwelvemonthlyCounter(0);
+    setSixmonthlyCounter(10000);
+    setFiveyearlyCounter(20000);
+    setTwentyfourmonthlyCounter(30000);
+    setThreemonthlyCounter(40000);
+    setMonthlyCounter(50000);
     setRcdAssetCounter(0);
     setAssetCounts({ monthly: 0, fiveYearly: 0 });
     localStorage.removeItem('currentSessionId');

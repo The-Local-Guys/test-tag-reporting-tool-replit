@@ -98,9 +98,30 @@ export default function TestDetails() {
   // Only auto-update if user hasn't manually edited the field
   useEffect(() => {
     if (assetProgress && !hasManuallyEditedAssetNumber) {
-      const nextAssetNumber = selectedFrequency === 'fiveyearly' 
-        ? assetProgress.nextFiveYearly 
-        : assetProgress.nextMonthly;
+      // Get the next asset number based on selected frequency
+      let nextAssetNumber: number;
+      switch (selectedFrequency) {
+        case 'twelvemonthly':
+          nextAssetNumber = assetProgress.nextTwelvemonthly;
+          break;
+        case 'sixmonthly':
+          nextAssetNumber = assetProgress.nextSixmonthly;
+          break;
+        case 'fiveyearly':
+          nextAssetNumber = assetProgress.nextFiveyearly;
+          break;
+        case 'twentyfourmonthly':
+          nextAssetNumber = assetProgress.nextTwentyfourmonthly;
+          break;
+        case 'threemonthly':
+          nextAssetNumber = assetProgress.nextThreemonthly;
+          break;
+        case 'monthly':
+          nextAssetNumber = assetProgress.nextMonthly;
+          break;
+        default:
+          nextAssetNumber = assetProgress.nextTwelvemonthly;
+      }
       form.setValue('assetNumber', nextAssetNumber.toString());
     }
   }, [assetProgress, selectedFrequency, form, hasManuallyEditedAssetNumber]);
@@ -296,11 +317,19 @@ export default function TestDetails() {
             </div>
           )}
           <div className="text-xs text-gray-500">
-            {assetProgress && (
-              selectedFrequency === 'fiveyearly' ? 
-                `Auto-incremented from ${assetProgress.fiveYearlyCount} tested (5-yearly items start at 10,001)` : 
-                `Auto-incremented from ${assetProgress.monthlyCount} tested (monthly items start at 1)`
-            )}
+            {assetProgress && (() => {
+              const frequencyInfo: Record<string, { count: number; start: number }> = {
+                'twelvemonthly': { count: assetProgress.twelvemonthlyCount, start: 1 },
+                'sixmonthly': { count: assetProgress.sixmonthlyCount, start: 10001 },
+                'fiveyearly': { count: assetProgress.fiveyearlyCount, start: 20001 },
+                'twentyfourmonthly': { count: assetProgress.twentyfourmonthlyCount, start: 30001 },
+                'threemonthly': { count: assetProgress.threemonthlyCount, start: 40001 },
+                'monthly': { count: assetProgress.monthlyCount, start: 50001 },
+              };
+              
+              const info = frequencyInfo[selectedFrequency] || { count: 0, start: 1 };
+              return `Auto-incremented from ${info.count} tested (${selectedFrequency === 'twelvemonthly' ? '12 monthly' : selectedFrequency === 'sixmonthly' ? '6 monthly' : selectedFrequency === 'fiveyearly' ? '5 yearly' : selectedFrequency === 'twentyfourmonthly' ? '24 monthly' : selectedFrequency === 'threemonthly' ? '3 monthly' : 'monthly'} items start at ${info.start.toLocaleString()})`;
+            })()}
           </div>
         </div>
 
