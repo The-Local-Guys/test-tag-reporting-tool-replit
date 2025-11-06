@@ -89,14 +89,16 @@ export const DEFAULT_STARTING_NUMBERS_ELECTRICAL = {
 /**
  * Default starting asset numbers for non-electrical service types
  * (Emergency Exit Light, Fire Testing, RCD Reporting)
+ * 6 Monthly: starts at 1
+ * Annually (12 Monthly): starts at 10001
  */
 const DEFAULT_STARTING_NUMBERS_OTHER = {
-  twelvemonthly: 1,
   sixmonthly: 1,
-  fiveyearly: 1,
-  twentyfourmonthly: 1,
-  threemonthly: 1,
-  monthly: 1,
+  twelvemonthly: 10001,
+  fiveyearly: 20001,
+  twentyfourmonthly: 30001,
+  threemonthly: 40001,
+  monthly: 50001,
 };
 
 export const DEFAULT_STARTING_NUMBERS = DEFAULT_STARTING_NUMBERS_ELECTRICAL;
