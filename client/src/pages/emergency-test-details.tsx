@@ -252,8 +252,8 @@ export default function EmergencyTestDetails() {
                   <div className="text-green-600 mt-1 text-lg font-semibold">
                     {assetProgress ? (
                       form.watch('frequency') === 'annually' ? 
-                        `#${assetProgress.nextFiveYearly}` : 
-                        `#${assetProgress.nextMonthly}`
+                        `#${assetProgress.nextTwelvemonthly}` : 
+                        `#${assetProgress.nextSixmonthly}`
                     ) : (
                       'Loading...'
                     )}
@@ -261,8 +261,8 @@ export default function EmergencyTestDetails() {
                   <div className="text-xs text-green-600 mt-1">
                     {assetProgress ? (
                       form.watch('frequency') === 'annually' ? 
-                        `Annual items: ${assetProgress.fiveYearlyCount} tested` : 
-                        `6-monthly items: ${assetProgress.monthlyCount} tested`
+                        `Annual items: ${assetProgress.twelvemonthlyCount} tested` : 
+                        `6-monthly items: ${assetProgress.sixmonthlyCount} tested`
                     ) : (
                       'Loading progress...'
                     )}

@@ -395,6 +395,50 @@ export function useSession() {
     }
   }, [existingResults, batchedResults.length, sessionId]);
 
+  // Initialize counters based on service type when a new session is created
+  useEffect(() => {
+    if (!session || !sessionId) return;
+    
+    // Check if counters need to be initialized for this session
+    const hasStoredCounters = localStorage.getItem(`twelvemonthlyCounter_${sessionId}`) !== null;
+    const storedServiceType = localStorage.getItem(`session_${sessionId}_serviceType`);
+    
+    // Skip if counters already initialized for this exact session AND service type matches
+    if (hasStoredCounters && storedServiceType === session.serviceType) {
+      console.log(`Counters already initialized for session ${sessionId} (${session.serviceType})`);
+      return;
+    }
+    
+    // Get service-type-aware defaults
+    const serviceTypeDefaults = getDefaultStartingNumbers(session.serviceType);
+    
+    // Initialize all counters based on service type
+    const initialTwelvemonthly = serviceTypeDefaults.twelvemonthly - 1;
+    const initialSixmonthly = serviceTypeDefaults.sixmonthly - 1;
+    const initialFiveyearly = serviceTypeDefaults.fiveyearly - 1;
+    const initialTwentyfourmonthly = serviceTypeDefaults.twentyfourmonthly - 1;
+    const initialThreemonthly = serviceTypeDefaults.threemonthly - 1;
+    const initialMonthly = serviceTypeDefaults.monthly - 1;
+    
+    console.log(`Initializing counters for ${session.serviceType} service (session ${sessionId}): 12M=${initialTwelvemonthly}, 6M=${initialSixmonthly}, 5Y=${initialFiveyearly}, 24M=${initialTwentyfourmonthly}, 3M=${initialThreemonthly}, M=${initialMonthly}`);
+    
+    // Update state
+    setTwelvemonthlyCounter(initialTwelvemonthly);
+    setSixmonthlyCounter(initialSixmonthly);
+    setFiveyearlyCounter(initialFiveyearly);
+    setTwentyfourmonthlyCounter(initialTwentyfourmonthly);
+    setThreemonthlyCounter(initialThreemonthly);
+    setMonthlyCounter(initialMonthly);
+    
+    // Store in localStorage
+    localStorage.setItem(`twelvemonthlyCounter_${sessionId}`, initialTwelvemonthly.toString());
+    localStorage.setItem(`sixmonthlyCounter_${sessionId}`, initialSixmonthly.toString());
+    localStorage.setItem(`fiveyearlyCounter_${sessionId}`, initialFiveyearly.toString());
+    localStorage.setItem(`twentyfourmonthlyCounter_${sessionId}`, initialTwentyfourmonthly.toString());
+    localStorage.setItem(`threemonthlyCounter_${sessionId}`, initialThreemonthly.toString());
+    localStorage.setItem(`monthlyCounter_${sessionId}`, initialMonthly.toString());
+  }, [session?.id, sessionId, session?.serviceType]);
+
   // Calculate local asset progress from actual used numbers (accounts for gaps)
   const getLocalAssetProgress = () => {
     // Collect all existing asset numbers
