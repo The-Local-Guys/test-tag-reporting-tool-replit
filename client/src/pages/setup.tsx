@@ -187,7 +187,23 @@ export default function Setup() {
       <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 space-y-6 pb-24">
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="testDate">Test Date</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="testDate">Test Date</Label>
+              {/* Custom Asset Numbers Button - Only for Electrical Test & Tag */}
+              {sessionStorage.getItem('selectedService') === 'electrical' && (
+                <Button 
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsCustomAssetModalOpen(true)}
+                  className="text-xs"
+                  data-testid="button-custom-asset-numbers"
+                >
+                  <Settings className="mr-1 h-3.5 w-3.5" />
+                  Custom Asset Numbers
+                </Button>
+              )}
+            </div>
             <Input
               id="testDate"
               type="date"
@@ -320,22 +336,8 @@ export default function Setup() {
         </div>
       </form>
 
-      {/* Fixed Bottom Buttons */}
-      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 p-4 space-y-3">
-        {/* Custom Asset Numbers Button - Only for Electrical Test & Tag */}
-        {sessionStorage.getItem('selectedService') === 'electrical' && (
-          <Button 
-            type="button"
-            variant="outline"
-            onClick={() => setIsCustomAssetModalOpen(true)}
-            className="w-full py-3 text-base font-medium touch-button"
-            data-testid="button-custom-asset-numbers"
-          >
-            <Settings className="mr-2 h-5 w-5" />
-            Custom Asset Numbers
-          </Button>
-        )}
-        
+      {/* Fixed Bottom Button */}
+      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 p-4">
         {/* Start Testing Button */}
         <Button 
           type="submit" 

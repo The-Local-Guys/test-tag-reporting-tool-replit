@@ -107,7 +107,7 @@ export function CustomAssetNumbersModal({
     setFormValues(defaultValues);
     setErrors({});
     onReset();
-    onClose();
+    // Don't close modal - let user review and save if desired
   };
 
   return (
@@ -125,23 +125,23 @@ export function CustomAssetNumbersModal({
         <div className="space-y-4 py-4">
           {FREQUENCIES.map(({ key, label, default: defaultValue }) => (
             <div key={key} className="space-y-2">
-              <Label htmlFor={key} className="text-sm font-medium">
-                {label}
-              </Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id={key}
-                  type="number"
-                  min="1"
-                  value={formValues[key] || ''}
-                  onChange={(e) => handleChange(key, e.target.value)}
-                  className={errors[key] ? 'border-red-500' : ''}
-                  data-testid={`input-${key}`}
-                />
-                <span className="text-xs text-gray-400 whitespace-nowrap">
-                  (Default: {defaultValue.toLocaleString()})
+              <div className="flex items-center justify-between">
+                <Label htmlFor={key} className="text-sm font-medium">
+                  {label}
+                </Label>
+                <span className="text-xs text-gray-500">
+                  Default: {defaultValue.toLocaleString()}
                 </span>
               </div>
+              <Input
+                id={key}
+                type="number"
+                min="1"
+                value={formValues[key] || ''}
+                onChange={(e) => handleChange(key, e.target.value)}
+                className={errors[key] ? 'border-red-500' : ''}
+                data-testid={`input-${key}`}
+              />
               {errors[key] && (
                 <p className="text-xs text-red-500">{errors[key]}</p>
               )}
