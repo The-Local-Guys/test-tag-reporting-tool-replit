@@ -60,6 +60,25 @@ function getFrequencyLabel(frequency: string): string {
   }
 }
 
+function formatAssetNumberWithFrequency(assetNumber: string, frequency: string, serviceType?: string): string {
+  // Only apply formatting for Electrical Test & Tag
+  if (serviceType !== 'electrical') {
+    return assetNumber;
+  }
+  
+  const frequencyMap: Record<string, string> = {
+    'monthly': 'M',
+    'threemonthly': '3',
+    'sixmonthly': '6',
+    'twelvemonthly': '12',
+    'twentyfourmonthly': '24',
+    'fiveyearly': '5Y',
+  };
+  
+  const frequencyCode = frequencyMap[frequency] || frequency;
+  return `${assetNumber} - ${frequencyCode}`;
+}
+
 async function addLetterheadToPage(doc: jsPDF, margin: number, pageWidth: number): Promise<number> {
   let yPosition = margin;
   
@@ -413,8 +432,8 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     // Store starting Y position for this row
     const rowStartY = yPosition;
 
-    // Use the actual asset number from the database
-    doc.text(result.assetNumber.toString(), margin, rowStartY);
+    // Use the actual asset number from the database with frequency
+    doc.text(formatAssetNumberWithFrequency(result.assetNumber.toString(), result.frequency, data.session.serviceType), margin, rowStartY);
     
     // Draw item name with word wrapping
     itemNameLines.forEach((line: string, i: number) => {
@@ -679,7 +698,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       }
       
       doc.setFont('helvetica', 'bold');
-      doc.text(`Asset #${result.assetNumber} - ${result.itemName} (${result.location})`, margin, yPosition);
+      doc.text(`Asset #${formatAssetNumberWithFrequency(result.assetNumber.toString(), result.frequency, data.session.serviceType)} - ${result.itemName} (${result.location})`, margin, yPosition);
       yPosition += 8;
       
       doc.setFont('helvetica', 'normal');
@@ -768,7 +787,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       }
       
       doc.setFont('helvetica', 'bold');
-      doc.text(`Asset #${result.assetNumber} - ${result.itemName} (${result.location})`, margin, yPosition);
+      doc.text(`Asset #${formatAssetNumberWithFrequency(result.assetNumber.toString(), result.frequency, data.session.serviceType)} - ${result.itemName} (${result.location})`, margin, yPosition);
       yPosition += 8;
       
       // Parse test details from notes
@@ -895,7 +914,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       // Item header
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text(`Asset #${result.assetNumber} - ${result.itemName}`, margin, yPosition);
+      doc.text(`Asset #${formatAssetNumberWithFrequency(result.assetNumber.toString(), result.frequency, data.session.serviceType)} - ${result.itemName}`, margin, yPosition);
       yPosition += 8;
       
       doc.setFontSize(10);

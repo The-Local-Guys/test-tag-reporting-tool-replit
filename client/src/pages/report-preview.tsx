@@ -21,6 +21,32 @@ import { useConditionalNav } from '@/contexts/ConditionalNavContext';
 import { useQuery } from '@tanstack/react-query';
 
 /**
+ * Helper function to format asset number with frequency for Electrical Test & Tag
+ * @param assetNumber - The asset number
+ * @param frequency - The test frequency
+ * @param serviceType - The service type
+ * @returns Formatted asset number (e.g., "2 - 6" for asset 2 with 6 monthly frequency)
+ */
+function formatAssetNumberWithFrequency(assetNumber: string, frequency: string, serviceType?: string): string {
+  // Only apply formatting for Electrical Test & Tag
+  if (serviceType !== 'electrical') {
+    return assetNumber;
+  }
+  
+  const frequencyMap: Record<string, string> = {
+    'monthly': 'M',
+    'threemonthly': '3',
+    'sixmonthly': '6',
+    'twelvemonthly': '12',
+    'twentyfourmonthly': '24',
+    'fiveyearly': '5Y',
+  };
+  
+  const frequencyCode = frequencyMap[frequency] || frequency;
+  return `${assetNumber} - ${frequencyCode}`;
+}
+
+/**
  * Report preview and generation interface
  * Displays test session summary and provides PDF/Excel export functionality
  * Shows pass/fail statistics and enables report customization options
@@ -834,7 +860,7 @@ export default function ReportPreview() {
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="font-medium text-gray-800">
-                    #{result.assetNumber || 'TBD'} - {
+                    #{formatAssetNumberWithFrequency(result.assetNumber || 'TBD', result.frequency, session?.serviceType)} - {
                       result.itemCode && session?.country === 'national_client' 
                         ? `${result.itemCode} - ${result.itemName}` 
                         : session?.serviceType === 'rcd_reporting' && result.classification === 'fixed-rcd' && (result as any).distributionBoardNumber

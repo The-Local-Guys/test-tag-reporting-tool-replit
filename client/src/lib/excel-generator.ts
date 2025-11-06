@@ -58,6 +58,25 @@ function getFrequencyLabel(frequency: string): string {
   }
 }
 
+function formatAssetNumberWithFrequency(assetNumber: string, frequency: string, serviceType?: string): string {
+  // Only apply formatting for Electrical Test & Tag
+  if (serviceType !== 'electrical') {
+    return assetNumber;
+  }
+  
+  const frequencyMap: Record<string, string> = {
+    'monthly': 'M',
+    'threemonthly': '3',
+    'sixmonthly': '6',
+    'twelvemonthly': '12',
+    'twentyfourmonthly': '24',
+    'fiveyearly': '5Y',
+  };
+  
+  const frequencyCode = frequencyMap[frequency] || frequency;
+  return `${assetNumber} - ${frequencyCode}`;
+}
+
 /**
  * Generates an Excel spreadsheet report with test results and compliance data
  * Creates downloadable .xlsx files with formatted data, calculations, and summaries
@@ -228,7 +247,7 @@ export function generateExcelReport(data: ReportData): Blob {
       }
 
       return [
-        result.assetNumber, // Asset number
+        formatAssetNumberWithFrequency(result.assetNumber, result.frequency, session.serviceType), // Asset number with frequency
         result.itemName,
         result.location,
         result.classification.toUpperCase(),
