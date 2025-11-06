@@ -26,12 +26,12 @@ interface FrequencyConfig {
 }
 
 const FREQUENCIES: FrequencyConfig[] = [
-  { key: 'twelvemonthly', label: '12 Monthly', default: DEFAULT_STARTING_NUMBERS.twelvemonthly },
-  { key: 'sixmonthly', label: '6 Monthly', default: DEFAULT_STARTING_NUMBERS.sixmonthly },
-  { key: 'fiveyearly', label: '5 Yearly', default: DEFAULT_STARTING_NUMBERS.fiveyearly },
-  { key: 'twentyfourmonthly', label: '24 Monthly', default: DEFAULT_STARTING_NUMBERS.twentyfourmonthly },
-  { key: 'threemonthly', label: '3 Monthly', default: DEFAULT_STARTING_NUMBERS.threemonthly },
   { key: 'monthly', label: 'Monthly', default: DEFAULT_STARTING_NUMBERS.monthly },
+  { key: 'threemonthly', label: '3 Monthly', default: DEFAULT_STARTING_NUMBERS.threemonthly },
+  { key: 'sixmonthly', label: '6 Monthly', default: DEFAULT_STARTING_NUMBERS.sixmonthly },
+  { key: 'twelvemonthly', label: '12 Monthly', default: DEFAULT_STARTING_NUMBERS.twelvemonthly },
+  { key: 'twentyfourmonthly', label: '24 Monthly', default: DEFAULT_STARTING_NUMBERS.twentyfourmonthly },
+  { key: 'fiveyearly', label: '5 Yearly', default: DEFAULT_STARTING_NUMBERS.fiveyearly },
 ];
 
 export function CustomAssetNumbersModal({
@@ -125,14 +125,9 @@ export function CustomAssetNumbersModal({
         <div className="space-y-4 py-4">
           {FREQUENCIES.map(({ key, label, default: defaultValue }) => (
             <div key={key} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor={key} className="text-sm font-medium">
-                  {label}
-                </Label>
-                <span className="text-xs text-gray-500">
-                  Default: {defaultValue.toLocaleString()}
-                </span>
-              </div>
+              <Label htmlFor={key} className="text-sm font-medium">
+                {label} <span className="text-xs text-gray-500 font-normal">(Default: {defaultValue.toLocaleString()})</span>
+              </Label>
               <Input
                 id={key}
                 type="number"
