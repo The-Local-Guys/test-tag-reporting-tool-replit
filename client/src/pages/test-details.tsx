@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { useSession } from '@/hooks/use-session';
+import { useSession, DEFAULT_STARTING_NUMBERS } from '@/hooks/use-session';
 import { useLocation, useSearch } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -57,7 +57,7 @@ export default function TestDetails() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const { sessionId, currentLocation, addToBatch, assetProgress } = useSession();
+  const { sessionId, currentLocation, addToBatch, assetProgress, customStartingNumbers } = useSession();
   const [, setLocation] = useLocation();
   const search = useSearch();
   
@@ -318,13 +318,18 @@ export default function TestDetails() {
           )}
           <div className="text-xs text-gray-500">
             {assetProgress && (() => {
+              // Get starting numbers (custom or default)
+              const getStartNumber = (freq: keyof typeof DEFAULT_STARTING_NUMBERS) => {
+                return customStartingNumbers[freq] ?? DEFAULT_STARTING_NUMBERS[freq];
+              };
+              
               const frequencyInfo: Record<string, { count: number; start: number }> = {
-                'twelvemonthly': { count: assetProgress.twelvemonthlyCount, start: 1 },
-                'sixmonthly': { count: assetProgress.sixmonthlyCount, start: 10001 },
-                'fiveyearly': { count: assetProgress.fiveyearlyCount, start: 20001 },
-                'twentyfourmonthly': { count: assetProgress.twentyfourmonthlyCount, start: 30001 },
-                'threemonthly': { count: assetProgress.threemonthlyCount, start: 40001 },
-                'monthly': { count: assetProgress.monthlyCount, start: 50001 },
+                'twelvemonthly': { count: assetProgress.twelvemonthlyCount, start: getStartNumber('twelvemonthly') },
+                'sixmonthly': { count: assetProgress.sixmonthlyCount, start: getStartNumber('sixmonthly') },
+                'fiveyearly': { count: assetProgress.fiveyearlyCount, start: getStartNumber('fiveyearly') },
+                'twentyfourmonthly': { count: assetProgress.twentyfourmonthlyCount, start: getStartNumber('twentyfourmonthly') },
+                'threemonthly': { count: assetProgress.threemonthlyCount, start: getStartNumber('threemonthly') },
+                'monthly': { count: assetProgress.monthlyCount, start: getStartNumber('monthly') },
               };
               
               const info = frequencyInfo[selectedFrequency] || { count: 0, start: 1 };

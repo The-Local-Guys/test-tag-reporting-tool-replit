@@ -75,26 +75,47 @@ const getNextAvailableAssetNumber = (usedNumbers: Set<number>, start: number): n
 };
 
 /**
+ * Default starting asset numbers for each frequency
+ */
+export const DEFAULT_STARTING_NUMBERS = {
+  twelvemonthly: 1,
+  sixmonthly: 10001,
+  fiveyearly: 20001,
+  twentyfourmonthly: 30001,
+  threemonthly: 40001,
+  monthly: 50001,
+};
+
+export type CustomStartingNumbers = typeof DEFAULT_STARTING_NUMBERS;
+
+/**
  * Helper function to get starting asset number for each frequency
  * @param frequency - The test frequency (twelvemonthly, sixmonthly, etc.)
+ * @param customStartingNumbers - Optional custom starting numbers per frequency
  * @returns Starting asset number for that frequency range
  */
-const getStartingAssetNumber = (frequency: string): number => {
+const getStartingAssetNumber = (
+  frequency: string, 
+  customStartingNumbers?: Partial<CustomStartingNumbers>
+): number => {
+  const defaults = DEFAULT_STARTING_NUMBERS;
+  const custom = customStartingNumbers || {};
+  
   switch (frequency) {
     case 'twelvemonthly':
-      return 1;
+      return custom.twelvemonthly ?? defaults.twelvemonthly;
     case 'sixmonthly':
-      return 10001;
+      return custom.sixmonthly ?? defaults.sixmonthly;
     case 'fiveyearly':
-      return 20001;
+      return custom.fiveyearly ?? defaults.fiveyearly;
     case 'twentyfourmonthly':
-      return 30001;
+      return custom.twentyfourmonthly ?? defaults.twentyfourmonthly;
     case 'threemonthly':
-      return 40001;
+      return custom.threemonthly ?? defaults.threemonthly;
     case 'monthly':
-      return 50001;
+      return custom.monthly ?? defaults.monthly;
     default:
-      return 1; // Default to twelvemonthly range
+      return custom.twelvemonthly ?? defaults.twelvemonthly;
   }
 };
 
@@ -118,6 +139,13 @@ export function useSession() {
     return localStorage.getItem('currentDistributionBoardNumber') || '';
   });
 
+  // Custom starting numbers (per session)
+  const [customStartingNumbers, setCustomStartingNumbers] = useState<Partial<CustomStartingNumbers>>(() => {
+    if (!sessionId) return {};
+    const stored = localStorage.getItem(`customStartingNumbers_${sessionId}`);
+    return stored ? JSON.parse(stored) : {};
+  });
+
   // Asset count state for tracking current counts
   const [assetCounts, setAssetCounts] = useState<{ monthly: number; fiveYearly: number }>(() => {
     if (!sessionId) return { monthly: 0, fiveYearly: 0 };
@@ -134,47 +162,77 @@ export function useSession() {
     return { monthly: 0, fiveYearly: 0 };
   });
 
+  // Helper to get starting number from pending or session-specific custom numbers
+  const getInitialStartNumber = (frequency: keyof CustomStartingNumbers, sessionIdParam: number | null): number => {
+    // Check for session-specific custom numbers first
+    if (sessionIdParam) {
+      const sessionCustom = localStorage.getItem(`customStartingNumbers_${sessionIdParam}`);
+      if (sessionCustom) {
+        try {
+          const custom = JSON.parse(sessionCustom);
+          return (custom[frequency] ?? DEFAULT_STARTING_NUMBERS[frequency]) - 1;
+        } catch {
+          // Fall through to default
+        }
+      }
+    }
+    
+    // Check for pending custom numbers (set before session creation)
+    const pendingCustom = localStorage.getItem('pendingCustomStartingNumbers');
+    if (pendingCustom) {
+      try {
+        const custom = JSON.parse(pendingCustom);
+        return (custom[frequency] ?? DEFAULT_STARTING_NUMBERS[frequency]) - 1;
+      } catch {
+        // Fall through to default
+      }
+    }
+    
+    // Use default
+    return DEFAULT_STARTING_NUMBERS[frequency] - 1;
+  };
+
   // Asset number counters - separate counter for each frequency
   // 12 Monthly: 1-10,000
   const [twelvemonthlyCounter, setTwelvemonthlyCounter] = useState<number>(() => {
-    if (!sessionId) return 0;
+    if (!sessionId) return getInitialStartNumber('twelvemonthly', null);
     const stored = localStorage.getItem(`twelvemonthlyCounter_${sessionId}`);
-    return stored ? parseInt(stored) : 0;
+    return stored ? parseInt(stored) : getInitialStartNumber('twelvemonthly', sessionId);
   });
 
   // 6 Monthly: 10,001-20,000
   const [sixmonthlyCounter, setSixmonthlyCounter] = useState<number>(() => {
-    if (!sessionId) return 10000;
+    if (!sessionId) return getInitialStartNumber('sixmonthly', null);
     const stored = localStorage.getItem(`sixmonthlyCounter_${sessionId}`);
-    return stored ? parseInt(stored) : 10000;
+    return stored ? parseInt(stored) : getInitialStartNumber('sixmonthly', sessionId);
   });
 
   // 5 Yearly: 20,001-30,000
   const [fiveyearlyCounter, setFiveyearlyCounter] = useState<number>(() => {
-    if (!sessionId) return 20000;
+    if (!sessionId) return getInitialStartNumber('fiveyearly', null);
     const stored = localStorage.getItem(`fiveyearlyCounter_${sessionId}`);
-    return stored ? parseInt(stored) : 20000;
+    return stored ? parseInt(stored) : getInitialStartNumber('fiveyearly', sessionId);
   });
 
   // 24 Monthly: 30,001-40,000
   const [twentyfourmonthlyCounter, setTwentyfourmonthlyCounter] = useState<number>(() => {
-    if (!sessionId) return 30000;
+    if (!sessionId) return getInitialStartNumber('twentyfourmonthly', null);
     const stored = localStorage.getItem(`twentyfourmonthlyCounter_${sessionId}`);
-    return stored ? parseInt(stored) : 30000;
+    return stored ? parseInt(stored) : getInitialStartNumber('twentyfourmonthly', sessionId);
   });
 
   // 3 Monthly: 40,001-50,000
   const [threemonthlyCounter, setThreemonthlyCounter] = useState<number>(() => {
-    if (!sessionId) return 40000;
+    if (!sessionId) return getInitialStartNumber('threemonthly', null);
     const stored = localStorage.getItem(`threemonthlyCounter_${sessionId}`);
-    return stored ? parseInt(stored) : 40000;
+    return stored ? parseInt(stored) : getInitialStartNumber('threemonthly', sessionId);
   });
 
   // Monthly: 50,001+
   const [monthlyCounter, setMonthlyCounter] = useState<number>(() => {
-    if (!sessionId) return 50000;
+    if (!sessionId) return getInitialStartNumber('monthly', null);
     const stored = localStorage.getItem(`monthlyCounter_${sessionId}`);
-    return stored ? parseInt(stored) : 50000;
+    return stored ? parseInt(stored) : getInitialStartNumber('monthly', sessionId);
   });
 
   // RCD Asset Counter (separate for RCD reporting)
@@ -892,6 +950,48 @@ export function useSession() {
     if (sessionId) {
       localStorage.setItem('currentSessionId', sessionId.toString());
       
+      // Check for pending custom starting numbers and apply them
+      const pendingCustomNumbers = localStorage.getItem('pendingCustomStartingNumbers');
+      if (pendingCustomNumbers) {
+        try {
+          const numbers = JSON.parse(pendingCustomNumbers);
+          console.log('Applying pending custom starting numbers to session:', numbers);
+          
+          // Save to session-specific storage
+          localStorage.setItem(`customStartingNumbers_${sessionId}`, JSON.stringify(numbers));
+          setCustomStartingNumbers(numbers);
+          
+          // Calculate counter values (starting number - 1)
+          const twelvemonthlyValue = (numbers.twelvemonthly ?? DEFAULT_STARTING_NUMBERS.twelvemonthly) - 1;
+          const sixmonthlyValue = (numbers.sixmonthly ?? DEFAULT_STARTING_NUMBERS.sixmonthly) - 1;
+          const fiveyearlyValue = (numbers.fiveyearly ?? DEFAULT_STARTING_NUMBERS.fiveyearly) - 1;
+          const twentyfourmonthlyValue = (numbers.twentyfourmonthly ?? DEFAULT_STARTING_NUMBERS.twentyfourmonthly) - 1;
+          const threemonthlyValue = (numbers.threemonthly ?? DEFAULT_STARTING_NUMBERS.threemonthly) - 1;
+          const monthlyValue = (numbers.monthly ?? DEFAULT_STARTING_NUMBERS.monthly) - 1;
+          
+          // Save counters to localStorage so they persist
+          localStorage.setItem(`twelvemonthlyCounter_${sessionId}`, twelvemonthlyValue.toString());
+          localStorage.setItem(`sixmonthlyCounter_${sessionId}`, sixmonthlyValue.toString());
+          localStorage.setItem(`fiveyearlyCounter_${sessionId}`, fiveyearlyValue.toString());
+          localStorage.setItem(`twentyfourmonthlyCounter_${sessionId}`, twentyfourmonthlyValue.toString());
+          localStorage.setItem(`threemonthlyCounter_${sessionId}`, threemonthlyValue.toString());
+          localStorage.setItem(`monthlyCounter_${sessionId}`, monthlyValue.toString());
+          
+          // Update state counters
+          setTwelvemonthlyCounter(twelvemonthlyValue);
+          setSixmonthlyCounter(sixmonthlyValue);
+          setFiveyearlyCounter(fiveyearlyValue);
+          setTwentyfourmonthlyCounter(twentyfourmonthlyValue);
+          setThreemonthlyCounter(threemonthlyValue);
+          setMonthlyCounter(monthlyValue);
+          
+          // Clear pending custom numbers
+          localStorage.removeItem('pendingCustomStartingNumbers');
+        } catch (error) {
+          console.warn('Error applying pending custom starting numbers:', error);
+        }
+      }
+      
       // Restore batched results if they exist for this session
       const storedBatchedResults = localStorage.getItem(`batchedResults_${sessionId}`);
       if (storedBatchedResults && batchedResults.length === 0) {
@@ -922,6 +1022,43 @@ export function useSession() {
 
 
 
+  // Save custom starting numbers for the current session
+  const saveCustomStartingNumbers = (numbers: Partial<CustomStartingNumbers>) => {
+    setCustomStartingNumbers(numbers);
+    
+    if (sessionId) {
+      // If session exists, save to session-specific storage
+      localStorage.setItem(`customStartingNumbers_${sessionId}`, JSON.stringify(numbers));
+      
+      // Reset counters to the new starting numbers - 1 (because they increment before use)
+      setTwelvemonthlyCounter((numbers.twelvemonthly ?? DEFAULT_STARTING_NUMBERS.twelvemonthly) - 1);
+      setSixmonthlyCounter((numbers.sixmonthly ?? DEFAULT_STARTING_NUMBERS.sixmonthly) - 1);
+      setFiveyearlyCounter((numbers.fiveyearly ?? DEFAULT_STARTING_NUMBERS.fiveyearly) - 1);
+      setTwentyfourmonthlyCounter((numbers.twentyfourmonthly ?? DEFAULT_STARTING_NUMBERS.twentyfourmonthly) - 1);
+      setThreemonthlyCounter((numbers.threemonthly ?? DEFAULT_STARTING_NUMBERS.threemonthly) - 1);
+      setMonthlyCounter((numbers.monthly ?? DEFAULT_STARTING_NUMBERS.monthly) - 1);
+    } else {
+      // No session yet, save to temporary storage (will be applied when session is created)
+      localStorage.setItem('pendingCustomStartingNumbers', JSON.stringify(numbers));
+    }
+  };
+
+  // Reset custom starting numbers to defaults
+  const resetCustomStartingNumbers = () => {
+    if (!sessionId) return;
+    
+    setCustomStartingNumbers({});
+    localStorage.removeItem(`customStartingNumbers_${sessionId}`);
+    
+    // Reset counters to defaults - 1
+    setTwelvemonthlyCounter(DEFAULT_STARTING_NUMBERS.twelvemonthly - 1);
+    setSixmonthlyCounter(DEFAULT_STARTING_NUMBERS.sixmonthly - 1);
+    setFiveyearlyCounter(DEFAULT_STARTING_NUMBERS.fiveyearly - 1);
+    setTwentyfourmonthlyCounter(DEFAULT_STARTING_NUMBERS.twentyfourmonthly - 1);
+    setThreemonthlyCounter(DEFAULT_STARTING_NUMBERS.threemonthly - 1);
+    setMonthlyCounter(DEFAULT_STARTING_NUMBERS.monthly - 1);
+  };
+
   // Clear session
   const clearSession = () => {
     if (sessionId) {
@@ -929,6 +1066,13 @@ export function useSession() {
       localStorage.removeItem(`monthlyCounter_${sessionId}`);
       localStorage.removeItem(`fiveYearlyCounter_${sessionId}`);
       localStorage.removeItem(`rcdCounter_${sessionId}`);
+      localStorage.removeItem(`customStartingNumbers_${sessionId}`);
+      localStorage.removeItem(`twelvemonthlyCounter_${sessionId}`);
+      localStorage.removeItem(`sixmonthlyCounter_${sessionId}`);
+      localStorage.removeItem(`fiveyearlyCounter_${sessionId}`);
+      localStorage.removeItem(`twentyfourmonthlyCounter_${sessionId}`);
+      localStorage.removeItem(`threemonthlyCounter_${sessionId}`);
+      localStorage.removeItem(`monthlyCounter_${sessionId}`);
     }
     // Clear unfinished flags
     localStorage.removeItem('unfinished');
@@ -937,6 +1081,7 @@ export function useSession() {
     setCurrentLocation('');
     setCurrentDistributionBoardNumber('');
     setBatchedResults([]);
+    setCustomStartingNumbers({});
     // Reset all frequency-specific counters
     setTwelvemonthlyCounter(0);
     setSixmonthlyCounter(10000);
@@ -977,6 +1122,11 @@ export function useSession() {
     assetProgress: getLocalAssetProgress(),
     assetCounts,
     rcdAssetCounter,
+    
+    // Custom asset numbers
+    customStartingNumbers,
+    saveCustomStartingNumbers,
+    resetCustomStartingNumbers,
     
     // Session operations
     createSession: createSessionMutation.mutate,

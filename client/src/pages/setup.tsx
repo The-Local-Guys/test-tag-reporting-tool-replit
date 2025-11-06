@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Clipboard, ArrowRight, AlertCircle } from 'lucide-react';
+import { Clipboard, ArrowRight, AlertCircle, Settings } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useSession } from '@/hooks/use-session';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,6 +18,7 @@ import { useSpaNavigation } from '@/hooks/useSpaNavigation';
 import { useQuery } from '@tanstack/react-query';
 import type { InsertTestSession, CustomFormType } from '@shared/schema';
 import logoPath from '@assets/The Local Guys - with plug wide boarder - png seek.png';
+import { CustomAssetNumbersModal } from '@/components/CustomAssetNumbersModal';
 
 /**
  * Initial setup page for creating new testing sessions
@@ -25,10 +26,26 @@ import logoPath from '@assets/The Local Guys - with plug wide boarder - png seek
  * Creates the testing context for either electrical or emergency exit light testing
  */
 export default function Setup() {
-  const { createSession, isCreatingSession, clearSession, sessionId } = useSession();
+  const { createSession, isCreatingSession, clearSession, sessionId, customStartingNumbers, saveCustomStartingNumbers, resetCustomStartingNumbers } = useSession();
   const { user } = useAuth();
   const { navigate } = useSpaNavigation();
   const [isNavigating, setIsNavigating] = useState(false);
+  const [isCustomAssetModalOpen, setIsCustomAssetModalOpen] = useState(false);
+  
+  // Load pending custom numbers if no session exists
+  const [modalCustomNumbers, setModalCustomNumbers] = useState(() => {
+    if (!sessionId) {
+      const pending = localStorage.getItem('pendingCustomStartingNumbers');
+      if (pending) {
+        try {
+          return JSON.parse(pending);
+        } catch {
+          return customStartingNumbers;
+        }
+      }
+    }
+    return customStartingNumbers;
+  });
   
   // Fetch custom form types (available for all service types)
   const { data: customFormTypes } = useQuery<CustomFormType[]>({
@@ -303,19 +320,49 @@ export default function Setup() {
         </div>
       </form>
 
-      {/* Fixed Bottom Button */}
-      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 p-4">
+      {/* Fixed Bottom Buttons */}
+      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 p-4 space-y-3">
+        {/* Custom Asset Numbers Button - Only for Electrical Test & Tag */}
+        {sessionStorage.getItem('selectedService') === 'electrical' && (
+          <Button 
+            type="button"
+            variant="outline"
+            onClick={() => setIsCustomAssetModalOpen(true)}
+            className="w-full py-3 text-base font-medium touch-button"
+            data-testid="button-custom-asset-numbers"
+          >
+            <Settings className="mr-2 h-5 w-5" />
+            Custom Asset Numbers
+          </Button>
+        )}
+        
+        {/* Start Testing Button */}
         <Button 
           type="submit" 
           onClick={form.handleSubmit(onSubmit)}
           className="w-full bg-primary text-white py-4 text-lg font-semibold touch-button"
           disabled={isCreatingSession}
+          data-testid="button-start-testing"
         >
           {isCreatingSession ? 'Creating Session...' : 'Start Testing'}
           <ArrowRight className="ml-2 h-5 w-5" />
         </Button>
       </div>
 
+      {/* Custom Asset Numbers Modal */}
+      <CustomAssetNumbersModal
+        isOpen={isCustomAssetModalOpen}
+        onClose={() => setIsCustomAssetModalOpen(false)}
+        currentCustomNumbers={modalCustomNumbers}
+        onSave={(numbers) => {
+          setModalCustomNumbers(numbers);
+          saveCustomStartingNumbers(numbers);
+        }}
+        onReset={() => {
+          setModalCustomNumbers({});
+          resetCustomStartingNumbers();
+        }}
+      />
 
     </div>
   );
