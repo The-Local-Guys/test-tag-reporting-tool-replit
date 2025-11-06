@@ -379,13 +379,18 @@ export function useSession() {
       });
     }
 
+    // Get minimum starting numbers (custom or default)
+    const getMinStartNumber = (freq: keyof typeof DEFAULT_STARTING_NUMBERS) => {
+      return customStartingNumbers[freq] ?? DEFAULT_STARTING_NUMBERS[freq];
+    };
+
     // Find next available numbers for each frequency range
-    const nextTwelvemonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(1, twelvemonthlyCounter + 1));
-    const nextSixmonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(10001, sixmonthlyCounter + 1));
-    const nextFiveyearly = getNextAvailableAssetNumber(usedNumbers, Math.max(20001, fiveyearlyCounter + 1));
-    const nextTwentyfourmonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(30001, twentyfourmonthlyCounter + 1));
-    const nextThreemonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(40001, threemonthlyCounter + 1));
-    const nextMonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(50001, monthlyCounter + 1));
+    const nextTwelvemonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(getMinStartNumber('twelvemonthly'), twelvemonthlyCounter + 1));
+    const nextSixmonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(getMinStartNumber('sixmonthly'), sixmonthlyCounter + 1));
+    const nextFiveyearly = getNextAvailableAssetNumber(usedNumbers, Math.max(getMinStartNumber('fiveyearly'), fiveyearlyCounter + 1));
+    const nextTwentyfourmonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(getMinStartNumber('twentyfourmonthly'), twentyfourmonthlyCounter + 1));
+    const nextThreemonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(getMinStartNumber('threemonthly'), threemonthlyCounter + 1));
+    const nextMonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(getMinStartNumber('monthly'), monthlyCounter + 1));
     
     // Count items by frequency
     const twelvemonthlyCount = batchedResults.filter(r => r.frequency === 'twelvemonthly').length;
