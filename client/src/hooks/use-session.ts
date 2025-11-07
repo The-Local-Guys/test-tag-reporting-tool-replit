@@ -203,8 +203,8 @@ export function useSession() {
     
     const defaults = getDefaultStartingNumbers(serviceType);
     
-    // Check for session-specific custom numbers first
-    if (sessionIdParam) {
+    // Check for session-specific custom numbers first (only for electrical sessions)
+    if (sessionIdParam && serviceType === 'electrical') {
       const sessionCustom = localStorage.getItem(`customStartingNumbers_${sessionIdParam}`);
       if (sessionCustom) {
         try {
@@ -216,14 +216,17 @@ export function useSession() {
       }
     }
     
-    // Check for pending custom numbers (set before session creation)
-    const pendingCustom = localStorage.getItem('pendingCustomStartingNumbers');
-    if (pendingCustom) {
-      try {
-        const custom = JSON.parse(pendingCustom);
-        return (custom[frequency] ?? defaults[frequency]) - 1;
-      } catch {
-        // Fall through to default
+    // CRITICAL: Only check pending custom numbers for electrical sessions
+    // Emergency Exit Light and Fire Equipment Testing must use service-type-specific defaults
+    if (serviceType === 'electrical') {
+      const pendingCustom = localStorage.getItem('pendingCustomStartingNumbers');
+      if (pendingCustom) {
+        try {
+          const custom = JSON.parse(pendingCustom);
+          return (custom[frequency] ?? defaults[frequency]) - 1;
+        } catch {
+          // Fall through to default
+        }
       }
     }
     
@@ -1081,43 +1084,65 @@ export function useSession() {
     if (sessionId) {
       localStorage.setItem('currentSessionId', sessionId.toString());
       
-      // Check for pending custom starting numbers and apply them
+      // CRITICAL: Only apply pending custom starting numbers for ELECTRICAL sessions
+      // Emergency Exit Light and Fire Equipment Testing must NEVER use custom numbers
       const pendingCustomNumbers = localStorage.getItem('pendingCustomStartingNumbers');
       if (pendingCustomNumbers) {
         try {
-          const numbers = JSON.parse(pendingCustomNumbers);
-          console.log('Applying pending custom starting numbers to session:', numbers);
+          // Check the service type of the current session
+          const serviceType = sessionData?.session?.serviceType || localStorage.getItem(`session_${sessionId}_serviceType`) || 'electrical';
           
-          // Save to session-specific storage
-          localStorage.setItem(`customStartingNumbers_${sessionId}`, JSON.stringify(numbers));
-          setCustomStartingNumbers(numbers);
-          
-          // Calculate counter values (starting number - 1)
-          const twelvemonthlyValue = (numbers.twelvemonthly ?? DEFAULT_STARTING_NUMBERS.twelvemonthly) - 1;
-          const sixmonthlyValue = (numbers.sixmonthly ?? DEFAULT_STARTING_NUMBERS.sixmonthly) - 1;
-          const fiveyearlyValue = (numbers.fiveyearly ?? DEFAULT_STARTING_NUMBERS.fiveyearly) - 1;
-          const twentyfourmonthlyValue = (numbers.twentyfourmonthly ?? DEFAULT_STARTING_NUMBERS.twentyfourmonthly) - 1;
-          const threemonthlyValue = (numbers.threemonthly ?? DEFAULT_STARTING_NUMBERS.threemonthly) - 1;
-          const monthlyValue = (numbers.monthly ?? DEFAULT_STARTING_NUMBERS.monthly) - 1;
-          
-          // Save counters to localStorage so they persist
-          localStorage.setItem(`twelvemonthlyCounter_${sessionId}`, twelvemonthlyValue.toString());
-          localStorage.setItem(`sixmonthlyCounter_${sessionId}`, sixmonthlyValue.toString());
-          localStorage.setItem(`fiveyearlyCounter_${sessionId}`, fiveyearlyValue.toString());
-          localStorage.setItem(`twentyfourmonthlyCounter_${sessionId}`, twentyfourmonthlyValue.toString());
-          localStorage.setItem(`threemonthlyCounter_${sessionId}`, threemonthlyValue.toString());
-          localStorage.setItem(`monthlyCounter_${sessionId}`, monthlyValue.toString());
-          
-          // Update state counters
-          setTwelvemonthlyCounter(twelvemonthlyValue);
-          setSixmonthlyCounter(sixmonthlyValue);
-          setFiveyearlyCounter(fiveyearlyValue);
-          setTwentyfourmonthlyCounter(twentyfourmonthlyValue);
-          setThreemonthlyCounter(threemonthlyValue);
-          setMonthlyCounter(monthlyValue);
-          
-          // Clear pending custom numbers
-          localStorage.removeItem('pendingCustomStartingNumbers');
+          if (serviceType === 'electrical') {
+            const numbers = JSON.parse(pendingCustomNumbers);
+            console.log('Applying pending custom starting numbers to electrical session:', numbers);
+            
+            // Validate that numbers object contains valid numeric values
+            const isValidNumbers = 
+              typeof numbers === 'object' &&
+              Object.values(numbers).every(val => typeof val === 'number' && !isNaN(val) && val > 0);
+            
+            if (!isValidNumbers) {
+              console.warn('Invalid pending custom numbers detected, clearing and using defaults');
+              localStorage.removeItem('pendingCustomStartingNumbers');
+              return;
+            }
+            
+            // Save to session-specific storage
+            localStorage.setItem(`customStartingNumbers_${sessionId}`, JSON.stringify(numbers));
+            setCustomStartingNumbers(numbers);
+            
+            // Calculate counter values (starting number - 1)
+            const twelvemonthlyValue = (numbers.twelvemonthly ?? DEFAULT_STARTING_NUMBERS.twelvemonthly) - 1;
+            const sixmonthlyValue = (numbers.sixmonthly ?? DEFAULT_STARTING_NUMBERS.sixmonthly) - 1;
+            const fiveyearlyValue = (numbers.fiveyearly ?? DEFAULT_STARTING_NUMBERS.fiveyearly) - 1;
+            const twentyfourmonthlyValue = (numbers.twentyfourmonthly ?? DEFAULT_STARTING_NUMBERS.twentyfourmonthly) - 1;
+            const threemonthlyValue = (numbers.threemonthly ?? DEFAULT_STARTING_NUMBERS.threemonthly) - 1;
+            const monthlyValue = (numbers.monthly ?? DEFAULT_STARTING_NUMBERS.monthly) - 1;
+            
+            // Save counters to localStorage so they persist
+            localStorage.setItem(`twelvemonthlyCounter_${sessionId}`, twelvemonthlyValue.toString());
+            localStorage.setItem(`sixmonthlyCounter_${sessionId}`, sixmonthlyValue.toString());
+            localStorage.setItem(`fiveyearlyCounter_${sessionId}`, fiveyearlyValue.toString());
+            localStorage.setItem(`twentyfourmonthlyCounter_${sessionId}`, twentyfourmonthlyValue.toString());
+            localStorage.setItem(`threemonthlyCounter_${sessionId}`, threemonthlyValue.toString());
+            localStorage.setItem(`monthlyCounter_${sessionId}`, monthlyValue.toString());
+            
+            // Update state counters
+            setTwelvemonthlyCounter(twelvemonthlyValue);
+            setSixmonthlyCounter(sixmonthlyValue);
+            setFiveyearlyCounter(fiveyearlyValue);
+            setTwentyfourmonthlyCounter(twentyfourmonthlyValue);
+            setThreemonthlyCounter(threemonthlyValue);
+            setMonthlyCounter(monthlyValue);
+            
+            // Clear pending custom numbers after applying
+            localStorage.removeItem('pendingCustomStartingNumbers');
+          } else {
+            // CRITICAL: Clear pending custom numbers for non-electrical sessions
+            // This prevents contamination of future electrical sessions with stale custom numbers
+            console.log(`Clearing pending custom numbers for ${serviceType} session - custom numbers are only for electrical sessions`);
+            localStorage.removeItem('pendingCustomStartingNumbers');
+          }
         } catch (error) {
           console.warn('Error applying pending custom starting numbers:', error);
         }
