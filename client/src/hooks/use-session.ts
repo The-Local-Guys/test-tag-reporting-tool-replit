@@ -693,7 +693,20 @@ export function useSession() {
         const sessionServiceType = sessionData?.session?.serviceType || 
                                    localStorage.getItem(`session_${sessionId}_serviceType`) || 
                                    'electrical';
-        const startingNumbers = getDefaultStartingNumbers(sessionServiceType);
+        const defaultStartingNumbers = getDefaultStartingNumbers(sessionServiceType);
+        
+        // IMPORTANT: Custom starting numbers are ONLY for electrical sessions
+        // Emergency Exit Light and Fire Equipment Testing always use service-type defaults
+        const startingNumbers = sessionServiceType === 'electrical' 
+          ? {
+              twelvemonthly: customStartingNumbers.twelvemonthly ?? defaultStartingNumbers.twelvemonthly,
+              sixmonthly: customStartingNumbers.sixmonthly ?? defaultStartingNumbers.sixmonthly,
+              fiveyearly: customStartingNumbers.fiveyearly ?? defaultStartingNumbers.fiveyearly,
+              twentyfourmonthly: customStartingNumbers.twentyfourmonthly ?? defaultStartingNumbers.twentyfourmonthly,
+              threemonthly: customStartingNumbers.threemonthly ?? defaultStartingNumbers.threemonthly,
+              monthly: customStartingNumbers.monthly ?? defaultStartingNumbers.monthly,
+            }
+          : defaultStartingNumbers;
         
         // Use frequency-specific ranges based on service type
         let candidate: number;
@@ -1142,6 +1155,15 @@ export function useSession() {
 
   // Save custom starting numbers for the current session
   const saveCustomStartingNumbers = (numbers: Partial<CustomStartingNumbers>) => {
+    // CRITICAL: Custom starting numbers are ONLY for electrical sessions
+    // Emergency Exit Light and Fire Equipment Testing must use default ranges
+    const serviceType = sessionData?.session?.serviceType || localStorage.getItem(`session_${sessionId}_serviceType`) || 'electrical';
+    
+    if (serviceType !== 'electrical') {
+      console.warn('Custom starting numbers are only available for Electrical Test & Tag sessions. Ignoring save request.');
+      return;
+    }
+    
     setCustomStartingNumbers(numbers);
     
     if (sessionId) {
@@ -1164,6 +1186,14 @@ export function useSession() {
   // Reset custom starting numbers to defaults
   const resetCustomStartingNumbers = () => {
     if (!sessionId) return;
+    
+    // CRITICAL: Custom starting numbers are ONLY for electrical sessions
+    const serviceType = sessionData?.session?.serviceType || localStorage.getItem(`session_${sessionId}_serviceType`) || 'electrical';
+    
+    if (serviceType !== 'electrical') {
+      console.warn('Custom starting numbers are only available for Electrical Test & Tag sessions. Ignoring reset request.');
+      return;
+    }
     
     setCustomStartingNumbers({});
     localStorage.removeItem(`customStartingNumbers_${sessionId}`);
