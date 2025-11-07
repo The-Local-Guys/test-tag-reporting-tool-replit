@@ -58,6 +58,15 @@ export default function FireTestDetails() {
     return 'fire_extinguisher';
   };
 
+  // Get last selected frequency from localStorage or default based on country
+  const getLastSelectedFrequency = (): 'sixmonthly' | 'annually' => {
+    const stored = localStorage.getItem('lastSelectedFrequency_fire');
+    if (stored === 'sixmonthly' || stored === 'annually') {
+      return stored;
+    }
+    return sessionData?.session?.country === 'newzealand' ? 'annually' : 'sixmonthly';
+  };
+
   const form = useForm<FireTestForm>({
     resolver: zodResolver(fireTestSchema),
     defaultValues: {
@@ -65,7 +74,7 @@ export default function FireTestDetails() {
       equipmentType: getEquipmentType(itemType),
       extinguisherType: undefined,
       result: 'pass',
-      frequency: sessionData?.session?.country === 'newzealand' ? 'annually' : 'sixmonthly',
+      frequency: getLastSelectedFrequency(),
       size: '',
       weight: '',
       visionInspection: false,
@@ -160,6 +169,9 @@ export default function FireTestDetails() {
         electricalTest: data.operationalTest, // Map operational test to electrical test field
         extinguisherType: data.extinguisherType || null,
       });
+
+      // Save selected frequency for next item
+      localStorage.setItem('lastSelectedFrequency_fire', data.frequency);
 
       toast({
         title: 'Test Recorded',
@@ -475,7 +487,10 @@ export default function FireTestDetails() {
               <Label htmlFor="frequency">Test Frequency *</Label>
               <Select 
                 value={form.watch('frequency')} 
-                onValueChange={(value) => form.setValue('frequency', value as 'sixmonthly' | 'annually')}
+                onValueChange={(value) => {
+                  form.setValue('frequency', value as 'sixmonthly' | 'annually');
+                  localStorage.setItem('lastSelectedFrequency_fire', value);
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select frequency" />

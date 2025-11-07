@@ -55,13 +55,18 @@ export default function EmergencyTestDetails() {
   const itemName = urlParams.get('item') || 'Emergency Equipment';
   const itemType = urlParams.get('type') || 'emergency-equipment';
 
+  // Get last selected frequency from localStorage or default to 'sixmonthly'
+  const getLastSelectedFrequency = (): 'sixmonthly' | 'annually' => {
+    return (localStorage.getItem('lastSelectedFrequency_emergency') as 'sixmonthly' | 'annually') || 'sixmonthly';
+  };
+
   const form = useForm<EmergencyTestForm>({
     resolver: zodResolver(emergencyTestSchema),
     defaultValues: {
       location: currentLocation,
       classification: 'emergency_equipment',
       result: 'pass',
-      frequency: 'sixmonthly',
+      frequency: getLastSelectedFrequency(),
       manufacturerInfo: '',
       installationDate: '',
       maintenanceType: 'maintained',
@@ -160,6 +165,9 @@ export default function EmergencyTestDetails() {
         manufacturerInfo: data.manufacturerInfo || null,
         installationDate: data.installationDate || null,
       });
+
+      // Save selected frequency for next item
+      localStorage.setItem('lastSelectedFrequency_emergency', data.frequency);
 
       toast({
         title: 'Test Recorded',
@@ -471,7 +479,10 @@ export default function EmergencyTestDetails() {
               <Label htmlFor="frequency">Test Frequency *</Label>
               <Select 
                 value={form.watch('frequency')} 
-                onValueChange={(value) => form.setValue('frequency', value as any)}
+                onValueChange={(value) => {
+                  form.setValue('frequency', value as any);
+                  localStorage.setItem('lastSelectedFrequency_emergency', value);
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select frequency" />
