@@ -439,6 +439,18 @@ export function useSession() {
     localStorage.setItem(`monthlyCounter_${sessionId}`, initialMonthly.toString());
   }, [session?.id, sessionId, session?.serviceType]);
 
+  // Ensure service type is always persisted to localStorage
+  // This is critical for addToBatch to correctly determine starting asset ranges
+  useEffect(() => {
+    if (session && sessionId) {
+      const stored = localStorage.getItem(`session_${sessionId}_serviceType`);
+      if (!stored || stored !== session.serviceType) {
+        console.log(`Backfilling service type for session ${sessionId}: ${session.serviceType}`);
+        localStorage.setItem(`session_${sessionId}_serviceType`, session.serviceType);
+      }
+    }
+  }, [session, sessionId]);
+
   // Calculate local asset progress from actual used numbers (accounts for gaps)
   const getLocalAssetProgress = () => {
     // Collect all existing asset numbers
@@ -676,12 +688,19 @@ export function useSession() {
         setRcdAssetCounter(candidate);
         localStorage.setItem(`rcdCounter_${sessionId}`, candidate.toString());
       } else {
-        // For Electrical Test & Tag, use frequency-specific ranges
+        // Get service type to determine correct starting ranges
+        // Priority: 1. Session data, 2. localStorage, 3. Default to 'electrical' for backwards compatibility
+        const sessionServiceType = sessionData?.session?.serviceType || 
+                                   localStorage.getItem(`session_${sessionId}_serviceType`) || 
+                                   'electrical';
+        const startingNumbers = getDefaultStartingNumbers(sessionServiceType);
+        
+        // Use frequency-specific ranges based on service type
         let candidate: number;
         
         switch (frequency) {
           case 'twelvemonthly':
-            candidate = Math.max(1, twelvemonthlyCounter + 1);
+            candidate = Math.max(startingNumbers.twelvemonthly, twelvemonthlyCounter + 1);
             while (usedNumbers.has(candidate)) {
               candidate++;
             }
@@ -691,7 +710,7 @@ export function useSession() {
             break;
             
           case 'sixmonthly':
-            candidate = Math.max(10001, sixmonthlyCounter + 1);
+            candidate = Math.max(startingNumbers.sixmonthly, sixmonthlyCounter + 1);
             while (usedNumbers.has(candidate)) {
               candidate++;
             }
@@ -701,7 +720,7 @@ export function useSession() {
             break;
             
           case 'fiveyearly':
-            candidate = Math.max(20001, fiveyearlyCounter + 1);
+            candidate = Math.max(startingNumbers.fiveyearly, fiveyearlyCounter + 1);
             while (usedNumbers.has(candidate)) {
               candidate++;
             }
@@ -711,7 +730,7 @@ export function useSession() {
             break;
             
           case 'twentyfourmonthly':
-            candidate = Math.max(30001, twentyfourmonthlyCounter + 1);
+            candidate = Math.max(startingNumbers.twentyfourmonthly, twentyfourmonthlyCounter + 1);
             while (usedNumbers.has(candidate)) {
               candidate++;
             }
@@ -721,7 +740,7 @@ export function useSession() {
             break;
             
           case 'threemonthly':
-            candidate = Math.max(40001, threemonthlyCounter + 1);
+            candidate = Math.max(startingNumbers.threemonthly, threemonthlyCounter + 1);
             while (usedNumbers.has(candidate)) {
               candidate++;
             }
@@ -731,7 +750,7 @@ export function useSession() {
             break;
             
           case 'monthly':
-            candidate = Math.max(50001, monthlyCounter + 1);
+            candidate = Math.max(startingNumbers.monthly, monthlyCounter + 1);
             while (usedNumbers.has(candidate)) {
               candidate++;
             }
@@ -742,7 +761,7 @@ export function useSession() {
             
           default:
             // Fallback to twelvemonthly range
-            candidate = Math.max(1, twelvemonthlyCounter + 1);
+            candidate = Math.max(startingNumbers.twelvemonthly, twelvemonthlyCounter + 1);
             while (usedNumbers.has(candidate)) {
               candidate++;
             }
