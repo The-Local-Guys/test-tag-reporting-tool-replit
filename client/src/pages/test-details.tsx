@@ -369,6 +369,8 @@ export default function TestDetails() {
           </Label>
           <Select value={selectedFrequency} onValueChange={(value) => {
             setSelectedFrequency(value);
+            // Reset manual edit flag so asset number updates based on new frequency
+            setHasManuallyEditedAssetNumber(false);
             // Save the selected frequency to localStorage for next item
             localStorage.setItem('lastSelectedFrequency', value);
           }}>
