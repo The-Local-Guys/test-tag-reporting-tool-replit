@@ -140,6 +140,9 @@ export default function ItemSelection() {
     return localStorage.getItem('selectedMicrowaveBrand') || '';
   });
 
+  // State for custom microwave brand input (when "Other" is selected)
+  const [customMicrowaveBrand, setCustomMicrowaveBrand] = useState('');
+
   // Set initial loading to false after a brief delay to ensure smooth transition
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -488,7 +491,13 @@ export default function ItemSelection() {
               <label className="text-sm font-medium text-gray-700">Microwave Brand</label>
               <Select
                 value={selectedMicrowaveBrand}
-                onValueChange={setSelectedMicrowaveBrand}
+                onValueChange={(value) => {
+                  setSelectedMicrowaveBrand(value);
+                  // Clear custom brand input when switching away from "Other"
+                  if (value !== 'Other') {
+                    setCustomMicrowaveBrand('');
+                  }
+                }}
               >
                 <SelectTrigger className="bg-white" data-testid="select-microwave-brand">
                   <SelectValue placeholder="Select a brand..." />
@@ -508,9 +517,45 @@ export default function ItemSelection() {
               </div>
             </div>
 
+            {/* Custom brand input field when "Other" is selected */}
+            {selectedMicrowaveBrand === 'Other' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Enter Brand Name</label>
+                <Input
+                  value={customMicrowaveBrand}
+                  onChange={(e) => setCustomMicrowaveBrand(e.target.value)}
+                  placeholder="Enter microwave brand name..."
+                  className="bg-white"
+                  data-testid="input-custom-microwave-brand"
+                />
+              </div>
+            )}
+
+            {/* Warning message when Panasonic is selected */}
+            {selectedMicrowaveBrand === 'Panasonic' && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4" data-testid="warning-panasonic">
+                <div className="flex items-start gap-2">
+                  <span className="text-red-600 text-xl">⚠️</span>
+                  <div>
+                    <p className="text-sm font-medium text-red-800">Cannot Test Panasonic</p>
+                    <p className="text-xs text-red-600 mt-1">We are unable to perform testing on Panasonic microwave ovens. Please select a different brand.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <Button
-              onClick={() => handleItemSelect('microwave-oven', `${selectedMicrowaveBrand} Microwave`)}
-              disabled={!selectedMicrowaveBrand}
+              onClick={() => {
+                const brandName = selectedMicrowaveBrand === 'Other' 
+                  ? customMicrowaveBrand 
+                  : selectedMicrowaveBrand;
+                handleItemSelect('microwave-oven', `${brandName} Microwave`);
+              }}
+              disabled={
+                !selectedMicrowaveBrand || 
+                selectedMicrowaveBrand === 'Panasonic' ||
+                (selectedMicrowaveBrand === 'Other' && !customMicrowaveBrand.trim())
+              }
               className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed py-6 text-lg"
               data-testid="button-start-microwave-testing"
             >
