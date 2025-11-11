@@ -135,6 +135,11 @@ export default function ItemSelection() {
     return localStorage.getItem('lastSelectedEnvironment') || 'default';
   });
 
+  // Initialize microwave brand selection from localStorage
+  const [selectedMicrowaveBrand, setSelectedMicrowaveBrand] = useState<string>(() => {
+    return localStorage.getItem('selectedMicrowaveBrand') || '';
+  });
+
   // Set initial loading to false after a brief delay to ensure smooth transition
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -150,6 +155,13 @@ export default function ItemSelection() {
       localStorage.setItem('lastSelectedEnvironment', selectedEnvironmentId);
     }
   }, [selectedEnvironmentId]);
+
+  // Save selected microwave brand to localStorage whenever it changes
+  useEffect(() => {
+    if (selectedMicrowaveBrand) {
+      localStorage.setItem('selectedMicrowaveBrand', selectedMicrowaveBrand);
+    }
+  }, [selectedMicrowaveBrand]);
 
   // Get the selected service type and country
   const selectedService = sessionData?.session?.serviceType || sessionStorage.getItem('selectedService') || 'electrical';
@@ -466,24 +478,44 @@ export default function ItemSelection() {
         </div>
       ) : selectedService === 'microwave_leakage' ? (
         <div className="p-4 pb-24">
-          <div className="mb-4 text-center">
-            <h2 className="text-lg font-semibold text-gray-800">Select Microwave Brand</h2>
+          <div className="mb-6 text-center">
+            <h2 className="text-lg font-semibold text-gray-800 mb-2">Select Microwave Brand</h2>
             <p className="text-sm text-gray-600">Choose the brand to test</p>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            {microwaveBrands.map((brand) => (
-              <button
-                key={brand}
-                onClick={() => handleItemSelect('microwave-oven', `${brand} Microwave`)}
-                className="bg-white border-2 border-green-200 rounded-xl p-4 text-center hover:border-green-500 hover:bg-green-50 transition-all touch-button"
-                data-testid={`button-brand-${brand.toLowerCase().replace(/\s+/g, '-')}`}
+          
+          <div className="space-y-4 max-w-md mx-auto">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Microwave Brand</label>
+              <Select
+                value={selectedMicrowaveBrand}
+                onValueChange={setSelectedMicrowaveBrand}
               >
-                <div className="flex justify-center items-center mb-2 h-12">
-                  <span className="text-3xl">📡</span>
-                </div>
-                <div className="font-medium text-gray-800">{brand}</div>
-              </button>
-            ))}
+                <SelectTrigger className="bg-white" data-testid="select-microwave-brand">
+                  <SelectValue placeholder="Select a brand..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {microwaveBrands.map((brand) => (
+                    <SelectItem key={brand} value={brand} data-testid={`option-brand-${brand.toLowerCase().replace(/\s+/g, '-')}`}>
+                      {brand}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="text-xs text-gray-500">
+                {selectedMicrowaveBrand 
+                  ? `Selected: ${selectedMicrowaveBrand}` 
+                  : 'Please select a microwave brand'}
+              </div>
+            </div>
+
+            <Button
+              onClick={() => handleItemSelect('microwave-oven', `${selectedMicrowaveBrand} Microwave`)}
+              disabled={!selectedMicrowaveBrand}
+              className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed py-6 text-lg"
+              data-testid="button-start-microwave-testing"
+            >
+              Start Testing
+            </Button>
           </div>
         </div>
       ) : (
