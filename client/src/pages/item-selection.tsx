@@ -531,8 +531,9 @@ export default function ItemSelection() {
               </div>
             )}
 
-            {/* Warning message when Panasonic is selected */}
-            {selectedMicrowaveBrand === 'Panasonic' && (
+            {/* Warning message when Panasonic is selected or typed in custom field */}
+            {(selectedMicrowaveBrand === 'Panasonic' || 
+              (selectedMicrowaveBrand === 'Other' && customMicrowaveBrand.toLowerCase().includes('panasonic'))) && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4" data-testid="warning-panasonic">
                 <div className="flex items-start gap-2">
                   <span className="text-red-600 text-xl">⚠️</span>
@@ -554,7 +555,8 @@ export default function ItemSelection() {
               disabled={
                 !selectedMicrowaveBrand || 
                 selectedMicrowaveBrand === 'Panasonic' ||
-                (selectedMicrowaveBrand === 'Other' && !customMicrowaveBrand.trim())
+                (selectedMicrowaveBrand === 'Other' && !customMicrowaveBrand.trim()) ||
+                (selectedMicrowaveBrand === 'Other' && customMicrowaveBrand.toLowerCase().includes('panasonic'))
               }
               className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed py-6 text-lg"
               data-testid="button-start-microwave-testing"
