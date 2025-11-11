@@ -97,28 +97,38 @@ export default function MicrowaveTestDetails() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
-      <div className="sticky top-0 bg-gradient-to-br from-green-600 to-green-700 text-white p-4 shadow-md z-10">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setLocation('/items')}
-            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-            data-testid="button-back"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div className="flex-1">
-            <h1 className="text-lg font-bold" data-testid="text-page-title">Microwave Leakage Testing</h1>
-            <p className="text-sm text-green-50" data-testid="text-item-name">
-              {currentItem?.name || 'Loading...'}
-            </p>
+    <div className="mobile-container">
+      {/* Header */}
+      <div className="bg-green-600 text-white p-4 sticky top-0 z-10">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <button
+              onClick={() => setLocation('/items')}
+              className="text-white hover:bg-green-700 p-2 rounded-lg transition-colors mr-3"
+              data-testid="button-back"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div>
+              <h1 className="text-xl font-semibold" data-testid="text-page-title">Microwave Leakage Testing</h1>
+              <div className="text-green-100 text-sm mt-1">AS/NZS 60335.2.25 Compliance</div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="p-4">
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 space-y-4">
+      {/* Item Info */}
+      <div className="bg-green-50 border-b border-green-100 p-4">
+        <div className="text-center">
+          <h2 className="text-lg font-semibold text-gray-800" data-testid="text-item-name">
+            {currentItem?.name || 'Loading...'}
+          </h2>
+          <p className="text-sm text-gray-600">Radiation Leakage Testing</p>
+        </div>
+      </div>
+
+      <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 space-y-6 pb-24">
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 space-y-4">
             <div className="space-y-2">
               <Label htmlFor="location">Location</Label>
               <Input
@@ -171,28 +181,27 @@ export default function MicrowaveTestDetails() {
                 data-testid="textarea-additional-comments"
               />
             </div>
-          </div>
+        </div>
 
-          <div className="flex gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setLocation('/items')}
-              className="flex-1"
-              data-testid="button-cancel"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="flex-1 bg-green-600 hover:bg-green-700"
-              data-testid="button-save-test"
-            >
-              Save Test
-            </Button>
-          </div>
-        </form>
-      </div>
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setLocation('/items')}
+            className="flex-1"
+            data-testid="button-cancel"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            className="flex-1 bg-green-600 hover:bg-green-700"
+            data-testid="button-save-test"
+          >
+            Save Test
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }
