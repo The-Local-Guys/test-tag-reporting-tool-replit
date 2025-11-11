@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
-import { Zap, ShieldAlert, ArrowRight, FileText, Plus, Flame, Trash2, CheckCircle } from "lucide-react";
+import { Zap, ShieldAlert, ArrowRight, FileText, Plus, Flame, Trash2, CheckCircle, Radio } from "lucide-react";
 import { useSpaNavigation } from "@/hooks/useSpaNavigation";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -162,7 +162,7 @@ export default function ServiceSelection() {
     }
   };
 
-  const selectService = (serviceType: 'electrical' | 'emergency_exit_light' | 'fire_testing' | 'rcd_reporting') => {
+  const selectService = (serviceType: 'electrical' | 'emergency_exit_light' | 'fire_testing' | 'rcd_reporting' | 'microwave_leakage') => {
     // Store the selected service type
     sessionStorage.setItem('selectedService', serviceType);
     // Navigate to setup page
@@ -269,7 +269,7 @@ export default function ServiceSelection() {
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
           {/* Electrical Test and Tag */}
           <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-blue-500">
             <CardHeader className="text-center">
@@ -388,6 +388,37 @@ export default function ServiceSelection() {
                 size="lg"
               >
                 Select RCD Reporting
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Microwave Leakage Testing */}
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-green-500">
+            <CardHeader className="text-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
+                <Radio className="w-8 h-8 text-green-600" />
+              </div>
+              <CardTitle className="text-xl">Microwave Leakage Testing</CardTitle>
+              <CardDescription className="text-base">
+                Microwave oven radiation leakage testing for workplace safety compliance
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="text-sm text-gray-600 space-y-2 mb-6">
+                <li>• Radiation leakage measurement</li>
+                <li>• Door seal inspection</li>
+                <li>• Safety interlock testing</li>
+                <li>• Visual condition assessment</li>
+                <li>• AS/NZS 60335 compliance</li>
+                <li>• Compliance certification</li>
+              </ul>
+              <Button 
+                onClick={() => selectService('microwave_leakage')}
+                className="w-full bg-green-600 hover:bg-green-700"
+                size="lg"
+              >
+                Select Microwave Testing
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </CardContent>

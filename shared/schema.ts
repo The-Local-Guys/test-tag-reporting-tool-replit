@@ -28,7 +28,7 @@ export const sessions = pgTable(
 
 export const testSessions = pgTable("test_sessions", {
   id: serial("id").primaryKey(),
-  serviceType: text("service_type").notNull().default("electrical"), // 'electrical', 'emergency_exit_light', 'fire_testing', or 'rcd_reporting'
+  serviceType: text("service_type").notNull().default("electrical"), // 'electrical', 'emergency_exit_light', 'fire_testing', 'rcd_reporting', or 'microwave_leakage'
   testDate: text("test_date").notNull(),
   technicianName: text("technician_name").notNull(),
   clientName: text("client_name").notNull(),
@@ -96,7 +96,7 @@ export const environments = pgTable("environments", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
   name: text("name").notNull(),
-  serviceType: text("service_type").notNull(), // 'electrical', 'emergency_exit_light', or 'fire_testing'
+  serviceType: text("service_type").notNull(), // 'electrical', 'emergency_exit_light', 'fire_testing', or 'microwave_leakage'
   items: jsonb("items").notNull().default('[]'), // Array of item objects
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -155,7 +155,7 @@ export type InsertCustomFormType = z.infer<typeof insertCustomFormTypeSchema>;
 export type CustomFormType = typeof customFormTypes.$inferSelect;
 
 // Define enum values for validation
-export const serviceTypes = ['electrical', 'emergency_exit_light', 'fire_testing', 'rcd_reporting'] as const;
+export const serviceTypes = ['electrical', 'emergency_exit_light', 'fire_testing', 'rcd_reporting', 'microwave_leakage'] as const;
 export const equipmentClassifications = ['class1', 'class2', 'epod', 'rcd', '3phase'] as const;
 export const emergencyClassifications = ['emergency_exit_sign', 'emergency_light_downlight', 'combination_unit', 'emergency_spotlight', 'floor_path_light', 'emergency_bulkhead'] as const;
 export const fireEquipmentTypes = ['fire_extinguisher', 'fire_blanket', 'fire_hose_reel'] as const;
