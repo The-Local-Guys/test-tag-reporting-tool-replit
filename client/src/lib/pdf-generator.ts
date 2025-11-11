@@ -664,12 +664,14 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     }
 
     // Add failure reason (positioning differs by service type)
-    if (result.result === 'fail') {
-      const failureReason = result.failureReason || 'Not specified';
-      
-      // Convert failure reason for display
-      let displayFailureReason = failureReason;
-      if (session.serviceType === 'emergency_exit_light') {
+    // Skip failure reason and action taken for microwave_leakage - not applicable
+    if (session.serviceType !== 'microwave_leakage') {
+      if (result.result === 'fail') {
+        const failureReason = result.failureReason || 'Not specified';
+        
+        // Convert failure reason for display
+        let displayFailureReason = failureReason;
+        if (session.serviceType === 'emergency_exit_light') {
         // Emergency exit light failure reasons
         if (failureReason === 'physical_damage') {
           displayFailureReason = 'Physical Damage';
@@ -755,6 +757,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         doc.text('-', margin + 158, rowStartY);
       }
     }
+    } // Close the outer if statement for microwave_leakage exclusion
 
     // Use dynamic row height instead of fixed 6
     yPosition += rowHeight + 2; // Add 2 for spacing between rows
