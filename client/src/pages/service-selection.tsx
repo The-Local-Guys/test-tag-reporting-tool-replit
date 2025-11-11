@@ -410,7 +410,7 @@ export default function ServiceSelection() {
                 <li>• Door seal inspection</li>
                 <li>• Safety interlock testing</li>
                 <li>• Visual condition assessment</li>
-                <li>• AS/NZS 60335 compliance</li>
+                <li>• AS/NZS 60335.2.25 compliance</li>
                 <li>• Compliance certification</li>
               </ul>
               <Button 
