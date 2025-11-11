@@ -135,11 +135,6 @@ export default function ItemSelection() {
     return localStorage.getItem('lastSelectedEnvironment') || 'default';
   });
 
-  // Initialize microwave brand selection from localStorage
-  const [selectedMicrowaveBrand, setSelectedMicrowaveBrand] = useState<string>(() => {
-    return localStorage.getItem('selectedMicrowaveBrand') || '';
-  });
-
   // Set initial loading to false after a brief delay to ensure smooth transition
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -155,13 +150,6 @@ export default function ItemSelection() {
       localStorage.setItem('lastSelectedEnvironment', selectedEnvironmentId);
     }
   }, [selectedEnvironmentId]);
-
-  // Save selected microwave brand to localStorage whenever it changes
-  useEffect(() => {
-    if (selectedMicrowaveBrand) {
-      localStorage.setItem('selectedMicrowaveBrand', selectedMicrowaveBrand);
-    }
-  }, [selectedMicrowaveBrand]);
 
   // Get the selected service type and country
   const selectedService = sessionData?.session?.serviceType || sessionStorage.getItem('selectedService') || 'electrical';
@@ -408,35 +396,6 @@ export default function ItemSelection() {
         </div>
       )}
 
-      {/* Microwave Brand Selection - Only for Microwave Leakage Testing */}
-      {selectedService === 'microwave_leakage' && (
-        <div className="bg-green-50 border-b border-green-100 p-4">
-          <div className="space-y-2">
-            <div className="text-sm text-gray-600 text-center">Select Microwave Brand:</div>
-            <Select
-              value={selectedMicrowaveBrand}
-              onValueChange={setSelectedMicrowaveBrand}
-            >
-              <SelectTrigger className="bg-white" data-testid="select-microwave-brand">
-                <SelectValue placeholder="Select a brand..." />
-              </SelectTrigger>
-              <SelectContent>
-                {microwaveBrands.map((brand) => (
-                  <SelectItem key={brand} value={brand} data-testid={`option-brand-${brand.toLowerCase().replace(/\s+/g, '-')}`}>
-                    {brand}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="text-xs text-gray-500 text-center">
-              {selectedMicrowaveBrand 
-                ? `Selected brand: ${selectedMicrowaveBrand}` 
-                : 'Please select a microwave brand'}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Item Selection - ARA Compliance/Custom Form Search or Regular Grid */}
       {isNationalClient || isCustomFormType ? (
         <div className="p-4 pb-24">
@@ -504,6 +463,28 @@ export default function ItemSelection() {
               <span className="font-medium text-gray-800">Other - Custom Item</span>
             </div>
           </button>
+        </div>
+      ) : selectedService === 'microwave_leakage' ? (
+        <div className="p-4 pb-24">
+          <div className="mb-4 text-center">
+            <h2 className="text-lg font-semibold text-gray-800">Select Microwave Brand</h2>
+            <p className="text-sm text-gray-600">Choose the brand to test</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {microwaveBrands.map((brand) => (
+              <button
+                key={brand}
+                onClick={() => handleItemSelect('microwave-oven', `${brand} Microwave`)}
+                className="bg-white border-2 border-green-200 rounded-xl p-4 text-center hover:border-green-500 hover:bg-green-50 transition-all touch-button"
+                data-testid={`button-brand-${brand.toLowerCase().replace(/\s+/g, '-')}`}
+              >
+                <div className="flex justify-center items-center mb-2 h-12">
+                  <span className="text-3xl">📡</span>
+                </div>
+                <div className="font-medium text-gray-800">{brand}</div>
+              </button>
+            ))}
+          </div>
         </div>
       ) : (
         <div className="p-4 pb-24">
