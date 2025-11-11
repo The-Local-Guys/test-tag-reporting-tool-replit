@@ -148,6 +148,8 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     ? 'Fire Equipment Testing Report'
     : session.serviceType === 'rcd_reporting'
     ? 'RCD Testing Report'
+    : session.serviceType === 'microwave_leakage'
+    ? 'Microwave Leakage Testing Report'
     : 'Electrical Safety Testing Report';
   
   // Page setup
@@ -266,62 +268,72 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   doc.setFont('helvetica', 'bold');
   doc.text('Asset#', margin, yPosition);
   
-  // For RCD reporting, change "Item" to "Distribution Board"
-  if (session.serviceType === 'rcd_reporting') {
-    doc.text('Distribution Board', margin + 12, yPosition);
+  // For Microwave Leakage Testing, use custom columns
+  if (session.serviceType === 'microwave_leakage') {
+    // Columns: Asset# | Microwave | Leakage Reading | Result | Location | Comments
+    doc.text('Microwave', margin + 15, yPosition);
+    doc.text('Leakage Reading', margin + 55, yPosition);
+    doc.text('Result', margin + 85, yPosition);
+    doc.text('Location', margin + 105, yPosition);
+    doc.text('Comments', margin + 135, yPosition);
   } else {
-    doc.text('Item', margin + 12, yPosition);
-  }
-  
-  // Location header (skip for RCD reporting - it's in a different position)
-  if (session.serviceType !== 'rcd_reporting') {
-    doc.text('Location', margin + 30, yPosition);
-  }
-  
-  if (session.serviceType === 'emergency_exit_light') {
-    doc.text('Result', margin + 48, yPosition);
-    doc.text('Manufacturer', margin + 62, yPosition);
-    doc.text('Install Date', margin + 84, yPosition);
-    doc.text('Frequency', margin + 106, yPosition);
-    doc.text('Due Date', margin + 124, yPosition);
-    doc.text('Failure Reason', margin + 142, yPosition);
-  } else if (session.serviceType === 'fire_testing') {
-    doc.text('Type', margin + 48, yPosition);
-    doc.text('Result', margin + 62, yPosition);
-    // Wrap "Net Size/Gross Weight" header to prevent overlap
-    const sizeWeightHeaderLines = doc.splitTextToSize('Net Size/Gross Weight', 20);
-    sizeWeightHeaderLines.forEach((line: string, i: number) => {
-      doc.text(line, margin + 78, yPosition + (i * 3));
-    });
-    doc.text('Manufacturer', margin + 100, yPosition);
-    doc.text('Frequency', margin + 122, yPosition);
-    doc.text('Due Date', margin + 140, yPosition);
-    doc.text('Failure Reason', margin + 158, yPosition);
-  } else if (session.serviceType === 'rcd_reporting') {
-    // New order: Asset# < Distribution Board > Push Button > Timed Test > Result > Location > Comments > Failure Reason > Action Taken
+    // For RCD reporting, change "Item" to "Distribution Board"
+    if (session.serviceType === 'rcd_reporting') {
+      doc.text('Distribution Board', margin + 12, yPosition);
+    } else {
+      doc.text('Item', margin + 12, yPosition);
+    }
     
-    // Push Button header in 2 lines
-    doc.text('Push Button', margin + 48, yPosition);
-    doc.text('( 6 monthly )', margin + 48, yPosition + 3);
+    // Location header (skip for RCD reporting - it's in a different position)
+    if (session.serviceType !== 'rcd_reporting') {
+      doc.text('Location', margin + 30, yPosition);
+    }
     
-    // Timed Test header in 2 lines
-    doc.text('Timed Test', margin + 70, yPosition);
-    doc.text('( 12 Monthly )', margin + 70, yPosition + 3);
-    
-    doc.text('Result', margin + 95, yPosition);
-    doc.text('Location', margin + 110, yPosition);
-    doc.text('Comments', margin + 130, yPosition);
-    doc.text('Failure Reason', margin + 150, yPosition);
-    doc.text('Action Taken', margin + 170, yPosition);
-  } else {
-    doc.text('Type', margin + 48, yPosition);
-    doc.text('Result', margin + 62, yPosition);
-    doc.text('V', margin + 78, yPosition);
-    doc.text('E', margin + 85, yPosition);
-    doc.text('Frequency', margin + 92, yPosition);
-    doc.text('Due Date', margin + 115, yPosition);
-    doc.text('Failure Reason', margin + 135, yPosition);
-    doc.text('Action Taken', margin + 158, yPosition);
+    if (session.serviceType === 'emergency_exit_light') {
+      doc.text('Result', margin + 48, yPosition);
+      doc.text('Manufacturer', margin + 62, yPosition);
+      doc.text('Install Date', margin + 84, yPosition);
+      doc.text('Frequency', margin + 106, yPosition);
+      doc.text('Due Date', margin + 124, yPosition);
+      doc.text('Failure Reason', margin + 142, yPosition);
+    } else if (session.serviceType === 'fire_testing') {
+      doc.text('Type', margin + 48, yPosition);
+      doc.text('Result', margin + 62, yPosition);
+      // Wrap "Net Size/Gross Weight" header to prevent overlap
+      const sizeWeightHeaderLines = doc.splitTextToSize('Net Size/Gross Weight', 20);
+      sizeWeightHeaderLines.forEach((line: string, i: number) => {
+        doc.text(line, margin + 78, yPosition + (i * 3));
+      });
+      doc.text('Manufacturer', margin + 100, yPosition);
+      doc.text('Frequency', margin + 122, yPosition);
+      doc.text('Due Date', margin + 140, yPosition);
+      doc.text('Failure Reason', margin + 158, yPosition);
+    } else if (session.serviceType === 'rcd_reporting') {
+      // New order: Asset# < Distribution Board > Push Button > Timed Test > Result > Location > Comments > Failure Reason > Action Taken
+      
+      // Push Button header in 2 lines
+      doc.text('Push Button', margin + 48, yPosition);
+      doc.text('( 6 monthly )', margin + 48, yPosition + 3);
+      
+      // Timed Test header in 2 lines
+      doc.text('Timed Test', margin + 70, yPosition);
+      doc.text('( 12 Monthly )', margin + 70, yPosition + 3);
+      
+      doc.text('Result', margin + 95, yPosition);
+      doc.text('Location', margin + 110, yPosition);
+      doc.text('Comments', margin + 130, yPosition);
+      doc.text('Failure Reason', margin + 150, yPosition);
+      doc.text('Action Taken', margin + 170, yPosition);
+    } else {
+      doc.text('Type', margin + 48, yPosition);
+      doc.text('Result', margin + 62, yPosition);
+      doc.text('V', margin + 78, yPosition);
+      doc.text('E', margin + 85, yPosition);
+      doc.text('Frequency', margin + 92, yPosition);
+      doc.text('Due Date', margin + 115, yPosition);
+      doc.text('Failure Reason', margin + 135, yPosition);
+      doc.text('Action Taken', margin + 158, yPosition);
+    }
   }
   yPosition += 7;
 
@@ -425,6 +437,23 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       }
     }
     
+    // For Microwave Leakage Testing, pre-calculate wrapped text for row height
+    let microwaveNameLines: string[] = [];
+    let microwaveLocationLines: string[] = [];
+    let microwaveCommentsLines: string[] = [];
+    
+    if (session.serviceType === 'microwave_leakage') {
+      const microwaveNameWidth = 38;
+      microwaveNameLines = doc.splitTextToSize(result.itemName, microwaveNameWidth);
+      
+      const microwaveLocationWidth = 28;
+      microwaveLocationLines = doc.splitTextToSize(result.location, microwaveLocationWidth);
+      
+      const commentsText = result.notes || '-';
+      const microwaveCommentsWidth = 45;
+      microwaveCommentsLines = doc.splitTextToSize(commentsText, microwaveCommentsWidth);
+    }
+    
     // Calculate row height based on maximum lines needed
     const maxLines = Math.max(
       assetNumberLines.length,
@@ -435,7 +464,10 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       typeLines.length,
       commentsLines.length,
       failureReasonLines.length,
-      actionTakenLines.length
+      actionTakenLines.length,
+      microwaveNameLines.length,
+      microwaveLocationLines.length,
+      microwaveCommentsLines.length
     );
     const lineHeight = 4; // Height per line
     const rowHeight = maxLines * lineHeight;
@@ -454,16 +486,55 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       doc.text(line, margin, rowStartY + (i * lineHeight));
     });
     
-    // Draw item name with word wrapping
-    itemNameLines.forEach((line: string, i: number) => {
-      doc.text(line, margin + 12, rowStartY + (i * lineHeight));
-    });
-    
-    // Draw location with word wrapping (skip for RCD reporting - it's rendered in custom position)
-    if (session.serviceType !== 'rcd_reporting') {
-      locationLines.forEach((line: string, i: number) => {
-        doc.text(line, margin + 30, rowStartY + (i * lineHeight));
+    // Microwave Leakage Testing - Custom column layout
+    if (session.serviceType === 'microwave_leakage') {
+      // Columns: Asset# | Microwave | Leakage Reading | Result | Location | Comments
+      
+      // Microwave (item name) - margin + 15 (using pre-calculated wrapped lines)
+      microwaveNameLines.forEach((line: string, i: number) => {
+        doc.text(line, margin + 15, rowStartY + (i * lineHeight));
       });
+      
+      // Leakage Reading - margin + 55
+      const leakageReading = (result as any).leakageReading;
+      if (leakageReading) {
+        doc.text(`${leakageReading} mW/cm²`, margin + 55, rowStartY);
+      } else {
+        doc.text('N/A', margin + 55, rowStartY);
+      }
+      
+      // Result (Pass/Fail) with color - margin + 85
+      if (result.result === 'pass') {
+        doc.setTextColor(0, 128, 0); // Green
+        doc.text('PASS', margin + 85, rowStartY);
+      } else {
+        doc.setTextColor(255, 0, 0); // Red
+        doc.text('FAIL', margin + 85, rowStartY);
+      }
+      doc.setTextColor(0, 0, 0); // Reset to black
+      
+      // Location - margin + 105 (using pre-calculated wrapped lines)
+      microwaveLocationLines.forEach((line: string, i: number) => {
+        doc.text(line, margin + 105, rowStartY + (i * lineHeight));
+      });
+      
+      // Comments - margin + 135 (using pre-calculated wrapped lines)
+      microwaveCommentsLines.forEach((line: string, i: number) => {
+        doc.text(line, margin + 135, rowStartY + (i * lineHeight));
+      });
+    } else {
+      // For all other service types, draw item name and location
+      // Draw item name with word wrapping
+      itemNameLines.forEach((line: string, i: number) => {
+        doc.text(line, margin + 12, rowStartY + (i * lineHeight));
+      });
+      
+      // Draw location with word wrapping (skip for RCD reporting - it's rendered in custom position)
+      if (session.serviceType !== 'rcd_reporting') {
+        locationLines.forEach((line: string, i: number) => {
+          doc.text(line, margin + 30, rowStartY + (i * lineHeight));
+        });
+      }
     }
     
     if (session.serviceType === 'emergency_exit_light') {
@@ -889,6 +960,8 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     ? 'This report complies with AS 2293.2:2019 emergency lighting standards.'
     : session.serviceType === 'fire_testing'
     ? `This report complies with ${session.country === 'newzealand' ? 'NZS 4503:2005' : 'AS 1851'} fire equipment standards.` // Default to AS 1851 for Australia and ARA Compliance
+    : session.serviceType === 'microwave_leakage'
+    ? 'This report complies with AS/NZS 60335.2.25 microwave oven safety standards.'
     : 'This report complies with AS/NZS 3760 electrical safety standards.';
   doc.text(
     footerText,
