@@ -46,6 +46,8 @@ export interface BatchedTestResult {
   pushButtonTest?: boolean;
   injectionTimedTest?: boolean;
   distributionBoardNumber?: string;
+  // Microwave leakage testing fields
+  leakageReading?: string;
 }
 
 /**
@@ -281,6 +283,13 @@ export function useSession() {
   const [rcdAssetCounter, setRcdAssetCounter] = useState<number>(() => {
     if (!sessionId) return 0;
     const stored = localStorage.getItem(`rcdCounter_${sessionId}`);
+    return stored ? parseInt(stored) : 0;
+  });
+
+  // Microwave Asset Counter (separate for microwave leakage testing)
+  const [microwaveCounter, setMicrowaveCounter] = useState<number>(() => {
+    if (!sessionId) return 0;
+    const stored = localStorage.getItem(`microwaveCounter_${sessionId}`);
     return stored ? parseInt(stored) : 0;
   });
 
@@ -624,6 +633,7 @@ export function useSession() {
     // Use provided asset number or auto-generate
     let assetNumber: string;
     const isRCD = cleanData.classification === 'rcd' || sessionData?.session?.serviceType === 'rcd_reporting';
+    const isMicrowave = cleanData.classification === 'microwave' || sessionData?.session?.serviceType === 'microwave_leakage';
     
     // If asset number is provided, use it and update counters accordingly
     if (cleanData.assetNumber && cleanData.assetNumber.trim() !== '') {
@@ -636,6 +646,11 @@ export function useSession() {
           if (assetNum > rcdAssetCounter) {
             setRcdAssetCounter(assetNum);
             localStorage.setItem(`rcdCounter_${sessionId}`, assetNum.toString());
+          }
+        } else if (isMicrowave) {
+          if (assetNum > microwaveCounter) {
+            setMicrowaveCounter(assetNum);
+            localStorage.setItem(`microwaveCounter_${sessionId}`, assetNum.toString());
           }
         } else {
           // Update the appropriate frequency counter
@@ -690,6 +705,15 @@ export function useSession() {
         assetNumber = candidate.toString();
         setRcdAssetCounter(candidate);
         localStorage.setItem(`rcdCounter_${sessionId}`, candidate.toString());
+      } else if (isMicrowave) {
+        // For microwave leakage testing, use simple sequential numbering starting from 1
+        let candidate = Math.max(1, microwaveCounter + 1);
+        while (usedNumbers.has(candidate)) {
+          candidate++;
+        }
+        assetNumber = candidate.toString();
+        setMicrowaveCounter(candidate);
+        localStorage.setItem(`microwaveCounter_${sessionId}`, candidate.toString());
       } else {
         // Get service type to determine correct starting ranges
         // Priority: 1. Session data, 2. localStorage, 3. Default to 'electrical' for backwards compatibility
@@ -1263,6 +1287,7 @@ export function useSession() {
     setThreemonthlyCounter(40000);
     setMonthlyCounter(50000);
     setRcdAssetCounter(0);
+    setMicrowaveCounter(0);
     setAssetCounts({ monthly: 0, fiveYearly: 0 });
     localStorage.removeItem('currentSessionId');
     localStorage.removeItem('currentLocation');
@@ -1295,6 +1320,7 @@ export function useSession() {
     assetProgress: getLocalAssetProgress(),
     assetCounts,
     rcdAssetCounter,
+    microwaveCounter,
     
     // Custom asset numbers
     customStartingNumbers,

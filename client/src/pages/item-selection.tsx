@@ -223,7 +223,7 @@ export default function ItemSelection() {
     const testRoute = selectedService === 'emergency_exit_light' ? '/emergency-test' : 
                      selectedService === 'fire_testing' ? '/fire-test' :
                      selectedService === 'rcd_reporting' ? '/rcd-test' :
-                     selectedService === 'microwave_leakage' ? '/test' : '/test';
+                     selectedService === 'microwave_leakage' ? '/microwave-test' : '/test';
     
     setLocation(`${testRoute}?item=${encodeURIComponent(itemName)}&type=${itemType}`);
   };

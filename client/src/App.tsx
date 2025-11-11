@@ -19,6 +19,7 @@ import TestDetails from "@/pages/test-details";
 import EmergencyTestDetails from "@/pages/emergency-test-details";
 import FireTestDetails from "@/pages/fire-test-details";
 import RCDTestDetails from "@/pages/rcd-test-details";
+import MicrowaveTestDetails from "@/pages/microwave-test-details";
 import FailureDetails from "@/pages/failure-details";
 import ReportPreview from "@/pages/report-preview";
 import AdminDashboard from "@/pages/admin-dashboard";
@@ -96,6 +97,7 @@ function Router() {
             <Route path="/fire-test" component={FireTestDetails} />
             <Route path="/rcd-test" component={RCDTestDetails} />
             <Route path="/rcd-test-details" component={RCDTestDetails} />
+            <Route path="/microwave-test" component={MicrowaveTestDetails} />
             <Route path="/failure" component={FailureDetails} />
             <Route path="/failure-details" component={FailureDetails} />
             <Route path="/report" component={ReportPreview} />
