@@ -90,6 +90,10 @@ const rcdItems: Item[] = [
   { type: 'portable-rcd', name: 'Portable RCD', icon: '🔌', description: 'Portable Residual Current Device' },
 ];
 
+const microwaveItems: Item[] = [
+  { type: 'microwave-oven', name: 'Microwave Oven', icon: '📡', description: 'Commercial/Workplace Microwave Oven' },
+];
+
 export default function ItemSelection() {
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [customItemName, setCustomItemName] = useState('');
@@ -158,7 +162,8 @@ export default function ItemSelection() {
   // Get items based on selected environment or default predefined items
   const defaultPredefinedItems = selectedService === 'emergency_exit_light' ? emergencyItems : 
                                   selectedService === 'fire_testing' ? fireItems :
-                                  selectedService === 'rcd_reporting' ? rcdItems : electricalItems;
+                                  selectedService === 'rcd_reporting' ? rcdItems :
+                                  selectedService === 'microwave_leakage' ? microwaveItems : electricalItems;
   
   const selectedEnvironment = environments?.find(env => env.id.toString() === selectedEnvironmentId);
   const predefinedItems = selectedEnvironment && Array.isArray(selectedEnvironment.items) && selectedEnvironment.items.length > 0
@@ -183,7 +188,8 @@ export default function ItemSelection() {
     // Route to different test pages based on service type
     const testRoute = selectedService === 'emergency_exit_light' ? '/emergency-test' : 
                      selectedService === 'fire_testing' ? '/fire-test' :
-                     selectedService === 'rcd_reporting' ? '/rcd-test' : '/test';
+                     selectedService === 'rcd_reporting' ? '/rcd-test' :
+                     selectedService === 'microwave_leakage' ? '/test' : '/test';
     
     setLocation(`${testRoute}?item=${encodeURIComponent(itemName)}&type=${itemType}`);
   };
@@ -305,7 +311,8 @@ export default function ItemSelection() {
           <div>
             <h1 className="text-xl font-semibold">
               {selectedService === 'emergency_exit_light' ? 'Emergency Equipment Selection' : 
-               selectedService === 'fire_testing' ? 'Fire Equipment Selection' : 'Select Item to Test'}
+               selectedService === 'fire_testing' ? 'Fire Equipment Selection' :
+               selectedService === 'microwave_leakage' ? 'Microwave Equipment Selection' : 'Select Item to Test'}
             </h1>
             <div className="text-blue-100 text-sm">
               {sessionData?.session?.clientName || 'Loading...'}
