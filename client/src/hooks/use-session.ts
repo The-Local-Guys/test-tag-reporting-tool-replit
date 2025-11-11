@@ -843,6 +843,8 @@ export function useSession() {
       pushButtonTest: (cleanData as any).pushButtonTest ?? undefined,
       injectionTimedTest: (cleanData as any).injectionTimedTest ?? undefined,
       distributionBoardNumber: (cleanData as any).distributionBoardNumber || undefined,
+      // Microwave-specific fields
+      leakageReading: cleanData.leakageReading || undefined,
     };
     
     // Add to batched results
