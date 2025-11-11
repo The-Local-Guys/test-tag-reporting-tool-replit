@@ -94,6 +94,25 @@ const microwaveItems: Item[] = [
   { type: 'microwave-oven', name: 'Microwave Oven', icon: '📡', description: 'Commercial/Workplace Microwave Oven' },
 ];
 
+const microwaveBrands = [
+  'Samsung',
+  'LG',
+  'Panasonic',
+  'Sharp',
+  'Whirlpool',
+  'GE',
+  'Kenmore',
+  'Bosch',
+  'Electrolux',
+  'Hitachi',
+  'Toshiba',
+  'Siemens',
+  'Miele',
+  'KitchenAid',
+  'Frigidaire',
+  'Other',
+];
+
 export default function ItemSelection() {
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [customItemName, setCustomItemName] = useState('');
@@ -116,6 +135,11 @@ export default function ItemSelection() {
     return localStorage.getItem('lastSelectedEnvironment') || 'default';
   });
 
+  // Initialize microwave brand selection from localStorage
+  const [selectedMicrowaveBrand, setSelectedMicrowaveBrand] = useState<string>(() => {
+    return localStorage.getItem('selectedMicrowaveBrand') || '';
+  });
+
   // Set initial loading to false after a brief delay to ensure smooth transition
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -131,6 +155,13 @@ export default function ItemSelection() {
       localStorage.setItem('lastSelectedEnvironment', selectedEnvironmentId);
     }
   }, [selectedEnvironmentId]);
+
+  // Save selected microwave brand to localStorage whenever it changes
+  useEffect(() => {
+    if (selectedMicrowaveBrand) {
+      localStorage.setItem('selectedMicrowaveBrand', selectedMicrowaveBrand);
+    }
+  }, [selectedMicrowaveBrand]);
 
   // Get the selected service type and country
   const selectedService = sessionData?.session?.serviceType || sessionStorage.getItem('selectedService') || 'electrical';
@@ -372,6 +403,35 @@ export default function ItemSelection() {
               {selectedEnvironmentId === 'default' 
                 ? 'Using default item list' 
                 : `Using "${selectedEnvironment?.name}" items`}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Microwave Brand Selection - Only for Microwave Leakage Testing */}
+      {selectedService === 'microwave_leakage' && (
+        <div className="bg-green-50 border-b border-green-100 p-4">
+          <div className="space-y-2">
+            <div className="text-sm text-gray-600 text-center">Select Microwave Brand:</div>
+            <Select
+              value={selectedMicrowaveBrand}
+              onValueChange={setSelectedMicrowaveBrand}
+            >
+              <SelectTrigger className="bg-white" data-testid="select-microwave-brand">
+                <SelectValue placeholder="Select a brand..." />
+              </SelectTrigger>
+              <SelectContent>
+                {microwaveBrands.map((brand) => (
+                  <SelectItem key={brand} value={brand} data-testid={`option-brand-${brand.toLowerCase().replace(/\s+/g, '-')}`}>
+                    {brand}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="text-xs text-gray-500 text-center">
+              {selectedMicrowaveBrand 
+                ? `Selected brand: ${selectedMicrowaveBrand}` 
+                : 'Please select a microwave brand'}
             </div>
           </div>
         </div>
