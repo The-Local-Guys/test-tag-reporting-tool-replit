@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useSession } from '@/hooks/use-session';
 import { useLocation, useSearch } from 'wouter';
@@ -21,6 +21,7 @@ const microwaveTestSchema = z.object({
 
 export default function MicrowaveTestDetails() {
   const [currentItem, setCurrentItem] = useState<{name: string, type: string} | null>(null);
+  const [testResult, setTestResult] = useState<'pass' | 'fail' | null>(null);
   const { sessionId, currentLocation, addToBatch, microwaveCounter } = useSession();
   const [, setLocation] = useLocation();
   const search = useSearch();
@@ -65,8 +66,23 @@ export default function MicrowaveTestDetails() {
     }
   }, [microwaveCounter, form]);
 
+  // Watch leakage reading and automatically determine pass/fail
+  const leakageReading = form.watch('leakageReading');
+  useEffect(() => {
+    if (leakageReading && leakageReading.trim() !== '') {
+      const reading = parseFloat(leakageReading);
+      if (!isNaN(reading)) {
+        setTestResult(reading > 5.0 ? 'fail' : 'pass');
+      } else {
+        setTestResult(null);
+      }
+    } else {
+      setTestResult(null);
+    }
+  }, [leakageReading]);
+
   const onSubmit = async (data: z.infer<typeof microwaveTestSchema>) => {
-    if (!sessionId || !currentItem) return;
+    if (!sessionId || !currentItem || !testResult) return;
 
     const result = {
       id: nanoid(),
@@ -74,7 +90,7 @@ export default function MicrowaveTestDetails() {
       itemType: currentItem.type,
       location: data.location,
       classification: 'microwave',
-      result: 'pass' as const,
+      result: testResult,
       frequency: 'single',
       notes: data.additionalComments,
       visionInspection: false,
@@ -149,7 +165,8 @@ export default function MicrowaveTestDetails() {
                 id="assetNumber"
                 {...form.register('assetNumber')}
                 placeholder="Asset number"
-                className="bg-white"
+                className="bg-gray-100 cursor-not-allowed"
+                disabled
                 data-testid="input-asset-number"
               />
               {form.formState.errors.assetNumber && (
@@ -158,18 +175,50 @@ export default function MicrowaveTestDetails() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="leakageReading">Leakage Reading</Label>
+              <Label htmlFor="leakageReading">Leakage Reading (mW/cm²)</Label>
               <Input
                 id="leakageReading"
                 {...form.register('leakageReading')}
-                placeholder="Enter leakage reading (e.g., 0.5 mW/cm²)"
+                placeholder="Enter leakage reading (e.g., 0.5)"
                 className="bg-white"
+                type="number"
+                step="0.1"
                 data-testid="input-leakage-reading"
               />
               {form.formState.errors.leakageReading && (
                 <p className="text-sm text-red-500">{form.formState.errors.leakageReading.message}</p>
               )}
+              <p className="text-xs text-gray-500">
+                Pass: ≤ 5.0 mW/cm² | Fail: &gt; 5.0 mW/cm²
+              </p>
             </div>
+
+            {/* Test Result Display */}
+            {testResult && (
+              <div className="space-y-2">
+                <Label>Test Result</Label>
+                <div 
+                  className={`p-4 rounded-lg border-2 flex items-center justify-center gap-2 ${
+                    testResult === 'pass' 
+                      ? 'bg-green-50 border-green-500 text-green-700' 
+                      : 'bg-red-50 border-red-500 text-red-700'
+                  }`}
+                  data-testid="display-test-result"
+                >
+                  {testResult === 'pass' ? (
+                    <>
+                      <CheckCircle className="w-6 h-6" />
+                      <span className="font-semibold text-lg">PASS</span>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="w-6 h-6" />
+                      <span className="font-semibold text-lg">FAIL</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="additionalComments">Additional Comments</Label>
