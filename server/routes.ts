@@ -598,6 +598,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Map RCD test fields from batch data
             pushButtonTest: batchedResult.pushButtonTest ?? null,
             injectionTimedTest: batchedResult.injectionTimedTest ?? null,
+            // Map microwave test fields from batch data
+            leakageReading: batchedResult.leakageReading || null,
           };
 
           console.log('Attempting to insert test result:', resultData);
@@ -721,6 +723,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           req.body.chargingTest !== undefined ? req.body.chargingTest : false,
         manufacturerInfo: req.body.manufacturerInfo || null,
         installationDate: req.body.installationDate || null,
+        // Microwave test specific fields (AS/NZS 60335.2.25)
+        leakageReading: req.body.leakageReading || null,
       };
 
       console.log(`[${requestId}] Request body received:`, {
