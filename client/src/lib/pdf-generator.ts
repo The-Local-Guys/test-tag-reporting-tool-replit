@@ -638,8 +638,8 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       commentsLines.forEach((line: string, i: number) => {
         doc.text(line, margin + 130, rowStartY + (i * lineHeight));
       });
-    } else {
-      // For regular electrical testing, show classification/type with word wrapping
+    } else if (session.serviceType !== 'microwave_leakage') {
+      // For regular electrical testing (exclude microwave_leakage), show classification/type with word wrapping
       typeLines.forEach((line: string, i: number) => {
         doc.text(line, margin + 48, rowStartY + (i * lineHeight));
       });
@@ -662,6 +662,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       doc.text(getFrequencyLabel(result.frequency), margin + 92, rowStartY);
       doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 115, rowStartY);
     }
+    // Note: microwave_leakage rendering is already complete above, so no else needed here
 
     // Add failure reason (positioning differs by service type)
     // Skip failure reason and action taken for microwave_leakage - not applicable
