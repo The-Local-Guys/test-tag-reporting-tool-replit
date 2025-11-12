@@ -976,6 +976,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   );
 
   // Add failed items details section
+  // Skip this section entirely for microwave leakage testing
   // For RCD reports, show all failed items (they always have failure reasons and actions)
   // For other reports, only show failed items with notes or photos
   const failedItemsWithDetails = results.filter(result => {
@@ -990,7 +991,8 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     return result.notes || result.photoData;
   });
   
-  if (failedItemsWithDetails.length > 0) {
+  // Exclude failed items details section for microwave leakage testing
+  if (session.serviceType !== 'microwave_leakage' && failedItemsWithDetails.length > 0) {
     // Add new page for failed items details
     doc.addPage();
     yPosition = await addLetterheadToPage(doc, margin, pageWidth);
