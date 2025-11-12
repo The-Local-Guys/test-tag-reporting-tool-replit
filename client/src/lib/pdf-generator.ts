@@ -496,7 +496,8 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       });
       
       // Leakage Reading - margin + 55
-      const leakageReading = (result as any).leakageReading;
+      // Check both camelCase (from localStorage) and snake_case (from database)
+      const leakageReading = (result as any).leakageReading || (result as any).leakage_reading;
       if (leakageReading) {
         doc.text(`${leakageReading} mW/cm²`, margin + 55, rowStartY);
       } else {
