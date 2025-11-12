@@ -149,7 +149,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     : session.serviceType === 'rcd_reporting'
     ? 'RCD Testing Report'
     : session.serviceType === 'microwave_leakage'
-    ? 'Microwave Leakage Testing Report'
+    ? 'Microwave Leakage Report'
     : 'Electrical Safety Testing Report';
   
   // Page setup
