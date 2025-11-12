@@ -338,6 +338,8 @@ export default function ReportPreview() {
         pushButtonTest: result.pushButtonTest || false,
         injectionTimedTest: result.injectionTimedTest || false,
         distributionBoardNumber: (result as any).distributionBoardNumber || null,
+        // Microwave leakage testing specific fields
+        leakageReading: (result as any).leakageReading || null,
       } as any));
 
       if (!sessionData?.session) {
@@ -410,6 +412,8 @@ export default function ReportPreview() {
         manufacturerInfo: result.manufacturerInfo || null,
         installationDate: result.installationDate || null,
         globeType: result.globeType || null,
+        // Microwave leakage testing specific fields
+        leakageReading: (result as any).leakageReading || null,
       } as any));
 
       if (!sessionData?.session) {
