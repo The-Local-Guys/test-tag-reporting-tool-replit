@@ -1672,6 +1672,8 @@ export default function AdminDashboard() {
                                   ? "bg-orange-50 text-orange-700"
                                   : session.serviceType === "rcd_reporting"
                                   ? "bg-purple-50 text-purple-700"
+                                  : session.serviceType === "microwave_leakage"
+                                  ? "bg-teal-50 text-teal-700"
                                   : "bg-blue-50 text-blue-700"
                               }
                             >
@@ -1681,6 +1683,8 @@ export default function AdminDashboard() {
                                 ? "Fire Testing"
                                 : session.serviceType === "rcd_reporting"
                                 ? "RCD Reporting"
+                                : session.serviceType === "microwave_leakage"
+                                ? "Microwave Leakage Testing"
                                 : "Electrical Test & Tag"}
                             </Badge>
                           </TableCell>
