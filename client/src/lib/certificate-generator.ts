@@ -77,15 +77,17 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
     yPosition = 30;
   }
 
-  // Title: THE LOCAL GUYS TEST & TAG
-  doc.setFontSize(14);
+  // Title: THE LOCAL GUYS TEST & TAG (red, larger size)
+  doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
+  doc.setTextColor(237, 28, 36); // Red color
   doc.text('THE LOCAL GUYS TEST & TAG', pageWidth / 2, yPosition, { align: 'center' });
-  yPosition += 10;
+  yPosition += 12;
 
-  // Main Title: CERTIFICATE OF COMPLIANCE
-  doc.setFontSize(16);
+  // Main Title: CERTIFICATE OF COMPLIANCE (black, larger size)
+  doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0, 0, 0); // Reset to black
   doc.text('CERTIFICATE OF COMPLIANCE', pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 15;
 
