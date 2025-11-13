@@ -4,6 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Plus, FileText, Trash2 } from "lucide-react";
 import { useCertificates } from "./useCertificates";
 import { CertificateModal } from "./CertificateModal";
@@ -14,6 +24,7 @@ export function CertificatesTab() {
   const { certificates, certificatesLoading, createCertificateMutation, deleteCertificateMutation } =
     useCertificates();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [certificateToDelete, setCertificateToDelete] = useState<number | null>(null);
 
   const handleCreateCertificate = (data: any) => {
     createCertificateMutation.mutate(data, {
@@ -33,8 +44,13 @@ export function CertificatesTab() {
   };
 
   const handleDeleteCertificate = (id: number) => {
-    if (confirm("Are you sure you want to delete this certificate?")) {
-      deleteCertificateMutation.mutate(id);
+    setCertificateToDelete(id);
+  };
+
+  const confirmDelete = () => {
+    if (certificateToDelete !== null) {
+      deleteCertificateMutation.mutate(certificateToDelete);
+      setCertificateToDelete(null);
     }
   };
 
@@ -158,6 +174,29 @@ export function CertificatesTab() {
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreateCertificate}
       />
+
+      <AlertDialog open={certificateToDelete !== null} onOpenChange={() => setCertificateToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Certificate</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this certificate? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-certificate">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+              data-testid="button-confirm-delete-certificate"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
