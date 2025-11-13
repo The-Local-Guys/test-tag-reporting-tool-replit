@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import letterheadPath from "@assets/1_1763032250172.png";
+import footerPath from "@assets/0_1763032956375.png";
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
 import type { Certificate } from '@shared/schema';
 
@@ -198,6 +199,35 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
   doc.text(companyFooter1, pageWidth / 2, footerY, { align: 'center' });
   doc.text(companyFooter2, pageWidth / 2, footerY + 5, { align: 'center' });
   doc.text(companyFooter3, pageWidth / 2, footerY + 10, { align: 'center' });
+
+  // Add footer image at bottom - full width, maintaining aspect ratio
+  try {
+    const footerResponse = await fetch(footerPath);
+    const footerBlob = await footerResponse.blob();
+    const footerDataUrl = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.readAsDataURL(footerBlob);
+    });
+    
+    // Load footer image to get natural dimensions
+    const footerImg = new Image();
+    await new Promise<void>((resolve) => {
+      footerImg.onload = () => resolve();
+      footerImg.src = footerDataUrl;
+    });
+    
+    // Calculate height to maintain aspect ratio at full page width
+    const footerAspectRatio = footerImg.height / footerImg.width;
+    const footerWidth = pageWidth;
+    const footerHeight = footerWidth * footerAspectRatio;
+    
+    // Position footer at bottom of page
+    const footerYPosition = pageHeight - footerHeight;
+    doc.addImage(footerDataUrl, 'PNG', 0, footerYPosition, footerWidth, footerHeight);
+  } catch (error) {
+    console.error('Failed to load footer image:', error);
+  }
 
   return doc.output('blob');
 }
