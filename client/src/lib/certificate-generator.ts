@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import letterheadPath from "@assets/1_1763032250172.png";
 import footerPath from "@assets/0_1763032956375.png";
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
+import greatVibesFont from '@/lib/fonts/GreatVibes-Regular.ttf?url';
 import type { Certificate } from '@shared/schema';
 
 /**
@@ -9,6 +10,36 @@ import type { Certificate } from '@shared/schema';
  */
 export interface CertificateData {
   certificate: Certificate;
+}
+
+/**
+ * Loads a custom font into jsPDF
+ * @param doc - jsPDF document instance
+ * @param fontUrl - URL path to the TTF font file
+ * @param fontName - Name to use for the font in jsPDF
+ */
+async function loadCustomFont(doc: jsPDF, fontUrl: string, fontName: string): Promise<void> {
+  try {
+    // Fetch TTF as ArrayBuffer
+    const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
+    const uint8Array = new Uint8Array(fontBytes);
+    
+    // Convert to binary string
+    let binaryString = '';
+    for (let i = 0; i < uint8Array.length; i++) {
+      binaryString += String.fromCharCode(uint8Array[i]);
+    }
+    
+    // Encode to base64
+    const base64String = btoa(binaryString);
+    
+    // Add to jsPDF
+    const fileName = `${fontName}.ttf`;
+    doc.addFileToVFS(fileName, base64String);
+    doc.addFont(fileName, fontName, 'normal');
+  } catch (error) {
+    console.error(`Failed to load custom font ${fontName}:`, error);
+  }
 }
 
 /**
@@ -34,6 +65,9 @@ function formatDateForCertificate(dateString: string): string {
 export async function generateCertificatePDF(data: CertificateData): Promise<Blob> {
   const { certificate } = data;
   const doc = new jsPDF();
+  
+  // Load custom cursive font for technician signature
+  await loadCustomFont(doc, greatVibesFont, 'GreatVibes');
   
   // Page setup
   const pageWidth = doc.internal.pageSize.width;
@@ -231,9 +265,9 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
   const footerTextY = pageHeight - footerImageHeight - 18;
   
   // Technician information - bottom left
-  // Technician name in cursive/script style font (matching template)
-  doc.setFontSize(14);
-  doc.setFont('times', 'italic');
+  // Technician name in elegant cursive/script font (Great Vibes - matching template signature style)
+  doc.setFontSize(16);
+  doc.setFont('GreatVibes', 'normal');
   doc.text(certificate.technicianName, margin, footerTextY);
   
   // License number in regular font below name
