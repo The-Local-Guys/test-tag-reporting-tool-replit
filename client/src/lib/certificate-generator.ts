@@ -176,31 +176,8 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
     yPosition += 10;
   });
 
-  // Footer section - positioned at bottom of page
-  const footerY = pageHeight - 30;
-  
-  // Technician information - bottom left
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text(certificate.technicianName, margin, footerY);
-  
-  if (certificate.technicianLicense) {
-    doc.setFont('helvetica', 'normal');
-    doc.text(certificate.technicianLicense, margin + 5, footerY + 5);
-  }
-
-  // Company footer - centered at bottom
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  const companyFooter1 = 'This certificate is property of The Local Guys Test & Tag Wollongong';
-  const companyFooter2 = 'Tel: 1800 056 225 | Email: admin@thelocalguys.com.au';
-  const companyFooter3 = 'www.thelocalguystestandtag.com.au';
-  
-  doc.text(companyFooter1, pageWidth / 2, footerY, { align: 'center' });
-  doc.text(companyFooter2, pageWidth / 2, footerY + 5, { align: 'center' });
-  doc.text(companyFooter3, pageWidth / 2, footerY + 10, { align: 'center' });
-
   // Add footer image at bottom - full width, maintaining aspect ratio
+  let footerImageHeight = 0;
   try {
     const footerResponse = await fetch(footerPath);
     const footerBlob = await footerResponse.blob();
@@ -220,14 +197,38 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
     // Calculate height to maintain aspect ratio at full page width
     const footerAspectRatio = footerImg.height / footerImg.width;
     const footerWidth = pageWidth;
-    const footerHeight = footerWidth * footerAspectRatio;
+    footerImageHeight = footerWidth * footerAspectRatio;
     
     // Position footer at bottom of page
-    const footerYPosition = pageHeight - footerHeight;
-    doc.addImage(footerDataUrl, 'PNG', 0, footerYPosition, footerWidth, footerHeight);
+    const footerYPosition = pageHeight - footerImageHeight;
+    doc.addImage(footerDataUrl, 'PNG', 0, footerYPosition, footerWidth, footerImageHeight);
   } catch (error) {
     console.error('Failed to load footer image:', error);
   }
+
+  // Footer text section - positioned above the footer image
+  const footerTextY = pageHeight - footerImageHeight - 25;
+  
+  // Technician information - bottom left
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text(certificate.technicianName, margin, footerTextY);
+  
+  if (certificate.technicianLicense) {
+    doc.setFont('helvetica', 'normal');
+    doc.text(certificate.technicianLicense, margin + 5, footerTextY + 5);
+  }
+
+  // Company footer - centered, positioned above footer image
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  const companyFooter1 = 'This certificate is property of The Local Guys Test & Tag Wollongong';
+  const companyFooter2 = 'Tel: 1800 056 225 | Email: admin@thelocalguys.com.au';
+  const companyFooter3 = 'www.thelocalguystestandtag.com.au';
+  
+  doc.text(companyFooter1, pageWidth / 2, footerTextY, { align: 'center' });
+  doc.text(companyFooter2, pageWidth / 2, footerTextY + 5, { align: 'center' });
+  doc.text(companyFooter3, pageWidth / 2, footerTextY + 10, { align: 'center' });
 
   return doc.output('blob');
 }
