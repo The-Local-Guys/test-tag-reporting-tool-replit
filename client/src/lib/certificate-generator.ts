@@ -127,27 +127,34 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
   });
   yPosition += 15;
 
-  // Services Completed section - label and service names on SAME LINE
+  // Services Completed section - always show 5 lines
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   const servicesLabel = 'Services Completed:';
   doc.text(servicesLabel, margin, yPosition);
   
-  // Service names appear on the same line, after the label
+  // Service names appear on lines below, indented (always 5 lines)
   doc.setFont('helvetica', 'normal');
   const serviceLabelWidth = doc.getTextWidth(servicesLabel);
-  let serviceX = margin + serviceLabelWidth + 10;
+  const serviceX = margin + serviceLabelWidth + 10;
   
-  services.forEach((serviceType, index) => {
-    const serviceName = getServiceDisplayName(serviceType);
-    if (index > 0) {
-      // If multiple services, put them on new lines but indented
-      yPosition += 6;
-      doc.text(serviceName, serviceX, yPosition);
+  // Always show 5 lines for services
+  for (let i = 0; i < 5; i++) {
+    if (i === 0) {
+      // First service on same line as label
+      if (services[i]) {
+        const serviceName = getServiceDisplayName(services[i]);
+        doc.text(serviceName, serviceX, yPosition);
+      }
     } else {
-      doc.text(serviceName, serviceX, yPosition);
+      // Other services on new lines
+      yPosition += 6;
+      if (services[i]) {
+        const serviceName = getServiceDisplayName(services[i]);
+        doc.text(serviceName, serviceX, yPosition);
+      }
     }
-  });
+  }
   
   yPosition += 25; // Large gap after services
 
