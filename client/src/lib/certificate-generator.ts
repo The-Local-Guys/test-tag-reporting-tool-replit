@@ -231,13 +231,16 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
   const footerTextY = pageHeight - footerImageHeight - 18;
   
   // Technician information - bottom left
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
+  // Technician name in cursive/script style font (matching template)
+  doc.setFontSize(14);
+  doc.setFont('times', 'italic');
   doc.text(certificate.technicianName, margin, footerTextY);
   
+  // License number in regular font below name
   if (certificate.technicianLicense) {
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(certificate.technicianLicense, margin + 5, footerTextY + 5);
+    doc.text(certificate.technicianLicense, margin, footerTextY + 6);
   }
 
   // Company footer - right-aligned, positioned at bottom right above footer image
