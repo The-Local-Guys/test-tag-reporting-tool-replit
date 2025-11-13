@@ -38,13 +38,13 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
   const pageWidth = doc.internal.pageSize.width;
   const pageHeight = doc.internal.pageSize.height;
   const margin = 20;
-  let yPosition = 30;
+  let yPosition = 0;
 
   // Parse services and validity dates from JSONB
   const services = certificate.services as any as string[];
   const validityDates = certificate.validityDates as any as Record<string, string>;
 
-  // Add letterhead background if available
+  // Add header image at top - full width, ~20% of page height
   try {
     const letterheadResponse = await fetch(letterheadPath);
     const letterheadBlob = await letterheadResponse.blob();
@@ -54,13 +54,15 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
       reader.readAsDataURL(letterheadBlob);
     });
     
-    const letterheadWidth = pageWidth * 1.15;
-    const letterheadHeight = pageHeight * 1.12;
-    const xOffset = (pageWidth - letterheadWidth) / 2;
-    const yOffset = (pageHeight - letterheadHeight) / 2;
-    doc.addImage(letterheadDataUrl, 'PNG', xOffset, yOffset, letterheadWidth, letterheadHeight);
+    // Full width header at the top, approximately 20% of page height
+    const headerHeight = pageHeight * 0.2;
+    doc.addImage(letterheadDataUrl, 'PNG', 0, 0, pageWidth, headerHeight);
+    
+    // Start content below header
+    yPosition = headerHeight + 15;
   } catch (error) {
     console.error('Failed to load letterhead:', error);
+    yPosition = 30;
   }
 
   // Title: THE LOCAL GUYS TEST & TAG
