@@ -43,13 +43,15 @@ export function CertificateModal({ isOpen, onClose, onSubmit }: CertificateModal
     queryKey: ["/api/admin/sessions"],
   });
 
-  // Extract unique clients from sessions
+  // Extract unique clients from sessions (filter out empty names)
   const uniqueClients = Array.from(
     new Map(
-      (sessions as any[] || []).map((s: any) => [
-        s.clientName,
-        { name: s.clientName, address: s.address }
-      ])
+      (sessions as any[] || [])
+        .filter((s: any) => s.clientName && s.clientName.trim())
+        .map((s: any) => [
+          s.clientName,
+          { name: s.clientName, address: s.address }
+        ])
     ).values()
   );
 
