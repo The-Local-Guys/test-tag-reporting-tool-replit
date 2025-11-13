@@ -127,18 +127,19 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
   });
   yPosition += 15;
 
-  // Services Completed section - always show 5 lines
+  // Services Completed section - always show 5 lines with underlines
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   const servicesLabel = 'Services Completed:';
   doc.text(servicesLabel, margin, yPosition);
   
-  // Service names appear on lines below, indented (always 5 lines)
+  // Service names appear on lines below, indented (always 5 lines with underlines)
   doc.setFont('helvetica', 'normal');
   const serviceLabelWidth = doc.getTextWidth(servicesLabel);
   const serviceX = margin + serviceLabelWidth + 10;
+  const underlineEndX = pageWidth - margin; // Underline extends to right margin
   
-  // Always show 5 lines for services
+  // Always show 5 lines for services with underlines
   for (let i = 0; i < 5; i++) {
     if (i === 0) {
       // First service on same line as label
@@ -146,6 +147,8 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
         const serviceName = getServiceDisplayName(services[i]);
         doc.text(serviceName, serviceX, yPosition);
       }
+      // Draw underline for first service line
+      doc.line(serviceX, yPosition + 1, underlineEndX, yPosition + 1);
     } else {
       // Other services on new lines
       yPosition += 6;
@@ -153,6 +156,8 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
         const serviceName = getServiceDisplayName(services[i]);
         doc.text(serviceName, serviceX, yPosition);
       }
+      // Draw underline for each service line
+      doc.line(serviceX, yPosition + 1, underlineEndX, yPosition + 1);
     }
   }
   
