@@ -10,6 +10,7 @@ import {
   insertUserSchema,
   insertEnvironmentSchema,
   insertCustomFormTypeSchema,
+  insertCertificateSchema,
   loginSchema,
   type User,
 } from "@shared/schema";
@@ -1200,6 +1201,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting custom form:", error);
       res.status(500).json({ error: "Failed to delete custom form" });
+    }
+  });
+
+  // Certificate of Compliance routes
+  
+  // Create a new certificate
+  app.post("/api/certificates", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const certificateData = insertCertificateSchema.parse({
+        ...req.body,
+        userId, // Ensure certificate is tied to the logged-in user
+      });
+
+      const certificate = await storage.createCertificate(certificateData);
+      res.status(201).json(certificate);
+    } catch (error) {
+      console.error("Error creating certificate:", error);
+      res.status(400).json({ error: "Failed to create certificate" });
+    }
+  });
+
+  // Get certificates (user's own or all if admin)
+  app.get("/api/certificates", requireAuth, async (req, res) => {
+    try {
+      const user = req.session.user!;
+      let certificates;
+
+      // Super admin and support center can see all certificates
+      if (user.role === "super_admin" || user.role === "support_center") {
+        certificates = await storage.getAllCertificates();
+      } else {
+        // Technicians can only see their own certificates
+        certificates = await storage.getCertificatesByUser(user.id);
+      }
+
+      res.json(certificates);
+    } catch (error) {
+      console.error("Error fetching certificates:", error);
+      res.status(500).json({ error: "Failed to fetch certificates" });
+    }
+  });
+
+  // Get a specific certificate
+  app.get("/api/certificates/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const user = req.session.user!;
+      const certificate = await storage.getCertificateById(id);
+      
+      if (!certificate) {
+        return res.status(404).json({ error: "Certificate not found" });
+      }
+
+      // Check permissions: technicians can only access their own certificates
+      if (user.role === "technician" && certificate.userId !== user.id) {
+        return res.status(403).json({ error: "You can only access your own certificates" });
+      }
+      
+      res.json(certificate);
+    } catch (error) {
+      console.error("Error fetching certificate:", error);
+      res.status(500).json({ error: "Failed to fetch certificate" });
+    }
+  });
+
+  // Delete a certificate
+  app.delete("/api/certificates/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const user = req.session.user!;
+      const certificate = await storage.getCertificateById(id);
+      
+      if (!certificate) {
+        return res.status(404).json({ error: "Certificate not found" });
+      }
+
+      // Check permissions: technicians can only delete their own certificates
+      if (user.role === "technician" && certificate.userId !== user.id) {
+        return res.status(403).json({ error: "You can only delete your own certificates" });
+      }
+      
+      await storage.deleteCertificate(id);
+      res.json({ success: true, message: "Certificate deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting certificate:", error);
+      res.status(500).json({ error: "Failed to delete certificate" });
     }
   });
 

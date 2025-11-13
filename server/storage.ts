@@ -4,6 +4,7 @@ import {
   users,
   environments,
   customFormTypes,
+  certificates,
   type TestSession, 
   type InsertTestSession,
   type TestResult,
@@ -13,7 +14,9 @@ import {
   type Environment,
   type InsertEnvironment,
   type CustomFormType,
-  type InsertCustomFormType
+  type InsertCustomFormType,
+  type Certificate,
+  type InsertCertificate
 } from "@shared/schema";
 import { db, pool } from "./db";
 import { eq, desc, and, gte, sql } from "drizzle-orm";
@@ -77,6 +80,13 @@ export interface IStorage {
   getCustomFormType(id: number): Promise<CustomFormType | undefined>;
   updateCustomFormType(id: number, data: Partial<InsertCustomFormType>): Promise<CustomFormType>;
   deleteCustomFormType(id: number): Promise<void>;
+  
+  // Certificates
+  createCertificate(certificate: InsertCertificate): Promise<Certificate>;
+  getCertificatesByUser(userId: number): Promise<Certificate[]>;
+  getAllCertificates(): Promise<Certificate[]>;
+  getCertificateById(id: number): Promise<Certificate | undefined>;
+  deleteCertificate(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -807,6 +817,68 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(customFormTypes)
       .where(eq(customFormTypes.id, id));
+  }
+
+  // Certificate operations
+
+  /**
+   * Creates a new certificate of compliance
+   * @param certificate - Certificate data to create
+   * @returns Newly created certificate object
+   */
+  async createCertificate(certificate: InsertCertificate): Promise<Certificate> {
+    const [cert] = await db
+      .insert(certificates)
+      .values(certificate)
+      .returning();
+    return cert;
+  }
+
+  /**
+   * Retrieves all certificates created by a specific user
+   * @param userId - User ID to filter certificates
+   * @returns Array of certificate objects
+   */
+  async getCertificatesByUser(userId: number): Promise<Certificate[]> {
+    return await db
+      .select()
+      .from(certificates)
+      .where(eq(certificates.userId, userId))
+      .orderBy(desc(certificates.createdAt));
+  }
+
+  /**
+   * Retrieves all certificates in the system
+   * @returns Array of all certificate objects
+   */
+  async getAllCertificates(): Promise<Certificate[]> {
+    return await db
+      .select()
+      .from(certificates)
+      .orderBy(desc(certificates.createdAt));
+  }
+
+  /**
+   * Retrieves a specific certificate by ID
+   * @param id - Certificate ID to retrieve
+   * @returns Certificate object if found, undefined otherwise
+   */
+  async getCertificateById(id: number): Promise<Certificate | undefined> {
+    const [cert] = await db
+      .select()
+      .from(certificates)
+      .where(eq(certificates.id, id));
+    return cert;
+  }
+
+  /**
+   * Deletes a certificate
+   * @param id - Certificate ID to delete
+   */
+  async deleteCertificate(id: number): Promise<void> {
+    await db
+      .delete(certificates)
+      .where(eq(certificates.id, id));
   }
 }
 

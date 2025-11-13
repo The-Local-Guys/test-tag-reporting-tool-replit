@@ -111,6 +111,20 @@ export const customFormTypes = pgTable("custom_form_types", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Certificates of Compliance table
+export const certificates = pgTable("certificates", {
+  id: serial("id").primaryKey(),
+  clientName: text("client_name").notNull(),
+  address: text("address").notNull(),
+  services: jsonb("services").notNull(), // Array of service type strings: ['electrical', 'rcd_reporting', etc.]
+  validityDates: jsonb("validity_dates").notNull(), // Object mapping service types to validity dates: {electrical: '2024-12-31', rcd_reporting: '2024-06-30'}
+  certificationDate: text("certification_date").notNull(),
+  technicianName: text("technician_name").notNull(),
+  technicianLicense: text("technician_license"),
+  userId: integer("user_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertTestSessionSchema = createInsertSchema(testSessions).omit({
   id: true,
   createdAt: true,
@@ -127,6 +141,11 @@ export const insertEnvironmentSchema = createInsertSchema(environments).omit({
 });
 
 export const insertCustomFormTypeSchema = createInsertSchema(customFormTypes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCertificateSchema = createInsertSchema(certificates).omit({
   id: true,
   createdAt: true,
 });
@@ -155,6 +174,8 @@ export type InsertEnvironment = z.infer<typeof insertEnvironmentSchema>;
 export type Environment = typeof environments.$inferSelect;
 export type InsertCustomFormType = z.infer<typeof insertCustomFormTypeSchema>;
 export type CustomFormType = typeof customFormTypes.$inferSelect;
+export type InsertCertificate = z.infer<typeof insertCertificateSchema>;
+export type Certificate = typeof certificates.$inferSelect;
 
 // Define enum values for validation
 export const serviceTypes = ['electrical', 'emergency_exit_light', 'fire_testing', 'rcd_reporting', 'microwave_leakage'] as const;

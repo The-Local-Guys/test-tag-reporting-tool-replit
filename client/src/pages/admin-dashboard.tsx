@@ -61,6 +61,7 @@ import {
 import { generatePDFReport, downloadPDF } from "@/lib/pdf-generator";
 import { generateExcelReport, downloadExcel } from "@/lib/excel-generator";
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
+import { CertificatesTab } from "@/features/certificates/CertificatesTab";
 
 /**
  * Administrative dashboard for managing users, sessions, and system oversight
@@ -171,6 +172,7 @@ export default function AdminDashboard() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+
   // Fetch all users
   const { data: users, isLoading: usersLoading } = useQuery({
     queryKey: ["/api/admin/users"],
@@ -193,6 +195,7 @@ export default function AdminDashboard() {
   const { data: customFormTypes } = useQuery<any[]>({
     queryKey: ['/api/custom-forms'],
   });
+
 
   // Force refresh data when component mounts or when navigating to admin
   useEffect(() => {
@@ -1494,6 +1497,7 @@ export default function AdminDashboard() {
               typedUser?.role === "support_center") && (
               <TabsTrigger value="users">User Management</TabsTrigger>
             )}
+            <TabsTrigger value="certificates">Certificates</TabsTrigger>
             <TabsTrigger value="reports">
               {typedUser?.role === "technician" ? "My Reports" : "All Reports"}
             </TabsTrigger>
@@ -1596,6 +1600,10 @@ export default function AdminDashboard() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="certificates" className="space-y-4">
+            <CertificatesTab />
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-4">
