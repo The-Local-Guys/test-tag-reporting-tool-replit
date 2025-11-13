@@ -175,11 +175,13 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
   doc.text(formatDateForCertificate(certificate.certificationDate), rightX, yPosition, { align: 'right' });
   yPosition += 10;
 
-  // All service validity dates - always show all types
+  // All service validity dates - always show all 5 testing types
   const allServiceTypes = [
-    { type: 'electrical', label: 'Electrical Appliance Testing Valid Until:' },
-    { type: 'rcd_reporting', label: 'Residual Current Device Testing Valid Until:' },
-    { type: 'fire_testing', label: 'Fire Equipment Maintenance Valid Until:' }
+    { type: 'electrical', label: 'Electrical Test and Tag Valid Until:' },
+    { type: 'emergency_exit_light', label: 'Emergency Exit Light Testing Valid Until:' },
+    { type: 'fire_testing', label: 'Fire Equipment Testing Valid Until:' },
+    { type: 'rcd_reporting', label: 'RCD Reporting Valid Until:' },
+    { type: 'microwave_leakage', label: 'Microwave Leakage Testing Valid Until:' }
   ];
   
   allServiceTypes.forEach(({ type, label }) => {
