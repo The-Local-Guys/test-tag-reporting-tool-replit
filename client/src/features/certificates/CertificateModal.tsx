@@ -75,10 +75,10 @@ export function CertificateModal({ isOpen, onClose, onSubmit }: CertificateModal
 
   const calculateValidityDate = (serviceType: string, baseDate: string): string => {
     const date = new Date(baseDate);
-    // Default validity periods (12 months for most services)
+    // All services have 12 months (1 year) validity period from certification date
     const validityMonths: Record<string, number> = {
       electrical: 12,
-      emergency_exit_light: 6,
+      emergency_exit_light: 12,
       fire_testing: 12,
       rcd_reporting: 12,
       microwave_leakage: 12,

@@ -219,11 +219,14 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
   ];
   
   allServiceTypes.forEach(({ type, label }) => {
+    // Make "Valid Until" labels more prominent (bold + slightly larger font)
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.text(label, margin, yPosition);
     
     // Only show date if this service was selected
     if (services.includes(type) && validityDates[type]) {
+      doc.setFontSize(11);
       doc.setFont('helvetica', 'normal');
       doc.text(formatDateForCertificate(validityDates[type]), rightX, yPosition, { align: 'right' });
     }
