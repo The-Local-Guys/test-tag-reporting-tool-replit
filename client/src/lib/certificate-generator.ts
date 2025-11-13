@@ -227,8 +227,8 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
     console.error('Failed to load footer image:', error);
   }
 
-  // Footer text section - positioned above the footer image
-  const footerTextY = pageHeight - footerImageHeight - 25;
+  // Footer text section - positioned above the footer image (closer to footer)
+  const footerTextY = pageHeight - footerImageHeight - 18;
   
   // Technician information - bottom left
   doc.setFontSize(10);
