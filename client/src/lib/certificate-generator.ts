@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import letterheadPath from "@assets/Letterheads_1754455497882.png";
+import letterheadPath from "@assets/1_1763032250172.png";
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
 import type { Certificate } from '@shared/schema';
 
