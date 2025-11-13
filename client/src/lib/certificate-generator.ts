@@ -10,6 +10,20 @@ export interface CertificateData {
   certificate: Certificate;
 }
 
+/**
+ * Formats a date string from YYYY-MM-DD to "DD Month YYYY" format
+ * @param dateString - Date in YYYY-MM-DD format
+ * @returns Formatted date string (e.g., "01 February 2023")
+ */
+function formatDateForCertificate(dateString: string): string {
+  const date = new Date(dateString);
+  const day = String(date.getDate()).padStart(2, '0');
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                  'July', 'August', 'September', 'October', 'November', 'December'];
+  const month = months[date.getMonth()];
+  const year = date.getFullYear();
+  return `${day} ${month} ${year}`;
+}
 
 /**
  * Generates a professionally formatted Certificate of Compliance PDF
@@ -136,24 +150,37 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   const certDateLabel = 'Date of Certification:';
-  const certDateValue = certificate.certificationDate;
-  doc.text(certDateLabel, margin, yPosition);
+  const certDateValue = formatDateForCertificate(certificate.certificationDate);
+  const labelX = margin;
+  const valueX = 120; // Fixed position for aligned values
+  
+  doc.text(certDateLabel, labelX, yPosition);
   doc.setFont('helvetica', 'normal');
-  const certDateLabelWidth = doc.getTextWidth(certDateLabel);
-  doc.text(certDateValue, margin + certDateLabelWidth + 15, yPosition);
-  yPosition += 8;
+  doc.text(certDateValue, valueX, yPosition);
+  yPosition += 10;
 
-  // Validity dates for each service
-  services.forEach(serviceType => {
-    const serviceName = getServiceDisplayName(serviceType);
-    const labelText = `${serviceName} Valid Until:`;
+  // All service validity dates (show all services, even if not selected)
+  const allServiceTypes = [
+    { type: 'electrical', label: 'Electrical Appliance Testing' },
+    { type: 'rcd_reporting', label: 'Residual Current Device Testing' },
+    { type: 'fire_testing', label: 'Fire Equipment Maintenance' },
+    { type: 'emergency_exit_light', label: 'Emergency Exit Light Testing' },
+    { type: 'microwave_leakage', label: 'Microwave Leakage Testing' }
+  ];
+  
+  allServiceTypes.forEach(({ type, label }) => {
+    const labelText = `${label} Valid Until:`;
+    const dateValue = services.includes(type) && validityDates[type] 
+      ? formatDateForCertificate(validityDates[type]) 
+      : '';
     
     doc.setFont('helvetica', 'bold');
-    doc.text(labelText, margin, yPosition);
+    doc.text(labelText, labelX, yPosition);
     
-    doc.setFont('helvetica', 'normal');
-    const labelWidth = doc.getTextWidth(labelText);
-    doc.text(validityDates[serviceType] || '', margin + labelWidth + 5, yPosition);
+    if (dateValue) {
+      doc.setFont('helvetica', 'normal');
+      doc.text(dateValue, valueX, yPosition);
+    }
     yPosition += 8;
   });
 
