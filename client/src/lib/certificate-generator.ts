@@ -26,8 +26,7 @@ function formatDateForCertificate(dateString: string): string {
 }
 
 /**
- * Generates a professionally formatted Certificate of Compliance PDF
- * Matches the design from the attached certificate template
+ * Generates a Certificate of Compliance PDF matching the exact template format
  * @param data - Certificate data including client info, services, and validity dates
  * @returns Promise resolving to Blob object containing the PDF file for download
  */
@@ -39,9 +38,13 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
   const pageWidth = doc.internal.pageSize.width;
   const pageHeight = doc.internal.pageSize.height;
   const margin = 20;
-  let yPosition = margin;
+  let yPosition = 30;
 
-  // Add letterhead
+  // Parse services and validity dates from JSONB
+  const services = certificate.services as any as string[];
+  const validityDates = certificate.validityDates as any as Record<string, string>;
+
+  // Add letterhead background if available
   try {
     const letterheadResponse = await fetch(letterheadPath);
     const letterheadBlob = await letterheadResponse.blob();
@@ -51,167 +54,138 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
       reader.readAsDataURL(letterheadBlob);
     });
     
-    // Add letterhead at 115% width and 112% height of the page, centered
     const letterheadWidth = pageWidth * 1.15;
     const letterheadHeight = pageHeight * 1.12;
-    
-    // Center the letterhead on the page
     const xOffset = (pageWidth - letterheadWidth) / 2;
     const yOffset = (pageHeight - letterheadHeight) / 2;
     doc.addImage(letterheadDataUrl, 'PNG', xOffset, yOffset, letterheadWidth, letterheadHeight);
-    
-    // Give space for letterhead content at top
-    yPosition += 60;
   } catch (error) {
-    // Fallback to logo and text if letterhead fails to load
-    try {
-      const logoResponse = await fetch(logoPath);
-      const logoBlob = await logoResponse.blob();
-      const logoDataUrl = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.readAsDataURL(logoBlob);
-      });
-      
-      const logoWidth = 40;
-      const logoHeight = 15;
-      doc.addImage(logoDataUrl, 'PNG', (pageWidth - logoWidth) / 2, yPosition, logoWidth, logoHeight);
-      yPosition += logoHeight + 10;
-      
-      // Add company name
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('THE LOCAL GUYS TEST & TAG', pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 10;
-    } catch (logoError) {
-      console.error('Failed to load logo:', logoError);
-      yPosition += 20;
-    }
+    console.error('Failed to load letterhead:', error);
   }
 
-  // Title: CERTIFICATE OF COMPLIANCE
-  doc.setFontSize(18);
+  // Title: THE LOCAL GUYS TEST & TAG
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('THE LOCAL GUYS TEST & TAG', pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 10;
+
+  // Main Title: CERTIFICATE OF COMPLIANCE
+  doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.text('CERTIFICATE OF COMPLIANCE', pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 15;
 
-  // "This certificate acknowledges that" text
+  // "This certificate acknowledges that"
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
   doc.text('This certificate acknowledges that', pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 10;
 
-  // Client name (bold and larger)
+  // Client Name (bold, larger, centered)
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.text(certificate.clientName, pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 8;
 
-  // Client address
+  // Client Address (centered)
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
   doc.text(certificate.address, pageWidth / 2, yPosition, { align: 'center' });
-  yPosition += 12;
+  yPosition += 10;
 
-  // Compliance statement
-  const complianceText = [
+  // Compliance statement (3 lines, centered)
+  const complianceLines = [
     'Is compliant with their obligations and duty of care for staff, visitors',
     'and contractors under the relevant Australian standards for the',
     'services listed.'
   ];
   
-  complianceText.forEach(line => {
+  complianceLines.forEach(line => {
     doc.text(line, pageWidth / 2, yPosition, { align: 'center' });
     yPosition += 6;
   });
-  yPosition += 10;
+  yPosition += 15;
 
-  // Services Completed section
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Services Completed:', margin, yPosition);
-  yPosition += 8;
-
-  // Parse services and validity dates from JSONB
-  const services = certificate.services as any as string[];
-  const validityDates = certificate.validityDates as any as Record<string, string>;
-  
-  // List completed services
+  // Services Completed section - label and service names on SAME LINE
   doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  const servicesLabel = 'Services Completed:';
+  doc.text(servicesLabel, margin, yPosition);
+  
+  // Service names appear on the same line, after the label
   doc.setFont('helvetica', 'normal');
-  services.forEach(serviceType => {
+  const serviceLabelWidth = doc.getTextWidth(servicesLabel);
+  let serviceX = margin + serviceLabelWidth + 10;
+  
+  services.forEach((serviceType, index) => {
     const serviceName = getServiceDisplayName(serviceType);
-    doc.text(`          ${serviceName}`, margin, yPosition);
-    yPosition += 6;
+    if (index > 0) {
+      // If multiple services, put them on new lines but indented
+      yPosition += 6;
+      doc.text(serviceName, serviceX, yPosition);
+    } else {
+      doc.text(serviceName, serviceX, yPosition);
+    }
   });
-  yPosition += 10;
-
-  // Date of Certification
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  const certDateLabel = 'Date of Certification:';
-  const certDateValue = formatDateForCertificate(certificate.certificationDate);
-  const labelX = margin;
-  const valueX = 120; // Fixed position for aligned values
   
-  doc.text(certDateLabel, labelX, yPosition);
+  yPosition += 25; // Large gap after services
+
+  // Date section - all dates RIGHT-ALIGNED at far right of page
+  const rightX = pageWidth - margin - 5; // Right edge position for dates
+  
+  doc.setFontSize(11);
+  
+  // Date of Certification
+  doc.setFont('helvetica', 'bold');
+  doc.text('Date of Certification:', margin, yPosition);
   doc.setFont('helvetica', 'normal');
-  doc.text(certDateValue, valueX, yPosition);
+  doc.text(formatDateForCertificate(certificate.certificationDate), rightX, yPosition, { align: 'right' });
   yPosition += 10;
 
-  // All service validity dates (show all services, even if not selected)
+  // All service validity dates - always show all types
   const allServiceTypes = [
-    { type: 'electrical', label: 'Electrical Appliance Testing' },
-    { type: 'rcd_reporting', label: 'Residual Current Device Testing' },
-    { type: 'fire_testing', label: 'Fire Equipment Maintenance' },
-    { type: 'emergency_exit_light', label: 'Emergency Exit Light Testing' },
-    { type: 'microwave_leakage', label: 'Microwave Leakage Testing' }
+    { type: 'electrical', label: 'Electrical Appliance Testing Valid Until:' },
+    { type: 'rcd_reporting', label: 'Residual Current Device Testing Valid Until:' },
+    { type: 'fire_testing', label: 'Fire Equipment Maintenance Valid Until:' }
   ];
   
   allServiceTypes.forEach(({ type, label }) => {
-    const labelText = `${label} Valid Until:`;
-    const dateValue = services.includes(type) && validityDates[type] 
-      ? formatDateForCertificate(validityDates[type]) 
-      : '';
-    
     doc.setFont('helvetica', 'bold');
-    doc.text(labelText, labelX, yPosition);
+    doc.text(label, margin, yPosition);
     
-    if (dateValue) {
+    // Only show date if this service was selected
+    if (services.includes(type) && validityDates[type]) {
       doc.setFont('helvetica', 'normal');
-      doc.text(dateValue, valueX, yPosition);
+      doc.text(formatDateForCertificate(validityDates[type]), rightX, yPosition, { align: 'right' });
     }
-    yPosition += 8;
+    
+    yPosition += 10;
   });
 
-  // Footer with technician information
-  yPosition = pageHeight - 40;
+  // Footer section - positioned at bottom of page
+  const footerY = pageHeight - 30;
   
-  // Technician name and license
+  // Technician information - bottom left
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text(certificate.technicianName, margin, yPosition);
-  yPosition += 6;
+  doc.text(certificate.technicianName, margin, footerY);
   
   if (certificate.technicianLicense) {
     doc.setFont('helvetica', 'normal');
-    doc.text(certificate.technicianLicense, margin, yPosition);
-    yPosition += 6;
+    doc.text(certificate.technicianLicense, margin + 5, footerY + 5);
   }
 
-  // Company information (right-aligned)
+  // Company footer - centered at bottom
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  const footerText1 = 'This certificate is property of The Local Guys Test & Tag Wollongong';
-  const footerText2 = 'Tel: 1800 056 225 | Email: admin@thelocalguys.com.au';
-  const footerText3 = 'www.thelocalguystestandtag.com.au';
+  const companyFooter1 = 'This certificate is property of The Local Guys Test & Tag Wollongong';
+  const companyFooter2 = 'Tel: 1800 056 225 | Email: admin@thelocalguys.com.au';
+  const companyFooter3 = 'www.thelocalguystestandtag.com.au';
   
-  const footerY = pageHeight - 25;
-  doc.text(footerText1, pageWidth / 2, footerY, { align: 'center' });
-  doc.text(footerText2, pageWidth / 2, footerY + 5, { align: 'center' });
-  doc.text(footerText3, pageWidth / 2, footerY + 10, { align: 'center' });
+  doc.text(companyFooter1, pageWidth / 2, footerY, { align: 'center' });
+  doc.text(companyFooter2, pageWidth / 2, footerY + 5, { align: 'center' });
+  doc.text(companyFooter3, pageWidth / 2, footerY + 10, { align: 'center' });
 
-  // Generate blob
   return doc.output('blob');
 }
 
