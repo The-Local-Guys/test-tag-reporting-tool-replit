@@ -97,17 +97,22 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
   doc.text('This certificate acknowledges that', pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 10;
 
-  // Client Name (bold, larger, centered)
+  // Client Name (bold, larger, centered, blue color)
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0, 102, 204); // Blue color
   doc.text(certificate.clientName, pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 8;
 
-  // Client Address (centered)
+  // Client Address (centered, blue color)
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
+  doc.setTextColor(0, 102, 204); // Blue color
   doc.text(certificate.address, pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 10;
+  
+  // Reset text color to black for remaining content
+  doc.setTextColor(0, 0, 0);
 
   // Compliance statement (3 lines, centered)
   const complianceLines = [
