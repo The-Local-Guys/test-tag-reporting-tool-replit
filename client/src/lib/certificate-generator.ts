@@ -240,16 +240,17 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
     doc.text(certificate.technicianLicense, margin + 5, footerTextY + 5);
   }
 
-  // Company footer - centered, positioned above footer image
+  // Company footer - right-aligned, positioned at bottom right above footer image
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   const companyFooter1 = 'This certificate is property of The Local Guys Test & Tag Wollongong';
   const companyFooter2 = 'Tel: 1800 056 225 | Email: admin@thelocalguys.com.au';
   const companyFooter3 = 'www.thelocalguystestandtag.com.au';
   
-  doc.text(companyFooter1, pageWidth / 2, footerTextY, { align: 'center' });
-  doc.text(companyFooter2, pageWidth / 2, footerTextY + 5, { align: 'center' });
-  doc.text(companyFooter3, pageWidth / 2, footerTextY + 10, { align: 'center' });
+  const footerRightX = pageWidth - margin;
+  doc.text(companyFooter1, footerRightX, footerTextY, { align: 'right' });
+  doc.text(companyFooter2, footerRightX, footerTextY + 5, { align: 'right' });
+  doc.text(companyFooter3, footerRightX, footerTextY + 10, { align: 'right' });
 
   return doc.output('blob');
 }
