@@ -44,7 +44,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
   const services = certificate.services as any as string[];
   const validityDates = certificate.validityDates as any as Record<string, string>;
 
-  // Add header image at top - full width, ~20% of page height
+  // Add header image at top - full width, maintaining aspect ratio
   try {
     const letterheadResponse = await fetch(letterheadPath);
     const letterheadBlob = await letterheadResponse.blob();
@@ -54,9 +54,20 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
       reader.readAsDataURL(letterheadBlob);
     });
     
-    // Full width header at the top, approximately 20% of page height
-    const headerHeight = pageHeight * 0.2;
-    doc.addImage(letterheadDataUrl, 'PNG', 0, 0, pageWidth, headerHeight);
+    // Load image to get natural dimensions
+    const img = new Image();
+    await new Promise<void>((resolve) => {
+      img.onload = () => resolve();
+      img.src = letterheadDataUrl;
+    });
+    
+    // Calculate height to maintain aspect ratio at full page width
+    const aspectRatio = img.height / img.width;
+    const headerWidth = pageWidth;
+    const headerHeight = headerWidth * aspectRatio;
+    
+    // Add header at top with natural aspect ratio
+    doc.addImage(letterheadDataUrl, 'PNG', 0, 0, headerWidth, headerHeight);
     
     // Start content below header
     yPosition = headerHeight + 15;
