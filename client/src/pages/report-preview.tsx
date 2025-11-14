@@ -337,6 +337,7 @@ export default function ReportPreview() {
         // RCD testing specific fields
         pushButtonTest: result.pushButtonTest || false,
         injectionTimedTest: result.injectionTimedTest || false,
+        tripTime: (result as any).tripTime || null,
         distributionBoardNumber: (result as any).distributionBoardNumber || null,
         // Microwave leakage testing specific fields
         leakageReading: (result as any).leakageReading || null,
