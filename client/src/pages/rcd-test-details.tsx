@@ -23,7 +23,7 @@ const rcdTestSchema = z.object({
   distributionBoardNumber: z.string().optional(), // Only for Fixed RCD
   pushButtonTest: z.boolean().default(true),
   injectionTimedTest: z.boolean().default(true),
-  tripTime: z.string().optional(), // Trip time for injection/timed test (as string from input)
+  tripTime: z.string().optional(), // Trip time for injection/timed test in milliseconds (as string from input)
   result: z.enum(['pass', 'fail']),
   notes: z.string().optional(),
 }).refine((data) => {
@@ -40,7 +40,7 @@ const rcdTestSchema = z.object({
   }
   return true;
 }, {
-  message: 'Trip time must be a positive number when Injection/Timed Test is selected',
+  message: 'Trip time must be a positive number in milliseconds when Injection/Timed Test is selected',
   path: ['tripTime'],
 });
 
@@ -134,6 +134,9 @@ export default function RCDTestDetails() {
     }
 
     try {
+      // Convert trip time from milliseconds to seconds for storage
+      const tripTimeInSeconds = data.tripTime ? parseFloat(data.tripTime) / 1000 : null;
+      
       console.log('Submitting RCD test result:', {
         assetNumber: data.assetNumber,
         itemName: currentItemName,
@@ -144,7 +147,8 @@ export default function RCDTestDetails() {
         notes: data.notes || null,
         pushButtonTest: data.pushButtonTest,
         injectionTimedTest: data.injectionTimedTest,
-        tripTime: data.tripTime,
+        tripTimeMs: data.tripTime,
+        tripTimeSeconds: tripTimeInSeconds,
       });
 
       // If failed, navigate to failure details page
@@ -159,7 +163,7 @@ export default function RCDTestDetails() {
           frequency: 'annually',
           pushButtonTest: data.pushButtonTest,
           injectionTimedTest: data.injectionTimedTest,
-          tripTime: data.tripTime ? parseFloat(data.tripTime) : null,
+          tripTime: tripTimeInSeconds,
           distributionBoardNumber: data.distributionBoardNumber || null,
           notes: data.notes || null,
           visionInspection: false,
@@ -182,7 +186,7 @@ export default function RCDTestDetails() {
         frequency: 'annually', // Default frequency for RCD testing
         pushButtonTest: data.pushButtonTest,
         injectionTimedTest: data.injectionTimedTest,
-        tripTime: data.tripTime ? parseFloat(data.tripTime) : null,
+        tripTime: tripTimeInSeconds,
         distributionBoardNumber: data.distributionBoardNumber || null,
         notes: data.notes || null,
         // RCD testing doesn't require vision/electrical test flags
@@ -361,13 +365,13 @@ export default function RCDTestDetails() {
               {/* Trip Time - Only show when Injection/Timed Test is checked */}
               {watchInjectionTimedTest && (
                 <div className="mt-3">
-                  <Label htmlFor="tripTime" className="text-sm">Trip Time (seconds) *</Label>
+                  <Label htmlFor="tripTime" className="text-sm">Trip Time (milliseconds) *</Label>
                   <Input
                     id="tripTime"
                     {...form.register('tripTime')}
-                    placeholder="e.g., 0.03"
+                    placeholder="e.g., 30"
                     type="number"
-                    step="0.001"
+                    step="0.1"
                     className="text-base mt-1"
                     data-testid="input-trip-time"
                   />
