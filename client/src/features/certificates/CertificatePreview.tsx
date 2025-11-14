@@ -13,6 +13,18 @@ interface CertificatePreviewProps {
   certificate: Certificate | null;
 }
 
+// Map service type codes to display names
+function getServiceDisplayName(serviceType: string): string {
+  const serviceNames: Record<string, string> = {
+    electrical: "Electrical Appliance Test & Tag",
+    emergency_exit_light: "Emergency Exit Light Testing",
+    fire_testing: "Fire Equipment Maintenance",
+    rcd_reporting: "Residual Current Device Testing",
+    microwave_leakage: "Microwave Leakage Testing",
+  };
+  return serviceNames[serviceType] || serviceType;
+}
+
 export function CertificatePreview({ isOpen, onClose, certificate }: CertificatePreviewProps) {
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -90,7 +102,7 @@ export function CertificatePreview({ isOpen, onClose, certificate }: Certificate
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <p className="font-medium text-gray-900 dark:text-gray-100">
-                        {service}
+                        {getServiceDisplayName(service)}
                       </p>
                     </div>
                     <div className="text-right ml-4">

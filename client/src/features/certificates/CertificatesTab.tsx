@@ -14,10 +14,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, FileText, Trash2, Edit } from "lucide-react";
+import { Plus, FileText, Trash2, Edit, Download } from "lucide-react";
 import { useCertificates } from "./useCertificates";
 import { CertificateModal } from "./CertificateModal";
 import { CertificatePreview } from "./CertificatePreview";
+import { generateCertificatePDF, downloadCertificatePDF } from "@/lib/certificate-generator";
 import type { Certificate } from "@shared/schema";
 
 export function CertificatesTab() {
@@ -27,6 +28,7 @@ export function CertificatesTab() {
   const [editingCertificate, setEditingCertificate] = useState<Certificate | null>(null);
   const [previewCertificate, setPreviewCertificate] = useState<Certificate | null>(null);
   const [certificateToDelete, setCertificateToDelete] = useState<number | null>(null);
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
   const handleSubmitCertificate = (data: any) => {
     if (editingCertificate) {
@@ -67,6 +69,18 @@ export function CertificatesTab() {
 
   const handleViewCertificate = (cert: Certificate) => {
     setPreviewCertificate(cert);
+  };
+
+  const handleDirectDownload = async (cert: Certificate) => {
+    setDownloadingId(cert.id);
+    try {
+      const blob = await generateCertificatePDF({ certificate: cert });
+      downloadCertificatePDF(blob, cert.clientName);
+    } catch (err) {
+      console.error("Error downloading certificate:", err);
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   const handleDeleteCertificate = (id: number) => {
@@ -162,10 +176,25 @@ export function CertificatesTab() {
                             variant="outline"
                             onClick={() => handleViewCertificate(cert)}
                             className="p-2 h-8 w-8"
-                            title="View & Download"
+                            title="View Preview"
                             data-testid={`button-view-certificate-${cert.id}`}
                           >
                             <FileText className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDirectDownload(cert)}
+                            disabled={downloadingId === cert.id}
+                            className="p-2 h-8 w-8"
+                            title="Download PDF"
+                            data-testid={`button-download-certificate-${cert.id}`}
+                          >
+                            {downloadingId === cert.id ? (
+                              <LoadingSpinner className="w-4 h-4" />
+                            ) : (
+                              <Download className="w-4 h-4" />
+                            )}
                           </Button>
                           <Button
                             size="sm"
