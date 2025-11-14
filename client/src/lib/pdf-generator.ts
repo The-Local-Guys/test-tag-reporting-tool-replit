@@ -309,21 +309,25 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       doc.text('Due Date', margin + 140, yPosition);
       doc.text('Failure Reason', margin + 158, yPosition);
     } else if (session.serviceType === 'rcd_reporting') {
-      // New order: Asset# < Distribution Board > Push Button > Timed Test > Result > Location > Comments > Failure Reason > Action Taken
+      // New order: Asset# < Distribution Board > Push Button > Timed Test > Trip Time > Result > Location > Comments > Failure Reason > Action Taken
       
       // Push Button header in 2 lines
       doc.text('Push Button', margin + 48, yPosition);
       doc.text('( 6 monthly )', margin + 48, yPosition + 3);
       
       // Timed Test header in 2 lines
-      doc.text('Timed Test', margin + 70, yPosition);
-      doc.text('( 12 Monthly )', margin + 70, yPosition + 3);
+      doc.text('Timed Test', margin + 66, yPosition);
+      doc.text('( 12 Monthly )', margin + 66, yPosition + 3);
       
-      doc.text('Result', margin + 95, yPosition);
-      doc.text('Location', margin + 110, yPosition);
-      doc.text('Comments', margin + 130, yPosition);
-      doc.text('Failure Reason', margin + 150, yPosition);
-      doc.text('Action Taken', margin + 170, yPosition);
+      // Trip Time header in 2 lines
+      doc.text('Trip Time', margin + 84, yPosition);
+      doc.text('(ms)', margin + 84, yPosition + 3);
+      
+      doc.text('Result', margin + 98, yPosition);
+      doc.text('Location', margin + 113, yPosition);
+      doc.text('Comments', margin + 133, yPosition);
+      doc.text('Failure Reason', margin + 153, yPosition);
+      doc.text('Action Taken', margin + 173, yPosition);
     } else {
       doc.text('Type', margin + 48, yPosition);
       doc.text('Result', margin + 62, yPosition);
@@ -590,11 +594,12 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         doc.text(line, margin + 140, rowStartY + (i * lineHeight));
       });
     } else if (session.serviceType === 'rcd_reporting') {
-      // New order: Asset# < Distribution Board > Push Button > Timed Test > Result > Location > Comments
+      // New order: Asset# < Distribution Board > Push Button > Timed Test > Trip Time > Result > Location > Comments
       
       // Show test results with proper null handling and color coding
       const pushButtonValue = (result as any).pushButtonTest;
       const injectionTimedValue = (result as any).injectionTimedTest;
+      const tripTimeMs = (result as any).tripTime;
       
       // Push Button Test (margin + 48)
       if (pushButtonValue === true) {
@@ -608,39 +613,43 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       }
       doc.setTextColor(0, 0, 0); // Reset to black
       
-      // Injection/Timed Test (margin + 70)
-      const tripTimeMs = (result as any).tripTime;
+      // Injection/Timed Test (margin + 66) - just Yes/No without trip time
       if (injectionTimedValue === true) {
         doc.setTextColor(0, 128, 0); // Green
-        // Display trip time if available (already in milliseconds)
-        const timedTestText = tripTimeMs != null && tripTimeMs > 0 ? `Yes (${tripTimeMs}ms)` : 'Yes';
-        doc.text(timedTestText, margin + 70, rowStartY);
+        doc.text('Yes', margin + 66, rowStartY);
       } else if (injectionTimedValue === false) {
         doc.setTextColor(0, 0, 0); // Black
-        doc.text('No', margin + 70, rowStartY);
+        doc.text('No', margin + 66, rowStartY);
       } else {
-        doc.text('N/A', margin + 70, rowStartY);
+        doc.text('N/A', margin + 66, rowStartY);
       }
       doc.setTextColor(0, 0, 0); // Reset to black
       
-      // Color code the result (margin + 95)
+      // Trip Time (margin + 84) - separate column
+      if (tripTimeMs != null && tripTimeMs > 0) {
+        doc.text(tripTimeMs.toString(), margin + 84, rowStartY);
+      } else {
+        doc.text('-', margin + 84, rowStartY);
+      }
+      
+      // Color code the result (margin + 98)
       if (result.result === 'pass') {
         doc.setTextColor(0, 128, 0); // Green
-        doc.text('PASS', margin + 95, rowStartY);
+        doc.text('PASS', margin + 98, rowStartY);
       } else {
         doc.setTextColor(255, 0, 0); // Red
-        doc.text('FAIL', margin + 95, rowStartY);
+        doc.text('FAIL', margin + 98, rowStartY);
       }
       doc.setTextColor(0, 0, 0); // Reset to black
       
-      // Show location with word wrapping (margin + 110)
+      // Show location with word wrapping (margin + 113)
       locationLines.forEach((line: string, i: number) => {
-        doc.text(line, margin + 110, rowStartY + (i * lineHeight));
+        doc.text(line, margin + 113, rowStartY + (i * lineHeight));
       });
       
-      // Show comments with word wrapping (margin + 130) - use pre-calculated lines
+      // Show comments with word wrapping (margin + 133) - use pre-calculated lines
       commentsLines.forEach((line: string, i: number) => {
-        doc.text(line, margin + 130, rowStartY + (i * lineHeight));
+        doc.text(line, margin + 133, rowStartY + (i * lineHeight));
       });
     } else if (session.serviceType !== 'microwave_leakage') {
       // For regular electrical testing (exclude microwave_leakage), show classification/type with word wrapping
