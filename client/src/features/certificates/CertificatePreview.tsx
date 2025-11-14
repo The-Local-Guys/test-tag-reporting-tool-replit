@@ -76,6 +76,15 @@ export function CertificatePreview({ isOpen, onClose, certificate }: Certificate
             </p>
           </div>
 
+          <div className="border-l-4 border-purple-500 pl-4">
+            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+              Address
+            </h3>
+            <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
+              {certificate.address}
+            </p>
+          </div>
+
           <div className="border-l-4 border-green-500 pl-4">
             <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
               Certification Date
