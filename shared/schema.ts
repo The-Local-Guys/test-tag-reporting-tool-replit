@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, varchar, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, varchar, jsonb, index, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -87,6 +87,7 @@ export const testResults = pgTable("test_results", {
   // RCD testing specific fields
   pushButtonTest: boolean("push_button_test"), // Push button test completed
   injectionTimedTest: boolean("injection_timed_test"), // Injection/Timed test completed
+  tripTime: numeric("trip_time"), // Trip time in seconds for timed test (nullable)
   distributionBoardNumber: text("distribution_board_number"), // Distribution board number for Fixed RCD
   // Microwave leakage testing specific fields
   leakageReading: text("leakage_reading"), // Microwave radiation leakage reading

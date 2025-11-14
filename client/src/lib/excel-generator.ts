@@ -136,7 +136,7 @@ export function generateExcelReport(data: ReportData): Blob {
     : session.serviceType === 'fire_testing'
     ? ['Asset #', 'Item Name', 'Location', 'Type', 'Result', 'Size/Weight', 'Manufacturer', 'Frequency', 'Next Due Date', 'Failure Reason', 'Notes', 'Visual Inspection', 'Accessibility', 'Signage', 'Operational Test', 'Pressure Test']
     : session.serviceType === 'rcd_reporting'
-    ? ['Asset #', 'Item Name', 'Location', 'Equipment Type', 'Result', 'Push Button Test', 'Injection/Timed Test', 'Notes']
+    ? ['Asset #', 'Item Name', 'Location', 'Equipment Type', 'Result', 'Push Button Test', 'Injection/Timed Test', 'Trip Time (s)', 'Notes']
     : ['Asset #', 'Item Name', 'Location', 'Classification', 'Result', 'Vision Inspection', 'Electrical Test', 'Frequency', 'Next Due Date', 'Failure Reason', 'Action Taken', 'Notes'];
   
   // Test results data - different structure for emergency exit light testing
@@ -237,6 +237,7 @@ export function generateExcelReport(data: ReportData): Blob {
       // RCD reporting specific format
       const equipmentTypeDisplay = result.classification === 'fixed-rcd' ? 'Fixed RCD' : 'Portable RCD';
       const toTestCell = (value: boolean | null | undefined) => value == null ? 'N/A' : (value ? 'PASS' : 'FAIL');
+      const tripTime = (result as any).tripTime;
       
       return [
         result.assetNumber, // Asset number
@@ -246,6 +247,7 @@ export function generateExcelReport(data: ReportData): Blob {
         result.result.toUpperCase(),
         toTestCell((result as any).pushButtonTest),
         toTestCell((result as any).injectionTimedTest),
+        tripTime || '', // Trip time in seconds
         result.notes || ''
       ];
     } else {
@@ -348,6 +350,7 @@ export function generateExcelReport(data: ReportData): Blob {
       { wch: 8 },  // Result
       { wch: 15 }, // Push Button Test
       { wch: 18 }, // Injection/Timed Test
+      { wch: 12 }, // Trip Time (s)
       { wch: 25 }  // Notes
     ];
   } else {
