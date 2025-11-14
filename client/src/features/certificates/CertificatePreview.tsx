@@ -107,6 +107,7 @@ export function CertificatePreview({ isOpen, onClose, certificate }: Certificate
                 src={pdfUrl}
                 className="w-full h-full"
                 title={`Certificate of Compliance - ${certificate?.clientName || 'Preview'}`}
+                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
                 data-testid="certificate-preview-iframe"
               >
                 <p className="p-4 text-center text-gray-600">
