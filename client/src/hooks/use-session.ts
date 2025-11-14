@@ -892,8 +892,39 @@ export function useSession() {
       
       console.log(`Submitting batch of ${batchedResults.length} results to server`);
       
+      // Normalize trip_time values: convert strings to numbers and old seconds format to milliseconds
+      const normalizedResults = batchedResults.map(result => {
+        const tripTime = (result as any).tripTime;
+        if (tripTime != null) {
+          // Coerce to number to handle both string and number values
+          const tripTimeNum = Number(tripTime);
+          
+          // Check if it's a valid finite number
+          if (isFinite(tripTimeNum)) {
+            // If value is < 1, it's in old seconds format - convert to milliseconds
+            if (tripTimeNum > 0 && tripTimeNum < 1) {
+              const normalizedValue = tripTimeNum * 1000;
+              console.log(`Normalizing old trip_time ${tripTime} (seconds) to ${normalizedValue}ms`);
+              return {
+                ...result,
+                tripTime: normalizedValue
+              };
+            }
+            // Always coerce to numeric type even if already in milliseconds (handles string values)
+            if (typeof tripTime === 'string') {
+              console.log(`Converting trip_time string "${tripTime}" to number ${tripTimeNum}`);
+            }
+            return {
+              ...result,
+              tripTime: tripTimeNum
+            };
+          }
+        }
+        return result;
+      });
+      
       const response = await apiRequest('POST', `/api/sessions/${sessionId}/batch-results`, {
-        results: batchedResults
+        results: normalizedResults
       });
       
       return response.json();

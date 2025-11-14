@@ -23,24 +23,21 @@ const rcdTestSchema = z.object({
   distributionBoardNumber: z.string().optional(), // Only for Fixed RCD
   pushButtonTest: z.boolean().default(true),
   injectionTimedTest: z.boolean().default(true),
-  tripTime: z.string().optional(), // Trip time for injection/timed test in milliseconds (as string from input)
+  tripTime: z.preprocess(
+    // Convert empty string to undefined, otherwise coerce to number
+    (val) => val === '' || val == null ? undefined : Number(val),
+    z.number().int().positive().optional()
+  ), // Trip time in milliseconds (must be positive integer)
   result: z.enum(['pass', 'fail']),
   notes: z.string().optional(),
 }).refine((data) => {
   // Require tripTime when injectionTimedTest is checked
-  if (data.injectionTimedTest && !data.tripTime) {
+  if (data.injectionTimedTest && data.tripTime == null) {
     return false;
-  }
-  // Validate tripTime is a positive number when provided
-  if (data.tripTime) {
-    const num = parseFloat(data.tripTime);
-    if (isNaN(num) || num <= 0) {
-      return false;
-    }
   }
   return true;
 }, {
-  message: 'Trip time must be a positive number in milliseconds when Injection/Timed Test is selected',
+  message: 'Trip time must be a positive whole number (integer) in milliseconds when Injection/Timed Test is selected',
   path: ['tripTime'],
 });
 
@@ -134,8 +131,8 @@ export default function RCDTestDetails() {
     }
 
     try {
-      // Parse trip time as integer (milliseconds) - no conversion needed
-      const tripTimeMs = data.tripTime ? parseInt(data.tripTime) : null;
+      // Zod coerces tripTime to number already - use directly
+      const tripTimeMs = data.tripTime ?? null;
       
       console.log('Submitting RCD test result:', {
         assetNumber: data.assetNumber,
@@ -370,6 +367,7 @@ export default function RCDTestDetails() {
                     {...form.register('tripTime')}
                     placeholder="e.g., 30"
                     type="number"
+                    inputMode="numeric"
                     step="1"
                     min="1"
                     className="text-base mt-1"
