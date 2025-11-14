@@ -361,7 +361,7 @@ export default function RCDTestDetails() {
               {/* Trip Time - Only show when Injection/Timed Test is checked */}
               {watchInjectionTimedTest && (
                 <div className="mt-3">
-                  <Label htmlFor="tripTime" className="text-sm">Trip Time (milliseconds) *</Label>
+                  <Label htmlFor="tripTime" className="text-sm">Trip Time (ms) *</Label>
                   <Input
                     id="tripTime"
                     {...form.register('tripTime')}
