@@ -406,7 +406,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     if (session.serviceType === 'rcd_reporting') {
       // Comments
       const commentsText = result.notes || '-';
-      commentsLines = doc.splitTextToSize(commentsText, 18);
+      commentsLines = doc.splitTextToSize(commentsText, 17);
       
       // Failure reason (only for failed items)
       if (result.result === 'fail') {
@@ -730,11 +730,11 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       } else if (session.serviceType === 'rcd_reporting') {
         // RCD reporting - use pre-calculated wrapped lines
         failureReasonLines.forEach((line: string, i: number) => {
-          doc.text(line, margin + 150, rowStartY + (i * lineHeight));
+          doc.text(line, margin + 153, rowStartY + (i * lineHeight));
         });
         
         actionTakenLines.forEach((line: string, i: number) => {
-          doc.text(line, margin + 170, rowStartY + (i * lineHeight));
+          doc.text(line, margin + 173, rowStartY + (i * lineHeight));
         });
       } else {
         // Standard electrical testing failure reasons
@@ -764,8 +764,8 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         doc.text('-', margin + 158, rowStartY);
       } else if (session.serviceType === 'rcd_reporting') {
         // RCD reporting - show dash for passed items
-        doc.text('-', margin + 150, rowStartY);
-        doc.text('-', margin + 170, rowStartY);
+        doc.text('-', margin + 153, rowStartY);
+        doc.text('-', margin + 173, rowStartY);
       } else {
         doc.text('-', margin + 135, rowStartY);
         doc.text('-', margin + 158, rowStartY);
