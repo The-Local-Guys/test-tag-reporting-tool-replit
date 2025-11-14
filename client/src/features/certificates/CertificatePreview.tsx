@@ -103,18 +103,22 @@ export function CertificatePreview({ isOpen, onClose, certificate }: Certificate
         {pdfUrl && !isLoading && !error && (
           <>
             <div className="bg-gray-100 rounded-lg overflow-hidden" style={{ height: '70vh' }}>
-              <iframe
-                src={pdfUrl}
+              <object
+                data={pdfUrl}
+                type="application/pdf"
                 className="w-full h-full"
-                title={`Certificate of Compliance - ${certificate?.clientName || 'Preview'}`}
-                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-                data-testid="certificate-preview-iframe"
+                aria-label={`Certificate of Compliance - ${certificate?.clientName || 'Preview'}`}
+                data-testid="certificate-preview-object"
               >
-                <p className="p-4 text-center text-gray-600">
-                  Your browser does not support inline PDF viewing. 
-                  Please use the Download button below to view the certificate.
-                </p>
-              </iframe>
+                <div className="p-8 text-center">
+                  <p className="text-gray-600 mb-4">
+                    Your browser does not support inline PDF viewing.
+                  </p>
+                  <p className="text-gray-600">
+                    Please use the Download button below to view the certificate.
+                  </p>
+                </div>
+              </object>
             </div>
 
             <div className="flex justify-end gap-2 pt-4 border-t">
