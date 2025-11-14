@@ -182,7 +182,7 @@ export default function RCDTestDetails() {
         frequency: 'annually', // Default frequency for RCD testing
         pushButtonTest: data.pushButtonTest,
         injectionTimedTest: data.injectionTimedTest,
-        tripTime: data.tripTime ? parseFloat(data.tripTime).toString() : null,
+        tripTime: data.tripTime ? parseFloat(data.tripTime) : null,
         distributionBoardNumber: data.distributionBoardNumber || null,
         notes: data.notes || null,
         // RCD testing doesn't require vision/electrical test flags
