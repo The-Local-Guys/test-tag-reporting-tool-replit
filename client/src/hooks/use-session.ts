@@ -45,6 +45,7 @@ export interface BatchedTestResult {
   // RCD testing fields
   pushButtonTest?: boolean;
   injectionTimedTest?: boolean;
+  tripTime?: number;
   distributionBoardNumber?: string;
   // Microwave leakage testing fields
   leakageReading?: string;
@@ -842,6 +843,7 @@ export function useSession() {
       // RCD-specific fields
       pushButtonTest: (cleanData as any).pushButtonTest ?? undefined,
       injectionTimedTest: (cleanData as any).injectionTimedTest ?? undefined,
+      tripTime: (cleanData as any).tripTime ?? undefined,
       distributionBoardNumber: (cleanData as any).distributionBoardNumber || undefined,
       // Microwave-specific fields
       leakageReading: cleanData.leakageReading || undefined,
