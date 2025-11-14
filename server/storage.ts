@@ -86,6 +86,7 @@ export interface IStorage {
   getCertificatesByUser(userId: number): Promise<Certificate[]>;
   getAllCertificates(): Promise<Certificate[]>;
   getCertificateById(id: number): Promise<Certificate | undefined>;
+  updateCertificate(id: number, data: Partial<InsertCertificate>): Promise<Certificate>;
   deleteCertificate(id: number): Promise<void>;
 }
 
@@ -868,6 +869,24 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(certificates)
       .where(eq(certificates.id, id));
+    return cert;
+  }
+
+  /**
+   * Updates an existing certificate
+   * @param id - Certificate ID to update
+   * @param data - Partial certificate data to update
+   * @returns Updated certificate object
+   */
+  async updateCertificate(id: number, data: Partial<InsertCertificate>): Promise<Certificate> {
+    // Remove userId from update data to prevent ownership reassignment
+    const { userId, ...updateData } = data;
+    
+    const [cert] = await db
+      .update(certificates)
+      .set(updateData)
+      .where(eq(certificates.id, id))
+      .returning();
     return cert;
   }
 

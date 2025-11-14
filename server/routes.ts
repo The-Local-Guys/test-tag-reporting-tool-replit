@@ -1267,6 +1267,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update a certificate
+  app.put("/api/certificates/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const user = req.session.user!;
+      const certificate = await storage.getCertificateById(id);
+      
+      if (!certificate) {
+        return res.status(404).json({ error: "Certificate not found" });
+      }
+
+      // Check permissions: technicians can only update their own certificates
+      if (user.role === "technician" && certificate.userId !== user.id) {
+        return res.status(403).json({ error: "You can only update your own certificates" });
+      }
+
+      // Validate and update the certificate (omit userId to prevent reassignment)
+      const updateData = insertCertificateSchema.omit({ userId: true }).partial().parse(req.body);
+      const updatedCertificate = await storage.updateCertificate(id, updateData);
+      
+      res.json(updatedCertificate);
+    } catch (error) {
+      console.error("Error updating certificate:", error);
+      res.status(500).json({ error: "Failed to update certificate" });
+    }
+  });
+
   // Delete a certificate
   app.delete("/api/certificates/:id", requireAuth, async (req, res) => {
     try {

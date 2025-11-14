@@ -14,24 +14,54 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, FileText, Trash2 } from "lucide-react";
+import { Plus, FileText, Trash2, Edit } from "lucide-react";
 import { useCertificates } from "./useCertificates";
 import { CertificateModal } from "./CertificateModal";
 import { generateCertificatePDF, downloadCertificatePDF } from "@/lib/certificate-generator";
 import type { Certificate } from "@shared/schema";
 
 export function CertificatesTab() {
-  const { certificates, certificatesLoading, createCertificateMutation, deleteCertificateMutation } =
+  const { certificates, certificatesLoading, createCertificateMutation, updateCertificateMutation, deleteCertificateMutation } =
     useCertificates();
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCertificate, setEditingCertificate] = useState<Certificate | null>(null);
   const [certificateToDelete, setCertificateToDelete] = useState<number | null>(null);
 
-  const handleCreateCertificate = (data: any) => {
-    createCertificateMutation.mutate(data, {
-      onSuccess: () => {
-        setIsCreateModalOpen(false);
-      },
-    });
+  const handleSubmitCertificate = (data: any) => {
+    if (editingCertificate) {
+      // Update existing certificate
+      updateCertificateMutation.mutate(
+        { id: editingCertificate.id, data },
+        {
+          onSuccess: () => {
+            setIsModalOpen(false);
+            setEditingCertificate(null);
+          },
+        }
+      );
+    } else {
+      // Create new certificate
+      createCertificateMutation.mutate(data, {
+        onSuccess: () => {
+          setIsModalOpen(false);
+        },
+      });
+    }
+  };
+
+  const handleCreateNew = () => {
+    setEditingCertificate(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEditCertificate = (cert: Certificate) => {
+    setEditingCertificate(cert);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingCertificate(null);
   };
 
   const handleViewCertificate = async (cert: Certificate) => {
@@ -82,7 +112,7 @@ export function CertificatesTab() {
             </CardDescription>
           </div>
           <Button
-            onClick={() => setIsCreateModalOpen(true)}
+            onClick={handleCreateNew}
             className="flex items-center gap-2"
             data-testid="button-create-certificate"
           >
@@ -144,6 +174,16 @@ export function CertificatesTab() {
                           <Button
                             size="sm"
                             variant="outline"
+                            onClick={() => handleEditCertificate(cert)}
+                            className="p-2 h-8 w-8"
+                            title="Edit"
+                            data-testid={`button-edit-certificate-${cert.id}`}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
                             onClick={() => handleDeleteCertificate(cert.id)}
                             className="p-2 h-8 w-8 text-red-600 hover:text-red-700"
                             title="Delete"
@@ -170,9 +210,10 @@ export function CertificatesTab() {
       </CardContent>
 
       <CertificateModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSubmit={handleCreateCertificate}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onSubmit={handleSubmitCertificate}
+        certificate={editingCertificate || undefined}
       />
 
       <AlertDialog open={certificateToDelete !== null} onOpenChange={() => setCertificateToDelete(null)}>

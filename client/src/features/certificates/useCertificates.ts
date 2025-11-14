@@ -57,6 +57,44 @@ export function useCertificates() {
     },
   });
 
+  // Update certificate mutation
+  const updateCertificateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      // Validate data with Zod schema (omit userId - server preserves it)
+      const clientSchema = insertCertificateSchema.omit({ userId: true }).partial();
+      const validatedData = clientSchema.parse(data);
+      
+      const response = await fetch(`/api/certificates/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(validatedData),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update certificate");
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/certificates"] });
+      toast({
+        title: "Success",
+        description: "Certificate updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update certificate",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Delete certificate mutation
   const deleteCertificateMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -91,6 +129,7 @@ export function useCertificates() {
     certificates,
     certificatesLoading,
     createCertificateMutation,
+    updateCertificateMutation,
     deleteCertificateMutation,
   };
 }

@@ -13,15 +13,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { Certificate } from "@shared/schema";
 
 interface CertificateModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: any) => void;
+  certificate?: Certificate;
 }
 
-export function CertificateModal({ isOpen, onClose, onSubmit }: CertificateModalProps) {
+export function CertificateModal({ isOpen, onClose, onSubmit, certificate }: CertificateModalProps) {
   const { user } = useAuth();
+  const isEditMode = !!certificate;
+
   const [formData, setFormData] = useState({
     clientName: "",
     address: "",
@@ -37,6 +41,33 @@ export function CertificateModal({ isOpen, onClose, onSubmit }: CertificateModal
     rcd_reporting: false,
     microwave_leakage: false,
   });
+
+  // Pre-populate form when editing
+  useEffect(() => {
+    if (certificate) {
+      setFormData({
+        clientName: certificate.clientName,
+        address: certificate.address,
+        certificationDate: certificate.certificationDate,
+        technicianName: certificate.technicianName,
+        technicianLicense: certificate.technicianLicense || "",
+      });
+
+      // Set selected services
+      const services = certificate.services as string[];
+      const servicesMap: Record<string, boolean> = {
+        electrical: false,
+        emergency_exit_light: false,
+        fire_testing: false,
+        rcd_reporting: false,
+        microwave_leakage: false,
+      };
+      services.forEach((service) => {
+        servicesMap[service] = true;
+      });
+      setSelectedServices(servicesMap);
+    }
+  }, [certificate]);
 
   // Fetch all test sessions to get unique clients
   const { data: sessions } = useQuery({
@@ -118,25 +149,27 @@ export function CertificateModal({ isOpen, onClose, onSubmit }: CertificateModal
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Create Certificate of Compliance"
+      title={isEditMode ? "Edit Certificate of Compliance" : "Create Certificate of Compliance"}
     >
       <div className="space-y-4">
-        {/* Client Selection */}
-        <div>
-          <Label htmlFor="client-select">Select Client</Label>
-          <Select onValueChange={handleClientSelect}>
-            <SelectTrigger>
-              <SelectValue placeholder="Choose from existing clients..." />
-            </SelectTrigger>
-            <SelectContent>
-              {uniqueClients.map((client: any) => (
-                <SelectItem key={client.name} value={client.name}>
-                  {client.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Client Selection - only show in create mode */}
+        {!isEditMode && (
+          <div>
+            <Label htmlFor="client-select">Select Client</Label>
+            <Select onValueChange={handleClientSelect}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose from existing clients..." />
+              </SelectTrigger>
+              <SelectContent>
+                {uniqueClients.map((client: any) => (
+                  <SelectItem key={client.name} value={client.name}>
+                    {client.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {/* Manual Client Entry */}
         <div>
@@ -254,7 +287,7 @@ export function CertificateModal({ isOpen, onClose, onSubmit }: CertificateModal
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={!isValid}>
-            Create Certificate
+            {isEditMode ? "Update Certificate" : "Create Certificate"}
           </Button>
         </div>
       </div>
