@@ -245,6 +245,10 @@ export function CertificatesTab() {
         isOpen={previewCertificate !== null}
         onClose={() => setPreviewCertificate(null)}
         certificate={previewCertificate}
+        onEdit={(cert) => {
+          setPreviewCertificate(null);
+          handleEditCertificate(cert);
+        }}
       />
 
       <AlertDialog open={certificateToDelete !== null} onOpenChange={() => setCertificateToDelete(null)}>

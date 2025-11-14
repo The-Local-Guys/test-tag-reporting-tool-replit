@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
-import { Download, X, FileCheck } from "lucide-react";
+import { Download, X, FileCheck, Edit } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { generateCertificatePDF, downloadCertificatePDF } from "@/lib/certificate-generator";
 import type { Certificate } from "@shared/schema";
@@ -11,6 +11,7 @@ interface CertificatePreviewProps {
   isOpen: boolean;
   onClose: () => void;
   certificate: Certificate | null;
+  onEdit?: (certificate: Certificate) => void;
 }
 
 // Map service type codes to display names
@@ -25,7 +26,7 @@ function getServiceDisplayName(serviceType: string): string {
   return serviceNames[serviceType] || serviceType;
 }
 
-export function CertificatePreview({ isOpen, onClose, certificate }: CertificatePreviewProps) {
+export function CertificatePreview({ isOpen, onClose, certificate, onEdit }: CertificatePreviewProps) {
   const [isDownloading, setIsDownloading] = useState(false);
 
   const handleDownload = async () => {
@@ -40,6 +41,11 @@ export function CertificatePreview({ isOpen, onClose, certificate }: Certificate
     } finally {
       setIsDownloading(false);
     }
+  };
+
+  const handleEdit = () => {
+    if (!certificate || !onEdit) return;
+    onEdit(certificate);
   };
 
   if (!certificate) return null;
@@ -162,6 +168,17 @@ export function CertificatePreview({ isOpen, onClose, certificate }: Certificate
             <X className="w-4 h-4 mr-2" />
             Close
           </Button>
+          {onEdit && (
+            <Button
+              variant="outline"
+              onClick={handleEdit}
+              className="flex items-center gap-2"
+              data-testid="button-edit-from-preview"
+            >
+              <Edit className="w-4 h-4" />
+              Edit Certificate
+            </Button>
+          )}
           <Button
             onClick={handleDownload}
             disabled={isDownloading}
