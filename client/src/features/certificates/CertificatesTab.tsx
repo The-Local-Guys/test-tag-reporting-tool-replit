@@ -17,7 +17,7 @@ import {
 import { Plus, FileText, Trash2, Edit } from "lucide-react";
 import { useCertificates } from "./useCertificates";
 import { CertificateModal } from "./CertificateModal";
-import { generateCertificatePDF, downloadCertificatePDF } from "@/lib/certificate-generator";
+import { CertificatePreview } from "./CertificatePreview";
 import type { Certificate } from "@shared/schema";
 
 export function CertificatesTab() {
@@ -25,6 +25,7 @@ export function CertificatesTab() {
     useCertificates();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCertificate, setEditingCertificate] = useState<Certificate | null>(null);
+  const [previewCertificate, setPreviewCertificate] = useState<Certificate | null>(null);
   const [certificateToDelete, setCertificateToDelete] = useState<number | null>(null);
 
   const handleSubmitCertificate = (data: any) => {
@@ -64,13 +65,8 @@ export function CertificatesTab() {
     setEditingCertificate(null);
   };
 
-  const handleViewCertificate = async (cert: Certificate) => {
-    try {
-      const blob = await generateCertificatePDF({ certificate: cert });
-      downloadCertificatePDF(blob, cert.clientName);
-    } catch (error) {
-      console.error("Error generating certificate PDF:", error);
-    }
+  const handleViewCertificate = (cert: Certificate) => {
+    setPreviewCertificate(cert);
   };
 
   const handleDeleteCertificate = (id: number) => {
@@ -214,6 +210,12 @@ export function CertificatesTab() {
         onClose={handleCloseModal}
         onSubmit={handleSubmitCertificate}
         certificate={editingCertificate || undefined}
+      />
+
+      <CertificatePreview
+        isOpen={previewCertificate !== null}
+        onClose={() => setPreviewCertificate(null)}
+        certificate={previewCertificate}
       />
 
       <AlertDialog open={certificateToDelete !== null} onOpenChange={() => setCertificateToDelete(null)}>
