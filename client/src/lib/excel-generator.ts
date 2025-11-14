@@ -237,9 +237,9 @@ export function generateExcelReport(data: ReportData): Blob {
       // RCD reporting specific format
       const equipmentTypeDisplay = result.classification === 'fixed-rcd' ? 'Fixed RCD' : 'Portable RCD';
       const toTestCell = (value: boolean | null | undefined) => value == null ? 'N/A' : (value ? 'PASS' : 'FAIL');
-      const tripTimeSeconds = (result as any).tripTime;
-      // Convert trip time from seconds to milliseconds for display
-      const tripTimeMs = tripTimeSeconds != null && tripTimeSeconds > 0 ? (tripTimeSeconds * 1000).toFixed(1) : '';
+      const tripTimeMs = (result as any).tripTime;
+      // Trip time is already in milliseconds - display directly
+      const tripTimeDisplay = tripTimeMs != null && tripTimeMs > 0 ? tripTimeMs.toString() : '';
       
       return [
         result.assetNumber, // Asset number
@@ -249,7 +249,7 @@ export function generateExcelReport(data: ReportData): Blob {
         result.result.toUpperCase(),
         toTestCell((result as any).pushButtonTest),
         toTestCell((result as any).injectionTimedTest),
-        tripTimeMs, // Trip time in milliseconds
+        tripTimeDisplay, // Trip time in milliseconds
         result.notes || ''
       ];
     } else {

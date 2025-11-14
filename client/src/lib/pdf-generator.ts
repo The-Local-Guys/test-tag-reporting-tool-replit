@@ -609,12 +609,11 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       doc.setTextColor(0, 0, 0); // Reset to black
       
       // Injection/Timed Test (margin + 70)
-      const tripTimeSeconds = (result as any).tripTime;
+      const tripTimeMs = (result as any).tripTime;
       if (injectionTimedValue === true) {
         doc.setTextColor(0, 128, 0); // Green
-        // Display trip time if available (convert seconds to milliseconds)
-        const tripTimeMs = tripTimeSeconds != null && tripTimeSeconds > 0 ? (tripTimeSeconds * 1000).toFixed(1) : null;
-        const timedTestText = tripTimeMs ? `Yes (${tripTimeMs}ms)` : 'Yes';
+        // Display trip time if available (already in milliseconds)
+        const timedTestText = tripTimeMs != null && tripTimeMs > 0 ? `Yes (${tripTimeMs}ms)` : 'Yes';
         doc.text(timedTestText, margin + 70, rowStartY);
       } else if (injectionTimedValue === false) {
         doc.setTextColor(0, 0, 0); // Black

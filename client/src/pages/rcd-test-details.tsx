@@ -134,8 +134,8 @@ export default function RCDTestDetails() {
     }
 
     try {
-      // Convert trip time from milliseconds to seconds for storage
-      const tripTimeInSeconds = data.tripTime ? parseFloat(data.tripTime) / 1000 : null;
+      // Parse trip time as integer (milliseconds) - no conversion needed
+      const tripTimeMs = data.tripTime ? parseInt(data.tripTime) : null;
       
       console.log('Submitting RCD test result:', {
         assetNumber: data.assetNumber,
@@ -147,8 +147,7 @@ export default function RCDTestDetails() {
         notes: data.notes || null,
         pushButtonTest: data.pushButtonTest,
         injectionTimedTest: data.injectionTimedTest,
-        tripTimeMs: data.tripTime,
-        tripTimeSeconds: tripTimeInSeconds,
+        tripTimeMs: tripTimeMs,
       });
 
       // If failed, navigate to failure details page
@@ -163,7 +162,7 @@ export default function RCDTestDetails() {
           frequency: 'annually',
           pushButtonTest: data.pushButtonTest,
           injectionTimedTest: data.injectionTimedTest,
-          tripTime: tripTimeInSeconds,
+          tripTime: tripTimeMs,
           distributionBoardNumber: data.distributionBoardNumber || null,
           notes: data.notes || null,
           visionInspection: false,
@@ -186,7 +185,7 @@ export default function RCDTestDetails() {
         frequency: 'annually', // Default frequency for RCD testing
         pushButtonTest: data.pushButtonTest,
         injectionTimedTest: data.injectionTimedTest,
-        tripTime: tripTimeInSeconds,
+        tripTime: tripTimeMs,
         distributionBoardNumber: data.distributionBoardNumber || null,
         notes: data.notes || null,
         // RCD testing doesn't require vision/electrical test flags
@@ -371,7 +370,8 @@ export default function RCDTestDetails() {
                     {...form.register('tripTime')}
                     placeholder="e.g., 30"
                     type="number"
-                    step="0.1"
+                    step="1"
+                    min="1"
                     className="text-base mt-1"
                     data-testid="input-trip-time"
                   />
