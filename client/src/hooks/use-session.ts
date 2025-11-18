@@ -11,6 +11,8 @@ export interface SessionData {
     passedItems: number;
     failedItems: number;
     passRate: number;
+    numberOfPushButtons?: number; // For RCD reporting only
+    numberOfTimeTests?: number;   // For RCD reporting only
   };
 }
 
@@ -533,13 +535,53 @@ export function useSession() {
   const sessionData: SessionData | undefined = session ? {
     session,
     results: [], // Empty since we're using batched results
-    summary: {
-      totalItems: batchedResults.length,
-      passedItems: batchedResults.filter(r => r.result === 'pass').length,
-      failedItems: batchedResults.filter(r => r.result === 'fail').length,
-      passRate: batchedResults.length > 0 ? 
-        Math.round((batchedResults.filter(r => r.result === 'pass').length / batchedResults.length) * 100) : 0,
-    }
+    summary: (() => {
+      // For RCD reporting, count push button and time tests individually
+      if (session.serviceType === 'rcd_reporting') {
+        let totalTests = 0;
+        let passedTests = 0;
+        let failedTests = 0;
+        let numberOfPushButtons = 0;
+        let numberOfTimeTests = 0;
+
+        batchedResults.forEach(result => {
+          const hasPushButton = (result as any).pushButtonTest === true;
+          const hasTimeTest = (result as any).injectionTimedTest === true;
+          
+          if (hasPushButton) {
+            numberOfPushButtons++;
+            totalTests++;
+            if (result.result === 'pass') passedTests++;
+            else failedTests++;
+          }
+          
+          if (hasTimeTest) {
+            numberOfTimeTests++;
+            totalTests++;
+            if (result.result === 'pass') passedTests++;
+            else failedTests++;
+          }
+        });
+
+        return {
+          totalItems: totalTests,
+          passedItems: passedTests,
+          failedItems: failedTests,
+          passRate: totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0,
+          numberOfPushButtons,
+          numberOfTimeTests,
+        };
+      }
+      
+      // For other service types, count normally
+      return {
+        totalItems: batchedResults.length,
+        passedItems: batchedResults.filter(r => r.result === 'pass').length,
+        failedItems: batchedResults.filter(r => r.result === 'fail').length,
+        passRate: batchedResults.length > 0 ? 
+          Math.round((batchedResults.filter(r => r.result === 'pass').length / batchedResults.length) * 100) : 0,
+      };
+    })()
   } : undefined;
 
   /**
