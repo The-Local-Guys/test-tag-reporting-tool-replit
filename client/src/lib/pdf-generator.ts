@@ -271,20 +271,24 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Total Items Tested: ${summary.totalItems}`, margin, yPosition);
+  
+  // For RCD reporting, use different labels without "items" wording
+  const isRCD = session.serviceType === 'rcd_reporting';
+  
+  doc.text(`${isRCD ? 'Total Tested' : 'Total Items Tested'}: ${summary.totalItems}`, margin, yPosition);
   yPosition += 7;
   
   // For RCD reporting, show push button and time test counts
-  if (session.serviceType === 'rcd_reporting' && summary.numberOfPushButtons !== undefined && summary.numberOfTimeTests !== undefined) {
+  if (isRCD && summary.numberOfPushButtons !== undefined && summary.numberOfTimeTests !== undefined) {
     doc.text(`Number of push buttons: ${summary.numberOfPushButtons}`, margin, yPosition);
     yPosition += 7;
     doc.text(`Number of time tests: ${summary.numberOfTimeTests}`, margin, yPosition);
     yPosition += 7;
   }
   
-  doc.text(`Items Passed: ${summary.passedItems}`, margin, yPosition);
+  doc.text(`${isRCD ? 'Passed' : 'Items Passed'}: ${summary.passedItems}`, margin, yPosition);
   yPosition += 7;
-  doc.text(`Items Failed: ${summary.failedItems}`, margin, yPosition);
+  doc.text(`${isRCD ? 'Failed' : 'Items Failed'}: ${summary.failedItems}`, margin, yPosition);
   yPosition += 7;
   doc.text(`Pass Rate: ${summary.passRate}%`, margin, yPosition);
   yPosition += 15;
