@@ -661,7 +661,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       }
       doc.setTextColor(0, 0, 0); // Reset to black
       
-      // Trip Times (margin + 84) - display with count for Fixed RCD, simple for Portable RCD
+      // Trip Times (margin + 84) - display all trip times for Fixed RCD, simple for Portable RCD
       if (Array.isArray(tripTimesArray) && tripTimesArray.length > 0) {
         const validTripTimes = tripTimesArray.filter((t: any) => t != null && t > 0);
         if (validTripTimes.length > 0) {
@@ -669,9 +669,11 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
           const isFixedRCD = result.itemName && result.itemName.includes('Fixed RCD');
           
           if (isFixedRCD) {
-            // Fixed RCD: Show count format (1 - 2000ms, 2 - 3000ms, etc.)
-            const tripTimeText = `${validTripTimes.length} - ${validTripTimes[validTripTimes.length - 1]}ms`;
-            doc.text(tripTimeText, margin + 84, rowStartY);
+            // Fixed RCD: Show all trip times individually (1 - 2000ms, 2 - 3000ms, 3 - 3000ms)
+            validTripTimes.forEach((tripTime: number, index: number) => {
+              const tripTimeText = `${index + 1} - ${tripTime}ms`;
+              doc.text(tripTimeText, margin + 84, rowStartY + (index * lineHeight));
+            });
           } else {
             // Portable RCD: Show simple format (2000ms)
             doc.text(`${validTripTimes[0]}ms`, margin + 84, rowStartY);
