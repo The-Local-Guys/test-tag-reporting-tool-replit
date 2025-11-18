@@ -235,8 +235,29 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   yPosition += 7;
   doc.text(`Site Contact: ${session.siteContact}`, margin, yPosition);
   yPosition += 7;
-  doc.text(`Address: ${session.address}`, margin, yPosition);
-  yPosition += 7;
+  
+  // Handle address with word wrapping to prevent overlap with technician field
+  const addressLabel = 'Address: ';
+  const addressMaxWidth = 90; // Maximum width for address text
+  const addressLines = doc.splitTextToSize(session.address, addressMaxWidth);
+  
+  // Display address label on first line
+  doc.text(addressLabel, margin, yPosition);
+  
+  // Display address lines (starting from same y position as label)
+  addressLines.forEach((line: string, index: number) => {
+    if (index === 0) {
+      // First line goes next to the label
+      doc.text(line, margin + doc.getTextWidth(addressLabel), yPosition);
+    } else {
+      // Subsequent lines are indented to align with first line of address
+      doc.text(line, margin + doc.getTextWidth(addressLabel), yPosition + (index * 5));
+    }
+  });
+  
+  // Adjust yPosition based on number of address lines
+  yPosition += Math.max(7, addressLines.length * 5);
+  
   doc.text(`Technician: ${session.technicianName}`, margin, yPosition);
   yPosition += 15;
 
