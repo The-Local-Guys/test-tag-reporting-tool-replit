@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useLocation } from 'wouter';
@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Plus, X } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useToast } from '@/hooks/use-toast';
 import type { InsertTestResult } from '@shared/schema';
@@ -23,22 +23,27 @@ const rcdTestSchema = z.object({
   distributionBoardNumber: z.string().optional(), // Only for Fixed RCD
   pushButtonTest: z.boolean().default(true),
   injectionTimedTest: z.boolean().default(true),
-  tripTime: z.preprocess(
-    // Convert empty string to undefined, otherwise coerce to number
-    (val) => val === '' || val == null ? undefined : Number(val),
-    z.number().int().positive().optional()
-  ), // Trip time in milliseconds (must be positive integer)
+  tripTimes: z.array(
+    z.object({
+      value: z.preprocess(
+        (val) => val === '' || val == null ? undefined : Number(val),
+        z.number().int().positive()
+      )
+    })
+  ).optional(), // Array of trip time objects for Fixed RCD (max 3)
   result: z.enum(['pass', 'fail']),
   notes: z.string().optional(),
 }).refine((data) => {
-  // Require tripTime when injectionTimedTest is checked
-  if (data.injectionTimedTest && data.tripTime == null) {
-    return false;
+  // Require at least one tripTime when injectionTimedTest is checked for Fixed RCD
+  if (data.equipmentType === 'fixed-rcd' && data.injectionTimedTest) {
+    if (!data.tripTimes || data.tripTimes.length === 0) {
+      return false;
+    }
   }
   return true;
 }, {
-  message: 'Trip time must be a positive whole number (integer) in milliseconds when Injection/Timed Test is selected',
-  path: ['tripTime'],
+  message: 'At least one trip time is required when Injection/Timed Test is selected for Fixed RCD',
+  path: ['tripTimes'],
 });
 
 type RCDTestForm = z.infer<typeof rcdTestSchema>;
@@ -82,10 +87,16 @@ export default function RCDTestDetails() {
       distributionBoardNumber: getEquipmentType(initialItemType) === 'fixed-rcd' ? currentDistributionBoardNumber : '',
       pushButtonTest: false,
       injectionTimedTest: false,
-      tripTime: '',
+      tripTimes: [{ value: '' as any }], // Start with one empty trip time field
       result: 'pass',
       notes: '',
     },
+  });
+
+  // useFieldArray for managing multiple trip times (Fixed RCD only)
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: 'tripTimes',
   });
 
   const watchResult = form.watch('result');
@@ -131,8 +142,10 @@ export default function RCDTestDetails() {
     }
 
     try {
-      // Zod coerces tripTime to number already - use directly
-      const tripTimeMs = data.tripTime ?? null;
+      // Convert tripTimes array to numeric array (filter out empty values)
+      const tripTimesArray = data.tripTimes
+        ? data.tripTimes.map(t => t.value).filter(v => v != null && v > 0)
+        : [];
       
       console.log('Submitting RCD test result:', {
         assetNumber: data.assetNumber,
@@ -144,7 +157,7 @@ export default function RCDTestDetails() {
         notes: data.notes || null,
         pushButtonTest: data.pushButtonTest,
         injectionTimedTest: data.injectionTimedTest,
-        tripTimeMs: tripTimeMs,
+        tripTimes: tripTimesArray,
       });
 
       // If failed, navigate to failure details page
@@ -159,7 +172,7 @@ export default function RCDTestDetails() {
           frequency: 'annually',
           pushButtonTest: data.pushButtonTest,
           injectionTimedTest: data.injectionTimedTest,
-          tripTime: tripTimeMs,
+          tripTimes: tripTimesArray,
           distributionBoardNumber: data.distributionBoardNumber || null,
           notes: data.notes || null,
           visionInspection: false,
@@ -182,7 +195,7 @@ export default function RCDTestDetails() {
         frequency: 'annually', // Default frequency for RCD testing
         pushButtonTest: data.pushButtonTest,
         injectionTimedTest: data.injectionTimedTest,
-        tripTime: tripTimeMs,
+        tripTimes: tripTimesArray,
         distributionBoardNumber: data.distributionBoardNumber || null,
         notes: data.notes || null,
         // RCD testing doesn't require vision/electrical test flags
@@ -358,23 +371,59 @@ export default function RCDTestDetails() {
                 </Label>
               </div>
 
-              {/* Trip Time - Only show when Injection/Timed Test is checked */}
+              {/* Trip Times - For Fixed RCD: multiple inputs (1-3), For Portable RCD: single input */}
               {watchInjectionTimedTest && (
-                <div className="mt-3">
-                  <Label htmlFor="tripTime" className="text-sm">Trip Time (ms) *</Label>
-                  <Input
-                    id="tripTime"
-                    {...form.register('tripTime')}
-                    placeholder="e.g., 30"
-                    type="number"
-                    inputMode="numeric"
-                    step="1"
-                    min="1"
-                    className="text-base mt-1"
-                    data-testid="input-trip-time"
-                  />
-                  {form.formState.errors.tripTime && (
-                    <p className="text-red-500 text-sm mt-1">{form.formState.errors.tripTime.message}</p>
+                <div className="mt-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm">Trip Time (ms) *</Label>
+                    {/* Add button - only for Fixed RCD and max 3 fields */}
+                    {watchEquipmentType === 'fixed-rcd' && fields.length < 3 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => append({ value: '' as any })}
+                        className="h-7 px-2"
+                        data-testid="button-add-trip-time"
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {fields.map((field, index) => (
+                    <div key={field.id} className="flex items-center gap-2">
+                      <Input
+                        {...form.register(`tripTimes.${index}.value` as const)}
+                        placeholder="e.g., 30"
+                        type="number"
+                        inputMode="numeric"
+                        step="1"
+                        min="1"
+                        className="text-base flex-1"
+                        data-testid={`input-trip-time-${index}`}
+                      />
+                      {/* Remove button - only show for Fixed RCD when more than 1 field */}
+                      {watchEquipmentType === 'fixed-rcd' && fields.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => remove(index)}
+                          className="h-10 w-10 p-0"
+                          data-testid={`button-remove-trip-time-${index}`}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  
+                  {form.formState.errors.tripTimes && (
+                    <p className="text-red-500 text-sm mt-1">
+                      {form.formState.errors.tripTimes.message || 'Please enter valid trip times'}
+                    </p>
                   )}
                 </div>
               )}

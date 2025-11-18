@@ -635,7 +635,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       // Show test results with proper null handling and color coding
       const pushButtonValue = (result as any).pushButtonTest;
       const injectionTimedValue = (result as any).injectionTimedTest;
-      const tripTimeMs = (result as any).tripTime;
+      const tripTimesArray = (result as any).tripTimes;
       
       // Push Button Test (margin + 48)
       if (pushButtonValue === true) {
@@ -661,9 +661,14 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       }
       doc.setTextColor(0, 0, 0); // Reset to black
       
-      // Trip Time (margin + 84) - separate column
-      if (tripTimeMs != null && tripTimeMs > 0) {
-        doc.text(tripTimeMs.toString(), margin + 84, rowStartY);
+      // Trip Times (margin + 84) - display multiple values comma-separated
+      if (Array.isArray(tripTimesArray) && tripTimesArray.length > 0) {
+        const validTripTimes = tripTimesArray.filter((t: any) => t != null && t > 0);
+        if (validTripTimes.length > 0) {
+          doc.text(validTripTimes.join(', '), margin + 84, rowStartY);
+        } else {
+          doc.text('-', margin + 84, rowStartY);
+        }
       } else {
         doc.text('-', margin + 84, rowStartY);
       }

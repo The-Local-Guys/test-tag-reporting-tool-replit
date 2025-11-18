@@ -47,7 +47,7 @@ export interface BatchedTestResult {
   // RCD testing fields
   pushButtonTest?: boolean;
   injectionTimedTest?: boolean;
-  tripTime?: number;
+  tripTimes?: number[]; // Array of trip times in milliseconds (for Fixed RCD, up to 3 values)
   distributionBoardNumber?: string;
   // Microwave leakage testing fields
   leakageReading?: string;
@@ -885,7 +885,7 @@ export function useSession() {
       // RCD-specific fields
       pushButtonTest: (cleanData as any).pushButtonTest ?? undefined,
       injectionTimedTest: (cleanData as any).injectionTimedTest ?? undefined,
-      tripTime: (cleanData as any).tripTime ?? undefined,
+      tripTimes: (cleanData as any).tripTimes ?? undefined,
       distributionBoardNumber: (cleanData as any).distributionBoardNumber || undefined,
       // Microwave-specific fields
       leakageReading: cleanData.leakageReading || undefined,
@@ -934,34 +934,55 @@ export function useSession() {
       
       console.log(`Submitting batch of ${batchedResults.length} results to server`);
       
-      // Normalize trip_time values: convert strings to numbers and old seconds format to milliseconds
+      // Normalize tripTimes values: convert arrays, handle old format, handle legacy single tripTime, and coerce to numbers
       const normalizedResults = batchedResults.map(result => {
-        const tripTime = (result as any).tripTime;
-        if (tripTime != null) {
-          // Coerce to number to handle both string and number values
-          const tripTimeNum = Number(tripTime);
-          
-          // Check if it's a valid finite number
-          if (isFinite(tripTimeNum)) {
-            // If value is < 1, it's in old seconds format - convert to milliseconds
-            if (tripTimeNum > 0 && tripTimeNum < 1) {
-              const normalizedValue = tripTimeNum * 1000;
-              console.log(`Normalizing old trip_time ${tripTime} (seconds) to ${normalizedValue}ms`);
-              return {
-                ...result,
-                tripTime: normalizedValue
-              };
-            }
-            // Always coerce to numeric type even if already in milliseconds (handles string values)
-            if (typeof tripTime === 'string') {
-              console.log(`Converting trip_time string "${tripTime}" to number ${tripTimeNum}`);
-            }
+        const tripTimes = (result as any).tripTimes;
+        const legacyTripTime = (result as any).tripTime; // Check for old single tripTime field
+        
+        // Handle legacy single tripTime - convert to array (ONLY if tripTimes doesn't exist)
+        if (legacyTripTime != null && tripTimes == null) {
+          const tripTimeNum = Number(legacyTripTime);
+          if (isFinite(tripTimeNum) && tripTimeNum > 0) {
+            // Convert old seconds format if needed
+            const normalized = tripTimeNum < 1 ? tripTimeNum * 1000 : tripTimeNum;
+            console.log(`Converting legacy tripTime ${legacyTripTime} to tripTimes array: [${normalized}]`);
             return {
               ...result,
-              tripTime: tripTimeNum
+              tripTimes: [normalized],
+              tripTime: undefined // Remove legacy field
             };
           }
         }
+        // Handle array of trip times (ONLY if legacy conversion didn't happen)
+        else if (tripTimes != null && Array.isArray(tripTimes)) {
+          const normalized = tripTimes.map(tripTime => {
+            const tripTimeNum = Number(tripTime);
+            if (isFinite(tripTimeNum) && tripTimeNum > 0) {
+              // If value is < 1, it's in old seconds format - convert to milliseconds
+              if (tripTimeNum < 1) {
+                console.log(`Converting trip time ${tripTime} from seconds to milliseconds: ${tripTimeNum * 1000}`);
+                return tripTimeNum * 1000;
+              }
+              return tripTimeNum;
+            }
+            console.warn(`Invalid trip time value: ${tripTime}`);
+            return null;
+          }).filter((v): v is number => v !== null);
+          
+          if (normalized.length > 0) {
+            return {
+              ...result,
+              tripTimes: normalized
+            };
+          } else {
+            console.warn(`All trip time values were invalid for result ${result.id}, removing tripTimes field`);
+            return {
+              ...result,
+              tripTimes: undefined
+            };
+          }
+        }
+        
         return result;
       });
       
