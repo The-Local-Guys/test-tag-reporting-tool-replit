@@ -494,6 +494,20 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       microwaveCommentsLines = doc.splitTextToSize(commentsText, microwaveCommentsWidth);
     }
     
+    // Calculate trip time lines for RCD reporting (Fixed RCD can have multiple trip times)
+    let tripTimeLinesCount = 1; // Default to 1 line
+    if (session.serviceType === 'rcd_reporting') {
+      const tripTimesArray = (result as any).tripTimes;
+      if (Array.isArray(tripTimesArray) && tripTimesArray.length > 0) {
+        const validTripTimes = tripTimesArray.filter((t: any) => t != null && t > 0);
+        const isFixedRCD = result.itemName && result.itemName.includes('Fixed RCD');
+        // Fixed RCD shows each trip time on a separate line
+        if (isFixedRCD && validTripTimes.length > 0) {
+          tripTimeLinesCount = validTripTimes.length;
+        }
+      }
+    }
+    
     // Calculate row height based on maximum lines needed
     const maxLines = Math.max(
       assetNumberLines.length,
@@ -507,7 +521,8 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       actionTakenLines.length,
       microwaveNameLines.length,
       microwaveLocationLines.length,
-      microwaveCommentsLines.length
+      microwaveCommentsLines.length,
+      tripTimeLinesCount
     );
     const lineHeight = 4; // Height per line
     const rowHeight = maxLines * lineHeight;
