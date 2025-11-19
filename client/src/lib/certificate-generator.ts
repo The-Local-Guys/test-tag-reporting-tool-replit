@@ -138,12 +138,18 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
   doc.text(certificate.clientName, pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 8;
 
-  // Client Address (centered, blue color)
+  // Client Address (centered, blue color, with text wrapping)
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(0, 102, 204); // Blue color
-  doc.text(certificate.address, pageWidth / 2, yPosition, { align: 'center' });
-  yPosition += 10;
+  
+  // Split address into multiple lines if needed (max width: 150mm)
+  const addressLines = doc.splitTextToSize(certificate.address, 150);
+  addressLines.forEach((line: string) => {
+    doc.text(line, pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 5; // Line spacing for address
+  });
+  yPosition += 5; // Extra spacing after address block
   
   // Reset text color to black for remaining content
   doc.setTextColor(0, 0, 0);
