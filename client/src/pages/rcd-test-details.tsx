@@ -21,8 +21,8 @@ const rcdTestSchema = z.object({
   assetNumber: z.string().optional(), // Auto-generated
   equipmentType: z.enum(['fixed-rcd', 'portable-rcd']),
   distributionBoardNumber: z.string().optional(), // Only for Fixed RCD
-  pushButtonTest: z.boolean().default(true),
-  injectionTimedTest: z.boolean().default(true),
+  pushButtonTest: z.boolean(),
+  injectionTimedTest: z.boolean(),
   tripTimes: z.array(
     z.object({
       value: z.preprocess(
@@ -87,14 +87,14 @@ export default function RCDTestDetails() {
       distributionBoardNumber: getEquipmentType(initialItemType) === 'fixed-rcd' ? currentDistributionBoardNumber : '',
       pushButtonTest: false,
       injectionTimedTest: false,
-      tripTimes: [{ value: '' as any }], // Start with one empty trip time field
+      tripTimes: [], // Start with empty array since injectionTimedTest is false
       result: 'pass',
       notes: '',
     },
   });
 
   // useFieldArray for managing multiple trip times (Fixed RCD only)
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: 'tripTimes',
   });
@@ -130,6 +130,19 @@ export default function RCDTestDetails() {
     setCurrentItemName(newItemName);
     setCurrentItemType(newItemType);
   }, [watchEquipmentType]);
+
+  // Clear trip times when Injection/Timed Test is unchecked
+  useEffect(() => {
+    if (!watchInjectionTimedTest) {
+      // Reset to empty array when unchecked to avoid validation issues
+      // Use replace([]) to safely clear all fields
+      replace([]);
+    } else if (watchInjectionTimedTest && fields.length === 0) {
+      // Add one empty field when checked if none exist
+      // Use append() to properly add to useFieldArray
+      append({ value: '' as any });
+    }
+  }, [watchInjectionTimedTest, fields.length, replace, append]);
 
   const onSubmit = async (data: RCDTestForm) => {
     if (!sessionData?.session?.id) {
