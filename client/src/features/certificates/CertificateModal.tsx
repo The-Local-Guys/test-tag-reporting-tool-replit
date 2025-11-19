@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
@@ -184,11 +185,13 @@ export function CertificateModal({ isOpen, onClose, onSubmit, certificate }: Cer
 
         <div>
           <Label htmlFor="address">Address</Label>
-          <Input
+          <Textarea
             id="address"
             value={formData.address}
             onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-            placeholder="Enter address"
+            placeholder="Enter address (e.g., Street, Area, City)"
+            rows={3}
+            className="resize-none"
           />
         </div>
 
