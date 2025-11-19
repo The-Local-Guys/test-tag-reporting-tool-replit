@@ -201,7 +201,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
     }
   }
   
-  yPosition += 25; // Large gap after services
+  yPosition += 12; // Gap after services
 
   // Date section - all dates RIGHT-ALIGNED at far right of page
   const rightX = pageWidth - margin - 5; // Right edge position for dates
