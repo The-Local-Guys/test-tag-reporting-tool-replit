@@ -311,7 +311,7 @@ function getServiceDisplayName(serviceType: string): string {
     case 'fire_testing':
       return 'Fire Equipment Maintenance';
     case 'rcd_reporting':
-      return 'Residual Current Device Testing';
+      return 'RCD Reporting';
     case 'microwave_leakage':
       return 'Microwave Leakage Testing';
     default:

@@ -20,7 +20,7 @@ function getServiceDisplayName(serviceType: string): string {
     electrical: "Electrical Appliance Test & Tag",
     emergency_exit_light: "Emergency Exit Light Testing",
     fire_testing: "Fire Equipment Maintenance",
-    rcd_reporting: "Residual Current Device Testing",
+    rcd_reporting: "RCD Reporting",
     microwave_leakage: "Microwave Leakage Testing",
   };
   return serviceNames[serviceType] || serviceType;
