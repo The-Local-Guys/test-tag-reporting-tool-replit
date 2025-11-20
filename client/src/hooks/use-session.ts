@@ -359,6 +359,13 @@ export function useSession() {
         luxTest: result.luxTest || undefined,
         luxReading: result.luxReading || undefined,
         luxCompliant: result.luxCompliant || undefined,
+        // RCD testing fields
+        pushButtonTest: result.pushButtonTest || undefined,
+        injectionTimedTest: result.injectionTimedTest || undefined,
+        tripTimes: result.tripTimes || undefined,
+        distributionBoardNumber: result.distributionBoardNumber || undefined,
+        // Microwave leakage testing fields
+        leakageReading: result.leakageReading || undefined,
       }));
       
       setBatchedResults(loadedResults);
