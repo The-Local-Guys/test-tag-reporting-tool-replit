@@ -86,6 +86,15 @@ export default function Setup() {
     // Get the selected service type from session storage
     const selectedService = sessionStorage.getItem('selectedService') || 'electrical';
     
+    // Validate fire testing checkbox
+    if (selectedService === 'fire_testing' && !data.technicianLicensed) {
+      form.setError('technicianLicensed', {
+        type: 'manual',
+        message: 'You must confirm that you are trained and licensed to perform fire testing'
+      });
+      return;
+    }
+    
     createSession({
       ...data,
       serviceType: selectedService as 'electrical' | 'emergency_exit_light' | 'fire_testing' | 'rcd_reporting' | 'microwave_leakage',
@@ -318,8 +327,13 @@ export default function Setup() {
                 <Checkbox
                   id="technicianLicensed"
                   checked={form.watch('technicianLicensed') || false}
-                  onCheckedChange={(checked) => form.setValue('technicianLicensed', checked === true)}
-                  required
+                  onCheckedChange={(checked) => {
+                    form.setValue('technicianLicensed', checked === true);
+                    if (checked) {
+                      form.clearErrors('technicianLicensed');
+                    }
+                  }}
+                  data-testid="checkbox-technician-licensed"
                 />
                 <div className="space-y-1">
                   <Label htmlFor="technicianLicensed" className="text-sm font-medium leading-tight">
@@ -331,7 +345,7 @@ export default function Setup() {
                 </div>
               </div>
               {form.formState.errors.technicianLicensed && (
-                <p className="text-sm text-error">{form.formState.errors.technicianLicensed.message}</p>
+                <p className="text-sm text-red-600 font-medium">{form.formState.errors.technicianLicensed.message}</p>
               )}
             </div>
           )}
