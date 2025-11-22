@@ -94,6 +94,34 @@ export function CertificateModal({ isOpen, onClose, onSubmit, certificate }: Cer
     }
   }, [certificate]);
 
+  // Reset form when modal closes (only in create mode)
+  useEffect(() => {
+    if (!isOpen && !certificate) {
+      // Reset to initial state
+      setFormData({
+        clientName: "",
+        address: "",
+        certificationDate: new Date().toISOString().split('T')[0],
+        technicianName: (user as any)?.fullName || "",
+        technicianLicense: "",
+      });
+      setSelectedServices({
+        electrical: false,
+        emergency_exit_light: false,
+        fire_testing: false,
+        rcd_reporting: false,
+        microwave_leakage: false,
+      });
+      setValidityPeriods({
+        electrical: 12,
+        emergency_exit_light: 12,
+        fire_testing: 12,
+        rcd_reporting: 12,
+        microwave_leakage: 12,
+      });
+    }
+  }, [isOpen, certificate, user]);
+
   // Fetch all test sessions to get unique clients
   const { data: sessions } = useQuery({
     queryKey: ["/api/admin/sessions"],
