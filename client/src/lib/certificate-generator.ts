@@ -157,7 +157,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
   // Compliance statement (3 lines, centered)
   const complianceLines = [
     'Is compliant with their obligations and duty of care for staff, visitors',
-    'and contractors under the relevant Australian/New Zealand standards for the',
+    'and contractors under the relevant Australia/New Zealand standards for the',
     'services listed.'
   ];
   
