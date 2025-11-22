@@ -43,6 +43,14 @@ export function CertificateModal({ isOpen, onClose, onSubmit, certificate }: Cer
     microwave_leakage: false,
   });
 
+  const [validityPeriods, setValidityPeriods] = useState<Record<string, number>>({
+    electrical: 12,
+    emergency_exit_light: 12,
+    fire_testing: 12,
+    rcd_reporting: 12,
+    microwave_leakage: 12,
+  });
+
   // Pre-populate form when editing
   useEffect(() => {
     if (certificate) {
@@ -67,6 +75,22 @@ export function CertificateModal({ isOpen, onClose, onSubmit, certificate }: Cer
         servicesMap[service] = true;
       });
       setSelectedServices(servicesMap);
+
+      // Set validity periods from existing certificate
+      if (certificate.validityDates) {
+        const periods: Record<string, number> = { ...validityPeriods };
+        services.forEach((service) => {
+          const validityDate = (certificate.validityDates as any)[service];
+          if (validityDate) {
+            // Calculate months between certification date and validity date
+            const certDate = new Date(certificate.certificationDate);
+            const validDate = new Date(validityDate);
+            const months = Math.round((validDate.getTime() - certDate.getTime()) / (1000 * 60 * 60 * 24 * 30));
+            periods[service] = months;
+          }
+        });
+        setValidityPeriods(periods);
+      }
     }
   }, [certificate]);
 
@@ -107,17 +131,17 @@ export function CertificateModal({ isOpen, onClose, onSubmit, certificate }: Cer
 
   const calculateValidityDate = (serviceType: string, baseDate: string): string => {
     const date = new Date(baseDate);
-    // All services have 12 months (1 year) validity period from certification date
-    const validityMonths: Record<string, number> = {
-      electrical: 12,
-      emergency_exit_light: 12,
-      fire_testing: 12,
-      rcd_reporting: 12,
-      microwave_leakage: 12,
-    };
-
-    date.setMonth(date.getMonth() + (validityMonths[serviceType] || 12));
+    // Use the selected validity period for this service
+    const months = validityPeriods[serviceType] || 12;
+    date.setMonth(date.getMonth() + months);
     return date.toISOString().split('T')[0];
+  };
+
+  const handleValidityPeriodChange = (service: string, months: string) => {
+    setValidityPeriods({
+      ...validityPeriods,
+      [service]: parseInt(months),
+    });
   };
 
   const handleSubmit = () => {
@@ -195,59 +219,178 @@ export function CertificateModal({ isOpen, onClose, onSubmit, certificate }: Cer
           />
         </div>
 
-        {/* Services Selection */}
+        {/* Services Selection with Validity Periods */}
         <div>
           <Label>Services Completed</Label>
-          <div className="space-y-2 mt-2">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="electrical"
-                checked={selectedServices.electrical}
-                onCheckedChange={() => handleServiceToggle('electrical')}
-              />
-              <label htmlFor="electrical" className="text-sm">
-                Electrical Appliance Test & Tag
-              </label>
+          <div className="space-y-3 mt-2">
+            {/* Electrical Service */}
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="electrical"
+                  checked={selectedServices.electrical}
+                  onCheckedChange={() => handleServiceToggle('electrical')}
+                />
+                <label htmlFor="electrical" className="text-sm font-medium">
+                  Electrical Appliance Test & Tag
+                </label>
+              </div>
+              {selectedServices.electrical && (
+                <div className="ml-6">
+                  <Label htmlFor="electrical-validity" className="text-xs text-gray-600">Valid for</Label>
+                  <Select 
+                    value={validityPeriods.electrical.toString()} 
+                    onValueChange={(value) => handleValidityPeriodChange('electrical', value)}
+                  >
+                    <SelectTrigger id="electrical-validity" className="w-40" data-testid="select-electrical-validity">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1" data-testid="electrical-validity-1">1 month</SelectItem>
+                      <SelectItem value="3" data-testid="electrical-validity-3">3 months</SelectItem>
+                      <SelectItem value="6" data-testid="electrical-validity-6">6 months</SelectItem>
+                      <SelectItem value="12" data-testid="electrical-validity-12">12 months</SelectItem>
+                      <SelectItem value="24" data-testid="electrical-validity-24">24 months</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="emergency"
-                checked={selectedServices.emergency_exit_light}
-                onCheckedChange={() => handleServiceToggle('emergency_exit_light')}
-              />
-              <label htmlFor="emergency" className="text-sm">
-                Emergency Exit Light Testing
-              </label>
+
+            {/* Emergency Exit Light Service */}
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="emergency"
+                  checked={selectedServices.emergency_exit_light}
+                  onCheckedChange={() => handleServiceToggle('emergency_exit_light')}
+                />
+                <label htmlFor="emergency" className="text-sm font-medium">
+                  Emergency Exit Light Testing
+                </label>
+              </div>
+              {selectedServices.emergency_exit_light && (
+                <div className="ml-6">
+                  <Label htmlFor="emergency-validity" className="text-xs text-gray-600">Valid for</Label>
+                  <Select 
+                    value={validityPeriods.emergency_exit_light.toString()} 
+                    onValueChange={(value) => handleValidityPeriodChange('emergency_exit_light', value)}
+                  >
+                    <SelectTrigger id="emergency-validity" className="w-40" data-testid="select-emergency-validity">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1" data-testid="emergency-validity-1">1 month</SelectItem>
+                      <SelectItem value="3" data-testid="emergency-validity-3">3 months</SelectItem>
+                      <SelectItem value="6" data-testid="emergency-validity-6">6 months</SelectItem>
+                      <SelectItem value="12" data-testid="emergency-validity-12">12 months</SelectItem>
+                      <SelectItem value="24" data-testid="emergency-validity-24">24 months</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="fire"
-                checked={selectedServices.fire_testing}
-                onCheckedChange={() => handleServiceToggle('fire_testing')}
-              />
-              <label htmlFor="fire" className="text-sm">
-                Fire Equipment Maintenance
-              </label>
+
+            {/* Fire Testing Service */}
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="fire"
+                  checked={selectedServices.fire_testing}
+                  onCheckedChange={() => handleServiceToggle('fire_testing')}
+                />
+                <label htmlFor="fire" className="text-sm font-medium">
+                  Fire Equipment Maintenance
+                </label>
+              </div>
+              {selectedServices.fire_testing && (
+                <div className="ml-6">
+                  <Label htmlFor="fire-validity" className="text-xs text-gray-600">Valid for</Label>
+                  <Select 
+                    value={validityPeriods.fire_testing.toString()} 
+                    onValueChange={(value) => handleValidityPeriodChange('fire_testing', value)}
+                  >
+                    <SelectTrigger id="fire-validity" className="w-40" data-testid="select-fire-validity">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1" data-testid="fire-validity-1">1 month</SelectItem>
+                      <SelectItem value="3" data-testid="fire-validity-3">3 months</SelectItem>
+                      <SelectItem value="6" data-testid="fire-validity-6">6 months</SelectItem>
+                      <SelectItem value="12" data-testid="fire-validity-12">12 months</SelectItem>
+                      <SelectItem value="24" data-testid="fire-validity-24">24 months</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="rcd"
-                checked={selectedServices.rcd_reporting}
-                onCheckedChange={() => handleServiceToggle('rcd_reporting')}
-              />
-              <label htmlFor="rcd" className="text-sm">
-                RCD Testing
-              </label>
+
+            {/* RCD Service */}
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="rcd"
+                  checked={selectedServices.rcd_reporting}
+                  onCheckedChange={() => handleServiceToggle('rcd_reporting')}
+                />
+                <label htmlFor="rcd" className="text-sm font-medium">
+                  RCD Testing
+                </label>
+              </div>
+              {selectedServices.rcd_reporting && (
+                <div className="ml-6">
+                  <Label htmlFor="rcd-validity" className="text-xs text-gray-600">Valid for</Label>
+                  <Select 
+                    value={validityPeriods.rcd_reporting.toString()} 
+                    onValueChange={(value) => handleValidityPeriodChange('rcd_reporting', value)}
+                  >
+                    <SelectTrigger id="rcd-validity" className="w-40" data-testid="select-rcd-validity">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1" data-testid="rcd-validity-1">1 month</SelectItem>
+                      <SelectItem value="3" data-testid="rcd-validity-3">3 months</SelectItem>
+                      <SelectItem value="6" data-testid="rcd-validity-6">6 months</SelectItem>
+                      <SelectItem value="12" data-testid="rcd-validity-12">12 months</SelectItem>
+                      <SelectItem value="24" data-testid="rcd-validity-24">24 months</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="microwave"
-                checked={selectedServices.microwave_leakage}
-                onCheckedChange={() => handleServiceToggle('microwave_leakage')}
-              />
-              <label htmlFor="microwave" className="text-sm">
-                Microwave Leakage Testing
-              </label>
+
+            {/* Microwave Leakage Service */}
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="microwave"
+                  checked={selectedServices.microwave_leakage}
+                  onCheckedChange={() => handleServiceToggle('microwave_leakage')}
+                />
+                <label htmlFor="microwave" className="text-sm font-medium">
+                  Microwave Leakage Testing
+                </label>
+              </div>
+              {selectedServices.microwave_leakage && (
+                <div className="ml-6">
+                  <Label htmlFor="microwave-validity" className="text-xs text-gray-600">Valid for</Label>
+                  <Select 
+                    value={validityPeriods.microwave_leakage.toString()} 
+                    onValueChange={(value) => handleValidityPeriodChange('microwave_leakage', value)}
+                  >
+                    <SelectTrigger id="microwave-validity" className="w-40" data-testid="select-microwave-validity">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1" data-testid="microwave-validity-1">1 month</SelectItem>
+                      <SelectItem value="3" data-testid="microwave-validity-3">3 months</SelectItem>
+                      <SelectItem value="6" data-testid="microwave-validity-6">6 months</SelectItem>
+                      <SelectItem value="12" data-testid="microwave-validity-12">12 months</SelectItem>
+                      <SelectItem value="24" data-testid="microwave-validity-24">24 months</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           </div>
         </div>
