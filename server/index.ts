@@ -2,11 +2,16 @@ import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { initPostHog, posthogMiddleware, shutdownPostHog } from "./posthog";
 
 const app = express();
+
+initPostHog();
 // Increase body parser limit to handle base64-encoded images (10MB limit)
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+
+app.use(posthogMiddleware);
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -91,5 +96,15 @@ app.use((req, res, next) => {
   const port = 5000;
   server.listen(port, () => {
     log(`serving on port ${port}`);
+  });
+
+  process.on('SIGTERM', async () => {
+    await shutdownPostHog();
+    process.exit(0);
+  });
+
+  process.on('SIGINT', async () => {
+    await shutdownPostHog();
+    process.exit(0);
   });
 })();

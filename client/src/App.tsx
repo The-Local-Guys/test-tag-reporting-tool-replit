@@ -28,6 +28,9 @@ import Environments from "@/pages/environments";
 import Login from "@/pages/login";
 import FormTypes from "@/pages/form-types";
 import { ConditionalNavProvider } from "./contexts/ConditionalNavContext";
+import { initPostHog, identifyUser, trackPageView, trackLogout } from "./lib/posthog";
+
+initPostHog();
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -38,6 +41,26 @@ function Router() {
   // Get current login mode
   const loginMode = sessionStorage.getItem('loginMode');
   console.log('Login mode:', loginMode, 'User role:', (user as any)?.role); // Debug log
+
+  // Identify user with PostHog when authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const typedUser = user as any;
+      identifyUser(typedUser.id, {
+        username: typedUser.username,
+        role: typedUser.role,
+        fullName: typedUser.fullName,
+        email: typedUser.email,
+      });
+    }
+  }, [isAuthenticated, user]);
+
+  // Track page views with PostHog
+  useEffect(() => {
+    if (prevLocationRef.current !== location) {
+      trackPageView(location);
+    }
+  }, [location]);
 
   // Always call all hooks before any early returns
   useEffect(() => {
