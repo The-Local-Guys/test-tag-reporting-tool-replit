@@ -42,6 +42,32 @@ Preferred communication style: Simple, everyday language.
 - **Zod Schema Validation**: Used for robust data validation, including specific RCD trip time validation.
 - **Modular Frontend**: Dedicated components and hooks for features like Certificates, ensuring maintainability.
 
+### Analytics Implementation
+- **PostHog Integration**: Comprehensive full-stack analytics for debugging, user behavior tracking, and business intelligence.
+  - **Backend Tracking** (`server/posthog.ts`):
+    - API Request Middleware: Captures all API requests with full authentication context (userId, username, email, role, fullName, companyName, sessionId, isAuthenticated, authMethod).
+    - Request Context: ip, userAgent, referer, origin, host, acceptLanguage, contentType.
+    - Response Metrics: Status codes, duration, duration category (fast/normal/slow/very_slow), route category.
+    - Request Body Logging: Sanitized POST/PUT/PATCH bodies with sensitive fields redacted.
+    - Error Tracking: Distinct events for api_unauthorized (401), api_forbidden (403), api_not_found (404), api_server_error (5xx).
+    - Helper Functions: trackLogin, trackLogout, trackSessionAction, trackTestResult, trackBatchSubmission, trackReportGenerated, trackCertificateAction, trackEnvironmentAction, trackCustomFormAction, trackUserManagementAction, trackAdminAction, trackDataExport, trackDatabaseOperation, trackSystemEvent.
+    - System Events: Captures uncaught_exception, unhandled_rejection, process_warning, system_startup, system_shutdown.
+  - **Frontend Tracking** (`client/src/lib/posthog.ts`):
+    - Page Views: Automatic tracking with stored user info persistence.
+    - Click Tracking: Captures clicks on interactive elements with tagName, id, testId, href, ariaLabel.
+    - Form Tracking: Automatic form submission capture with input counts.
+    - Input Tracking: Focus/blur events with duration tracking.
+    - Scroll Tracking: Scroll depth milestones (25%, 50%, 75%, 100%).
+    - Visibility Tracking: Page hide/show events with hidden duration.
+    - Keyboard Tracking: Escape key, Ctrl+S, Enter in inputs.
+    - Clipboard Tracking: Copy/paste events.
+    - Modal/Dialog Tracking: Dialog open events via MutationObserver.
+    - Select/Checkbox/Radio Tracking: Change events for form controls.
+    - Tab Tracking: Tab clicks for navigation.
+    - Error Tracking: JavaScript errors, unhandled promise rejections.
+    - Helper Functions: trackLogin, trackLogout, trackSessionStart, trackSessionComplete, trackSessionCancelled, trackTestResult, trackItemAdded, trackItemDeleted, trackReportPreview, trackReportDownload, trackCertificateAction, trackEnvironmentAction, trackNavigation, trackButtonClick, trackFormSubmit, trackFormValidationError, trackModalOpen, trackModalClose, trackTabChange, trackDropdownSelect, trackSearchPerformed, trackFileUpload, trackAPICall, trackServiceTypeSelected, trackCountrySelected, trackFrequencySelected, trackAssetNumberChanged, trackPhotoCapture.
+  - **Environment Variables**: POSTHOG_API_KEY, POSTHOG_HOST (backend), VITE_POSTHOG_API_KEY, VITE_POSTHOG_HOST (frontend). Analytics disabled gracefully when API key not configured.
+
 ## External Dependencies
 
 - **Database**: Neon Database (@neondatabase/serverless)
