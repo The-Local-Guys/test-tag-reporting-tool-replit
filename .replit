@@ -102,5 +102,11 @@ externalPort = 8081
 [userenv.shared]
 POSTHOG_API_KEY = "phc_NlhfyqhzzNc7MdTyX3jjCFOqvZLPip0QDmaaP8wZ1TK"
 POSTHOG_HOST = "https://us.i.posthog.com"
+
+[userenv.development]
+VITE_POSTHOG_API_KEY = "phc_NlhfyqhzzNc7MdTyX3jjCFOqvZLPip0QDmaaP8wZ1TK"
+VITE_POSTHOG_HOST = "https://us.i.posthog.com"
+
+[userenv.production]
 VITE_POSTHOG_API_KEY = "phc_NlhfyqhzzNc7MdTyX3jjCFOqvZLPip0QDmaaP8wZ1TK"
 VITE_POSTHOG_HOST = "https://us.i.posthog.com"
