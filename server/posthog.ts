@@ -44,9 +44,12 @@ export function track(req: Request, event: string, data?: Record<string, any>): 
   if (!posthogClient) return;
 
   const userInfo = getUserInfo(req);
+  const distinctId = getUserId(req);
+  
+  console.log(`[Analytics] ${event}:`, { ...userInfo, ...data });
   
   posthogClient.capture({
-    distinctId: getUserId(req),
+    distinctId,
     event,
     properties: {
       ...userInfo,
@@ -56,9 +59,14 @@ export function track(req: Request, event: string, data?: Record<string, any>): 
 }
 
 export function trackUserLogin(req: Request, username: string, role: string): void {
-  if (!posthogClient) return;
+  if (!posthogClient) {
+    console.log('[Analytics] Skipped - client not initialized');
+    return;
+  }
 
   const userId = getUserId(req);
+  
+  console.log(`[Analytics] User Logged In: ${username} (${role})`);
   
   posthogClient.identify({
     distinctId: userId,
@@ -73,6 +81,7 @@ export function trackUserLogin(req: Request, username: string, role: string): vo
 }
 
 export function trackUserLogout(req: Request): void {
+  console.log('[Analytics] User Logged Out');
   track(req, 'User Logged Out');
 }
 
@@ -82,6 +91,7 @@ export function trackJobStarted(req: Request, data: {
   serviceType: string;
   country: string;
 }): void {
+  console.log(`[Analytics] Job Started: ${data.client} - ${data.serviceType}`);
   track(req, 'Job Started', {
     client: data.client,
     location: data.location,
@@ -98,6 +108,10 @@ export function trackJobCompleted(req: Request, data: {
   passedItems: number;
   failedItems: number;
 }): void {
+  const passRate = data.totalItems > 0 
+    ? Math.round((data.passedItems / data.totalItems) * 100) + '%' 
+    : '0%';
+  console.log(`[Analytics] Job Completed: ${data.client} - ${data.totalItems} items (${passRate} pass rate)`);
   track(req, 'Job Completed', {
     jobId: data.sessionId,
     client: data.client,
@@ -105,9 +119,7 @@ export function trackJobCompleted(req: Request, data: {
     totalItems: data.totalItems,
     passed: data.passedItems,
     failed: data.failedItems,
-    passRate: data.totalItems > 0 
-      ? Math.round((data.passedItems / data.totalItems) * 100) + '%' 
-      : '0%',
+    passRate,
   });
 }
 
@@ -143,6 +155,7 @@ export function trackCertificateCreated(req: Request, data: {
   clientName: string;
   services: string[];
 }): void {
+  console.log(`[Analytics] Certificate Created: ${data.clientName} (${data.services.length} services)`);
   track(req, 'Certificate Created', {
     client: data.clientName,
     services: data.services.join(', '),
@@ -151,6 +164,7 @@ export function trackCertificateCreated(req: Request, data: {
 }
 
 export function trackCertificateDownloaded(req: Request, clientName: string): void {
+  console.log(`[Analytics] Certificate Downloaded: ${clientName}`);
   track(req, 'Certificate Downloaded', { client: clientName });
 }
 
@@ -158,6 +172,7 @@ export function trackUserCreated(req: Request, data: {
   newUsername: string;
   newRole: string;
 }): void {
+  console.log(`[Analytics] User Created: ${data.newUsername} (${data.newRole})`);
   track(req, 'User Created', {
     newUser: data.newUsername,
     assignedRole: data.newRole,
@@ -169,6 +184,7 @@ export function trackEnvironmentCreated(req: Request, data: {
   serviceType: string;
   itemCount: number;
 }): void {
+  console.log(`[Analytics] Custom Environment Created: ${data.name} (${data.itemCount} items)`);
   track(req, 'Custom Environment Created', {
     name: data.name,
     service: data.serviceType,
@@ -177,6 +193,7 @@ export function trackEnvironmentCreated(req: Request, data: {
 }
 
 export function trackError(req: Request, error: string, context?: string): void {
+  console.log(`[Analytics] Error: ${error} (${context || 'Unknown'})`);
   track(req, 'Error Occurred', {
     error,
     context: context || 'Unknown',
