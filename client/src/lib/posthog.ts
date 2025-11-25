@@ -126,44 +126,44 @@ export function trackPageView(pageName?: string): void {
 
 export function trackLogin(userId: number | string, username: string, role?: string): void {
   const loginProps = { 
-    userId, 
-    username, 
-    role,
-    loginMethod: 'password',
-    loginTime: new Date().toISOString(),
+    user_id: userId, 
+    user_name: username, 
+    user_role: role,
+    login_method: 'password',
+    login_time: new Date().toISOString(),
   };
   
   identifyUser(userId, loginProps);
-  trackEvent('user_login', loginProps);
+  trackEvent('User Logged In', loginProps);
 }
 
 export function trackLogout(): void {
   const userInfo = getStoredUserInfo();
-  trackEvent('user_logout', {
+  trackEvent('User Logged Out', {
     ...userInfo,
-    logoutTime: new Date().toISOString(),
+    logout_time: new Date().toISOString(),
   });
   resetUser();
 }
 
 export function trackSessionStart(sessionData: Record<string, any>): void {
-  trackEvent('test_session_started', {
+  trackEvent('Test Session Started', {
     ...sessionData,
-    sessionStartTime: new Date().toISOString(),
+    session_start_time: new Date().toISOString(),
   });
 }
 
 export function trackSessionComplete(sessionData: Record<string, any>): void {
-  trackEvent('test_session_completed', {
+  trackEvent('Test Session Completed', {
     ...sessionData,
-    sessionCompleteTime: new Date().toISOString(),
+    session_complete_time: new Date().toISOString(),
   });
 }
 
 export function trackSessionCancelled(sessionData: Record<string, any>): void {
-  trackEvent('test_session_cancelled', {
+  trackEvent('Test Session Cancelled', {
     ...sessionData,
-    cancelTime: new Date().toISOString(),
+    cancel_time: new Date().toISOString(),
   });
 }
 
@@ -172,43 +172,43 @@ export function trackTestResult(
   result: 'pass' | 'fail',
   itemData?: Record<string, any>
 ): void {
-  trackEvent('test_result_recorded', {
-    testType,
-    result,
-    isPassing: result === 'pass',
-    recordedAt: new Date().toISOString(),
+  trackEvent(result === 'pass' ? 'Test Passed' : 'Test Failed', {
+    test_type: testType,
+    test_result: result,
+    is_passing: result === 'pass',
+    recorded_at: new Date().toISOString(),
     ...itemData,
   });
 }
 
 export function trackItemAdded(serviceType: string, itemData: Record<string, any>): void {
-  trackEvent('test_item_added', {
-    serviceType,
+  trackEvent('Test Item Added', {
+    service_type: serviceType,
     ...itemData,
-    addedAt: new Date().toISOString(),
+    added_at: new Date().toISOString(),
   });
 }
 
 export function trackItemDeleted(serviceType: string, itemData: Record<string, any>): void {
-  trackEvent('test_item_deleted', {
-    serviceType,
+  trackEvent('Test Item Deleted', {
+    service_type: serviceType,
     ...itemData,
-    deletedAt: new Date().toISOString(),
+    deleted_at: new Date().toISOString(),
   });
 }
 
 export function trackReportPreview(sessionData: Record<string, any>): void {
-  trackEvent('report_preview_opened', {
+  trackEvent('Report Previewed', {
     ...sessionData,
-    previewTime: new Date().toISOString(),
+    preview_time: new Date().toISOString(),
   });
 }
 
 export function trackReportDownload(format: 'pdf' | 'excel', sessionData: Record<string, any>): void {
-  trackEvent('report_downloaded', {
-    format,
+  trackEvent(`Report Downloaded (${format.toUpperCase()})`, {
+    report_format: format,
     ...sessionData,
-    downloadTime: new Date().toISOString(),
+    download_time: new Date().toISOString(),
   });
 }
 
@@ -216,9 +216,18 @@ export function trackCertificateAction(
   action: 'created' | 'updated' | 'deleted' | 'downloaded' | 'previewed' | 'modal_opened' | 'modal_closed',
   certificateData?: Record<string, any>
 ): void {
-  trackEvent(`certificate_${action}`, {
+  const actionMap: Record<string, string> = {
+    created: 'Certificate Created',
+    updated: 'Certificate Updated',
+    deleted: 'Certificate Deleted',
+    downloaded: 'Certificate Downloaded',
+    previewed: 'Certificate Previewed',
+    modal_opened: 'Certificate Modal Opened',
+    modal_closed: 'Certificate Modal Closed',
+  };
+  trackEvent(actionMap[action] || `Certificate ${action}`, {
     ...certificateData,
-    actionTime: new Date().toISOString(),
+    action_time: new Date().toISOString(),
   });
 }
 
@@ -226,104 +235,110 @@ export function trackEnvironmentAction(
   action: 'selected' | 'created' | 'updated' | 'deleted',
   environmentData?: Record<string, any>
 ): void {
-  trackEvent(`environment_${action}`, {
+  const actionMap: Record<string, string> = {
+    selected: 'Environment Selected',
+    created: 'Environment Created',
+    updated: 'Environment Updated',
+    deleted: 'Environment Deleted',
+  };
+  trackEvent(actionMap[action] || `Environment ${action}`, {
     ...environmentData,
-    actionTime: new Date().toISOString(),
+    action_time: new Date().toISOString(),
   });
 }
 
 export function trackNavigation(from: string, to: string, method: 'click' | 'programmatic' = 'click'): void {
-  trackEvent('navigation', { 
-    from, 
-    to, 
-    method,
-    navigationTime: new Date().toISOString(),
+  trackEvent('Page Navigation', { 
+    from_page: from, 
+    to_page: to, 
+    navigation_method: method,
+    navigation_time: new Date().toISOString(),
   });
 }
 
 export function trackButtonClick(buttonName: string, context?: Record<string, any>): void {
-  trackEvent('button_click', { 
-    buttonName, 
+  trackEvent(`Button Click: ${buttonName}`, { 
+    button_name: buttonName, 
     ...context,
-    clickTime: new Date().toISOString(),
+    click_time: new Date().toISOString(),
   });
 }
 
 export function trackFormSubmit(formName: string, success: boolean, data?: Record<string, any>): void {
-  trackEvent('form_submit', { 
-    formName, 
-    success, 
+  trackEvent(success ? `Form Submitted: ${formName}` : `Form Submit Failed: ${formName}`, { 
+    form_name: formName, 
+    submit_success: success, 
     ...data,
-    submitTime: new Date().toISOString(),
+    submit_time: new Date().toISOString(),
   });
 }
 
 export function trackFormValidationError(formName: string, fieldErrors: Record<string, string>): void {
-  trackEvent('form_validation_error', {
-    formName,
-    fieldErrors,
-    errorCount: Object.keys(fieldErrors).length,
-    errorTime: new Date().toISOString(),
+  trackEvent(`Form Validation Error: ${formName}`, {
+    form_name: formName,
+    field_errors: fieldErrors,
+    error_count: Object.keys(fieldErrors).length,
+    error_time: new Date().toISOString(),
   });
 }
 
 export function trackModalOpen(modalName: string, context?: Record<string, any>): void {
-  trackEvent('modal_opened', {
-    modalName,
+  trackEvent(`Modal Opened: ${modalName}`, {
+    modal_name: modalName,
     ...context,
-    openTime: new Date().toISOString(),
+    open_time: new Date().toISOString(),
   });
 }
 
 export function trackModalClose(modalName: string, closeReason: 'submit' | 'cancel' | 'backdrop' | 'escape' = 'cancel'): void {
-  trackEvent('modal_closed', {
-    modalName,
-    closeReason,
-    closeTime: new Date().toISOString(),
+  trackEvent(`Modal Closed: ${modalName}`, {
+    modal_name: modalName,
+    close_reason: closeReason,
+    close_time: new Date().toISOString(),
   });
 }
 
 export function trackTabChange(tabName: string, previousTab?: string): void {
-  trackEvent('tab_changed', {
-    tabName,
-    previousTab,
-    changeTime: new Date().toISOString(),
+  trackEvent(`Tab Changed: ${tabName}`, {
+    tab_name: tabName,
+    previous_tab: previousTab,
+    change_time: new Date().toISOString(),
   });
 }
 
 export function trackDropdownSelect(dropdownName: string, selectedValue: string, previousValue?: string): void {
-  trackEvent('dropdown_selected', {
-    dropdownName,
-    selectedValue,
-    previousValue,
-    selectTime: new Date().toISOString(),
+  trackEvent(`Dropdown Selected: ${dropdownName}`, {
+    dropdown_name: dropdownName,
+    selected_value: selectedValue,
+    previous_value: previousValue,
+    select_time: new Date().toISOString(),
   });
 }
 
 export function trackCheckboxToggle(checkboxName: string, checked: boolean): void {
-  trackEvent('checkbox_toggled', {
-    checkboxName,
-    checked,
-    toggleTime: new Date().toISOString(),
+  trackEvent(checked ? `Checkbox Checked: ${checkboxName}` : `Checkbox Unchecked: ${checkboxName}`, {
+    checkbox_name: checkboxName,
+    is_checked: checked,
+    toggle_time: new Date().toISOString(),
   });
 }
 
 export function trackSearchPerformed(searchQuery: string, resultCount?: number, context?: string): void {
-  trackEvent('search_performed', {
-    searchQuery: searchQuery.substring(0, 100),
-    resultCount,
-    context,
-    searchTime: new Date().toISOString(),
+  trackEvent('Search Performed', {
+    search_query: searchQuery.substring(0, 100),
+    result_count: resultCount,
+    search_context: context,
+    search_time: new Date().toISOString(),
   });
 }
 
 export function trackFileUpload(fileName: string, fileSize: number, fileType: string, success: boolean): void {
-  trackEvent('file_uploaded', {
-    fileName,
-    fileSize,
-    fileType,
-    success,
-    uploadTime: new Date().toISOString(),
+  trackEvent(success ? 'File Uploaded' : 'File Upload Failed', {
+    file_name: fileName,
+    file_size: fileSize,
+    file_type: fileType,
+    upload_success: success,
+    upload_time: new Date().toISOString(),
   });
 }
 
@@ -331,11 +346,11 @@ export function trackError(error: Error | string, context?: Record<string, any>)
   const errorMessage = error instanceof Error ? error.message : error;
   const errorStack = error instanceof Error ? error.stack : undefined;
 
-  trackEvent('frontend_error', {
-    error: errorMessage,
-    stack: errorStack,
+  trackEvent('Frontend Error', {
+    error_message: errorMessage,
+    error_stack: errorStack,
     ...context,
-    errorTime: new Date().toISOString(),
+    error_time: new Date().toISOString(),
   });
 }
 
@@ -346,80 +361,146 @@ export function trackAPICall(
   duration: number,
   statusCode?: number
 ): void {
-  trackEvent('api_call', {
-    endpoint,
-    method,
-    success,
-    duration,
-    statusCode,
-    callTime: new Date().toISOString(),
+  trackEvent(success ? 'API Call Success' : 'API Call Failed', {
+    api_endpoint: endpoint,
+    http_method: method,
+    call_success: success,
+    duration_ms: duration,
+    status_code: statusCode,
+    call_time: new Date().toISOString(),
   });
 }
 
 export function trackServiceTypeSelected(serviceType: string): void {
-  trackEvent('service_type_selected', {
-    serviceType,
-    selectTime: new Date().toISOString(),
+  trackEvent(`Service Selected: ${serviceType}`, {
+    service_type: serviceType,
+    select_time: new Date().toISOString(),
   });
 }
 
 export function trackCountrySelected(country: string, serviceType?: string): void {
-  trackEvent('country_selected', {
+  trackEvent(`Country Selected: ${country}`, {
     country,
-    serviceType,
-    selectTime: new Date().toISOString(),
+    service_type: serviceType,
+    select_time: new Date().toISOString(),
   });
 }
 
 export function trackFrequencySelected(frequency: string, serviceType?: string): void {
-  trackEvent('frequency_selected', {
+  trackEvent(`Frequency Selected: ${frequency}`, {
     frequency,
-    serviceType,
-    selectTime: new Date().toISOString(),
+    service_type: serviceType,
+    select_time: new Date().toISOString(),
   });
 }
 
 export function trackClassificationSelected(classification: string): void {
-  trackEvent('classification_selected', {
+  trackEvent(`Classification Selected: ${classification}`, {
     classification,
-    selectTime: new Date().toISOString(),
+    select_time: new Date().toISOString(),
   });
 }
 
 export function trackAssetNumberChanged(assetNumber: string, method: 'auto' | 'manual'): void {
-  trackEvent('asset_number_changed', {
-    assetNumber,
-    method,
-    changeTime: new Date().toISOString(),
+  trackEvent('Asset Number Changed', {
+    asset_number: assetNumber,
+    change_method: method,
+    change_time: new Date().toISOString(),
   });
 }
 
 export function trackPhotoCapture(success: boolean, context?: string): void {
-  trackEvent('photo_captured', {
-    success,
-    context,
-    captureTime: new Date().toISOString(),
+  trackEvent(success ? 'Photo Captured' : 'Photo Capture Failed', {
+    capture_success: success,
+    capture_context: context,
+    capture_time: new Date().toISOString(),
   });
 }
 
 function setupErrorTracking(): void {
   window.addEventListener('error', (event) => {
-    trackEvent('javascript_error', {
-      message: event.message,
-      filename: event.filename,
-      lineno: event.lineno,
-      colno: event.colno,
-      error: event.error?.stack,
-      errorType: 'runtime',
+    const userInfo = getStoredUserInfo();
+    posthog.capture('JavaScript Error', {
+      error_message: event.message,
+      error_file: event.filename,
+      error_line: event.lineno,
+      error_column: event.colno,
+      error_stack: event.error?.stack,
+      error_type: 'runtime',
+      page_path: window.location.pathname,
+      ...userInfo,
+      timestamp: new Date().toISOString(),
     });
   });
 
   window.addEventListener('unhandledrejection', (event) => {
-    trackEvent('unhandled_promise_rejection', {
-      reason: String(event.reason),
-      errorType: 'promise',
+    const userInfo = getStoredUserInfo();
+    posthog.capture('Promise Rejection', {
+      error_reason: String(event.reason),
+      error_type: 'unhandled_promise',
+      page_path: window.location.pathname,
+      ...userInfo,
+      timestamp: new Date().toISOString(),
     });
   });
+}
+
+function getButtonAction(element: HTMLElement): string {
+  // Check aria-label first (most reliable for icon buttons)
+  const ariaLabel = element.getAttribute('aria-label');
+  if (ariaLabel) return ariaLabel;
+  
+  // Check data-testid for action clues (e.g., "button-delete", "delete-session")
+  const testId = element.getAttribute('data-testid');
+  if (testId) {
+    const actionMatch = testId.match(/(?:button-|btn-)?(\w+)(?:-button|-btn)?/i);
+    if (actionMatch) {
+      return actionMatch[1].charAt(0).toUpperCase() + actionMatch[1].slice(1);
+    }
+  }
+  
+  // Check for common action class names
+  const className = element.className || '';
+  if (className.includes('delete') || className.includes('trash')) return 'Delete';
+  if (className.includes('edit') || className.includes('pencil')) return 'Edit';
+  if (className.includes('save') || className.includes('check')) return 'Save';
+  if (className.includes('close') || className.includes('x-')) return 'Close';
+  if (className.includes('add') || className.includes('plus')) return 'Add';
+  if (className.includes('cancel')) return 'Cancel';
+  if (className.includes('submit')) return 'Submit';
+  if (className.includes('view') || className.includes('eye')) return 'View';
+  if (className.includes('download')) return 'Download';
+  if (className.includes('upload')) return 'Upload';
+  
+  // Check button text content
+  const text = element.innerText?.trim().slice(0, 30);
+  if (text) return text;
+  
+  // Check for SVG icon child with known names
+  const svg = element.querySelector('svg');
+  if (svg) {
+    const svgClass = svg.getAttribute('class') || '';
+    if (svgClass.includes('trash') || svgClass.includes('delete')) return 'Delete';
+    if (svgClass.includes('edit') || svgClass.includes('pencil')) return 'Edit';
+    if (svgClass.includes('x') || svgClass.includes('close')) return 'Close';
+    if (svgClass.includes('plus') || svgClass.includes('add')) return 'Add';
+    if (svgClass.includes('check') || svgClass.includes('save')) return 'Save';
+    if (svgClass.includes('eye') || svgClass.includes('view')) return 'View';
+    if (svgClass.includes('download')) return 'Download';
+    
+    // Check for lucide icon data attribute
+    const lucideIcon = svg.querySelector('[data-lucide]');
+    if (lucideIcon) {
+      const iconName = lucideIcon.getAttribute('data-lucide');
+      if (iconName) return iconName.charAt(0).toUpperCase() + iconName.slice(1);
+    }
+  }
+  
+  // Check title attribute
+  const title = element.getAttribute('title');
+  if (title) return title;
+  
+  return 'Unknown Action';
 }
 
 function setupClickTracking(): void {
@@ -427,27 +508,36 @@ function setupClickTracking(): void {
     const target = event.target as HTMLElement;
     if (!target) return;
 
-    const isInteractive = target.matches('button, a, [role="button"], input[type="submit"], [data-testid]');
-    if (!isInteractive) return;
-
-    const closestButton = target.closest('button, a, [role="button"]');
-    const element = closestButton || target;
+    // Find the closest interactive element
+    const closestButton = target.closest('button, a, [role="button"], input[type="submit"], [data-testid]');
+    if (!closestButton) return;
+    
+    const element = closestButton as HTMLElement;
+    const buttonAction = getButtonAction(element);
+    const isIconButton = !element.innerText?.trim() && element.querySelector('svg');
 
     const elementInfo = {
-      tagName: element.tagName.toLowerCase(),
-      id: element.id || undefined,
-      className: typeof element.className === 'string' ? element.className.split(' ').slice(0, 3).join(' ') : undefined,
-      text: (element as HTMLElement).innerText?.slice(0, 50) || undefined,
-      testId: element.getAttribute('data-testid') || undefined,
+      // Most important - what action was performed
+      button_action: buttonAction,
+      is_icon_button: isIconButton,
+      // Element details
+      element_type: element.tagName.toLowerCase(),
+      element_id: element.id || undefined,
+      element_text: element.innerText?.trim().slice(0, 50) || undefined,
+      test_id: element.getAttribute('data-testid') || undefined,
       href: (element as HTMLAnchorElement).href || undefined,
-      ariaLabel: element.getAttribute('aria-label') || undefined,
-      disabled: (element as HTMLButtonElement).disabled || undefined,
+      aria_label: element.getAttribute('aria-label') || undefined,
+      is_disabled: (element as HTMLButtonElement).disabled || undefined,
+      // Page context
+      page_path: window.location.pathname,
     };
 
-    posthog.capture('element_click', {
+    const userInfo = getStoredUserInfo();
+
+    posthog.capture(`Button Click: ${buttonAction}`, {
       ...elementInfo,
-      path: window.location.pathname,
-      $timestamp: new Date().toISOString(),
+      ...userInfo,
+      timestamp: new Date().toISOString(),
     });
   }, { passive: true });
 }
@@ -457,18 +547,20 @@ function setupFormTracking(): void {
     const form = event.target as HTMLFormElement;
     if (!form) return;
 
+    const userInfo = getStoredUserInfo();
     const formInfo = {
-      formId: form.id || undefined,
-      formName: form.name || undefined,
-      formAction: form.action || undefined,
-      formMethod: form.method || undefined,
-      inputCount: form.querySelectorAll('input, select, textarea').length,
+      form_id: form.id || undefined,
+      form_name: form.name || undefined,
+      form_action: form.action || undefined,
+      form_method: form.method || undefined,
+      input_count: form.querySelectorAll('input, select, textarea').length,
+      page_path: window.location.pathname,
     };
 
-    posthog.capture('form_submission', {
+    posthog.capture('Form Submitted', {
       ...formInfo,
-      path: window.location.pathname,
-      $timestamp: new Date().toISOString(),
+      ...userInfo,
+      timestamp: new Date().toISOString(),
     });
   }, { passive: true });
 }
@@ -485,15 +577,16 @@ function setupInputTracking(): void {
     lastFocusedElement = target;
 
     const inputType = (target as HTMLInputElement).type || target.tagName.toLowerCase();
-    const testId = target.getAttribute('data-testid');
+    const userInfo = getStoredUserInfo();
 
-    posthog.capture('input_focus', {
-      inputType,
-      inputId: target.id || undefined,
-      inputName: (target as HTMLInputElement).name || undefined,
-      testId,
-      path: window.location.pathname,
-      $timestamp: new Date().toISOString(),
+    posthog.capture('Input Focused', {
+      input_type: inputType,
+      input_id: target.id || undefined,
+      input_name: (target as HTMLInputElement).name || undefined,
+      test_id: target.getAttribute('data-testid') || undefined,
+      page_path: window.location.pathname,
+      ...userInfo,
+      timestamp: new Date().toISOString(),
     });
   }, { passive: true });
 
@@ -505,16 +598,18 @@ function setupInputTracking(): void {
     const focusDuration = focusStartTime ? Date.now() - focusStartTime : 0;
     const inputType = (target as HTMLInputElement).type || target.tagName.toLowerCase();
     const hasValue = !!(target as HTMLInputElement).value;
+    const userInfo = getStoredUserInfo();
 
-    posthog.capture('input_blur', {
-      inputType,
-      inputId: target.id || undefined,
-      inputName: (target as HTMLInputElement).name || undefined,
-      testId: target.getAttribute('data-testid') || undefined,
-      focusDuration,
-      hasValue,
-      path: window.location.pathname,
-      $timestamp: new Date().toISOString(),
+    posthog.capture('Input Completed', {
+      input_type: inputType,
+      input_id: target.id || undefined,
+      input_name: (target as HTMLInputElement).name || undefined,
+      test_id: target.getAttribute('data-testid') || undefined,
+      focus_duration_ms: focusDuration,
+      has_value: hasValue,
+      page_path: window.location.pathname,
+      ...userInfo,
+      timestamp: new Date().toISOString(),
     });
 
     focusStartTime = null;
@@ -526,6 +621,7 @@ function setupScrollTracking(): void {
   let scrollTimeout: ReturnType<typeof setTimeout>;
   let maxScrollDepth = 0;
   let lastScrollTime = Date.now();
+  let trackedDepths = new Set<number>();
 
   window.addEventListener('scroll', () => {
     const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
@@ -537,27 +633,22 @@ function setupScrollTracking(): void {
 
     clearTimeout(scrollTimeout);
     scrollTimeout = setTimeout(() => {
+      const userInfo = getStoredUserInfo();
       const scrollDuration = Date.now() - lastScrollTime;
       
-      if (maxScrollDepth >= 25 && maxScrollDepth < 50) {
-        posthog.capture('scroll_depth_25', { 
-          path: window.location.pathname,
-          scrollDuration,
-        });
-      } else if (maxScrollDepth >= 50 && maxScrollDepth < 75) {
-        posthog.capture('scroll_depth_50', { 
-          path: window.location.pathname,
-          scrollDuration,
-        });
-      } else if (maxScrollDepth >= 75 && maxScrollDepth < 100) {
-        posthog.capture('scroll_depth_75', { 
-          path: window.location.pathname,
-          scrollDuration,
-        });
-      } else if (maxScrollDepth >= 100) {
-        posthog.capture('scroll_depth_100', { 
-          path: window.location.pathname,
-          scrollDuration,
+      const depthMilestone = maxScrollDepth >= 100 ? 100 : 
+                             maxScrollDepth >= 75 ? 75 :
+                             maxScrollDepth >= 50 ? 50 :
+                             maxScrollDepth >= 25 ? 25 : 0;
+      
+      if (depthMilestone > 0 && !trackedDepths.has(depthMilestone)) {
+        trackedDepths.add(depthMilestone);
+        posthog.capture(`Scrolled ${depthMilestone}%`, { 
+          scroll_depth_percent: depthMilestone,
+          scroll_duration_ms: scrollDuration,
+          page_path: window.location.pathname,
+          ...userInfo,
+          timestamp: new Date().toISOString(),
         });
       }
       
@@ -570,54 +661,65 @@ function setupVisibilityTracking(): void {
   let hiddenTime: number | null = null;
 
   document.addEventListener('visibilitychange', () => {
+    const userInfo = getStoredUserInfo();
+    
     if (document.hidden) {
       hiddenTime = Date.now();
-      posthog.capture('page_hidden', {
-        path: window.location.pathname,
-        $timestamp: new Date().toISOString(),
+      posthog.capture('Page Hidden', {
+        page_path: window.location.pathname,
+        ...userInfo,
+        timestamp: new Date().toISOString(),
       });
     } else {
       const hiddenDuration = hiddenTime ? Date.now() - hiddenTime : 0;
-      posthog.capture('page_visible', {
-        path: window.location.pathname,
-        hiddenDuration,
-        $timestamp: new Date().toISOString(),
+      posthog.capture('Page Returned', {
+        page_path: window.location.pathname,
+        hidden_duration_ms: hiddenDuration,
+        ...userInfo,
+        timestamp: new Date().toISOString(),
       });
       hiddenTime = null;
     }
   });
 
   window.addEventListener('beforeunload', () => {
-    posthog.capture('page_unload', {
-      path: window.location.pathname,
-      $timestamp: new Date().toISOString(),
+    const userInfo = getStoredUserInfo();
+    posthog.capture('Page Leaving', {
+      page_path: window.location.pathname,
+      ...userInfo,
+      timestamp: new Date().toISOString(),
     });
   });
 }
 
 function setupKeyboardTracking(): void {
   document.addEventListener('keydown', (event) => {
+    const userInfo = getStoredUserInfo();
+    
     if (event.key === 'Escape') {
-      posthog.capture('escape_pressed', {
-        path: window.location.pathname,
-        activeElement: document.activeElement?.tagName,
-        $timestamp: new Date().toISOString(),
+      posthog.capture('Pressed Escape', {
+        page_path: window.location.pathname,
+        active_element: document.activeElement?.tagName,
+        ...userInfo,
+        timestamp: new Date().toISOString(),
       });
     }
 
     if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-      posthog.capture('keyboard_save', {
-        path: window.location.pathname,
-        $timestamp: new Date().toISOString(),
+      posthog.capture('Keyboard Save', {
+        page_path: window.location.pathname,
+        ...userInfo,
+        timestamp: new Date().toISOString(),
       });
     }
 
     if (event.key === 'Enter' && document.activeElement?.matches('input, textarea')) {
-      posthog.capture('enter_pressed', {
-        inputType: (document.activeElement as HTMLInputElement).type,
-        inputId: document.activeElement.id,
-        path: window.location.pathname,
-        $timestamp: new Date().toISOString(),
+      posthog.capture('Pressed Enter', {
+        input_type: (document.activeElement as HTMLInputElement).type,
+        input_id: document.activeElement.id,
+        page_path: window.location.pathname,
+        ...userInfo,
+        timestamp: new Date().toISOString(),
       });
     }
   }, { passive: true });
@@ -625,20 +727,24 @@ function setupKeyboardTracking(): void {
 
 function setupClipboardTracking(): void {
   document.addEventListener('copy', () => {
-    posthog.capture('content_copied', {
-      path: window.location.pathname,
-      selectionLength: window.getSelection()?.toString().length || 0,
-      $timestamp: new Date().toISOString(),
+    const userInfo = getStoredUserInfo();
+    posthog.capture('Content Copied', {
+      page_path: window.location.pathname,
+      selection_length: window.getSelection()?.toString().length || 0,
+      ...userInfo,
+      timestamp: new Date().toISOString(),
     });
   }, { passive: true });
 
   document.addEventListener('paste', (event) => {
     const target = event.target as HTMLElement;
-    posthog.capture('content_pasted', {
-      path: window.location.pathname,
-      targetElement: target.tagName,
-      targetId: target.id,
-      $timestamp: new Date().toISOString(),
+    const userInfo = getStoredUserInfo();
+    posthog.capture('Content Pasted', {
+      page_path: window.location.pathname,
+      target_element: target.tagName,
+      target_id: target.id,
+      ...userInfo,
+      timestamp: new Date().toISOString(),
     });
   }, { passive: true });
 }
@@ -654,11 +760,13 @@ function setupModalTracking(): void {
           
           if (dialog) {
             const dialogTitle = dialog.querySelector('[role="heading"], h1, h2, h3')?.textContent?.slice(0, 50);
-            posthog.capture('dialog_opened', {
-              dialogTitle,
-              dialogId: dialog.id,
-              path: window.location.pathname,
-              $timestamp: new Date().toISOString(),
+            const userInfo = getStoredUserInfo();
+            posthog.capture('Dialog Opened', {
+              dialog_title: dialogTitle || 'Unnamed Dialog',
+              dialog_id: dialog.id,
+              page_path: window.location.pathname,
+              ...userInfo,
+              timestamp: new Date().toISOString(),
             });
           }
         }
@@ -672,41 +780,45 @@ function setupModalTracking(): void {
 function setupSelectTracking(): void {
   document.addEventListener('change', (event) => {
     const target = event.target as HTMLElement;
+    const userInfo = getStoredUserInfo();
     
     if (target.matches('select')) {
       const select = target as HTMLSelectElement;
-      posthog.capture('select_changed', {
-        selectId: select.id,
-        selectName: select.name,
-        testId: select.getAttribute('data-testid'),
-        selectedValue: select.value,
-        selectedText: select.options[select.selectedIndex]?.text,
-        path: window.location.pathname,
-        $timestamp: new Date().toISOString(),
+      posthog.capture('Dropdown Selected', {
+        select_id: select.id,
+        select_name: select.name,
+        test_id: select.getAttribute('data-testid'),
+        selected_value: select.value,
+        selected_text: select.options[select.selectedIndex]?.text,
+        page_path: window.location.pathname,
+        ...userInfo,
+        timestamp: new Date().toISOString(),
       });
     }
 
     if (target.matches('input[type="checkbox"]')) {
       const checkbox = target as HTMLInputElement;
-      posthog.capture('checkbox_changed', {
-        checkboxId: checkbox.id,
-        checkboxName: checkbox.name,
-        testId: checkbox.getAttribute('data-testid'),
-        checked: checkbox.checked,
-        path: window.location.pathname,
-        $timestamp: new Date().toISOString(),
+      posthog.capture(checkbox.checked ? 'Checkbox Checked' : 'Checkbox Unchecked', {
+        checkbox_id: checkbox.id,
+        checkbox_name: checkbox.name,
+        test_id: checkbox.getAttribute('data-testid'),
+        is_checked: checkbox.checked,
+        page_path: window.location.pathname,
+        ...userInfo,
+        timestamp: new Date().toISOString(),
       });
     }
 
     if (target.matches('input[type="radio"]')) {
       const radio = target as HTMLInputElement;
-      posthog.capture('radio_changed', {
-        radioId: radio.id,
-        radioName: radio.name,
-        testId: radio.getAttribute('data-testid'),
+      posthog.capture('Radio Selected', {
+        radio_id: radio.id,
+        radio_name: radio.name,
+        test_id: radio.getAttribute('data-testid'),
         value: radio.value,
-        path: window.location.pathname,
-        $timestamp: new Date().toISOString(),
+        page_path: window.location.pathname,
+        ...userInfo,
+        timestamp: new Date().toISOString(),
       });
     }
   }, { passive: true });
@@ -720,12 +832,14 @@ function setupTabTracking(): void {
     if (tabTrigger) {
       const tabName = tabTrigger.textContent?.trim().slice(0, 50);
       const tabId = tabTrigger.id || tabTrigger.getAttribute('data-value');
+      const userInfo = getStoredUserInfo();
       
-      posthog.capture('tab_clicked', {
-        tabName,
-        tabId,
-        path: window.location.pathname,
-        $timestamp: new Date().toISOString(),
+      posthog.capture(`Tab Selected: ${tabName || 'Unknown'}`, {
+        tab_name: tabName,
+        tab_id: tabId,
+        page_path: window.location.pathname,
+        ...userInfo,
+        timestamp: new Date().toISOString(),
       });
     }
   }, { passive: true });

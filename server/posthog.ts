@@ -27,7 +27,10 @@ export function getPostHogClient(): PostHog | null {
 }
 
 export function getDistinctId(req: Request): string {
-  const user = (req as any).user;
+  // Get user from session (where Express stores authenticated user)
+  const session = (req as any).session;
+  const user = session?.user;
+  
   if (user?.id) return `user_${user.id}`;
   if (user?.email) return user.email;
   
@@ -39,34 +42,35 @@ export function getDistinctId(req: Request): string {
 }
 
 export function getAuthDetails(req: Request): Record<string, any> {
-  const user = (req as any).user;
+  // Get user from session (where Express stores authenticated user)
   const session = (req as any).session;
+  const user = session?.user;
   
   return {
-    isAuthenticated: !!user,
-    authMethod: user ? 'session' : 'anonymous',
-    userId: user?.id || null,
-    username: user?.username || null,
-    email: user?.email || null,
-    role: user?.role || null,
-    fullName: user?.fullName || null,
-    companyName: user?.companyName || null,
-    sessionId: (req as any).sessionID || null,
-    sessionCreatedAt: session?.cookie?.expires ? new Date(session.cookie.expires).toISOString() : null,
-    sessionMaxAge: session?.cookie?.maxAge || null,
+    // User identification
+    user_id: user?.id || null,
+    user_name: user?.username || null,
+    user_email: user?.email || null,
+    user_role: user?.role || null,
+    user_full_name: user?.fullName || null,
+    user_company: user?.companyName || null,
+    // Authentication status
+    is_authenticated: !!user,
+    auth_method: user ? 'session' : 'anonymous',
+    // Session info
+    session_id: (req as any).sessionID || null,
   };
 }
 
 export function getRequestContext(req: Request): Record<string, any> {
   return {
-    ip: req.ip || req.headers['x-forwarded-for'] || null,
-    userAgent: req.headers['user-agent'] || null,
+    client_ip: req.ip || req.headers['x-forwarded-for'] || null,
+    user_agent: req.headers['user-agent'] || null,
     referer: req.headers['referer'] || null,
     origin: req.headers['origin'] || null,
     host: req.headers['host'] || null,
-    acceptLanguage: req.headers['accept-language'] || null,
-    contentType: req.headers['content-type'] || null,
-    contentLength: req.headers['content-length'] || null,
+    accept_language: req.headers['accept-language'] || null,
+    content_type: req.headers['content-type'] || null,
   };
 }
 
@@ -104,6 +108,43 @@ function getRouteCategory(path: string, method: string): string {
   return 'general';
 }
 
+function getActionDescription(method: string, path: string, routeCategory: string): string {
+  const methodAction: Record<string, string> = {
+    'GET': 'Viewed',
+    'POST': 'Created',
+    'PUT': 'Updated',
+    'PATCH': 'Modified',
+    'DELETE': 'Deleted',
+  };
+  
+  const action = methodAction[method] || method;
+  
+  // Map route patterns to readable resource names
+  if (path.includes('/certificates')) return `${action} Certificate`;
+  if (path.includes('/test-sessions') && path.includes('/batch-results')) return `${action} Batch Results`;
+  if (path.includes('/test-sessions') && path.includes('/results')) return `${action} Test Results`;
+  if (path.includes('/test-sessions') && path.includes('/report')) return 'Generated Report';
+  if (path.includes('/test-sessions')) return `${action} Test Session`;
+  if (path.includes('/test-results')) return `${action} Test Result`;
+  if (path.includes('/environments')) return `${action} Environment`;
+  if (path.includes('/custom-forms')) return `${action} Custom Form`;
+  if (path.includes('/users')) return `${action} User`;
+  if (path.includes('/login')) return 'Login Attempt';
+  if (path.includes('/logout')) return 'Logout Request';
+  if (path.includes('/register')) return 'Registration Attempt';
+  if (path.includes('/auth/user')) return 'Checked Auth Status';
+  
+  return `${action} ${routeCategory}`;
+}
+
+// Convert snake_case to Title Case for readable event names
+function formatEventName(eventName: string): string {
+  return eventName
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
 export function trackEvent(
   distinctId: string,
   eventName: string,
@@ -111,12 +152,15 @@ export function trackEvent(
 ): void {
   if (!posthogClient) return;
   
+  const readableEventName = formatEventName(eventName);
+  
   posthogClient.capture({
     distinctId,
-    event: eventName,
+    event: readableEventName,
     properties: {
       ...properties,
-      $timestamp: new Date().toISOString(),
+      event_key: eventName,
+      timestamp: new Date().toISOString(),
       source: 'backend',
       environment: process.env.NODE_ENV || 'development',
     },
@@ -172,51 +216,58 @@ export function posthogMiddleware(req: Request, res: Response, next: NextFunctio
       ? sanitizeRequestBody(req.body, path) 
       : null;
 
+    // Generate human-readable action description
+    const actionDescription = getActionDescription(req.method, path, routeCategory);
+
     const eventProperties: Record<string, any> = {
-      method: req.method,
-      path: req.path,
-      fullUrl: req.originalUrl,
-      statusCode: res.statusCode,
-      statusMessage: res.statusMessage,
-      duration,
-      durationCategory: duration < 100 ? 'fast' : duration < 500 ? 'normal' : duration < 1000 ? 'slow' : 'very_slow',
-      routeCategory,
-      queryParams: Object.keys(req.query).length > 0 ? req.query : null,
-      requestBody: sanitizedBody,
+      // Action info (most important - at top)
+      action: actionDescription,
+      http_method: req.method,
+      endpoint: req.path,
+      // Response info
+      status_code: res.statusCode,
+      response_time_ms: duration,
+      response_speed: duration < 100 ? 'fast' : duration < 500 ? 'normal' : duration < 1000 ? 'slow' : 'very_slow',
+      // Category
+      route_category: routeCategory,
+      // Request details
+      request_body: sanitizedBody,
+      // User info (from authDetails)
       ...authDetails,
-      ...requestContext,
+      // Timestamp
+      timestamp: new Date().toISOString(),
     };
 
     posthogClient!.capture({
       distinctId,
-      event: 'api_request',
+      event: 'API Request',
       properties: eventProperties,
     });
 
     if (res.statusCode >= 400) {
-      const errorEventName = res.statusCode === 401 ? 'api_unauthorized' :
-                             res.statusCode === 403 ? 'api_forbidden' :
-                             res.statusCode === 404 ? 'api_not_found' :
-                             res.statusCode >= 500 ? 'api_server_error' : 'api_client_error';
+      const errorType = res.statusCode === 401 ? 'Unauthorized' :
+                        res.statusCode === 403 ? 'Forbidden' :
+                        res.statusCode === 404 ? 'Not Found' :
+                        res.statusCode >= 500 ? 'Server Error' : 'Client Error';
       
       posthogClient!.capture({
         distinctId,
-        event: errorEventName,
+        event: `API Error: ${errorType}`,
         properties: {
           ...eventProperties,
-          errorType: errorEventName,
-          responseBody: responseBody?.message || responseBody?.error || null,
+          error_type: errorType,
+          error_message: responseBody?.message || responseBody?.error || null,
         },
       });
     }
 
     if (res.statusCode >= 200 && res.statusCode < 300) {
       if (path.includes('/login') && req.method === 'POST') {
-        trackAuthEvent(distinctId, 'login_success', authDetails, requestContext);
+        trackAuthEvent(distinctId, 'User Logged In', authDetails, requestContext);
       } else if (path.includes('/logout')) {
-        trackAuthEvent(distinctId, 'logout_success', authDetails, requestContext);
+        trackAuthEvent(distinctId, 'User Logged Out', authDetails, requestContext);
       } else if (path.includes('/register') && req.method === 'POST') {
-        trackAuthEvent(distinctId, 'registration_success', authDetails, requestContext);
+        trackAuthEvent(distinctId, 'User Registered', authDetails, requestContext);
       }
     }
   });
@@ -252,16 +303,15 @@ export function trackLogin(req: Request, success: boolean, errorMessage?: string
   trackEvent(distinctId, success ? 'user_login_success' : 'user_login_failed', {
     ...authDetails,
     ...requestContext,
-    success,
-    errorMessage,
-    attemptedUsername: req.body?.username || null,
+    login_success: success,
+    error_message: errorMessage,
+    attempted_username: req.body?.username || null,
   });
 
-  if (success && authDetails.userId) {
+  if (success && authDetails.user_id) {
     identifyUser(distinctId, {
       ...authDetails,
-      lastLoginAt: new Date().toISOString(),
-      loginCount: { $increment: 1 },
+      last_login_at: new Date().toISOString(),
     });
   }
 }
@@ -274,7 +324,7 @@ export function trackLogout(req: Request): void {
   trackEvent(distinctId, 'user_logout', {
     ...authDetails,
     ...requestContext,
-    logoutReason: 'user_initiated',
+    logout_reason: 'user_initiated',
   });
 }
 
@@ -290,7 +340,7 @@ export function trackSessionAction(
   trackEvent(distinctId, `test_session_${action}`, {
     ...authDetails,
     ...requestContext,
-    sessionAction: action,
+    session_action: action,
     ...sessionData,
   });
 }
@@ -306,9 +356,9 @@ export function trackTestResult(
   
   trackEvent(distinctId, 'test_result_recorded', {
     ...authDetails,
-    testType,
-    result,
-    isPassing: result === 'pass',
+    test_type: testType,
+    test_result: result,
+    is_passing: result === 'pass',
     ...testData,
   });
 }
@@ -326,12 +376,12 @@ export function trackBatchSubmission(
   
   trackEvent(distinctId, 'batch_results_submitted', {
     ...authDetails,
-    sessionId,
-    itemCount,
-    passCount,
-    failCount,
-    passRate: itemCount > 0 ? (passCount / itemCount * 100).toFixed(2) : 0,
-    serviceType,
+    session_id: sessionId,
+    item_count: itemCount,
+    pass_count: passCount,
+    fail_count: failCount,
+    pass_rate: itemCount > 0 ? (passCount / itemCount * 100).toFixed(2) : 0,
+    service_type: serviceType,
   });
 }
 
@@ -346,8 +396,8 @@ export function trackReportGenerated(
   
   trackEvent(distinctId, 'report_generated', {
     ...authDetails,
-    reportType,
-    format,
+    report_type: reportType,
+    report_format: format,
     ...sessionData,
   });
 }
@@ -362,7 +412,7 @@ export function trackCertificateAction(
   
   trackEvent(distinctId, `certificate_${action}`, {
     ...authDetails,
-    certificateAction: action,
+    certificate_action: action,
     ...certificateData,
   });
 }
@@ -377,7 +427,7 @@ export function trackEnvironmentAction(
   
   trackEvent(distinctId, `environment_${action}`, {
     ...authDetails,
-    environmentAction: action,
+    environment_action: action,
     ...environmentData,
   });
 }
@@ -392,7 +442,7 @@ export function trackCustomFormAction(
   
   trackEvent(distinctId, `custom_form_${action}`, {
     ...authDetails,
-    formAction: action,
+    form_action: action,
     ...formData,
   });
 }
@@ -407,9 +457,9 @@ export function trackUserManagementAction(
   
   trackEvent(distinctId, `user_management_${action}`, {
     ...authDetails,
-    managementAction: action,
-    performedBy: authDetails.username,
-    performedByRole: authDetails.role,
+    management_action: action,
+    performed_by: authDetails.user_name,
+    performed_by_role: authDetails.user_role,
     ...targetUserData,
   });
 }
@@ -424,7 +474,7 @@ export function trackAdminAction(
   
   trackEvent(distinctId, `admin_${action}`, {
     ...authDetails,
-    adminAction: action,
+    admin_action: action,
     ...actionData,
   });
 }
@@ -440,9 +490,9 @@ export function trackDataExport(
   
   trackEvent(distinctId, 'data_exported', {
     ...authDetails,
-    exportType,
-    format,
-    recordCount,
+    export_type: exportType,
+    export_format: format,
+    record_count: recordCount,
   });
 }
 
@@ -457,14 +507,14 @@ export function trackDatabaseOperation(
 
   posthogClient.capture({
     distinctId: userId ? `user_${userId}` : 'system',
-    event: 'database_operation',
+    event: 'Database Operation',
     properties: {
-      operation,
-      table,
-      duration,
-      recordCount,
-      durationCategory: duration < 10 ? 'fast' : duration < 50 ? 'normal' : duration < 200 ? 'slow' : 'very_slow',
-      $timestamp: new Date().toISOString(),
+      db_operation: operation,
+      db_table: table,
+      duration_ms: duration,
+      record_count: recordCount,
+      duration_category: duration < 10 ? 'fast' : duration < 50 ? 'normal' : duration < 200 ? 'slow' : 'very_slow',
+      timestamp: new Date().toISOString(),
       source: 'backend',
     },
   });
