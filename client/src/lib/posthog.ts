@@ -95,8 +95,11 @@ export function trackEvent(eventName: string, properties?: Record<string, any>):
   if (!isInitialized) return;
 
   const userInfo = getStoredUserInfo();
+  
+  // Prefix with "Frontend:" for clear source identification
+  const prefixedEventName = eventName.startsWith('Frontend:') ? eventName : `Frontend: ${eventName}`;
 
-  posthog.capture(eventName, {
+  posthog.capture(prefixedEventName, {
     ...properties,
     ...userInfo,
     $timestamp: new Date().toISOString(),
@@ -420,7 +423,7 @@ export function trackPhotoCapture(success: boolean, context?: string): void {
 function setupErrorTracking(): void {
   window.addEventListener('error', (event) => {
     const userInfo = getStoredUserInfo();
-    posthog.capture('JavaScript Error', {
+    posthog.capture('Frontend: JavaScript Error', {
       error_message: event.message,
       error_file: event.filename,
       error_line: event.lineno,
@@ -428,6 +431,7 @@ function setupErrorTracking(): void {
       error_stack: event.error?.stack,
       error_type: 'runtime',
       page_path: window.location.pathname,
+      source: 'frontend',
       ...userInfo,
       timestamp: new Date().toISOString(),
     });
@@ -435,10 +439,11 @@ function setupErrorTracking(): void {
 
   window.addEventListener('unhandledrejection', (event) => {
     const userInfo = getStoredUserInfo();
-    posthog.capture('Promise Rejection', {
+    posthog.capture('Frontend: Promise Rejection', {
       error_reason: String(event.reason),
       error_type: 'unhandled_promise',
       page_path: window.location.pathname,
+      source: 'frontend',
       ...userInfo,
       timestamp: new Date().toISOString(),
     });
@@ -534,9 +539,10 @@ function setupClickTracking(): void {
 
     const userInfo = getStoredUserInfo();
 
-    posthog.capture(`Button Click: ${buttonAction}`, {
+    posthog.capture(`Frontend: Button Click: ${buttonAction}`, {
       ...elementInfo,
       ...userInfo,
+      source: 'frontend',
       timestamp: new Date().toISOString(),
     });
   }, { passive: true });
@@ -548,6 +554,7 @@ function setupFormTracking(): void {
     if (!form) return;
 
     const userInfo = getStoredUserInfo();
+    const formName = form.name || form.id || 'Unknown Form';
     const formInfo = {
       form_id: form.id || undefined,
       form_name: form.name || undefined,
@@ -557,9 +564,10 @@ function setupFormTracking(): void {
       page_path: window.location.pathname,
     };
 
-    posthog.capture('Form Submitted', {
+    posthog.capture(`Frontend: Form Submitted: ${formName}`, {
       ...formInfo,
       ...userInfo,
+      source: 'frontend',
       timestamp: new Date().toISOString(),
     });
   }, { passive: true });
@@ -577,14 +585,16 @@ function setupInputTracking(): void {
     lastFocusedElement = target;
 
     const inputType = (target as HTMLInputElement).type || target.tagName.toLowerCase();
+    const inputName = (target as HTMLInputElement).name || target.id || inputType;
     const userInfo = getStoredUserInfo();
 
-    posthog.capture('Input Focused', {
+    posthog.capture(`Frontend: Input Focused: ${inputName}`, {
       input_type: inputType,
       input_id: target.id || undefined,
       input_name: (target as HTMLInputElement).name || undefined,
       test_id: target.getAttribute('data-testid') || undefined,
       page_path: window.location.pathname,
+      source: 'frontend',
       ...userInfo,
       timestamp: new Date().toISOString(),
     });
@@ -597,10 +607,11 @@ function setupInputTracking(): void {
 
     const focusDuration = focusStartTime ? Date.now() - focusStartTime : 0;
     const inputType = (target as HTMLInputElement).type || target.tagName.toLowerCase();
+    const inputName = (target as HTMLInputElement).name || target.id || inputType;
     const hasValue = !!(target as HTMLInputElement).value;
     const userInfo = getStoredUserInfo();
 
-    posthog.capture('Input Completed', {
+    posthog.capture(`Frontend: Input Completed: ${inputName}`, {
       input_type: inputType,
       input_id: target.id || undefined,
       input_name: (target as HTMLInputElement).name || undefined,
@@ -608,6 +619,7 @@ function setupInputTracking(): void {
       focus_duration_ms: focusDuration,
       has_value: hasValue,
       page_path: window.location.pathname,
+      source: 'frontend',
       ...userInfo,
       timestamp: new Date().toISOString(),
     });
@@ -643,10 +655,11 @@ function setupScrollTracking(): void {
       
       if (depthMilestone > 0 && !trackedDepths.has(depthMilestone)) {
         trackedDepths.add(depthMilestone);
-        posthog.capture(`Scrolled ${depthMilestone}%`, { 
+        posthog.capture(`Frontend: Scrolled ${depthMilestone}%`, { 
           scroll_depth_percent: depthMilestone,
           scroll_duration_ms: scrollDuration,
           page_path: window.location.pathname,
+          source: 'frontend',
           ...userInfo,
           timestamp: new Date().toISOString(),
         });
@@ -665,16 +678,18 @@ function setupVisibilityTracking(): void {
     
     if (document.hidden) {
       hiddenTime = Date.now();
-      posthog.capture('Page Hidden', {
+      posthog.capture('Frontend: Page Hidden', {
         page_path: window.location.pathname,
+        source: 'frontend',
         ...userInfo,
         timestamp: new Date().toISOString(),
       });
     } else {
       const hiddenDuration = hiddenTime ? Date.now() - hiddenTime : 0;
-      posthog.capture('Page Returned', {
+      posthog.capture('Frontend: Page Returned', {
         page_path: window.location.pathname,
         hidden_duration_ms: hiddenDuration,
+        source: 'frontend',
         ...userInfo,
         timestamp: new Date().toISOString(),
       });
@@ -684,8 +699,9 @@ function setupVisibilityTracking(): void {
 
   window.addEventListener('beforeunload', () => {
     const userInfo = getStoredUserInfo();
-    posthog.capture('Page Leaving', {
+    posthog.capture('Frontend: Page Leaving', {
       page_path: window.location.pathname,
+      source: 'frontend',
       ...userInfo,
       timestamp: new Date().toISOString(),
     });
@@ -697,27 +713,30 @@ function setupKeyboardTracking(): void {
     const userInfo = getStoredUserInfo();
     
     if (event.key === 'Escape') {
-      posthog.capture('Pressed Escape', {
+      posthog.capture('Frontend: Pressed Escape', {
         page_path: window.location.pathname,
         active_element: document.activeElement?.tagName,
+        source: 'frontend',
         ...userInfo,
         timestamp: new Date().toISOString(),
       });
     }
 
     if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-      posthog.capture('Keyboard Save', {
+      posthog.capture('Frontend: Keyboard Save', {
         page_path: window.location.pathname,
+        source: 'frontend',
         ...userInfo,
         timestamp: new Date().toISOString(),
       });
     }
 
     if (event.key === 'Enter' && document.activeElement?.matches('input, textarea')) {
-      posthog.capture('Pressed Enter', {
+      posthog.capture('Frontend: Pressed Enter', {
         input_type: (document.activeElement as HTMLInputElement).type,
         input_id: document.activeElement.id,
         page_path: window.location.pathname,
+        source: 'frontend',
         ...userInfo,
         timestamp: new Date().toISOString(),
       });
@@ -728,9 +747,10 @@ function setupKeyboardTracking(): void {
 function setupClipboardTracking(): void {
   document.addEventListener('copy', () => {
     const userInfo = getStoredUserInfo();
-    posthog.capture('Content Copied', {
+    posthog.capture('Frontend: Content Copied', {
       page_path: window.location.pathname,
       selection_length: window.getSelection()?.toString().length || 0,
+      source: 'frontend',
       ...userInfo,
       timestamp: new Date().toISOString(),
     });
@@ -739,10 +759,11 @@ function setupClipboardTracking(): void {
   document.addEventListener('paste', (event) => {
     const target = event.target as HTMLElement;
     const userInfo = getStoredUserInfo();
-    posthog.capture('Content Pasted', {
+    posthog.capture('Frontend: Content Pasted', {
       page_path: window.location.pathname,
       target_element: target.tagName,
       target_id: target.id,
+      source: 'frontend',
       ...userInfo,
       timestamp: new Date().toISOString(),
     });
@@ -761,10 +782,11 @@ function setupModalTracking(): void {
           if (dialog) {
             const dialogTitle = dialog.querySelector('[role="heading"], h1, h2, h3')?.textContent?.slice(0, 50);
             const userInfo = getStoredUserInfo();
-            posthog.capture('Dialog Opened', {
+            posthog.capture(`Frontend: Dialog Opened: ${dialogTitle || 'Unnamed'}`, {
               dialog_title: dialogTitle || 'Unnamed Dialog',
               dialog_id: dialog.id,
               page_path: window.location.pathname,
+              source: 'frontend',
               ...userInfo,
               timestamp: new Date().toISOString(),
             });
@@ -784,13 +806,15 @@ function setupSelectTracking(): void {
     
     if (target.matches('select')) {
       const select = target as HTMLSelectElement;
-      posthog.capture('Dropdown Selected', {
+      const selectName = select.name || select.id || 'Unknown';
+      posthog.capture(`Frontend: Dropdown Selected: ${selectName}`, {
         select_id: select.id,
         select_name: select.name,
         test_id: select.getAttribute('data-testid'),
         selected_value: select.value,
         selected_text: select.options[select.selectedIndex]?.text,
         page_path: window.location.pathname,
+        source: 'frontend',
         ...userInfo,
         timestamp: new Date().toISOString(),
       });
@@ -798,12 +822,14 @@ function setupSelectTracking(): void {
 
     if (target.matches('input[type="checkbox"]')) {
       const checkbox = target as HTMLInputElement;
-      posthog.capture(checkbox.checked ? 'Checkbox Checked' : 'Checkbox Unchecked', {
+      const checkboxName = checkbox.name || checkbox.id || 'Unknown';
+      posthog.capture(checkbox.checked ? `Frontend: Checkbox Checked: ${checkboxName}` : `Frontend: Checkbox Unchecked: ${checkboxName}`, {
         checkbox_id: checkbox.id,
         checkbox_name: checkbox.name,
         test_id: checkbox.getAttribute('data-testid'),
         is_checked: checkbox.checked,
         page_path: window.location.pathname,
+        source: 'frontend',
         ...userInfo,
         timestamp: new Date().toISOString(),
       });
@@ -811,12 +837,14 @@ function setupSelectTracking(): void {
 
     if (target.matches('input[type="radio"]')) {
       const radio = target as HTMLInputElement;
-      posthog.capture('Radio Selected', {
+      const radioName = radio.name || radio.id || 'Unknown';
+      posthog.capture(`Frontend: Radio Selected: ${radioName}`, {
         radio_id: radio.id,
         radio_name: radio.name,
         test_id: radio.getAttribute('data-testid'),
         value: radio.value,
         page_path: window.location.pathname,
+        source: 'frontend',
         ...userInfo,
         timestamp: new Date().toISOString(),
       });
@@ -834,10 +862,11 @@ function setupTabTracking(): void {
       const tabId = tabTrigger.id || tabTrigger.getAttribute('data-value');
       const userInfo = getStoredUserInfo();
       
-      posthog.capture(`Tab Selected: ${tabName || 'Unknown'}`, {
+      posthog.capture(`Frontend: Tab Selected: ${tabName || 'Unknown'}`, {
         tab_name: tabName,
         tab_id: tabId,
         page_path: window.location.pathname,
+        source: 'frontend',
         ...userInfo,
         timestamp: new Date().toISOString(),
       });

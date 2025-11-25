@@ -156,7 +156,7 @@ export function trackEvent(
   
   posthogClient.capture({
     distinctId,
-    event: readableEventName,
+    event: `Backend: ${readableEventName}`,
     properties: {
       ...properties,
       event_key: eventName,
@@ -219,11 +219,28 @@ export function posthogMiddleware(req: Request, res: Response, next: NextFunctio
     // Generate human-readable action description
     const actionDescription = getActionDescription(req.method, path, routeCategory);
 
+    // Build user display info for event name
+    const userDisplay = authDetails.user_name 
+      ? `by ${authDetails.user_name} (${authDetails.user_role || 'unknown role'})`
+      : authDetails.is_authenticated 
+        ? 'by authenticated user'
+        : 'by anonymous';
+
     const eventProperties: Record<string, any> = {
-      // Action info (most important - at top)
+      // User info (most important - at top for visibility)
+      requested_by: authDetails.user_name || 'anonymous',
+      user_id: authDetails.user_id,
+      user_name: authDetails.user_name,
+      user_email: authDetails.user_email,
+      user_role: authDetails.user_role,
+      user_company: authDetails.user_company,
+      is_authenticated: authDetails.is_authenticated,
+      session_id: authDetails.session_id,
+      // Action info
       action: actionDescription,
       http_method: req.method,
-      endpoint: req.path,
+      api_url: req.path,
+      full_url: req.originalUrl,
       // Response info
       status_code: res.statusCode,
       response_time_ms: duration,
@@ -232,15 +249,18 @@ export function posthogMiddleware(req: Request, res: Response, next: NextFunctio
       route_category: routeCategory,
       // Request details
       request_body: sanitizedBody,
-      // User info (from authDetails)
-      ...authDetails,
+      // Request context
+      ...requestContext,
+      // Source
+      source: 'backend',
       // Timestamp
       timestamp: new Date().toISOString(),
     };
 
+    // Event name includes method, URL, and user info
     posthogClient!.capture({
       distinctId,
-      event: 'API Request',
+      event: `Backend API: ${req.method} ${req.path} ${userDisplay}`,
       properties: eventProperties,
     });
 
@@ -252,7 +272,7 @@ export function posthogMiddleware(req: Request, res: Response, next: NextFunctio
       
       posthogClient!.capture({
         distinctId,
-        event: `API Error: ${errorType}`,
+        event: `Backend API Error: ${req.method} ${req.path} - ${errorType} ${userDisplay}`,
         properties: {
           ...eventProperties,
           error_type: errorType,
@@ -285,8 +305,9 @@ function trackAuthEvent(
 
   posthogClient.capture({
     distinctId,
-    event: eventType,
+    event: `Backend: ${eventType}`,
     properties: {
+      requested_by: authDetails.user_name || 'anonymous',
       ...authDetails,
       ...requestContext,
       $timestamp: new Date().toISOString(),
