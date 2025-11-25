@@ -15,6 +15,19 @@ import {
   type User,
 } from "@shared/schema";
 import { z } from "zod";
+import {
+  trackLogin,
+  trackLogout,
+  trackSessionAction,
+  trackTestResult,
+  trackBatchSubmission,
+  trackReportGenerated,
+  trackCertificateAction,
+  trackEnvironmentAction,
+  trackCustomFormAction,
+  trackUserManagementAction,
+  trackAdminAction,
+} from "./posthog";
 
 // Extend Express session interface
 declare module "express-session" {
@@ -132,6 +145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const user = await storage.validatePassword(username, password);
       if (!user) {
+        trackLogin(req, false, "Invalid username or password");
         return res
           .status(401)
           .json({ message: "Invalid username or password" });
@@ -141,16 +155,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.session.userId = user.id;
       req.session.user = user;
 
+      // Track successful login with full user details
+      trackLogin(req, true);
+
       // Remove password from response
       const { password: _, ...userWithoutPassword } = user;
       res.json({ message: "Login successful", user: userWithoutPassword });
     } catch (error) {
       console.error("Login error:", error);
+      trackLogin(req, false, error instanceof Error ? error.message : "Login failed");
       res.status(400).json({ message: "Login failed" });
     }
   });
 
   app.post("/api/logout", (req, res) => {
+    // Track logout before destroying session
+    trackLogout(req);
+    
     req.session.destroy((err) => {
       if (err) {
         return res.status(500).json({ message: "Logout failed" });
@@ -261,6 +282,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const updatedUser = await storage.updateUser(userId, updateData);
       const { password: _, ...userWithoutPassword } = updatedUser;
+      
+      // Track user update
+      trackUserManagementAction(req, 'updated', {
+        targetUserId: userId,
+        targetUsername: username,
+        targetRole: role,
+        passwordChanged: !!password,
+      });
+      
       res.json(userWithoutPassword);
     } catch (error) {
       console.error("Update user error:", error);
@@ -281,6 +311,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const user = await storage.createUser(validation.data);
       const { password, ...userWithoutPassword } = user;
+      
+      // Track user creation
+      trackUserManagementAction(req, 'created', {
+        targetUserId: user.id,
+        targetUsername: user.username,
+        targetRole: user.role,
+      });
+      
       res.status(201).json(userWithoutPassword);
     } catch (error) {
       console.error("Error creating user:", error);
@@ -295,6 +333,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const user = await storage.updateUserStatus(userId, isActive);
       const { password, ...userWithoutPassword } = user;
+      
+      // Track user status change
+      trackUserManagementAction(req, isActive ? 'updated' : 'deleted', {
+        targetUserId: userId,
+        targetUsername: user.username,
+        statusChanged: true,
+        isActive,
+      });
+      
       res.json(userWithoutPassword);
     } catch (error) {
       console.error("Error updating user status:", error);
@@ -360,6 +407,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const session = await storage.updateTestSession(sessionId, sessionData);
       console.log("Updated session result:", session);
+      
+      // Track session update
+      trackSessionAction(req, 'updated', {
+        sessionId,
+        clientName: session.clientName,
+        serviceType: session.serviceType,
+      });
+      
       res.json(session);
     } catch (error) {
       console.error("Error updating session - detailed:", error);
@@ -394,6 +449,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       await storage.deleteTestSession(sessionId);
+      
+      // Track session deletion/cancellation
+      trackSessionAction(req, 'cancelled', {
+        sessionId,
+        clientName: session.clientName,
+        serviceType: session.serviceType,
+        cancelledBy: user.username,
+      });
+      
       res.json({ message: "Session deleted successfully" });
     } catch (error) {
       console.error("Error deleting session:", error);
@@ -404,7 +468,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/admin/sessions/:id", requireAdmin, async (req, res) => {
     try {
       const sessionId = parseInt(req.params.id);
+      const session = await storage.getTestSession(sessionId);
+      
       await storage.deleteTestSession(sessionId);
+      
+      // Track admin session deletion
+      trackAdminAction(req, 'session_deleted', {
+        sessionId,
+        clientName: session?.clientName,
+        serviceType: session?.serviceType,
+      });
+      
       res.json({ message: "Session deleted successfully" });
     } catch (error) {
       console.error("Error deleting session:", error);
@@ -423,6 +497,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: req.session.userId, // Link session to the logged-in user
       };
       const session = await storage.createTestSession(sessionWithUser);
+      
+      // Track session creation
+      trackSessionAction(req, 'created', {
+        sessionId: session.id,
+        clientName: session.clientName,
+        serviceType: session.serviceType,
+        address: session.address,
+      });
+      
       res.json(session);
     } catch (error) {
       console.error('Session creation error:', error);
@@ -636,6 +719,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(
         `Batch processing complete: ${savedResults.length}/${results.length} processed (${newResultsCount} new, ${skippedCount} skipped duplicates)`,
       );
+
+      // Track batch submission with counts
+      const passCount = savedResults.filter(r => r.result === 'pass').length;
+      const failCount = savedResults.filter(r => r.result === 'fail').length;
+      const session = await storage.getTestSession(sessionId);
+      
+      trackBatchSubmission(req, sessionId, savedResults.length, passCount, failCount, session?.serviceType);
 
       if (errors.length > 0) {
         res.status(207).json(response); // 207 Multi-Status for partial success
@@ -951,6 +1041,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const passRate =
         totalItems > 0 ? Math.round((passedItems / totalItems) * 100) : 0;
 
+      // Track report generation/view
+      trackReportGenerated(req, session.serviceType || 'electrical', 'pdf', {
+        sessionId,
+        clientName: session.clientName,
+        totalItems,
+        passedItems,
+        failedItems,
+        passRate,
+      });
+
       res.json({
         session,
         results,
@@ -978,6 +1078,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const environment = await storage.createEnvironment(environmentData);
+      
+      // Track environment creation
+      trackEnvironmentAction(req, 'created', {
+        environmentId: environment.id,
+        environmentName: environment.name,
+        serviceType: environment.serviceType,
+      });
+      
       res.json(environment);
     } catch (error) {
       console.error("Error creating environment:", error);
@@ -1039,6 +1147,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse update data and remove userId to prevent ownership reassignment
       const { userId: _, ...updateData } = insertEnvironmentSchema.partial().parse(req.body);
       const updatedEnvironment = await storage.updateEnvironment(id, updateData);
+      
+      // Track environment update
+      trackEnvironmentAction(req, 'updated', {
+        environmentId: id,
+        environmentName: updatedEnvironment.name,
+        serviceType: updatedEnvironment.serviceType,
+      });
+      
       res.json(updatedEnvironment);
     } catch (error) {
       console.error("Error updating environment:", error);
@@ -1063,6 +1179,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       await storage.deleteEnvironment(id);
+      
+      // Track environment deletion
+      trackEnvironmentAction(req, 'deleted', {
+        environmentId: id,
+        environmentName: environment.name,
+        serviceType: environment.serviceType,
+      });
+      
       res.json({ success: true, message: "Environment deleted successfully" });
     } catch (error) {
       console.error("Error deleting environment:", error);
@@ -1092,6 +1216,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const formType = await storage.createCustomFormType({
         name,
         csvData
+      });
+
+      // Track custom form creation
+      trackCustomFormAction(req, 'created', {
+        formId: formType.id,
+        formName: name,
+        itemCount: lines.length,
       });
 
       res.status(201).json(formType);
@@ -1202,6 +1333,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       await storage.deleteCustomFormType(id);
+      
+      // Track custom form deletion
+      trackCustomFormAction(req, 'deleted', {
+        formId: id,
+        formName: formType.name,
+      });
+      
       res.json({ success: true, message: "Form type deleted successfully" });
     } catch (error) {
       console.error("Error deleting custom form:", error);
@@ -1221,6 +1359,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const certificate = await storage.createCertificate(certificateData);
+      
+      // Track certificate creation
+      trackCertificateAction(req, 'created', {
+        certificateId: certificate.id,
+        clientName: certificate.clientName,
+        services: certificate.services,
+      });
+      
       res.status(201).json(certificate);
     } catch (error) {
       console.error("Error creating certificate:", error);
@@ -1292,6 +1438,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updateData = insertCertificateSchema.omit({ userId: true }).partial().parse(req.body);
       const updatedCertificate = await storage.updateCertificate(id, updateData);
       
+      // Track certificate update
+      trackCertificateAction(req, 'updated', {
+        certificateId: id,
+        clientName: updatedCertificate.clientName,
+        services: updatedCertificate.services,
+      });
+      
       res.json(updatedCertificate);
     } catch (error) {
       console.error("Error updating certificate:", error);
@@ -1316,6 +1469,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       await storage.deleteCertificate(id);
+      
+      // Track certificate deletion
+      trackCertificateAction(req, 'deleted', {
+        certificateId: id,
+        clientName: certificate.clientName,
+        services: certificate.services,
+      });
+      
       res.json({ success: true, message: "Certificate deleted successfully" });
     } catch (error) {
       console.error("Error deleting certificate:", error);
