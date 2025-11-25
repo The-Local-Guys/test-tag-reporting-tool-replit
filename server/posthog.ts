@@ -219,16 +219,26 @@ export function posthogMiddleware(req: Request, res: Response, next: NextFunctio
     // Generate human-readable action description
     const actionDescription = getActionDescription(req.method, path, routeCategory);
 
-    // Build user display info for event name
+    // Build user display info for event name - include session ID for DB tracking
+    const sessionIdShort = authDetails.session_id 
+      ? authDetails.session_id.substring(0, 8) 
+      : null;
+    
     const userDisplay = authDetails.user_name 
       ? `by ${authDetails.user_name} (${authDetails.user_role || 'unknown role'})`
       : authDetails.is_authenticated 
-        ? 'by authenticated user'
-        : 'by anonymous';
+        ? `by authenticated user (session: ${sessionIdShort || 'unknown'})`
+        : sessionIdShort 
+          ? `by session ${sessionIdShort}`
+          : 'by unknown';
+
+    // For DB tracking: use username if available, otherwise use session ID
+    const requestedBy = authDetails.user_name 
+      || (authDetails.session_id ? `session:${authDetails.session_id}` : 'unknown');
 
     const eventProperties: Record<string, any> = {
       // User info (most important - at top for visibility)
-      requested_by: authDetails.user_name || 'anonymous',
+      requested_by: requestedBy,
       user_id: authDetails.user_id,
       user_name: authDetails.user_name,
       user_email: authDetails.user_email,
@@ -303,11 +313,15 @@ function trackAuthEvent(
 ): void {
   if (!posthogClient) return;
 
+  // For DB tracking: use username if available, otherwise use session ID
+  const requestedBy = authDetails.user_name 
+    || (authDetails.session_id ? `session:${authDetails.session_id}` : 'unknown');
+
   posthogClient.capture({
     distinctId,
     event: `Backend: ${eventType}`,
     properties: {
-      requested_by: authDetails.user_name || 'anonymous',
+      requested_by: requestedBy,
       ...authDetails,
       ...requestContext,
       $timestamp: new Date().toISOString(),
