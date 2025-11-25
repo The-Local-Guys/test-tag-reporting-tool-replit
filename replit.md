@@ -1,65 +1,55 @@
 # Electrical Testing System
 
 ## Overview
-This is a full-stack web application for electrical safety testing in Australia and New Zealand. It enables technicians to perform portable appliance testing (PAT), emergency exit light testing, fire equipment testing, RCD testing, and microwave leakage testing with automated compliance report generation. The system features role-based access control (super admin, support center, technician), comprehensive test session management, and automated report generation, addressing critical safety and compliance needs in the electrical testing market.
+This full-stack web application streamlines electrical safety testing in Australia and New Zealand. It supports various testing types (PAT, emergency exit light, fire equipment, RCD, microwave leakage) and automates compliance report generation. The system features role-based access control, comprehensive test session management, and aims to meet critical safety and compliance needs in the electrical testing market.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend
+### UI/UX Decisions
 - **Framework**: React with TypeScript
-- **Routing**: Wouter
-- **State Management**: TanStack Query (server state), React hooks (local state)
 - **UI Library**: shadcn/ui with Radix UI primitives
 - **Styling**: Tailwind CSS
-- **Build Tool**: Vite
+- **Mobile Navigation**: Persistent site-wide header with mobile-responsive hamburger menu.
+- **SPA Design**: True client-side routing with custom loading screens and seamless navigation.
+- **Reporting Design**: Professional PDF/Excel reports with company branding and compliance formatting.
 
-### Backend
-- **Runtime**: Node.js with Express.js
-- **Language**: TypeScript with ES modules
-- **Database ORM**: Drizzle ORM (PostgreSQL dialect)
-- **Session Management**: Express sessions with PostgreSQL storage
-- **Authentication**: Password-based with bcrypt hashing
-- **Performance**: Optimized database queries using SQL aggregates to prevent N+1 query problems
+### Technical Implementations
+- **Frontend**: React, TypeScript, Wouter for routing, TanStack Query for server state, Vite for build.
+- **Backend**: Node.js with Express.js, TypeScript, Drizzle ORM (PostgreSQL), Express sessions.
+- **Database**: Neon Database (PostgreSQL) with Drizzle Kit for schema management.
+- **Authentication**: Role-based access control (super_admin, support_center, technician), session-based with bcrypt hashing.
+- **Performance**: Optimized database queries using SQL aggregates to prevent N+1 query problems.
 
-### Database
-- **Provider**: Neon Database (PostgreSQL)
-- **Schema Management**: Drizzle Kit
-- **Core Entities**: Users, sessions, test_sessions, test_results, environments, custom_form_types, certificates
-- **Schema Synchronization**: Both development (DEV_DATABASE_URL) and production (DATABASE_URL) databases maintain identical schemas with synchronized structure
-- **Query Optimization**: Admin dashboard queries use efficient SQL JOINs and aggregates to count test items, eliminating N+1 query problems for large datasets
+### Feature Specifications
+- **Test Session Management**: Multi-step workflow, asset number validation, classification support, test frequency management, failure tracking, client-side batching. Includes frequency memory for emergency exit light and fire testing, and smart asset number updates for Electrical Test & Tag.
+- **Report Generation**: PDF (jsPDF) and Excel (SheetJS) export with compliance formatting and next due date calculations.
+- **Admin Dashboard**: User management, test session oversight, bulk data export.
+- **ARA Compliance Support**: Standardized item codes (e.g., "1122 - 3D Printer") throughout the system and in reports.
+- **Data Flow**: Client-side batched local storage system for test results, with batch submission upon job completion.
+- **Session Cancellation**: Comprehensive functionality to cancel reports, delete associated data, and verify ownership.
+- **Custom Environments**: Technicians can create and manage account-specific, service-filtered custom item sets with full CRUD operations.
+- **Custom Form Types**: Admin/support roles can upload CSVs to create dynamic custom form types for various service types.
+- **RCD Reporting**: Dedicated workflow for Fixed and Portable RCDs, supporting multiple trip times for Fixed RCDs, specific failure handling, and AS/NZS 3760 compliance.
+- **Microwave Leakage Testing**: Dedicated service for microwave testing (AS/NZS 60335.2.25 compliance) with brand selection, custom brand input, and simplified test workflow. Panasonic brand selection disables testing.
+- **Certificate of Compliance**: Admin feature for generating professional compliance certificates with client selection, multi-service support, automatic validity date calculation, technician credentials, and in-app preview/editing.
+- **Asset Number Ranges**: Service-type-specific asset numbering with isolation between Electrical Test & Tag, Emergency Exit Light, Fire Equipment Testing, RCD Reporting, and Microwave Leakage Testing. Includes custom starting numbers for Electrical Test & Tag.
 
-### Key Features
-- **Authentication**: Role-based access control (super_admin, support_center, technician), session-based.
-- **Test Session Management**: Multi-step workflow (setup → item selection → testing → results), asset number validation, classification support (Class 1, Class 2, EPOD, RCD, 3 Phase), test frequency management, failure reason tracking. Features client-side batching for improved performance, ensuring atomic submission of results. **Frequency Memory**: Emergency Exit Light and Fire Equipment Testing remember the last selected frequency (sixmonthly/annually) across items using service-specific localStorage keys (`lastSelectedFrequency_emergency`, `lastSelectedFrequency_fire`), improving workflow efficiency by eliminating repetitive frequency selection. **Smart Asset Number Updates**: When changing test frequency in Electrical Test & Tag, the asset number automatically updates to the correct starting number for the new frequency, even if the user previously manually edited the asset number. This ensures accurate frequency-based asset numbering.
-- **Report Generation**: PDF (jsPDF) and Excel (SheetJS) export with company branding, compliance formatting, and next due date calculations.
-- **Admin Dashboard**: User management, test session oversight, bulk data export, system administration.
-- **ARA Compliance Support**: Items display with standardized codes in "code - item name" format (e.g., "1122 - 3D Printer") throughout item selection, report preview, delete confirmations, and all generated reports (PDF/Excel). Codes are embedded directly in item names at selection time. Custom items for ARA Compliance use code "532" and format as "532 Other (custom_item_name)" (e.g., "532 Other (Electric Kettle)").
-- **Data Flow**: User authentication, test session creation, testing workflow, report generation, and admin operations are managed via a client-side batched local storage system. Users can add results, preview reports (including PDF downloads), and continue adding more results. Batch submission occurs only when clicking "Finish Job" on the report preview page, enabling flexible testing workflows. Asset numbering is handled client-side with intelligent allocation and duplicate prevention, then validated server-side upon batch submission.
-- **Mobile Navigation**: Persistent site-wide header with mobile-responsive hamburger menu, accessible from all pages with global sign out functionality.
-- **Session Cancellation**: Comprehensive cancel report functionality available on both item-selection and report-preview pages with database deletion, ownership verification, and proper cleanup of all associated test results.
-- **Single Page Application (SPA)**: True client-side routing with no full page reloads, custom loading screens with 500ms minimum display time, and seamless navigation between testing and admin modes. Uses wouter for routing with custom SPA navigation hooks for consistent loading states.
-- **Custom Environments**: Technicians can create and manage custom item sets per testing type. Each environment is account-specific (only visible to creator), filtered by service type (electrical, emergency exit light, fire testing). Environment dropdown in item selection page allows switching between default items and custom environments. Includes full CRUD operations with ownership verification and security against ownership reassignment.
-- **Custom Form Types**: Admin and support-center roles can create dynamic custom form types via CSV file upload. Custom forms appear as country/form selection options in the setup page alongside standard country selections (Australia, New Zealand). Available for all service types (electrical, emergency exit light, fire testing, RCD reporting) without filtering. Features CSV file upload interface, validation, and CRUD operations for managing custom test item sets. Implementation: Single-table design (custom_form_types) with CSV data stored in csvData column. Table automatically created on server startup using raw SQL to ensure compatibility across environments.
-- **RCD Reporting**: Dedicated testing workflow for Residual Current Devices (RCDs) with support for both Fixed RCD and Portable RCD testing. Features manual asset number entry, location tracking, equipment type identification (with automatic item name synchronization), distribution board number field (Fixed RCD only), and comprehensive test completion tracking (Push Button Test and Injection/Timed Test). **Multiple Trip Times (Fixed RCD Only)**: For Fixed RCD testing, when Injection/Timed Test is selected, users can capture 1-3 trip time measurements using dynamic input fields. A Plus (+) icon button allows adding up to 3 trip time fields (minimum 1, maximum 3). Remove (X) button appears for each field when more than 1 exists. Portable RCD maintains single trip time input with no add/remove functionality. **Trip time validation enforces positive integers only** - decimals are rejected by Zod schema. Trip times stored as numeric array (tripTimes) in database trip_time column. **Display**: Multiple trip times display comma-separated in both PDF ("20, 22, 25") and Excel reports. **Legacy Data Handling**: Batch normalization automatically converts legacy single tripTime values to tripTimes arrays and converts old seconds format (< 1) to milliseconds by multiplying by 1000. String values coerced to numbers. Includes test result recording (Pass/Fail) with failure handling (RCD-specific failure reasons, action taken, notes, and photo documentation). Distribution board numbers display in report preview and PDF reports as "Fixed RCD (DB-1)" format. Data stored with RCD-specific fields (pushButtonTest, injectionTimedTest, tripTimes array, distributionBoardNumber, failureReason, actionTaken, notes, photoData) in test_results table. The distribution_board_number and trip_time columns are synchronized across both development and production databases. Report generation includes smart batch submission handling to prevent "No active session" errors when finishing jobs. AS/NZS 3760 compliance testing standard for both Australia and New Zealand (displayed in setup page country labels and PDF footer).
-- **Microwave Leakage Testing**: Dedicated service for microwave oven radiation leakage testing (AS/NZS 60335.2.25 compliance standard for both Australia and New Zealand). Features brand selection with 16 popular brands (Samsung, LG, Panasonic, Sharp, Whirlpool, GE, Kenmore, Bosch, Electrolux, Hitachi, Toshiba, Siemens, Miele, KitchenAid, Frigidaire, Other). **Custom Brand Input**: When "Other" is selected, an input field appears for custom microwave brand entry. **Panasonic Restriction**: Selecting "Panasonic" (case-insensitive, including custom input) displays a red warning and disables testing. **Simplified Test Workflow**: Dedicated test details page (`/microwave-test`) with 4 fields: Location, Asset Number (auto-filled, starts at 1), Leakage Reading (required), and Additional Comments (optional). Asset numbering uses simple sequential numbering (1, 2, 3...) stored in `microwaveCounter_${sessionId}` localStorage. Uses `frequency: 'single'` as sentinel value and `classification: 'microwave'`. Test data stored in test_results table with `leakageReading` field. Brand selection persists in localStorage.
-- **Certificate of Compliance**: Admin feature for generating professional compliance certificates for clients. Accessible via Certificates tab in admin dashboard for super_admin and support_center roles. Features client selection from existing test sessions or manual entry, multi-service selection (Electrical Test & Tag, Emergency Exit Light Testing, Fire Equipment Maintenance, RCD Testing, Microwave Leakage Testing), automatic validity date calculation based on service type (all services have 12-month validity from certification date), and technician credential fields (name and optional license number). **Edit Functionality**: Certificates can be edited via Edit button in the table or directly from the certificate preview modal, which opens the modal in edit mode with pre-populated data, updated title ("Edit Certificate of Compliance"), and hidden client selector. **In-App Preview**: View button opens CertificatePreview modal displaying certificate information in HTML format (client name, address, certification date, services with full display names, validity dates, and technician details). Preview includes Edit Certificate button for quick editing without closing preview. Direct download button available in both table and preview modal for instant PDF generation. Modular frontend architecture with dedicated components: CertificatesTab (list view with View/Edit/Delete actions), CertificateModal (unified create/edit form), CertificatePreview (in-app PDF viewer with download), and useCertificates hook (data management with create/update/delete mutations). Backend implements full CRUD operations with ownership verification and role-based access control. **Security**: Update endpoint (PUT /api/certificates/:id) enforces userId immutability by omitting it from validation schema and stripping it at storage layer, preventing ownership reassignment. **Delete Confirmation**: Themed AlertDialog component replaces vanilla JavaScript alerts for professional UI consistency. PDF generation uses company letterhead matching test report branding (full-width header/footer images with preserved aspect ratio), includes all selected services with validity dates, Great Vibes cursive font for technician signature, and produces professionally formatted compliance documentation. Certificate data stored in dedicated certificates table with jsonb columns for services array and validityDates object. Implementation includes Zod schema validation (insertCertificateSchema with client-side userId omission), proper mutation timing to prevent form state loss, and downloadCertificatePDF helper for file downloads. System maintains data integrity through modal state persistence until mutation completion.
-- **Asset Number Ranges**: Service-type-specific asset numbering system with strict isolation between service types. **Electrical Test & Tag**: Custom frequency-based ranges (Monthly=50001, 3M=40001, 6M=10001, 12M=1, 24M=30001, 5Y=20001) with optional user-defined custom starting numbers per session. **Emergency Exit Light & Fire Equipment Testing**: Hardcoded ranges (6 Monthly starts at 1, Annually starts at 10001, other frequencies use separate ranges) that always use defaults regardless of electrical custom settings. **RCD Reporting**: Sequential numbering starting at 1. **Microwave Leakage Testing**: Sequential numbering starting at 1 (counter starts at 0, first item shows 1). Frequency codes (1M, 3M, 6M, 12M, 24M, 5Y) display only when multiple items share the same asset number across different frequencies. Service type stored in localStorage during session creation ensures correct asset allocation. **Custom Asset Number Isolation**: Custom starting numbers are strictly scoped to Electrical Test & Tag sessions only with comprehensive safeguards: (1) getInitialStartNumber only reads pending custom numbers for electrical sessions, (2) session initialization validates and applies pending numbers only for electrical service type, (3) pending custom numbers are immediately cleared after application (electrical) or rejection (non-electrical) to prevent stale-state contamination, (4) saveCustomStartingNumbers and resetCustomStartingNumbers guard functions reject operations for non-electrical sessions. These safeguards ensure each service type maintains completely independent numbering systems with no cross-service contamination.
+### System Design Choices
+- **Database Schema**: Core entities include Users, sessions, test_sessions, test_results, environments, custom_form_types, certificates. Schema synchronization between development and production databases.
+- **Zod Schema Validation**: Used for robust data validation, including specific RCD trip time validation.
+- **Modular Frontend**: Dedicated components and hooks for features like Certificates, ensuring maintainability.
 
 ## External Dependencies
 
-### Production
-- **Database**: @neondatabase/serverless
+- **Database**: Neon Database (@neondatabase/serverless)
 - **Authentication**: bcryptjs
 - **Session Storage**: connect-pg-simple
 - **Email**: @sendgrid/mail
 - **UI Components**: Radix UI
 - **PDF Generation**: jsPDF
 - **Excel Export**: XLSX
-
-### Development
-- **Language**: TypeScript
-- **Build/Dev Tools**: Vite, ESBuild
-- **Database Management**: Drizzle Kit
+- **Analytics**: PostHog (posthog-js for frontend, posthog-node for backend)
+- **Development Tools**: TypeScript, Vite, ESBuild, Drizzle Kit
