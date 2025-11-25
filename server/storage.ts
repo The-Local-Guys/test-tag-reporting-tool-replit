@@ -19,7 +19,7 @@ import {
   type InsertCertificate
 } from "@shared/schema";
 import { db, pool } from "./db";
-import { eq, desc, and, gte, sql } from "drizzle-orm";
+import { eq, desc, and, gte, sql, isNull } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 export interface IStorage {
@@ -229,13 +229,15 @@ export class DatabaseStorage implements IStorage {
         technicianLicensed: testSessions.technicianLicensed,
         complianceStandard: testSessions.complianceStandard,
         createdAt: testSessions.createdAt,
+        deletedAt: testSessions.deletedAt,
         technicianFullName: users.fullName,
         totalItems: sql<number>`count(${testResults.id})`.mapWith(Number),
         failedItems: sql<number>`count(case when ${testResults.result} = 'fail' then 1 end)`.mapWith(Number),
       })
       .from(testSessions)
       .leftJoin(users, eq(testSessions.userId, users.id))
-      .leftJoin(testResults, eq(testSessions.id, testResults.sessionId))
+      .leftJoin(testResults, and(eq(testSessions.id, testResults.sessionId), isNull(testResults.deletedAt)))
+      .where(isNull(testSessions.deletedAt))
       .groupBy(testSessions.id, users.fullName)
       .orderBy(desc(testSessions.testDate));
     
@@ -264,12 +266,13 @@ export class DatabaseStorage implements IStorage {
         technicianLicensed: testSessions.technicianLicensed,
         complianceStandard: testSessions.complianceStandard,
         createdAt: testSessions.createdAt,
+        deletedAt: testSessions.deletedAt,
         totalItems: sql<number>`count(${testResults.id})`.mapWith(Number),
         failedItems: sql<number>`count(case when ${testResults.result} = 'fail' then 1 end)`.mapWith(Number),
       })
       .from(testSessions)
-      .leftJoin(testResults, eq(testSessions.id, testResults.sessionId))
-      .where(eq(testSessions.userId, userId))
+      .leftJoin(testResults, and(eq(testSessions.id, testResults.sessionId), isNull(testResults.deletedAt)))
+      .where(and(eq(testSessions.userId, userId), isNull(testSessions.deletedAt)))
       .groupBy(testSessions.id)
       .orderBy(desc(testSessions.testDate));
     
@@ -299,17 +302,21 @@ export class DatabaseStorage implements IStorage {
    */
   async deleteTestSession(sessionId: number): Promise<void> {
     try {
-      // First delete all test results for this session
+      const now = new Date();
+      
+      // Soft delete all test results for this session
       await db
-        .delete(testResults)
+        .update(testResults)
+        .set({ deletedAt: now })
         .where(eq(testResults.sessionId, sessionId));
 
-      // Then delete the session itself
+      // Soft delete the session itself
       await db
-        .delete(testSessions)
+        .update(testSessions)
+        .set({ deletedAt: now })
         .where(eq(testSessions.id, sessionId));
     } catch (error) {
-      console.error('Error deleting session:', error);
+      console.error('Error soft deleting session:', error);
       throw error;
     }
   }
@@ -356,9 +363,10 @@ export class DatabaseStorage implements IStorage {
         technicianLicensed: testSessions.technicianLicensed,
         complianceStandard: testSessions.complianceStandard,
         createdAt: testSessions.createdAt,
+        deletedAt: testSessions.deletedAt,
       })
       .from(testSessions)
-      .where(eq(testSessions.id, id));
+      .where(and(eq(testSessions.id, id), isNull(testSessions.deletedAt)));
     return session || undefined;
   }
 
@@ -451,7 +459,7 @@ export class DatabaseStorage implements IStorage {
     const results = await db
       .select()
       .from(testResults)
-      .where(eq(testResults.sessionId, sessionId));
+      .where(and(eq(testResults.sessionId, sessionId), isNull(testResults.deletedAt)));
     
     // Sort by asset number (numerical order) - handle both monthly (1-999) and 5-yearly (10001+) sequences
     return results.sort((a, b) => {
@@ -557,7 +565,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteTestResult(id: number): Promise<void> {
-    await db.delete(testResults).where(eq(testResults.id, id));
+    await db
+      .update(testResults)
+      .set({ deletedAt: new Date() })
+      .where(eq(testResults.id, id));
   }
 
   async validateAssetNumber(sessionId: number, assetNumber: string, excludeId?: number): Promise<boolean> {
