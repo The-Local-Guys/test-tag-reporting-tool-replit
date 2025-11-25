@@ -36,7 +36,7 @@ export interface IStorage {
   getAllTestSessions(): Promise<(TestSession & { technicianFullName?: string | null })[]>;
   getSessionsByUser(userId: number): Promise<TestSession[]>;
   updateTestSession(sessionId: number, data: Partial<InsertTestSession>): Promise<TestSession>;
-  deleteTestSession(sessionId: number): Promise<void>;
+  deleteTestSession(sessionId: number, deletedByUserId: number): Promise<void>;
   
   // Test Sessions
   createTestSession(session: InsertTestSession): Promise<TestSession>;
@@ -45,7 +45,7 @@ export interface IStorage {
   // Test Results
   createTestResult(result: InsertTestResult): Promise<TestResult>;
   updateTestResult(id: number, data: Partial<InsertTestResult>): Promise<TestResult>;
-  deleteTestResult(id: number): Promise<void>;
+  deleteTestResult(id: number, deletedByUserId: number): Promise<void>;
   getTestResult(resultId: number): Promise<TestResult | undefined>;
   getTestResultsBySession(sessionId: number): Promise<TestResult[]>;
   getNextAssetNumber(sessionId: number): Promise<number>;
@@ -230,6 +230,7 @@ export class DatabaseStorage implements IStorage {
         complianceStandard: testSessions.complianceStandard,
         createdAt: testSessions.createdAt,
         deletedAt: testSessions.deletedAt,
+        deletedBy: testSessions.deletedBy,
         technicianFullName: users.fullName,
         totalItems: sql<number>`count(${testResults.id})`.mapWith(Number),
         failedItems: sql<number>`count(case when ${testResults.result} = 'fail' then 1 end)`.mapWith(Number),
@@ -267,6 +268,7 @@ export class DatabaseStorage implements IStorage {
         complianceStandard: testSessions.complianceStandard,
         createdAt: testSessions.createdAt,
         deletedAt: testSessions.deletedAt,
+        deletedBy: testSessions.deletedBy,
         totalItems: sql<number>`count(${testResults.id})`.mapWith(Number),
         failedItems: sql<number>`count(case when ${testResults.result} = 'fail' then 1 end)`.mapWith(Number),
       })
@@ -296,24 +298,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   /**
-   * Deletes a test session and all associated test results
+   * Soft deletes a test session and all associated test results
+   * Records the user who performed the delete action for audit trail
    * Used by technicians to remove their own sessions or by admins for management
    * @param sessionId - ID of the session to delete
+   * @param deletedByUserId - ID of the user performing the delete action
    */
-  async deleteTestSession(sessionId: number): Promise<void> {
+  async deleteTestSession(sessionId: number, deletedByUserId: number): Promise<void> {
     try {
       const now = new Date();
       
-      // Soft delete all test results for this session
+      // Soft delete all test results for this session with audit info
       await db
         .update(testResults)
-        .set({ deletedAt: now })
+        .set({ deletedAt: now, deletedBy: deletedByUserId })
         .where(eq(testResults.sessionId, sessionId));
 
-      // Soft delete the session itself
+      // Soft delete the session itself with audit info
       await db
         .update(testSessions)
-        .set({ deletedAt: now })
+        .set({ deletedAt: now, deletedBy: deletedByUserId })
         .where(eq(testSessions.id, sessionId));
     } catch (error) {
       console.error('Error soft deleting session:', error);
@@ -364,6 +368,7 @@ export class DatabaseStorage implements IStorage {
         complianceStandard: testSessions.complianceStandard,
         createdAt: testSessions.createdAt,
         deletedAt: testSessions.deletedAt,
+        deletedBy: testSessions.deletedBy,
       })
       .from(testSessions)
       .where(and(eq(testSessions.id, id), isNull(testSessions.deletedAt)));
@@ -564,10 +569,16 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async deleteTestResult(id: number): Promise<void> {
+  /**
+   * Soft deletes a single test result with audit trail
+   * Records the user who performed the delete action
+   * @param id - ID of the test result to delete
+   * @param deletedByUserId - ID of the user performing the delete action
+   */
+  async deleteTestResult(id: number, deletedByUserId: number): Promise<void> {
     await db
       .update(testResults)
-      .set({ deletedAt: new Date() })
+      .set({ deletedAt: new Date(), deletedBy: deletedByUserId })
       .where(eq(testResults.id, id));
   }
 

@@ -448,7 +448,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      await storage.deleteTestSession(sessionId);
+      await storage.deleteTestSession(sessionId, user.id);
       
       // Track session deletion/cancellation
       trackSessionAction(req, 'cancelled', {
@@ -469,8 +469,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const sessionId = parseInt(req.params.id);
       const session = await storage.getTestSession(sessionId);
+      const user = req.session.user!;
       
-      await storage.deleteTestSession(sessionId);
+      await storage.deleteTestSession(sessionId, user.id);
       
       // Track admin session deletion
       trackAdminAction(req, 'session_deleted', {
@@ -962,10 +963,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return;
         }
 
-        // Delete the test result
-        await storage.deleteTestResult(resultId);
+        // Delete the test result with audit trail
+        const userId = req.session.userId!;
+        await storage.deleteTestResult(resultId, userId);
         
-        console.log(`Successfully deleted test result ${resultId} from session ${sessionId}`);
+        console.log(`Successfully deleted test result ${resultId} from session ${sessionId} by user ${userId}`);
         res.json({ success: true, message: "Test result deleted successfully" });
       } catch (error) {
         console.error("Error deleting test result:", error);
@@ -990,10 +992,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "You can only delete your own reports" });
       }
       
-      // Delete the session (this will cascade delete all test results)
-      await storage.deleteTestSession(sessionId);
+      // Delete the session (this will cascade delete all test results) with audit trail
+      const userId = req.session.userId!;
+      await storage.deleteTestSession(sessionId, userId);
       
-      console.log(`User ${req.session.userId} deleted session ${sessionId}: ${session.clientName}`);
+      console.log(`User ${userId} deleted session ${sessionId}: ${session.clientName}`);
       res.json({ success: true, message: "Report deleted successfully" });
     } catch (error) {
       console.error("Error deleting session:", error);
