@@ -15,17 +15,6 @@ import {
   type User,
 } from "@shared/schema";
 import { z } from "zod";
-import {
-  track,
-  trackUserLogin,
-  trackUserLogout,
-  trackJobStarted,
-  trackJobCompleted,
-  trackCertificateCreated,
-  trackUserCreated,
-  trackEnvironmentCreated,
-  trackError,
-} from "./posthog";
 
 // Extend Express session interface
 declare module "express-session" {
@@ -152,9 +141,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.session.userId = user.id;
       req.session.user = user;
 
-      // Track login
-      trackUserLogin(req, user.username, user.role);
-
       // Remove password from response
       const { password: _, ...userWithoutPassword } = user;
       res.json({ message: "Login successful", user: userWithoutPassword });
@@ -165,9 +151,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/logout", (req, res) => {
-    // Track logout before destroying session
-    trackUserLogout(req);
-    
     req.session.destroy((err) => {
       if (err) {
         return res.status(500).json({ message: "Logout failed" });
@@ -297,13 +280,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const user = await storage.createUser(validation.data);
-      
-      // Track user created
-      trackUserCreated(req, {
-        newUsername: user.username,
-        newRole: user.role,
-      });
-      
       const { password, ...userWithoutPassword } = user;
       res.status(201).json(userWithoutPassword);
     } catch (error) {
@@ -447,15 +423,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId: req.session.userId, // Link session to the logged-in user
       };
       const session = await storage.createTestSession(sessionWithUser);
-      
-      // Track job started
-      trackJobStarted(req, {
-        client: sessionData.clientName,
-        location: sessionData.address,
-        serviceType: sessionData.serviceType || "electrical",
-        country: sessionData.country,
-      });
-      
       res.json(session);
     } catch (error) {
       console.error('Session creation error:', error);
@@ -669,21 +636,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(
         `Batch processing complete: ${savedResults.length}/${results.length} processed (${newResultsCount} new, ${skippedCount} skipped duplicates)`,
       );
-
-      // Track job completed when batch results are saved
-      const session = await storage.getTestSession(sessionId);
-      if (session) {
-        const passedItems = savedResults.filter(r => r.result === 'pass').length;
-        const failedItems = savedResults.filter(r => r.result === 'fail').length;
-        trackJobCompleted(req, {
-          sessionId,
-          client: session.clientName,
-          serviceType: session.serviceType,
-          totalItems: savedResults.length,
-          passedItems,
-          failedItems,
-        });
-      }
 
       if (errors.length > 0) {
         res.status(207).json(response); // 207 Multi-Status for partial success
@@ -1026,15 +978,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const environment = await storage.createEnvironment(environmentData);
-      
-      // Track environment created
-      const items = Array.isArray(environmentData.items) ? environmentData.items : [];
-      trackEnvironmentCreated(req, {
-        name: environmentData.name,
-        serviceType: environmentData.serviceType,
-        itemCount: items.length,
-      });
-      
       res.json(environment);
     } catch (error) {
       console.error("Error creating environment:", error);
@@ -1278,13 +1221,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const certificate = await storage.createCertificate(certificateData);
-      
-      // Track certificate created
-      trackCertificateCreated(req, {
-        clientName: certificateData.clientName,
-        services: Array.isArray(certificateData.services) ? certificateData.services : [],
-      });
-      
       res.status(201).json(certificate);
     } catch (error) {
       console.error("Error creating certificate:", error);
