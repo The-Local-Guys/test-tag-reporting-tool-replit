@@ -39,7 +39,6 @@ Preferred communication style: Simple, everyday language.
 
 ### System Design Choices
 - **Database Schema**: Core entities include Users, sessions, test_sessions, test_results, environments, custom_form_types, certificates. Schema synchronization between development and production databases.
-- **Soft Delete**: Test sessions and test results use soft delete (deletedAt timestamp) instead of permanent deletion. This preserves data for recovery and audit purposes while hiding deleted records from normal queries. All user roles experience the same soft delete behavior.
 - **Zod Schema Validation**: Used for robust data validation, including specific RCD trip time validation.
 - **Modular Frontend**: Dedicated components and hooks for features like Certificates, ensuring maintainability.
 
