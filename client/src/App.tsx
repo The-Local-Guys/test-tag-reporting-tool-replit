@@ -28,9 +28,28 @@ import Environments from "@/pages/environments";
 import Login from "@/pages/login";
 import FormTypes from "@/pages/form-types";
 import { ConditionalNavProvider } from "./contexts/ConditionalNavContext";
-import { initPostHog, identifyUser, trackPageView, trackLogout } from "./lib/posthog";
+import { initPostHog, identifyUser, trackPageView } from "./lib/posthog";
 
 initPostHog();
+
+function getPageName(path: string): string {
+  const routes: Record<string, string> = {
+    '/': 'Service Selection',
+    '/setup': 'Job Setup',
+    '/item-selection': 'Item Selection',
+    '/test-details': 'Test Details',
+    '/emergency-test-details': 'Emergency Light Test',
+    '/fire-test-details': 'Fire Equipment Test',
+    '/rcd-test': 'RCD Test',
+    '/microwave-test': 'Microwave Leakage Test',
+    '/failure-details': 'Failure Details',
+    '/report-preview': 'Report Preview',
+    '/admin': 'Admin Dashboard',
+    '/environments': 'Custom Environments',
+    '/form-types': 'Custom Form Types',
+  };
+  return routes[path] || path;
+}
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -46,19 +65,15 @@ function Router() {
   useEffect(() => {
     if (isAuthenticated && user) {
       const typedUser = user as any;
-      identifyUser(typedUser.id, {
-        username: typedUser.username,
-        role: typedUser.role,
-        fullName: typedUser.fullName,
-        email: typedUser.email,
-      });
+      identifyUser(typedUser.id, typedUser.username, typedUser.role);
     }
   }, [isAuthenticated, user]);
 
   // Track page views with PostHog
   useEffect(() => {
     if (prevLocationRef.current !== location) {
-      trackPageView(location);
+      const pageName = getPageName(location);
+      trackPageView(pageName);
     }
   }, [location]);
 

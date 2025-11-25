@@ -8,7 +8,7 @@ let posthogClient: PostHog | null = null;
 
 export function initPostHog(): PostHog | null {
   if (!POSTHOG_API_KEY) {
-    console.warn('[PostHog] API key not configured. Analytics disabled.');
+    console.log('[Analytics] Disabled - No API key configured');
     return null;
   }
 
@@ -18,7 +18,7 @@ export function initPostHog(): PostHog | null {
     flushInterval: 0,
   });
 
-  console.log('[PostHog] Backend analytics initialized');
+  console.log('[Analytics] Ready');
   return posthogClient;
 }
 
@@ -26,194 +26,160 @@ export function getPostHogClient(): PostHog | null {
   return posthogClient;
 }
 
-export function getDistinctId(req: Request): string {
+function getUserId(req: Request): string {
   const user = (req as any).user;
   if (user?.id) return `user_${user.id}`;
-  if (user?.email) return user.email;
-  
-  const sessionId = (req as any).sessionID || req.headers['x-session-id'];
-  if (sessionId) return `session_${sessionId}`;
-  
-  const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
-  return `ip_${ip}`;
+  return 'anonymous';
 }
 
-export function getUserProperties(req: Request): Record<string, any> {
+function getUserInfo(req: Request): { user: string; role: string } {
   const user = (req as any).user;
   return {
-    userId: user?.id || null,
-    username: user?.username || null,
-    email: user?.email || null,
-    role: user?.role || null,
-    fullName: user?.fullName || null,
-    ip: req.ip || req.headers['x-forwarded-for'] || null,
-    userAgent: req.headers['user-agent'] || null,
+    user: user?.username || 'anonymous',
+    role: user?.role || 'guest',
   };
 }
 
-export function trackEvent(
-  distinctId: string,
-  eventName: string,
-  properties?: Record<string, any>
-): void {
+export function track(req: Request, event: string, data?: Record<string, any>): void {
   if (!posthogClient) return;
+
+  const userInfo = getUserInfo(req);
   
   posthogClient.capture({
-    distinctId,
-    event: eventName,
+    distinctId: getUserId(req),
+    event,
     properties: {
-      ...properties,
-      timestamp: new Date().toISOString(),
-      source: 'backend',
+      ...userInfo,
+      ...data,
     },
   });
 }
 
-export function identifyUser(
-  distinctId: string,
-  properties: Record<string, any>
-): void {
+export function trackUserLogin(req: Request, username: string, role: string): void {
   if (!posthogClient) return;
+
+  const userId = getUserId(req);
   
   posthogClient.identify({
-    distinctId,
-    properties,
+    distinctId: userId,
+    properties: { username, role },
+  });
+
+  posthogClient.capture({
+    distinctId: userId,
+    event: 'User Logged In',
+    properties: { username, role },
   });
 }
 
-export function posthogMiddleware(req: Request, res: Response, next: NextFunction): void {
-  if (!posthogClient) {
-    next();
-    return;
-  }
-
-  const startTime = Date.now();
-  const distinctId = getDistinctId(req);
-  const userProps = getUserProperties(req);
-
-  res.on('finish', () => {
-    const duration = Date.now() - startTime;
-    const path = req.path;
-    
-    if (path.startsWith('/assets') || path.includes('.')) {
-      return;
-    }
-
-    posthogClient!.capture({
-      distinctId,
-      event: 'api_request',
-      properties: {
-        method: req.method,
-        path: req.path,
-        statusCode: res.statusCode,
-        duration,
-        query: req.query,
-        ...userProps,
-        timestamp: new Date().toISOString(),
-        source: 'backend',
-      },
-    });
-
-    if (res.statusCode >= 400) {
-      posthogClient!.capture({
-        distinctId,
-        event: 'api_error',
-        properties: {
-          method: req.method,
-          path: req.path,
-          statusCode: res.statusCode,
-          ...userProps,
-          timestamp: new Date().toISOString(),
-          source: 'backend',
-        },
-      });
-    }
-  });
-
-  next();
+export function trackUserLogout(req: Request): void {
+  track(req, 'User Logged Out');
 }
 
-export function trackLogin(req: Request, success: boolean, errorMessage?: string): void {
-  const distinctId = getDistinctId(req);
-  const userProps = getUserProperties(req);
-  
-  trackEvent(distinctId, success ? 'user_login_success' : 'user_login_failed', {
-    ...userProps,
-    success,
-    errorMessage,
-  });
-
-  if (success && userProps.userId) {
-    identifyUser(distinctId, userProps);
-  }
-}
-
-export function trackLogout(req: Request): void {
-  const distinctId = getDistinctId(req);
-  const userProps = getUserProperties(req);
-  
-  trackEvent(distinctId, 'user_logout', userProps);
-}
-
-export function trackSessionAction(
-  req: Request,
-  action: string,
-  sessionData?: Record<string, any>
-): void {
-  const distinctId = getDistinctId(req);
-  const userProps = getUserProperties(req);
-  
-  trackEvent(distinctId, `session_${action}`, {
-    ...userProps,
-    ...sessionData,
+export function trackJobStarted(req: Request, data: {
+  client: string;
+  location: string;
+  serviceType: string;
+  country: string;
+}): void {
+  track(req, 'Job Started', {
+    client: data.client,
+    location: data.location,
+    service: data.serviceType,
+    country: data.country,
   });
 }
 
-export function trackTestResult(
-  req: Request,
-  testType: string,
-  result: 'pass' | 'fail',
-  testData?: Record<string, any>
-): void {
-  const distinctId = getDistinctId(req);
-  const userProps = getUserProperties(req);
-  
-  trackEvent(distinctId, 'test_result_recorded', {
-    ...userProps,
-    testType,
-    result,
-    ...testData,
+export function trackJobCompleted(req: Request, data: {
+  sessionId: number;
+  client: string;
+  serviceType: string;
+  totalItems: number;
+  passedItems: number;
+  failedItems: number;
+}): void {
+  track(req, 'Job Completed', {
+    jobId: data.sessionId,
+    client: data.client,
+    service: data.serviceType,
+    totalItems: data.totalItems,
+    passed: data.passedItems,
+    failed: data.failedItems,
+    passRate: data.totalItems > 0 
+      ? Math.round((data.passedItems / data.totalItems) * 100) + '%' 
+      : '0%',
   });
 }
 
-export function trackReportGenerated(
-  req: Request,
-  reportType: string,
-  format: 'pdf' | 'excel',
-  sessionData?: Record<string, any>
-): void {
-  const distinctId = getDistinctId(req);
-  const userProps = getUserProperties(req);
-  
-  trackEvent(distinctId, 'report_generated', {
-    ...userProps,
-    reportType,
-    format,
-    ...sessionData,
+export function trackTestRecorded(req: Request, data: {
+  serviceType: string;
+  itemName: string;
+  result: 'pass' | 'fail';
+  classification?: string;
+}): void {
+  track(req, 'Test Recorded', {
+    service: data.serviceType,
+    item: data.itemName,
+    result: data.result === 'pass' ? 'Pass' : 'Fail',
+    classification: data.classification || 'N/A',
   });
 }
 
-export function trackCertificateAction(
-  req: Request,
-  action: 'created' | 'updated' | 'deleted' | 'downloaded',
-  certificateData?: Record<string, any>
-): void {
-  const distinctId = getDistinctId(req);
-  const userProps = getUserProperties(req);
-  
-  trackEvent(distinctId, `certificate_${action}`, {
-    ...userProps,
-    ...certificateData,
+export function trackReportDownloaded(req: Request, data: {
+  format: 'pdf' | 'excel';
+  client: string;
+  serviceType: string;
+  itemCount: number;
+}): void {
+  track(req, 'Report Downloaded', {
+    format: data.format.toUpperCase(),
+    client: data.client,
+    service: data.serviceType,
+    items: data.itemCount,
+  });
+}
+
+export function trackCertificateCreated(req: Request, data: {
+  clientName: string;
+  services: string[];
+}): void {
+  track(req, 'Certificate Created', {
+    client: data.clientName,
+    services: data.services.join(', '),
+    serviceCount: data.services.length,
+  });
+}
+
+export function trackCertificateDownloaded(req: Request, clientName: string): void {
+  track(req, 'Certificate Downloaded', { client: clientName });
+}
+
+export function trackUserCreated(req: Request, data: {
+  newUsername: string;
+  newRole: string;
+}): void {
+  track(req, 'User Created', {
+    newUser: data.newUsername,
+    assignedRole: data.newRole,
+  });
+}
+
+export function trackEnvironmentCreated(req: Request, data: {
+  name: string;
+  serviceType: string;
+  itemCount: number;
+}): void {
+  track(req, 'Custom Environment Created', {
+    name: data.name,
+    service: data.serviceType,
+    items: data.itemCount,
+  });
+}
+
+export function trackError(req: Request, error: string, context?: string): void {
+  track(req, 'Error Occurred', {
+    error,
+    context: context || 'Unknown',
   });
 }
 
@@ -228,12 +194,10 @@ process.on('uncaughtException', (error) => {
   if (posthogClient) {
     posthogClient.capture({
       distinctId: 'system',
-      event: 'uncaught_exception',
+      event: 'Server Error',
       properties: {
+        type: 'Uncaught Exception',
         error: error.message,
-        stack: error.stack,
-        timestamp: new Date().toISOString(),
-        source: 'backend',
       },
     });
   }
@@ -243,11 +207,10 @@ process.on('unhandledRejection', (reason) => {
   if (posthogClient) {
     posthogClient.capture({
       distinctId: 'system',
-      event: 'unhandled_rejection',
+      event: 'Server Error',
       properties: {
-        reason: String(reason),
-        timestamp: new Date().toISOString(),
-        source: 'backend',
+        type: 'Unhandled Promise Rejection',
+        error: String(reason),
       },
     });
   }
