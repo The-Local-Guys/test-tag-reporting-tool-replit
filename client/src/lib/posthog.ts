@@ -1,12 +1,17 @@
 import posthog from 'posthog-js';
 
-const POSTHOG_API_KEY = import.meta.env.VITE_POSTHOG_API_KEY || 'phc_NlhfyqhzzNc7MdTyX3jjCFOqvZLPip0QDmaaP8wZ1TK';
+const POSTHOG_API_KEY = import.meta.env.VITE_POSTHOG_API_KEY || '';
 const POSTHOG_HOST = import.meta.env.VITE_POSTHOG_HOST || 'https://us.i.posthog.com';
 
 let isInitialized = false;
 
 export function initPostHog(): void {
   if (isInitialized || typeof window === 'undefined') return;
+
+  if (!POSTHOG_API_KEY) {
+    console.warn('[PostHog] API key not configured. Analytics disabled.');
+    return;
+  }
 
   try {
     posthog.init(POSTHOG_API_KEY, {
