@@ -30,6 +30,7 @@ import FormTypes from "@/pages/form-types";
 import { ConditionalNavProvider } from "./contexts/ConditionalNavContext";
 import { initPostHog, identifyUser, trackPageView, trackLogout } from "./lib/posthog";
 
+// Initialize PostHog (async - fetches config from server if build-time env vars not available)
 initPostHog();
 
 function Router() {

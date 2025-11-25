@@ -1,21 +1,37 @@
 import posthog from 'posthog-js';
 
-const POSTHOG_API_KEY = import.meta.env.VITE_POSTHOG_API_KEY || '';
-const POSTHOG_HOST = import.meta.env.VITE_POSTHOG_HOST || 'https://us.i.posthog.com';
-
 let isInitialized = false;
+let isInitializing = false;
 
-export function initPostHog(): void {
-  if (isInitialized || typeof window === 'undefined') return;
+// Try build-time env vars first, then fall back to runtime fetch
+const BUILD_TIME_API_KEY = import.meta.env.VITE_POSTHOG_API_KEY || '';
+const BUILD_TIME_HOST = import.meta.env.VITE_POSTHOG_HOST || 'https://us.i.posthog.com';
 
-  if (!POSTHOG_API_KEY) {
+async function fetchRuntimeConfig(): Promise<{ apiKey: string; host: string }> {
+  try {
+    const response = await fetch('/api/config');
+    if (response.ok) {
+      const config = await response.json();
+      return {
+        apiKey: config.posthog?.apiKey || '',
+        host: config.posthog?.host || 'https://us.i.posthog.com',
+      };
+    }
+  } catch (error) {
+    console.warn('[PostHog] Failed to fetch runtime config:', error);
+  }
+  return { apiKey: '', host: 'https://us.i.posthog.com' };
+}
+
+function initializePostHog(apiKey: string, host: string): void {
+  if (!apiKey) {
     console.warn('[PostHog] API key not configured. Analytics disabled.');
     return;
   }
 
   try {
-    posthog.init(POSTHOG_API_KEY, {
-      api_host: POSTHOG_HOST,
+    posthog.init(apiKey, {
+      api_host: host,
       person_profiles: 'identified_only',
       capture_pageview: true,
       capture_pageleave: true,
@@ -43,6 +59,24 @@ export function initPostHog(): void {
   } catch (error) {
     console.error('[PostHog] Failed to initialize:', error);
   }
+}
+
+export async function initPostHog(): Promise<void> {
+  if (isInitialized || isInitializing || typeof window === 'undefined') return;
+  
+  isInitializing = true;
+
+  // First try build-time environment variables
+  if (BUILD_TIME_API_KEY) {
+    initializePostHog(BUILD_TIME_API_KEY, BUILD_TIME_HOST);
+    isInitializing = false;
+    return;
+  }
+
+  // Fall back to runtime configuration from server
+  const runtimeConfig = await fetchRuntimeConfig();
+  initializePostHog(runtimeConfig.apiKey, runtimeConfig.host);
+  isInitializing = false;
 }
 
 function getOrCreateSessionId(): string {

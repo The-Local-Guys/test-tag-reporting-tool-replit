@@ -190,6 +190,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(userWithoutPassword);
   });
 
+  // Public endpoint for frontend configuration (PostHog, etc.)
+  app.get("/api/config", (req, res) => {
+    res.json({
+      posthog: {
+        apiKey: process.env.POSTHOG_API_KEY || process.env.VITE_POSTHOG_API_KEY || '',
+        host: process.env.POSTHOG_HOST || process.env.VITE_POSTHOG_HOST || 'https://us.i.posthog.com',
+      },
+    });
+  });
+
   app.post("/api/auth/change-password", requireAuth, async (req, res) => {
     try {
       const { currentPassword, newPassword } = req.body;
