@@ -42,6 +42,7 @@ export const testSessions = pgTable("test_sessions", {
   complianceStandard: text("compliance_standard"), // 'AS_1851_AU' or 'NZS_4503_NZ'
   createdAt: timestamp("created_at").defaultNow(),
   deletedAt: timestamp("deleted_at"), // Soft delete - null means active, timestamp means deleted
+  deletedBy: integer("deleted_by").references(() => users.id), // User who performed the soft delete
 });
 
 export const testResults = pgTable("test_results", {
@@ -94,6 +95,7 @@ export const testResults = pgTable("test_results", {
   leakageReading: text("leakage_reading"), // Microwave radiation leakage reading
   createdAt: timestamp("created_at").defaultNow(),
   deletedAt: timestamp("deleted_at"), // Soft delete - null means active, timestamp means deleted
+  deletedBy: integer("deleted_by").references(() => users.id), // User who performed the soft delete
 });
 
 // Environments table for custom item sets per technician
@@ -132,12 +134,14 @@ export const insertTestSessionSchema = createInsertSchema(testSessions).omit({
   id: true,
   createdAt: true,
   deletedAt: true,
+  deletedBy: true,
 });
 
 export const insertTestResultSchema = createInsertSchema(testResults).omit({
   id: true,
   createdAt: true,
   deletedAt: true,
+  deletedBy: true,
 });
 
 export const insertEnvironmentSchema = createInsertSchema(environments).omit({
