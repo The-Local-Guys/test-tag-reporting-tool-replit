@@ -1,0 +1,40 @@
+You are an expert software engineer. Your task is to fully integrate PostHog analytics into this Replit project (frontend and backend) so that **every possible action is tracked along with user details** for debugging and analytics purposes. Follow these instructions precisely:
+
+1. **Backend (Node.js/Express)**:
+   - Install and configure the official PostHog Node SDK.
+   - Automatically capture for every request:
+     - HTTP method, path, headers, query, and body.
+     - Response status codes and any error messages.
+     - Chat interactions (user messages and agent responses).
+     - Any uncaught exceptions or unhandled promise rejections.
+   - Include **user identification** for all events (use session ID, user ID, email, or IP if no authentication).
+   - Use environment variables for `POSTHOG_API_KEY` and `POSTHOG_HOST`.
+   - Add helper functions to easily log any backend event with `distinctId` set to the user performing the action.
+
+2. **Frontend (React/Vanilla JS)**:
+   - Install and configure PostHog JS.
+   - Automatically track:
+     - Page views.
+     - All click events (element tag, id, class, innerText).
+     - Form submissions.
+     - Chat messages sent and received.
+     - Any frontend errors or unhandled promise rejections.
+   - Include **user identification** in all events (use authenticated user ID, email, or generate a session ID if unauthenticated).
+   - Provide a helper function so any frontend action can be logged with user details.
+
+3. **Integration**:
+   - Setup should be fully functional out-of-the-box.
+   - Include example code showing how chat interactions and other user actions are automatically logged with user info.
+   - Ensure environment variables in Replit Secrets are used for API keys.
+
+4. **Best Practices**:
+   - Never hardcode API keys; always use environment variables.
+   - Flush events immediately for real-time debugging.
+   - Minimize performance impact.
+   - Comment code clearly for maintainability.
+
+5. **Deliverables**:
+   - Backend PostHog integration file with automatic logging and user identification.
+   - Frontend PostHog integration file with automatic logging and user identification.
+   - Updated server and frontend files with automatic logging of all actions.
+   - Clear instructions for adding environment variables in Replit and for logging user actions.
