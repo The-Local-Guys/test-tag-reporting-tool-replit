@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, CheckCircle, XCircle, Camera, Save } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Camera, Save, X } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
@@ -48,7 +48,7 @@ export default function EmergencyTestDetails() {
   const { toast } = useToast();
   const { sessionData, addToBatch, assetProgress, currentLocation } = useSession();
   const [photoData, setPhotoData] = useState<string | null>(null);
-  const [showCamera, setShowCamera] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Get URL parameters
   const urlParams = new URLSearchParams(window.location.search);
@@ -185,20 +185,57 @@ export default function EmergencyTestDetails() {
     }
   };
 
-  const handlePhotoCapture = () => {
-    // Simulate photo capture - in a real app, this would use the camera API
-    const canvas = document.createElement('canvas');
-    canvas.width = 640;
-    canvas.height = 480;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.fillStyle = '#f0f0f0';
-      ctx.fillRect(0, 0, 640, 480);
-      ctx.fillStyle = '#333';
-      ctx.font = '20px Arial';
-      ctx.fillText('Photo captured for failed item', 50, 250);
-      setPhotoData(canvas.toDataURL());
-      setShowCamera(false);
+  const handleCameraClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handlePhotoCapture = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        const maxWidth = 800;
+        const maxHeight = 600;
+        
+        let { width, height } = img;
+        
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height;
+            height = maxHeight;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        ctx?.drawImage(img, 0, 0, width, height);
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        
+        console.log('Photo compressed from', file.size, 'to approximately', Math.round(compressedDataUrl.length * 0.75), 'bytes');
+        setPhotoData(compressedDataUrl);
+      };
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removePhoto = () => {
+    setPhotoData(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -519,18 +556,45 @@ export default function EmergencyTestDetails() {
                   </Select>
                 </div>
 
-                <div>
+                <div className="space-y-3">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handlePhotoCapture}
+                    className="hidden"
+                    data-testid="input-photo-capture"
+                  />
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setShowCamera(true)}
+                    onClick={handleCameraClick}
                     className="w-full"
+                    data-testid="button-take-photo"
                   >
                     <Camera className="w-4 h-4 mr-2" />
                     {photoData ? 'Retake Photo' : 'Take Photo of Issue'}
                   </Button>
                   {photoData && (
-                    <p className="text-sm text-green-600 mt-2">Photo captured</p>
+                    <div className="relative">
+                      <img 
+                        src={photoData} 
+                        alt="Captured failure" 
+                        className="w-full rounded-lg border border-gray-200"
+                        data-testid="img-captured-photo"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={removePhoto}
+                        className="absolute top-2 right-2"
+                        data-testid="button-remove-photo"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -548,25 +612,6 @@ export default function EmergencyTestDetails() {
           </CardContent>
         </Card>
 
-        {/* Camera Modal */}
-        {showCamera && (
-          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg max-w-sm w-full mx-4">
-              <h3 className="text-lg font-semibold mb-4">Capture Photo</h3>
-              <div className="bg-gray-200 h-48 rounded-lg mb-4 flex items-center justify-center">
-                <Camera className="w-12 h-12 text-gray-400" />
-              </div>
-              <div className="flex space-x-3">
-                <Button onClick={() => setShowCamera(false)} variant="outline" className="flex-1">
-                  Cancel
-                </Button>
-                <Button onClick={handlePhotoCapture} className="flex-1">
-                  Capture
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Fixed Save Button */}
         <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 p-4">
