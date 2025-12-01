@@ -11,33 +11,33 @@ export interface WorkflowStep {
 
 const workflowSteps: Record<ServiceType, WorkflowStep[]> = {
   electrical: [
-    { id: 'setup', label: 'Client Setup', shortLabel: 'Setup' },
-    { id: 'items', label: 'Select Items', shortLabel: 'Items' },
-    { id: 'test', label: 'Test Details', shortLabel: 'Test' },
+    { id: 'setup', label: 'Client\nSetup', shortLabel: 'Setup' },
+    { id: 'items', label: 'Select\nItems', shortLabel: 'Items' },
+    { id: 'test', label: 'Test\nDetails', shortLabel: 'Test' },
     { id: 'complete', label: 'View Report\n& Complete', shortLabel: 'Report' },
   ],
   emergency_exit_light: [
-    { id: 'setup', label: 'Client Setup', shortLabel: 'Setup' },
-    { id: 'items', label: 'Select Items', shortLabel: 'Items' },
-    { id: 'test', label: 'Test Details', shortLabel: 'Test' },
+    { id: 'setup', label: 'Client\nSetup', shortLabel: 'Setup' },
+    { id: 'items', label: 'Select\nItems', shortLabel: 'Items' },
+    { id: 'test', label: 'Test\nDetails', shortLabel: 'Test' },
     { id: 'complete', label: 'View Report\n& Complete', shortLabel: 'Report' },
   ],
   fire_testing: [
-    { id: 'setup', label: 'Client Setup', shortLabel: 'Setup' },
-    { id: 'items', label: 'Select Items', shortLabel: 'Items' },
-    { id: 'test', label: 'Test Details', shortLabel: 'Test' },
+    { id: 'setup', label: 'Client\nSetup', shortLabel: 'Setup' },
+    { id: 'items', label: 'Select\nItems', shortLabel: 'Items' },
+    { id: 'test', label: 'Test\nDetails', shortLabel: 'Test' },
     { id: 'complete', label: 'View Report\n& Complete', shortLabel: 'Report' },
   ],
   rcd_reporting: [
-    { id: 'setup', label: 'Client Setup', shortLabel: 'Setup' },
-    { id: 'items', label: 'Select Items', shortLabel: 'Items' },
-    { id: 'test', label: 'Test Details', shortLabel: 'Test' },
+    { id: 'setup', label: 'Client\nSetup', shortLabel: 'Setup' },
+    { id: 'items', label: 'Select\nItems', shortLabel: 'Items' },
+    { id: 'test', label: 'Test\nDetails', shortLabel: 'Test' },
     { id: 'complete', label: 'View Report\n& Complete', shortLabel: 'Report' },
   ],
   microwave_leakage: [
-    { id: 'setup', label: 'Client Setup', shortLabel: 'Setup' },
-    { id: 'items', label: 'Select Brand', shortLabel: 'Brand' },
-    { id: 'test', label: 'Test Details', shortLabel: 'Test' },
+    { id: 'setup', label: 'Client\nSetup', shortLabel: 'Setup' },
+    { id: 'items', label: 'Select\nBrand', shortLabel: 'Brand' },
+    { id: 'test', label: 'Test\nDetails', shortLabel: 'Test' },
     { id: 'complete', label: 'View Report\n& Complete', shortLabel: 'Report' },
   ],
 };
