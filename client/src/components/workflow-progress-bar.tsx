@@ -36,7 +36,7 @@ const workflowSteps: Record<ServiceType, WorkflowStep[]> = {
   ],
   microwave_leakage: [
     { id: 'setup', label: 'Client Setup', shortLabel: 'Setup' },
-    { id: 'items', label: 'Select Items', shortLabel: 'Items' },
+    { id: 'items', label: 'Select Brand', shortLabel: 'Brand' },
     { id: 'test', label: 'Test Details', shortLabel: 'Test' },
     { id: 'complete', label: 'Complete', shortLabel: 'Done' },
   ],
