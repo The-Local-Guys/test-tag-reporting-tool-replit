@@ -2,6 +2,12 @@ import { CheckCircle } from "lucide-react";
 
 export type ServiceType = 'electrical' | 'emergency_exit_light' | 'fire_testing' | 'rcd_reporting' | 'microwave_leakage';
 
+function isValidServiceType(type: string | undefined): type is ServiceType {
+  return type === 'electrical' || type === 'emergency_exit_light' || 
+         type === 'fire_testing' || type === 'rcd_reporting' || 
+         type === 'microwave_leakage';
+}
+
 interface WorkflowStep {
   name: string;
   shortName: string;
@@ -42,11 +48,13 @@ const serviceSteps: Record<ServiceType, WorkflowStep[]> = {
 
 interface WorkflowProgressBarProps {
   currentStep: number;
-  serviceType?: ServiceType;
+  serviceType?: string;
 }
 
 export function WorkflowProgressBar({ currentStep, serviceType }: WorkflowProgressBarProps) {
-  const service = serviceType || (sessionStorage.getItem('selectedService') as ServiceType) || 'electrical';
+  const storedService = sessionStorage.getItem('selectedService');
+  const service: ServiceType = isValidServiceType(serviceType) ? serviceType : 
+                                isValidServiceType(storedService) ? storedService : 'electrical';
   const steps = serviceSteps[service] || serviceSteps.electrical;
 
   return (
@@ -92,8 +100,10 @@ export function WorkflowProgressBar({ currentStep, serviceType }: WorkflowProgre
   );
 }
 
-export function getServiceTitle(serviceType?: ServiceType): string {
-  const service = serviceType || (sessionStorage.getItem('selectedService') as ServiceType) || 'electrical';
+export function getServiceTitle(serviceType?: string): string {
+  const storedService = sessionStorage.getItem('selectedService');
+  const service: ServiceType = isValidServiceType(serviceType) ? serviceType : 
+                                isValidServiceType(storedService) ? storedService : 'electrical';
   
   switch (service) {
     case 'emergency_exit_light':
