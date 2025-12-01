@@ -365,7 +365,7 @@ export default function ItemSelection() {
       {/* Workflow Progress Bar */}
       <WorkflowProgressBar 
         serviceType={selectedService as ServiceType} 
-        currentStep="select" 
+        currentStep="items" 
       />
 
       {/* Quick Stats */}

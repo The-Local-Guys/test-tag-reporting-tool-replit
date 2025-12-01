@@ -11,32 +11,32 @@ export interface WorkflowStep {
 
 const workflowSteps: Record<ServiceType, WorkflowStep[]> = {
   electrical: [
-    { id: 'select', label: 'Select Item', shortLabel: 'Select' },
-    { id: 'details', label: 'Enter Details', shortLabel: 'Details' },
+    { id: 'setup', label: 'Client Setup', shortLabel: 'Setup' },
+    { id: 'items', label: 'Select Items', shortLabel: 'Items' },
     { id: 'test', label: 'Test & Result', shortLabel: 'Test' },
     { id: 'complete', label: 'Complete', shortLabel: 'Done' },
   ],
   emergency_exit_light: [
-    { id: 'select', label: 'Select Item', shortLabel: 'Select' },
-    { id: 'details', label: 'Equipment Info', shortLabel: 'Info' },
+    { id: 'setup', label: 'Client Setup', shortLabel: 'Setup' },
+    { id: 'items', label: 'Select Items', shortLabel: 'Items' },
     { id: 'test', label: 'Run Tests', shortLabel: 'Test' },
     { id: 'complete', label: 'Complete', shortLabel: 'Done' },
   ],
   fire_testing: [
-    { id: 'select', label: 'Select Item', shortLabel: 'Select' },
-    { id: 'details', label: 'Equipment Details', shortLabel: 'Details' },
-    { id: 'test', label: 'Inspection & Test', shortLabel: 'Test' },
+    { id: 'setup', label: 'Client Setup', shortLabel: 'Setup' },
+    { id: 'items', label: 'Select Items', shortLabel: 'Items' },
+    { id: 'test', label: 'Inspection', shortLabel: 'Test' },
     { id: 'complete', label: 'Complete', shortLabel: 'Done' },
   ],
   rcd_reporting: [
-    { id: 'select', label: 'Select RCD Type', shortLabel: 'Type' },
-    { id: 'details', label: 'Enter Details', shortLabel: 'Details' },
+    { id: 'setup', label: 'Client Setup', shortLabel: 'Setup' },
+    { id: 'items', label: 'Select RCD', shortLabel: 'Items' },
     { id: 'test', label: 'Run Tests', shortLabel: 'Test' },
     { id: 'complete', label: 'Complete', shortLabel: 'Done' },
   ],
   microwave_leakage: [
-    { id: 'select', label: 'Select Brand', shortLabel: 'Brand' },
-    { id: 'details', label: 'Enter Details', shortLabel: 'Details' },
+    { id: 'setup', label: 'Client Setup', shortLabel: 'Setup' },
+    { id: 'items', label: 'Select Brand', shortLabel: 'Items' },
     { id: 'test', label: 'Leakage Test', shortLabel: 'Test' },
     { id: 'complete', label: 'Complete', shortLabel: 'Done' },
   ],
