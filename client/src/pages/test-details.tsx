@@ -9,7 +9,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { WorkflowProgressBar } from '@/components/ui/workflow-progress-bar';
 import { useSession, DEFAULT_STARTING_NUMBERS } from '@/hooks/use-session';
 import { useLocation, useSearch } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
@@ -255,14 +254,11 @@ export default function TestDetails() {
           </button>
           <div className="text-center flex-1">
             <h1 className="text-xl font-semibold">Test Details</h1>
-            <div className="text-blue-100 text-sm">Step 3: Record Results</div>
+            <div className="text-blue-100 text-sm">{currentItem.name}</div>
           </div>
           <div className="w-8"></div>
         </div>
       </div>
-
-      {/* Progress Bar */}
-      <WorkflowProgressBar currentStep={3} serviceType="electrical" />
 
       {/* Item Preview */}
       <div className="bg-white border-b border-gray-200 p-4">

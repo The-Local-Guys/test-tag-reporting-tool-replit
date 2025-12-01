@@ -3,76 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
-import { Zap, ShieldAlert, ArrowRight, FileText, Plus, Flame, Trash2, CheckCircle, Radio, Circle } from "lucide-react";
+import { Zap, ShieldAlert, ArrowRight, FileText, Plus, Flame, Trash2, CheckCircle, Radio } from "lucide-react";
 import { useSpaNavigation } from "@/hooks/useSpaNavigation";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
-
-interface ProcessStep {
-  name: string;
-  completed: boolean;
-}
-
-interface ServiceProcess {
-  serviceType: string;
-  steps: ProcessStep[];
-}
-
-function ProcessSteps({ steps, accentColor }: { steps: ProcessStep[]; accentColor: string }) {
-  return (
-    <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Process Steps</p>
-      <div className="space-y-1.5">
-        {steps.map((step, index) => (
-          <div key={index} className="flex items-center gap-2">
-            {step.completed ? (
-              <CheckCircle className={`w-4 h-4 flex-shrink-0 ${accentColor}`} />
-            ) : (
-              <Circle className="w-4 h-4 flex-shrink-0 text-gray-300" />
-            )}
-            <span className={`text-xs ${step.completed ? 'text-gray-700 font-medium' : 'text-gray-500'}`}>
-              {index + 1}. {step.name}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-const serviceProcessSteps: Record<string, ProcessStep[]> = {
-  electrical: [
-    { name: "Setup Job Details", completed: false },
-    { name: "Select Items to Test", completed: false },
-    { name: "Record Test Results", completed: false },
-    { name: "Review & Generate Report", completed: false },
-  ],
-  emergency_exit_light: [
-    { name: "Setup Job Details", completed: false },
-    { name: "Add Exit Light Assets", completed: false },
-    { name: "Record Duration Tests", completed: false },
-    { name: "Review & Generate Report", completed: false },
-  ],
-  fire_testing: [
-    { name: "Setup Job Details", completed: false },
-    { name: "Select Equipment Type", completed: false },
-    { name: "Record Test Results", completed: false },
-    { name: "Review & Generate Report", completed: false },
-  ],
-  rcd_reporting: [
-    { name: "Setup Job Details", completed: false },
-    { name: "Select RCD Type", completed: false },
-    { name: "Record Trip Times", completed: false },
-    { name: "Review & Generate Report", completed: false },
-  ],
-  microwave_leakage: [
-    { name: "Setup Job Details", completed: false },
-    { name: "Enter Microwave Details", completed: false },
-    { name: "Record Leakage Readings", completed: false },
-    { name: "Review & Generate Report", completed: false },
-  ],
-};
 
 export default function ServiceSelection() {
   const { navigate } = useSpaNavigation();
@@ -337,7 +272,7 @@ export default function ServiceSelection() {
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Electrical Test and Tag */}
           <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-blue-500">
-            <CardHeader className="text-center pb-2">
+            <CardHeader className="text-center">
               <div className="w-16 h-16 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center">
                 <Zap className="w-8 h-8 text-blue-600" />
               </div>
@@ -347,12 +282,18 @@ export default function ServiceSelection() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ProcessSteps steps={serviceProcessSteps.electrical} accentColor="text-blue-600" />
+              <ul className="text-sm text-gray-600 space-y-2 mb-6">
+                <li>• Visual inspection testing</li>
+                <li>• Earth continuity testing</li>
+                <li>• Insulation resistance testing</li>
+                <li>• Polarity testing</li>
+                <li>• Appliance leakage testing</li>
+                <li>• Compliance tagging and reporting</li>
+              </ul>
               <Button 
                 onClick={() => selectService('electrical')}
                 className="w-full"
                 size="lg"
-                data-testid="button-select-electrical"
               >
                 Select Electrical Testing
                 <ArrowRight className="w-4 h-4 ml-2" />
@@ -362,7 +303,7 @@ export default function ServiceSelection() {
 
           {/* Emergency Exit Light Testing */}
           <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-red-500">
-            <CardHeader className="text-center pb-2">
+            <CardHeader className="text-center">
               <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
                 <ShieldAlert className="w-8 h-8 text-red-600" />
               </div>
@@ -372,12 +313,18 @@ export default function ServiceSelection() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ProcessSteps steps={serviceProcessSteps.emergency_exit_light} accentColor="text-red-600" />
+              <ul className="text-sm text-gray-600 space-y-2 mb-6">
+                <li>• 90-minute discharge testing</li>
+                <li>• Physical inspection</li>
+                <li>• Battery condition assessment</li>
+
+                <li>• Switching mechanism testing</li>
+                <li>• Compliance certification</li>
+              </ul>
               <Button 
                 onClick={() => selectService('emergency_exit_light')}
                 className="w-full bg-red-600 hover:bg-red-700"
                 size="lg"
-                data-testid="button-select-emergency"
               >
                 Select Emergency Testing
                 <ArrowRight className="w-4 h-4 ml-2" />
@@ -387,7 +334,7 @@ export default function ServiceSelection() {
 
           {/* Fire Testing */}
           <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-orange-500">
-            <CardHeader className="text-center pb-2">
+            <CardHeader className="text-center">
               <div className="w-16 h-16 mx-auto mb-4 bg-orange-100 rounded-full flex items-center justify-center">
                 <Flame className="w-8 h-8 text-orange-600" />
               </div>
@@ -397,12 +344,17 @@ export default function ServiceSelection() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ProcessSteps steps={serviceProcessSteps.fire_testing} accentColor="text-orange-600" />
+              <ul className="text-sm text-gray-600 space-y-2 mb-6">
+                <li>• Fire extinguisher testing</li>
+                <li>• Fire blanket inspection</li>
+                <li>• Fire hose reel testing</li>
+                <li>• 6-monthly and 12-monthly tests</li>
+                <li>• Compliance documentation</li>
+              </ul>
               <Button 
                 onClick={() => selectService('fire_testing')}
                 className="w-full bg-orange-600 hover:bg-orange-700"
                 size="lg"
-                data-testid="button-select-fire"
               >
                 Select Fire Testing
                 <ArrowRight className="w-4 h-4 ml-2" />
@@ -412,7 +364,7 @@ export default function ServiceSelection() {
 
           {/* RCD Reporting */}
           <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-purple-500">
-            <CardHeader className="text-center pb-2">
+            <CardHeader className="text-center">
               <div className="w-16 h-16 mx-auto mb-4 bg-purple-100 rounded-full flex items-center justify-center">
                 <Zap className="w-8 h-8 text-purple-600" />
               </div>
@@ -422,12 +374,18 @@ export default function ServiceSelection() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ProcessSteps steps={serviceProcessSteps.rcd_reporting} accentColor="text-purple-600" />
+              <ul className="text-sm text-gray-600 space-y-2 mb-6">
+                <li>• Fixed RCD testing</li>
+                <li>• Portable RCD testing</li>
+                <li>• Push button test (6 monthly)</li>
+                <li>• Injection/Timed test (12 monthly)</li>
+                <li>• Distribution board tracking</li>
+                <li>• Compliance certification</li>
+              </ul>
               <Button 
                 onClick={() => selectService('rcd_reporting')}
                 className="w-full bg-purple-600 hover:bg-purple-700"
                 size="lg"
-                data-testid="button-select-rcd"
               >
                 Select RCD Reporting
                 <ArrowRight className="w-4 h-4 ml-2" />
@@ -437,7 +395,7 @@ export default function ServiceSelection() {
 
           {/* Microwave Leakage Testing */}
           <Card className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-green-500">
-            <CardHeader className="text-center pb-2">
+            <CardHeader className="text-center">
               <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
                 <Radio className="w-8 h-8 text-green-600" />
               </div>
@@ -447,12 +405,18 @@ export default function ServiceSelection() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ProcessSteps steps={serviceProcessSteps.microwave_leakage} accentColor="text-green-600" />
+              <ul className="text-sm text-gray-600 space-y-2 mb-6">
+                <li>• Radiation leakage measurement</li>
+                <li>• Door seal inspection</li>
+                <li>• Safety interlock testing</li>
+                <li>• Visual condition assessment</li>
+                <li>• AS/NZS 60335.2.25 compliance</li>
+                <li>• Compliance certification</li>
+              </ul>
               <Button 
                 onClick={() => selectService('microwave_leakage')}
                 className="w-full bg-green-600 hover:bg-green-700"
                 size="lg"
-                data-testid="button-select-microwave"
               >
                 Select Microwave Testing
                 <ArrowRight className="w-4 h-4 ml-2" />

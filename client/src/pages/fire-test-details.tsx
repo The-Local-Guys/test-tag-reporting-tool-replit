@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, CheckCircle, XCircle, Camera, Save, X } from 'lucide-react';
-import { WorkflowProgressBar } from '@/components/ui/workflow-progress-bar';
 import { useSession } from '@/hooks/use-session';
 import { useToast } from '@/hooks/use-toast';
 
@@ -266,14 +265,11 @@ export default function FireTestDetails() {
             </Button>
             <div>
               <h1 className="text-xl font-semibold">Fire Equipment Test</h1>
-              <div className="text-orange-100 text-sm mt-1">Step 3: Record Results</div>
+              <div className="text-orange-100 text-sm mt-1">{getComplianceStandard()} Compliance</div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Progress Bar */}
-      <WorkflowProgressBar currentStep={3} serviceType="fire_testing" />
 
       {/* Item Info */}
       <div className="bg-orange-50 border-b border-orange-100 p-4">

@@ -7,7 +7,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Modal } from '@/components/ui/modal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ArrowLeft, Download, Mail, Share, Plus, Edit2, FileText, RefreshCw, Trash2, Check, CheckCircle } from 'lucide-react';
-import { WorkflowProgressBar } from '@/components/ui/workflow-progress-bar';
 import { useSession, type BatchedTestResult } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
 import { downloadPDF } from '@/lib/pdf-generator';
@@ -828,7 +827,7 @@ export default function ReportPreview() {
           </button>
           <div className="text-center flex-1">
             <h1 className="text-xl font-semibold">Test Report</h1>
-            <div className="text-green-100 text-sm">Step 4: Review & Export</div>
+            <div className="text-green-100 text-sm">Ready for Export</div>
           </div>
           <div className="flex gap-2">
             <button 
@@ -848,9 +847,6 @@ export default function ReportPreview() {
           </div>
         </div>
       </div>
-
-      {/* Progress Bar */}
-      <WorkflowProgressBar currentStep={4} serviceType={sessionData?.session?.serviceType} />
 
       {/* Report Summary */}
       <div className="bg-white border-b border-gray-200 p-4">

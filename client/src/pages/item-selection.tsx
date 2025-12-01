@@ -5,7 +5,6 @@ import { Modal } from '@/components/ui/modal';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { WorkflowProgressBar, getServiceTitle } from '@/components/ui/workflow-progress-bar';
 import { Edit2, FileText, CheckCircle, Plus, RotateCcw, Trash2, Search } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
 import { deleteResource } from '@/lib/queryClient';
@@ -344,9 +343,13 @@ export default function ItemSelection() {
       <div className="bg-primary text-white p-4 sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold">{getServiceTitle()}</h1>
+            <h1 className="text-xl font-semibold">
+              {selectedService === 'emergency_exit_light' ? 'Emergency Equipment Selection' : 
+               selectedService === 'fire_testing' ? 'Fire Equipment Selection' :
+               selectedService === 'microwave_leakage' ? 'Microwave Equipment Selection' : 'Select Item to Test'}
+            </h1>
             <div className="text-blue-100 text-sm">
-              Step 2: {selectedService === 'rcd_reporting' ? 'Select RCD Type' : 'Select Items'}
+              {sessionData?.session?.clientName || 'Loading...'}
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -357,9 +360,6 @@ export default function ItemSelection() {
           </div>
         </div>
       </div>
-
-      {/* Progress Bar */}
-      <WorkflowProgressBar currentStep={2} />
 
       {/* Quick Stats */}
       <div className="bg-white border-b border-gray-200 p-4">

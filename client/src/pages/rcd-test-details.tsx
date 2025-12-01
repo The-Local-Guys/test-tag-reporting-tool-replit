@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, CheckCircle, XCircle, Plus, X } from 'lucide-react';
-import { WorkflowProgressBar } from '@/components/ui/workflow-progress-bar';
 import { useSession } from '@/hooks/use-session';
 import { useToast } from '@/hooks/use-toast';
 import type { InsertTestResult } from '@shared/schema';
@@ -257,14 +256,11 @@ export default function RCDTestDetails() {
             </Button>
             <div>
               <h1 className="text-xl font-semibold">RCD Test</h1>
-              <div className="text-purple-100 text-sm mt-1">Step 3: Record Trip Times</div>
+              <div className="text-purple-100 text-sm mt-1">{getComplianceStandard()} Compliance</div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Progress Bar */}
-      <WorkflowProgressBar currentStep={3} serviceType="rcd_reporting" />
 
       {/* Item Info */}
       <div className="bg-purple-50 border-b border-purple-100 p-4">
