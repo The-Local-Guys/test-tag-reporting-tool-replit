@@ -53,33 +53,31 @@ export function WorkflowProgressBar({ serviceType, currentStep, className }: Wor
   const currentStepIndex = steps.findIndex(step => step.id === currentStep);
 
   return (
-    <div className={cn("w-full bg-white border-b border-gray-200 py-3 px-4", className)} data-testid="workflow-progress-bar">
-      <div className="flex flex-col max-w-2xl mx-auto">
+    <div className={cn("w-full bg-white border-b border-gray-200 py-3 px-2 overflow-visible", className)} data-testid="workflow-progress-bar">
+      <div className="flex flex-col max-w-2xl mx-auto overflow-visible">
         {/* Step indicators row - aligned horizontally */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center">
           {steps.map((step, index) => {
             const isCompleted = index < currentStepIndex;
             const isCurrent = index === currentStepIndex;
             const isPending = index > currentStepIndex;
 
             return (
-              <div key={step.id} className="flex items-center flex-1 last:flex-initial">
-                <div className="flex items-center justify-center w-8">
-                  <div
-                    className={cn(
-                      "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300",
-                      isCompleted && "bg-green-500 text-white",
-                      isCurrent && "bg-primary text-white ring-2 ring-primary ring-offset-2",
-                      isPending && "bg-gray-200 text-gray-500"
-                    )}
-                    data-testid={`step-indicator-${step.id}`}
-                  >
-                    {isCompleted ? (
-                      <Check className="w-4 h-4" />
-                    ) : (
-                      <span>{index + 1}</span>
-                    )}
-                  </div>
+              <div key={step.id} className="flex items-center flex-1 last:flex-none">
+                <div
+                  className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 shrink-0",
+                    isCompleted && "bg-green-500 text-white",
+                    isCurrent && "bg-primary text-white ring-2 ring-primary ring-offset-2",
+                    isPending && "bg-gray-200 text-gray-500"
+                  )}
+                  data-testid={`step-indicator-${step.id}`}
+                >
+                  {isCompleted ? (
+                    <Check className="w-4 h-4" />
+                  ) : (
+                    <span>{index + 1}</span>
+                  )}
                 </div>
                 
                 {index < steps.length - 1 && (
@@ -102,32 +100,31 @@ export function WorkflowProgressBar({ serviceType, currentStep, className }: Wor
             const isCompleted = index < currentStepIndex;
             const isCurrent = index === currentStepIndex;
             const isPending = index > currentStepIndex;
-            const isLast = index === steps.length - 1;
 
             return (
-              <div key={`label-${step.id}`} className={cn("flex", isLast ? "flex-initial" : "flex-1")}>
-                <div className="w-8 flex justify-center">
-                  <span
-                    className={cn(
-                      "text-xs font-medium text-center hidden sm:block whitespace-pre",
-                      isCompleted && "text-green-600",
-                      isCurrent && "text-primary",
-                      isPending && "text-gray-400"
-                    )}
-                  >
-                    {step.label}
-                  </span>
-                  <span
-                    className={cn(
-                      "text-xs font-medium text-center sm:hidden whitespace-pre",
-                      isCompleted && "text-green-600",
-                      isCurrent && "text-primary",
-                      isPending && "text-gray-400"
-                    )}
-                  >
-                    {step.shortLabel || step.label}
-                  </span>
-                </div>
+              <div key={`label-${step.id}`} className="flex-1 last:flex-none flex justify-start">
+                <span
+                  className={cn(
+                    "text-xs font-medium text-center hidden sm:block whitespace-pre min-w-[60px]",
+                    isCompleted && "text-green-600",
+                    isCurrent && "text-primary",
+                    isPending && "text-gray-400"
+                  )}
+                  style={{ marginLeft: '-10px' }}
+                >
+                  {step.label}
+                </span>
+                <span
+                  className={cn(
+                    "text-xs font-medium text-center sm:hidden whitespace-pre",
+                    isCompleted && "text-green-600",
+                    isCurrent && "text-primary",
+                    isPending && "text-gray-400"
+                  )}
+                  style={{ marginLeft: '-4px' }}
+                >
+                  {step.shortLabel || step.label}
+                </span>
               </div>
             );
           })}
