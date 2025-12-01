@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { WorkflowProgressBar } from '@/components/workflow-progress-bar';
 import { useSession } from '@/hooks/use-session';
 import { useLocation, useSearch } from 'wouter';
 import { nanoid } from 'nanoid';
@@ -132,6 +133,9 @@ export default function MicrowaveTestDetails() {
           </div>
         </div>
       </div>
+
+      {/* Workflow Progress Bar */}
+      <WorkflowProgressBar serviceType="microwave_leakage" currentStep="details" />
 
       {/* Item Info */}
       <div className="bg-green-50 border-b border-green-100 p-4">

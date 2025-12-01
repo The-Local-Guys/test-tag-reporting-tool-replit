@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, CheckCircle, XCircle, Camera, Save, X } from 'lucide-react';
+import { WorkflowProgressBar } from '@/components/workflow-progress-bar';
 import { useSession } from '@/hooks/use-session';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
@@ -260,6 +261,9 @@ export default function EmergencyTestDetails() {
           </div>
         </div>
       </div>
+
+      {/* Workflow Progress Bar */}
+      <WorkflowProgressBar serviceType="emergency_exit_light" currentStep="details" />
 
       {/* Item Info */}
       <div className="bg-red-50 border-b border-red-100 p-4">

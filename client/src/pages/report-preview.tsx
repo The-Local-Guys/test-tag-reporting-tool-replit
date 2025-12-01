@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Modal } from '@/components/ui/modal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ArrowLeft, Download, Mail, Share, Plus, Edit2, FileText, RefreshCw, Trash2, Check, CheckCircle } from 'lucide-react';
+import { WorkflowProgressBar, type ServiceType } from '@/components/workflow-progress-bar';
 import { useSession, type BatchedTestResult } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
 import { downloadPDF } from '@/lib/pdf-generator';
@@ -847,6 +848,12 @@ export default function ReportPreview() {
           </div>
         </div>
       </div>
+
+      {/* Workflow Progress Bar */}
+      <WorkflowProgressBar 
+        serviceType={(session?.serviceType || 'electrical') as ServiceType} 
+        currentStep="complete" 
+      />
 
       {/* Report Summary */}
       <div className="bg-white border-b border-gray-200 p-4">

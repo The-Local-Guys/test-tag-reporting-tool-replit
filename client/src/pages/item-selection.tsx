@@ -12,6 +12,7 @@ import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import { WorkflowProgressBar, type ServiceType } from '@/components/workflow-progress-bar';
 import type { Environment } from '@shared/schema';
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
 
@@ -360,6 +361,12 @@ export default function ItemSelection() {
           </div>
         </div>
       </div>
+
+      {/* Workflow Progress Bar */}
+      <WorkflowProgressBar 
+        serviceType={selectedService as ServiceType} 
+        currentStep="select" 
+      />
 
       {/* Quick Stats */}
       <div className="bg-white border-b border-gray-200 p-4">

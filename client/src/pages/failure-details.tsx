@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, AlertCircle, Save, XCircle, Camera, X } from 'lucide-react';
+import { WorkflowProgressBar, type ServiceType } from '@/components/workflow-progress-bar';
 import { useSession } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
 import type { InsertTestResult } from '@shared/schema';
@@ -40,9 +41,12 @@ export default function FailureDetails() {
   const [notes, setNotes] = useState('');
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [testData, setTestData] = useState<Omit<InsertTestResult, 'sessionId'> | null>(null);
-  const { addToBatch } = useSession();
+  const { addToBatch, sessionData } = useSession();
   const [, setLocation] = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Get service type from session
+  const serviceType = (sessionData?.session?.serviceType || 'electrical') as ServiceType;
   
   // Detect if this is RCD testing
   const isRCDTest = testData?.classification === 'fixed-rcd' || testData?.classification === 'portable-rcd';
@@ -199,6 +203,9 @@ export default function FailureDetails() {
           <div className="w-8"></div>
         </div>
       </div>
+
+      {/* Workflow Progress Bar */}
+      <WorkflowProgressBar serviceType={serviceType} currentStep="test" />
 
       {/* Failed Item Preview */}
       <div className="bg-red-50 border-b border-red-100 p-4">

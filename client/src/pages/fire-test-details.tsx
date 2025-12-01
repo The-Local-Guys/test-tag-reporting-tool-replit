@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, CheckCircle, XCircle, Camera, Save, X } from 'lucide-react';
+import { WorkflowProgressBar } from '@/components/workflow-progress-bar';
 import { useSession } from '@/hooks/use-session';
 import { useToast } from '@/hooks/use-toast';
 
@@ -270,6 +271,9 @@ export default function FireTestDetails() {
           </div>
         </div>
       </div>
+
+      {/* Workflow Progress Bar */}
+      <WorkflowProgressBar serviceType="fire_testing" currentStep="details" />
 
       {/* Item Info */}
       <div className="bg-orange-50 border-b border-orange-100 p-4">
