@@ -262,7 +262,7 @@ export default function TestDetails() {
       </div>
 
       {/* Workflow Progress Bar */}
-      <WorkflowProgressBar serviceType="electrical" currentStep="details" />
+      <WorkflowProgressBar serviceType="electrical" currentStep="test" />
 
       {/* Item Preview */}
       <div className="bg-white border-b border-gray-200 p-4">

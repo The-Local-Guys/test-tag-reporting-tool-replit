@@ -135,7 +135,7 @@ export default function MicrowaveTestDetails() {
       </div>
 
       {/* Workflow Progress Bar */}
-      <WorkflowProgressBar serviceType="microwave_leakage" currentStep="details" />
+      <WorkflowProgressBar serviceType="microwave_leakage" currentStep="test" />
 
       {/* Item Info */}
       <div className="bg-green-50 border-b border-green-100 p-4">

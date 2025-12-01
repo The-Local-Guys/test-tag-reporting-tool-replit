@@ -263,7 +263,7 @@ export default function EmergencyTestDetails() {
       </div>
 
       {/* Workflow Progress Bar */}
-      <WorkflowProgressBar serviceType="emergency_exit_light" currentStep="details" />
+      <WorkflowProgressBar serviceType="emergency_exit_light" currentStep="test" />
 
       {/* Item Info */}
       <div className="bg-red-50 border-b border-red-100 p-4">

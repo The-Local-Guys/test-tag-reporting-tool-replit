@@ -264,7 +264,7 @@ export default function RCDTestDetails() {
       </div>
 
       {/* Workflow Progress Bar */}
-      <WorkflowProgressBar serviceType="rcd_reporting" currentStep="details" />
+      <WorkflowProgressBar serviceType="rcd_reporting" currentStep="test" />
 
       {/* Item Info */}
       <div className="bg-purple-50 border-b border-purple-100 p-4">

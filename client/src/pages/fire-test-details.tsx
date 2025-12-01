@@ -273,7 +273,7 @@ export default function FireTestDetails() {
       </div>
 
       {/* Workflow Progress Bar */}
-      <WorkflowProgressBar serviceType="fire_testing" currentStep="details" />
+      <WorkflowProgressBar serviceType="fire_testing" currentStep="test" />
 
       {/* Item Info */}
       <div className="bg-orange-50 border-b border-orange-100 p-4">
