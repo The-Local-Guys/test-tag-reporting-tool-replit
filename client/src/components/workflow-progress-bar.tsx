@@ -53,8 +53,8 @@ export function WorkflowProgressBar({ serviceType, currentStep, className }: Wor
   const currentStepIndex = steps.findIndex(step => step.id === currentStep);
 
   return (
-    <div className={cn("w-full bg-white border-b border-gray-200 py-3 px-2 overflow-visible", className)} data-testid="workflow-progress-bar">
-      <div className="flex flex-col max-w-2xl mx-auto overflow-visible">
+    <div className={cn("w-full bg-white border-b border-gray-200 py-3 px-4", className)} data-testid="workflow-progress-bar">
+      <div className="flex flex-col max-w-md mx-auto">
         {/* Step indicators row - aligned horizontally */}
         <div className="flex items-center">
           {steps.map((step, index) => {
@@ -105,7 +105,7 @@ export function WorkflowProgressBar({ serviceType, currentStep, className }: Wor
               <div key={`label-${step.id}`} className="flex-1 last:flex-none flex justify-start">
                 <span
                   className={cn(
-                    "text-xs font-medium text-center hidden sm:block whitespace-pre min-w-[60px]",
+                    "text-xs font-medium text-center hidden sm:block whitespace-pre",
                     isCompleted && "text-green-600",
                     isCurrent && "text-primary",
                     isPending && "text-gray-400"
