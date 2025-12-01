@@ -12,6 +12,7 @@ import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Clipboard, ArrowRight, AlertCircle, Settings } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { WorkflowProgressBar, type ServiceType } from '@/components/workflow-progress-bar';
 import { useSession } from '@/hooks/use-session';
 import { useAuth } from '@/hooks/useAuth';
 import { useSpaNavigation } from '@/hooks/useSpaNavigation';
@@ -172,7 +173,7 @@ export default function Setup() {
                 return 'Electrical Test & Tag';
               })()}
             </h1>
-            <div className="text-blue-100 text-sm mt-1">Step 1 of 3: Client Setup</div>
+            <div className="text-blue-100 text-sm mt-1">Client Setup</div>
           </div>
           <div className="flex items-center gap-3">
             <Clipboard className="h-6 w-6" />
@@ -180,18 +181,11 @@ export default function Setup() {
         </div>
       </div>
 
-      {/* Progress Bar */}
-      <div className="bg-white border-b border-gray-200 p-4">
-        <div className="flex items-center">
-          <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center text-sm font-medium">1</div>
-          <div className="flex-1 h-1 bg-gray-200 mx-2">
-            <div className="h-full bg-primary w-1/3"></div>
-          </div>
-          <div className="w-8 h-8 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm">2</div>
-          <div className="flex-1 h-1 bg-gray-200 mx-2"></div>
-          <div className="w-8 h-8 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm">3</div>
-        </div>
-      </div>
+      {/* Workflow Progress Bar */}
+      <WorkflowProgressBar 
+        serviceType={(sessionStorage.getItem('selectedService') || 'electrical') as ServiceType} 
+        currentStep="setup" 
+      />
 
       {/* Form Content */}
       <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 space-y-6 pb-24">
