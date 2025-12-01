@@ -102,29 +102,29 @@ export function WorkflowProgressBar({ serviceType, currentStep, className }: Wor
             const isPending = index > currentStepIndex;
 
             return (
-              <div key={`label-${step.id}`} className="flex-1 last:flex-none flex justify-start">
-                <span
-                  className={cn(
-                    "text-xs font-medium text-center hidden sm:block whitespace-pre",
-                    isCompleted && "text-green-600",
-                    isCurrent && "text-primary",
-                    isPending && "text-gray-400"
-                  )}
-                  style={{ marginLeft: '-10px' }}
-                >
-                  {step.label}
-                </span>
-                <span
-                  className={cn(
-                    "text-xs font-medium text-center sm:hidden whitespace-pre",
-                    isCompleted && "text-green-600",
-                    isCurrent && "text-primary",
-                    isPending && "text-gray-400"
-                  )}
-                  style={{ marginLeft: '-4px' }}
-                >
-                  {step.shortLabel || step.label}
-                </span>
+              <div key={`label-${step.id}`} className="flex-1 last:flex-none">
+                <div className="flex justify-start" style={{ marginLeft: '-16px' }}>
+                  <span
+                    className={cn(
+                      "text-xs font-medium text-center hidden sm:block whitespace-pre w-16",
+                      isCompleted && "text-green-600",
+                      isCurrent && "text-primary",
+                      isPending && "text-gray-400"
+                    )}
+                  >
+                    {step.label}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-xs font-medium text-center sm:hidden whitespace-pre w-16",
+                      isCompleted && "text-green-600",
+                      isCurrent && "text-primary",
+                      isPending && "text-gray-400"
+                    )}
+                  >
+                    {step.shortLabel || step.label}
+                  </span>
+                </div>
               </div>
             );
           })}
