@@ -8,10 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Card } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Clipboard, ArrowRight, AlertCircle, Settings } from 'lucide-react';
+import { Clipboard, ArrowRight, Settings } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { WorkflowProgressBar, getServiceTitle } from '@/components/ui/workflow-progress-bar';
 import { useSession } from '@/hooks/use-session';
 import { useAuth } from '@/hooks/useAuth';
 import { useSpaNavigation } from '@/hooks/useSpaNavigation';
@@ -162,17 +161,8 @@ export default function Setup() {
       <div className="bg-primary text-white p-4 sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold">
-              {(() => {
-                const service = sessionStorage.getItem('selectedService');
-                if (service === 'emergency_exit_light') return 'Emergency Exit Light Testing';
-                if (service === 'fire_testing') return 'Fire Equipment Testing';
-                if (service === 'rcd_reporting') return 'RCD Reporting';
-                if (service === 'microwave_leakage') return 'Microwave Leakage Testing';
-                return 'Electrical Test & Tag';
-              })()}
-            </h1>
-            <div className="text-blue-100 text-sm mt-1">Step 1 of 3: Client Setup</div>
+            <h1 className="text-xl font-semibold">{getServiceTitle()}</h1>
+            <div className="text-blue-100 text-sm mt-1">Step 1: Client Setup</div>
           </div>
           <div className="flex items-center gap-3">
             <Clipboard className="h-6 w-6" />
@@ -181,17 +171,7 @@ export default function Setup() {
       </div>
 
       {/* Progress Bar */}
-      <div className="bg-white border-b border-gray-200 p-4">
-        <div className="flex items-center">
-          <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center text-sm font-medium">1</div>
-          <div className="flex-1 h-1 bg-gray-200 mx-2">
-            <div className="h-full bg-primary w-1/3"></div>
-          </div>
-          <div className="w-8 h-8 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm">2</div>
-          <div className="flex-1 h-1 bg-gray-200 mx-2"></div>
-          <div className="w-8 h-8 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm">3</div>
-        </div>
-      </div>
+      <WorkflowProgressBar currentStep={1} />
 
       {/* Form Content */}
       <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 space-y-6 pb-24">
