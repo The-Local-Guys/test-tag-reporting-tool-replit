@@ -14,31 +14,31 @@ const workflowSteps: Record<ServiceType, WorkflowStep[]> = {
     { id: 'setup', label: 'Client Setup', shortLabel: 'Setup' },
     { id: 'items', label: 'Select Items', shortLabel: 'Items' },
     { id: 'test', label: 'Test Details', shortLabel: 'Test' },
-    { id: 'complete', label: 'View Report & Complete', shortLabel: 'Report' },
+    { id: 'complete', label: 'View Report\n& Complete', shortLabel: 'Report' },
   ],
   emergency_exit_light: [
     { id: 'setup', label: 'Client Setup', shortLabel: 'Setup' },
     { id: 'items', label: 'Select Items', shortLabel: 'Items' },
     { id: 'test', label: 'Test Details', shortLabel: 'Test' },
-    { id: 'complete', label: 'View Report & Complete', shortLabel: 'Report' },
+    { id: 'complete', label: 'View Report\n& Complete', shortLabel: 'Report' },
   ],
   fire_testing: [
     { id: 'setup', label: 'Client Setup', shortLabel: 'Setup' },
     { id: 'items', label: 'Select Items', shortLabel: 'Items' },
     { id: 'test', label: 'Test Details', shortLabel: 'Test' },
-    { id: 'complete', label: 'View Report & Complete', shortLabel: 'Report' },
+    { id: 'complete', label: 'View Report\n& Complete', shortLabel: 'Report' },
   ],
   rcd_reporting: [
     { id: 'setup', label: 'Client Setup', shortLabel: 'Setup' },
     { id: 'items', label: 'Select Items', shortLabel: 'Items' },
     { id: 'test', label: 'Test Details', shortLabel: 'Test' },
-    { id: 'complete', label: 'View Report & Complete', shortLabel: 'Report' },
+    { id: 'complete', label: 'View Report\n& Complete', shortLabel: 'Report' },
   ],
   microwave_leakage: [
     { id: 'setup', label: 'Client Setup', shortLabel: 'Setup' },
     { id: 'items', label: 'Select Brand', shortLabel: 'Brand' },
     { id: 'test', label: 'Test Details', shortLabel: 'Test' },
-    { id: 'complete', label: 'View Report & Complete', shortLabel: 'Report' },
+    { id: 'complete', label: 'View Report\n& Complete', shortLabel: 'Report' },
   ],
 };
 
@@ -80,7 +80,7 @@ export function WorkflowProgressBar({ serviceType, currentStep, className }: Wor
                 </div>
                 <span
                   className={cn(
-                    "mt-1 text-xs font-medium text-center hidden sm:block",
+                    "mt-1 text-xs font-medium text-center hidden sm:block whitespace-pre-line",
                     isCompleted && "text-green-600",
                     isCurrent && "text-primary",
                     isPending && "text-gray-400"
