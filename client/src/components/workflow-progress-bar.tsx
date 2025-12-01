@@ -83,7 +83,7 @@ export function WorkflowProgressBar({ serviceType, currentStep, className }: Wor
                 {index < steps.length - 1 && (
                   <div
                     className={cn(
-                      "flex-1 h-0.5 mx-2 transition-all duration-300",
+                      "flex-1 h-0.5 mx-1 max-w-12 transition-all duration-300",
                       index < currentStepIndex ? "bg-green-500" : "bg-gray-200"
                     )}
                     data-testid={`step-connector-${index}`}
@@ -102,11 +102,11 @@ export function WorkflowProgressBar({ serviceType, currentStep, className }: Wor
             const isPending = index > currentStepIndex;
 
             return (
-              <div key={`label-${step.id}`} className="flex-1 last:flex-none">
-                <div className="flex justify-start" style={{ marginLeft: '-16px' }}>
+              <div key={`label-${step.id}`} className="flex-1 last:flex-none flex justify-start">
+                <div className="w-8 flex justify-center">
                   <span
                     className={cn(
-                      "text-xs font-medium text-center hidden sm:block whitespace-pre w-16",
+                      "text-xs font-medium text-center hidden sm:block whitespace-pre",
                       isCompleted && "text-green-600",
                       isCurrent && "text-primary",
                       isPending && "text-gray-400"
@@ -116,7 +116,7 @@ export function WorkflowProgressBar({ serviceType, currentStep, className }: Wor
                   </span>
                   <span
                     className={cn(
-                      "text-xs font-medium text-center sm:hidden whitespace-pre w-16",
+                      "text-xs font-medium text-center sm:hidden whitespace-pre",
                       isCompleted && "text-green-600",
                       isCurrent && "text-primary",
                       isPending && "text-gray-400"
