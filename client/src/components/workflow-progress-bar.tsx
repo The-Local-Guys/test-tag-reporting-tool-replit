@@ -53,7 +53,7 @@ export function WorkflowProgressBar({ serviceType, currentStep, className }: Wor
   const currentStepIndex = steps.findIndex(step => step.id === currentStep);
 
   return (
-    <div className={cn("w-full bg-white border-b border-gray-200 py-3 px-4", className)} data-testid="workflow-progress-bar">
+    <div className={cn("w-full bg-white border-b border-gray-200 py-3 px-4 relative z-0", className)} data-testid="workflow-progress-bar">
       <div className="relative flex justify-between items-start max-w-lg mx-auto">
         {/* Connector lines - absolute positioned */}
         <div className="absolute top-4 left-0 right-0 flex justify-between px-10">
