@@ -54,64 +54,85 @@ export function WorkflowProgressBar({ serviceType, currentStep, className }: Wor
 
   return (
     <div className={cn("w-full bg-white border-b border-gray-200 py-3 px-4", className)} data-testid="workflow-progress-bar">
-      <div className="flex items-center justify-between max-w-2xl mx-auto">
-        {steps.map((step, index) => {
-          const isCompleted = index < currentStepIndex;
-          const isCurrent = index === currentStepIndex;
-          const isPending = index > currentStepIndex;
+      <div className="flex flex-col max-w-2xl mx-auto">
+        {/* Step indicators row - aligned horizontally */}
+        <div className="flex items-center justify-between">
+          {steps.map((step, index) => {
+            const isCompleted = index < currentStepIndex;
+            const isCurrent = index === currentStepIndex;
+            const isPending = index > currentStepIndex;
 
-          return (
-            <div key={step.id} className="flex items-center flex-1 last:flex-initial">
-              <div className="flex flex-col items-center">
-                <div
-                  className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300",
-                    isCompleted && "bg-green-500 text-white",
-                    isCurrent && "bg-primary text-white ring-2 ring-primary ring-offset-2",
-                    isPending && "bg-gray-200 text-gray-500"
-                  )}
-                  data-testid={`step-indicator-${step.id}`}
-                >
-                  {isCompleted ? (
-                    <Check className="w-4 h-4" />
-                  ) : (
-                    <span>{index + 1}</span>
-                  )}
+            return (
+              <div key={step.id} className="flex items-center flex-1 last:flex-initial">
+                <div className="flex items-center justify-center w-8">
+                  <div
+                    className={cn(
+                      "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300",
+                      isCompleted && "bg-green-500 text-white",
+                      isCurrent && "bg-primary text-white ring-2 ring-primary ring-offset-2",
+                      isPending && "bg-gray-200 text-gray-500"
+                    )}
+                    data-testid={`step-indicator-${step.id}`}
+                  >
+                    {isCompleted ? (
+                      <Check className="w-4 h-4" />
+                    ) : (
+                      <span>{index + 1}</span>
+                    )}
+                  </div>
                 </div>
-                <span
-                  className={cn(
-                    "mt-1 text-xs font-medium text-center hidden sm:block whitespace-pre-line",
-                    isCompleted && "text-green-600",
-                    isCurrent && "text-primary",
-                    isPending && "text-gray-400"
-                  )}
-                >
-                  {step.label}
-                </span>
-                <span
-                  className={cn(
-                    "mt-1 text-xs font-medium text-center sm:hidden",
-                    isCompleted && "text-green-600",
-                    isCurrent && "text-primary",
-                    isPending && "text-gray-400"
-                  )}
-                >
-                  {step.shortLabel || step.label}
-                </span>
+                
+                {index < steps.length - 1 && (
+                  <div
+                    className={cn(
+                      "flex-1 h-0.5 mx-2 transition-all duration-300",
+                      index < currentStepIndex ? "bg-green-500" : "bg-gray-200"
+                    )}
+                    data-testid={`step-connector-${index}`}
+                  />
+                )}
               </div>
-              
-              {index < steps.length - 1 && (
-                <div
-                  className={cn(
-                    "flex-1 h-0.5 mx-2 transition-all duration-300",
-                    index < currentStepIndex ? "bg-green-500" : "bg-gray-200"
-                  )}
-                  data-testid={`step-connector-${index}`}
-                />
-              )}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+        
+        {/* Labels row - aligned below indicators */}
+        <div className="flex justify-between mt-1">
+          {steps.map((step, index) => {
+            const isCompleted = index < currentStepIndex;
+            const isCurrent = index === currentStepIndex;
+            const isPending = index > currentStepIndex;
+
+            return (
+              <div key={`label-${step.id}`} className="flex-1 last:flex-initial">
+                <div className="flex justify-start">
+                  <div className="w-8 flex justify-center">
+                    <span
+                      className={cn(
+                        "text-xs font-medium text-center hidden sm:block whitespace-pre-line",
+                        isCompleted && "text-green-600",
+                        isCurrent && "text-primary",
+                        isPending && "text-gray-400"
+                      )}
+                    >
+                      {step.label}
+                    </span>
+                    <span
+                      className={cn(
+                        "text-xs font-medium text-center sm:hidden",
+                        isCompleted && "text-green-600",
+                        isCurrent && "text-primary",
+                        isPending && "text-gray-400"
+                      )}
+                    >
+                      {step.shortLabel || step.label}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
