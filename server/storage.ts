@@ -426,7 +426,10 @@ export class DatabaseStorage implements IStorage {
         // RCD specific fields
         insertResult.pushButtonTest ?? null,
         insertResult.injectionTimedTest ?? null,
-        insertResult.tripTimes ?? null, // Array of trip times in milliseconds
+        // Format tripTimes array for PostgreSQL - use PostgreSQL array literal format
+        insertResult.tripTimes && Array.isArray(insertResult.tripTimes) && insertResult.tripTimes.length > 0
+          ? `{${insertResult.tripTimes.map((t: any) => Number(t)).join(',')}}`
+          : null,
         insertResult.distributionBoardNumber ?? null,
         // Microwave specific fields
         insertResult.leakageReading ?? null,
