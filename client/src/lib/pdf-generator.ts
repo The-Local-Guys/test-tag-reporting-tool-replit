@@ -440,8 +440,10 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     let actionTakenLines: string[] = [];
     
     if (session.serviceType === 'rcd_reporting') {
-      // Comments
-      const commentsText = result.notes || '-';
+      // Comments - clean out the [TRIP_TIMES:...] data that was embedded for storage
+      let commentsText = result.notes || '-';
+      // Remove [TRIP_TIMES:[...]] pattern from notes
+      commentsText = commentsText.replace(/\s*\[TRIP_TIMES:\[[^\]]*\]\]/g, '').trim() || '-';
       commentsLines = doc.splitTextToSize(commentsText, 17);
       
       // Failure reason (only for failed items)
@@ -677,24 +679,45 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       doc.setTextColor(0, 0, 0); // Reset to black
       
       // Trip Times (margin + 84) - display all trip times for Fixed RCD, simple for Portable RCD
+      // Try multiple sources for trip times:
+      // 1. tripTimes array (from localStorage/camelCase)
+      // 2. trip_time single value (from database snake_case)
+      // 3. Parse from notes field [TRIP_TIMES:[...]]
+      let validTripTimes: number[] = [];
+      
       if (Array.isArray(tripTimesArray) && tripTimesArray.length > 0) {
-        const validTripTimes = tripTimesArray.filter((t: any) => t != null && t > 0);
-        if (validTripTimes.length > 0) {
-          // Check if this is Fixed RCD or Portable RCD
-          const isFixedRCD = result.itemName && result.itemName.includes('Fixed RCD');
-          
-          if (isFixedRCD) {
-            // Fixed RCD: Show all trip times individually (1 - 2000ms, 2 - 3000ms, 3 - 3000ms)
-            validTripTimes.forEach((tripTime: number, index: number) => {
-              const tripTimeText = `${index + 1} - ${tripTime}ms`;
-              doc.text(tripTimeText, margin + 84, rowStartY + (index * lineHeight));
-            });
-          } else {
-            // Portable RCD: Show simple format (2000ms)
-            doc.text(`${validTripTimes[0]}ms`, margin + 84, rowStartY);
+        validTripTimes = tripTimesArray.filter((t: any) => t != null && t > 0);
+      } else {
+        // Try to get from snake_case trip_time (database format - single value)
+        const tripTimeValue = (result as any).trip_time || (result as any).tripTime;
+        if (tripTimeValue != null && Number(tripTimeValue) > 0) {
+          validTripTimes = [Number(tripTimeValue)];
+        }
+        
+        // Try to parse from notes field for full array
+        const notesValue = result.notes || '';
+        const tripTimesMatch = notesValue.match(/\[TRIP_TIMES:\[([^\]]*)\]\]/);
+        if (tripTimesMatch && tripTimesMatch[1]) {
+          const parsedTimes = tripTimesMatch[1].split(',').map((t: string) => Number(t.trim())).filter((t: number) => t > 0);
+          if (parsedTimes.length > 0) {
+            validTripTimes = parsedTimes;
           }
+        }
+      }
+      
+      if (validTripTimes.length > 0) {
+        // Check if this is Fixed RCD or Portable RCD
+        const isFixedRCD = result.itemName && result.itemName.includes('Fixed RCD');
+        
+        if (isFixedRCD) {
+          // Fixed RCD: Show all trip times individually (1 - 2000ms, 2 - 3000ms, 3 - 3000ms)
+          validTripTimes.forEach((tripTime: number, index: number) => {
+            const tripTimeText = `${index + 1} - ${tripTime}ms`;
+            doc.text(tripTimeText, margin + 84, rowStartY + (index * lineHeight));
+          });
         } else {
-          doc.text('-', margin + 84, rowStartY);
+          // Portable RCD: Show simple format (2000ms)
+          doc.text(`${validTripTimes[0]}ms`, margin + 84, rowStartY);
         }
       } else {
         doc.text('-', margin + 84, rowStartY);
