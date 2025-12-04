@@ -6,14 +6,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Modal } from '@/components/ui/modal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Download, Mail, Share, Plus, Edit2, FileText, RefreshCw, Trash2, Check, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Download, Mail, Share, Plus, Edit2, FileText, Trash2, Check, CheckCircle } from 'lucide-react';
 import { WorkflowProgressBar, type ServiceType } from '@/components/workflow-progress-bar';
 import { useSession, type BatchedTestResult } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
 import { downloadPDF } from '@/lib/pdf-generator';
 import { downloadExcel } from '@/lib/excel-generator';
 import { useToast } from '@/hooks/use-toast';
-import { deleteResource } from '@/lib/queryClient';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { insertTestResultSchema, type TestResult, type InsertTestResult, failureReasons, emergencyFailureReasons, fireFailureReasons } from '@shared/schema';
@@ -73,9 +72,6 @@ export default function ReportPreview() {
   const { toast } = useToast();
   const [editingResult, setEditingResult] = useState<TestResult | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [showNewReportConfirm, setShowNewReportConfirm] = useState(false);
-  const [isCancelling, setIsCancelling] = useState(false);
-  const [showCancelSuccess, setShowCancelSuccess] = useState(false);
   const [deletingResult, setDeletingResult] = useState<TestResult | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
@@ -454,62 +450,6 @@ export default function ReportPreview() {
         variant: "destructive",
       });
     }
-  };
-
-
-
-  const handleNewReport = () => {
-    setShowNewReportConfirm(true);
-  };
-
-  const confirmNewReport = async () => {
-    setIsCancelling(true);
-    
-    // Try both sessionData.session.id and the sessionId from hook
-    const currentSessionId = sessionData?.session?.id || sessionId;
-    
-    if (!currentSessionId) {
-      // If no session ID, just clear local data
-      clearSession();
-      localStorage.removeItem('currentSession');
-      
-      // Show success feedback
-      setIsCancelling(false);
-      setShowCancelSuccess(true);
-      setTimeout(() => {
-        navigate('/');
-      }, 1000);
-      
-      setShowNewReportConfirm(false);
-      return;
-    }
-
-    try {
-      // Delete the session from the database
-      await deleteResource(`/api/sessions/${currentSessionId}`, "report");
-      
-      // Clear current session data
-      clearSession();
-      localStorage.removeItem('currentSession');
-      
-      // Show success feedback for 1 second
-      setIsCancelling(false);
-      setShowCancelSuccess(true);
-      
-      setTimeout(() => {
-        navigate('/');
-      }, 1000);
-      
-    } catch (error) {
-      setIsCancelling(false);
-      toast({
-        title: "Delete Failed",
-        description: "Failed to delete the report. Please try again.",
-        variant: "destructive",
-      });
-    }
-    
-    setShowNewReportConfirm(false);
   };
 
   const handleNewJob = async () => {
@@ -994,14 +934,6 @@ export default function ReportPreview() {
             </>
           )}
         </Button>
-        <Button 
-          onClick={handleNewReport}
-          variant="destructive"
-          className="w-full py-3 font-medium touch-button"
-        >
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Cancel Report
-        </Button>
       </div>
 
       {/* Edit Modal */}
@@ -1181,43 +1113,6 @@ export default function ReportPreview() {
           </div>
         </div>
       </Modal>
-
-      {/* Delete Result Functions */}
-      {/* Note: handleDeleteResult and confirmDelete functions should be added */}
-
-      {/* Cancel Report Confirmation Dialog */}
-      <AlertDialog open={showNewReportConfirm} onOpenChange={setShowNewReportConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancel Report?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the current report and all test results from the database. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isCancelling || showCancelSuccess}>Keep Report</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmNewReport} 
-              disabled={isCancelling || showCancelSuccess}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {isCancelling ? (
-                <>
-                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  Deleting...
-                </>
-              ) : showCancelSuccess ? (
-                <>
-                  <CheckCircle className="mr-2 h-4 w-4 text-green-400" />
-                  Report Cancelled
-                </>
-              ) : (
-                "Yes, Cancel Report"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Delete Item Confirmation Dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
