@@ -411,7 +411,10 @@ export class DatabaseStorage implements IStorage {
         insertResult.frequency,
         insertResult.failureReason,
         insertResult.actionTaken,
-        insertResult.notes,
+        // For RCD tests, append trip times JSON to notes for full data preservation
+        insertResult.tripTimes && Array.isArray(insertResult.tripTimes) && insertResult.tripTimes.length > 0
+          ? (insertResult.notes ? `${insertResult.notes} [TRIP_TIMES:${JSON.stringify(insertResult.tripTimes)}]` : `[TRIP_TIMES:${JSON.stringify(insertResult.tripTimes)}]`)
+          : insertResult.notes,
         insertResult.photoData,
         insertResult.visionInspection !== undefined ? insertResult.visionInspection : true,
         insertResult.electricalTest !== undefined ? insertResult.electricalTest : true,
@@ -426,9 +429,10 @@ export class DatabaseStorage implements IStorage {
         // RCD specific fields
         insertResult.pushButtonTest ?? null,
         insertResult.injectionTimedTest ?? null,
-        // Format tripTimes array for PostgreSQL - use PostgreSQL array literal format
+        // Store first trip time value in numeric column (database column is single numeric, not array)
+        // Full trip times array is preserved in notes field above
         insertResult.tripTimes && Array.isArray(insertResult.tripTimes) && insertResult.tripTimes.length > 0
-          ? `{${insertResult.tripTimes.map((t: any) => Number(t)).join(',')}}`
+          ? Number(insertResult.tripTimes[0])
           : null,
         insertResult.distributionBoardNumber ?? null,
         // Microwave specific fields
