@@ -3,11 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { Edit2, FileText, CheckCircle, Plus, RotateCcw, Trash2, Search } from 'lucide-react';
+import { Edit2, FileText, Plus, RotateCcw, Search } from 'lucide-react';
 import { useSession } from '@/hooks/use-session';
-import { deleteResource } from '@/lib/queryClient';
 import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
@@ -117,9 +115,6 @@ const microwaveBrands = [
 export default function ItemSelection() {
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [customItemName, setCustomItemName] = useState('');
-  const [showNewReportConfirm, setShowNewReportConfirm] = useState(false);
-  const [isCancelling, setIsCancelling] = useState(false);
-  const [showCancelSuccess, setShowCancelSuccess] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const { sessionData, currentLocation, setCurrentLocation, clearSession, sessionId, isLoading: isLoadingSession, submitBatch, isSubmittingBatch } = useSession();
@@ -240,62 +235,6 @@ export default function ItemSelection() {
       setCustomItemName('');
       setIsCustomModalOpen(false);
     }
-  };
-
-  const handleNewJob = () => {
-    setShowNewReportConfirm(true);
-  };
-
-  const confirmNewReport = async () => {
-    setIsCancelling(true);
-    
-    // Try both sessionData.session.id and the sessionId from hook
-    const currentSessionId = sessionData?.session?.id || sessionId;
-    
-    if (!currentSessionId) {
-      // If no session ID, just clear local data
-      clearSession();
-      localStorage.removeItem('currentSession');
-      
-      // Show success feedback
-      setIsCancelling(false);
-      setShowCancelSuccess(true);
-      setTimeout(() => {
-        setLocation('/');
-      }, 1000);
-      
-      setShowNewReportConfirm(false);
-      return;
-    }
-
-    try {
-      // Delete the session from the database
-      await deleteResource(`/api/sessions/${currentSessionId}`, "report");
-      
-      // Clear current session data
-      clearSession();
-      localStorage.removeItem('currentSession');
-      
-      // Note: We keep lastSelectedEnvironment in localStorage (it persists globally like frequency)
-      
-      // Show success feedback for 1 second
-      setIsCancelling(false);
-      setShowCancelSuccess(true);
-      
-      setTimeout(() => {
-        setLocation('/');
-      }, 1000);
-      
-    } catch (error) {
-      setIsCancelling(false);
-      toast({
-        title: "Delete Failed",
-        description: "Failed to delete the report. Please try again.",
-        variant: "destructive",
-      });
-    }
-    
-    setShowNewReportConfirm(false);
   };
 
   const handleViewReport = () => {
@@ -628,14 +567,6 @@ export default function ItemSelection() {
             View Report
           </Button>
         </div>
-        <Button 
-          onClick={handleNewJob}
-          variant="outline"
-          className="w-full py-3 font-medium border-red-300 text-red-600 hover:bg-red-50"
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          Cancel Report
-        </Button>
       </div>
 
       {/* Custom Item Modal */}
@@ -667,40 +598,6 @@ export default function ItemSelection() {
           </Button>
         </div>
       </Modal>
-
-      {/* Cancel Report Confirmation Dialog */}
-      <AlertDialog open={showNewReportConfirm} onOpenChange={setShowNewReportConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancel Report?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the current report and all test results from the database. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isCancelling || showCancelSuccess}>Keep Report</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmNewReport} 
-              disabled={isCancelling || showCancelSuccess}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {isCancelling ? (
-                <>
-                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  Deleting...
-                </>
-              ) : showCancelSuccess ? (
-                <>
-                  <CheckCircle className="mr-2 h-4 w-4 text-green-400" />
-                  Report Cancelled
-                </>
-              ) : (
-                "Yes, Cancel Report"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
