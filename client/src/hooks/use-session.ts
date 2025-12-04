@@ -341,7 +341,12 @@ export function useSession() {
         frequency: result.frequency,
         failureReason: result.failureReason || undefined,
         actionTaken: result.actionTaken || undefined,
-        notes: result.notes || undefined,
+        // Clean notes by removing [TRIP_TIMES:[...]] pattern that was used for storage
+        notes: (() => {
+          const rawNotes = result.notes || '';
+          const cleanedNotes = rawNotes.replace(/\s*\[TRIP_TIMES:\[[^\]]*\]\]/g, '').trim();
+          return cleanedNotes || undefined;
+        })(),
         photoData: result.photoData || undefined,
         visionInspection: result.visionInspection,
         electricalTest: result.electricalTest,
@@ -360,10 +365,40 @@ export function useSession() {
         luxReading: result.luxReading || undefined,
         luxCompliant: result.luxCompliant || undefined,
         // RCD testing fields
-        pushButtonTest: result.pushButtonTest || undefined,
-        injectionTimedTest: result.injectionTimedTest || undefined,
-        tripTimes: result.tripTimes || undefined,
-        distributionBoardNumber: result.distributionBoardNumber || undefined,
+        pushButtonTest: result.pushButtonTest ?? result.push_button_test ?? undefined,
+        injectionTimedTest: result.injectionTimedTest ?? result.injection_timed_test ?? undefined,
+        // Parse tripTimes from multiple sources with validation:
+        // 1. Parse from notes field [TRIP_TIMES:[...]] (most reliable for stored data)
+        // 2. tripTimes array (if available and contains valid values)
+        // 3. Fall back to trip_time single value from database
+        tripTimes: (() => {
+          // First priority: Parse from notes field (this has the full array)
+          const notesValue = result.notes || '';
+          const tripTimesMatch = notesValue.match(/\[TRIP_TIMES:\[([^\]]*)\]\]/);
+          if (tripTimesMatch && tripTimesMatch[1]) {
+            const parsedTimes = tripTimesMatch[1].split(',').map((t: string) => Number(t.trim())).filter((t: number) => t > 0);
+            if (parsedTimes.length > 0) {
+              console.log(`Parsed tripTimes from notes: [${parsedTimes.join(',')}]`);
+              return parsedTimes;
+            }
+          }
+          // Second: Try direct tripTimes array (only if values are valid > 0)
+          if (result.tripTimes && Array.isArray(result.tripTimes) && result.tripTimes.length > 0) {
+            const validTimes = result.tripTimes.map((t: any) => Number(t)).filter((t: number) => t > 0);
+            if (validTimes.length > 0) {
+              console.log(`Using existing tripTimes array: [${validTimes.join(',')}]`);
+              return validTimes;
+            }
+          }
+          // Fall back to single trip_time value from database
+          const singleTripTime = result.trip_time || result.tripTime;
+          if (singleTripTime != null && Number(singleTripTime) > 0) {
+            console.log(`Using single trip_time value: ${singleTripTime}`);
+            return [Number(singleTripTime)];
+          }
+          return undefined;
+        })(),
+        distributionBoardNumber: result.distributionBoardNumber ?? result.distribution_board_number ?? undefined,
         // Microwave leakage testing fields
         leakageReading: result.leakageReading || undefined,
       }));
