@@ -1033,26 +1033,53 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         yPosition += 6;
       }
       
+      // Show Equipment Type on separate line - for Fire Extinguisher, show the extinguisher type
+      const extinguisherTypeMatch = notes.match(/Extinguisher Type: ([^|]+)/);
+      if (equipmentType === 'fire_extinguisher' && extinguisherTypeMatch?.[1]?.trim()) {
+        // Show the actual extinguisher type (Dry Powder, CO2, etc.) for fire extinguishers
+        doc.text(`• Equipment Type: ${extinguisherTypeMatch[1].trim()}`, margin + 5, yPosition);
+        yPosition += 6;
+      } else {
+        // Show formatted equipment type for other equipment
+        const formattedEquipmentType = equipmentType
+          .replace(/_/g, ' ')
+          .replace(/\b\w/g, (l: string) => l.toUpperCase());
+        doc.text(`• Equipment Type: ${formattedEquipmentType}`, margin + 5, yPosition);
+        yPosition += 6;
+      }
+      
       // Show equipment details if available
       const sizeMatch = notes.match(/Net Size: ([^|]+)/);
       const weightMatch = notes.match(/Gross Weight: ([^|]+)/);
       if (sizeMatch?.[1]) {
-        doc.text(`• Net Size: ${sizeMatch[1]}`, margin + 5, yPosition);
+        doc.text(`• Net Size: ${sizeMatch[1].trim()}`, margin + 5, yPosition);
         yPosition += 6;
       }
       if (weightMatch?.[1]) {
-        doc.text(`• Gross Weight: ${weightMatch[1]}`, margin + 5, yPosition);
+        doc.text(`• Gross Weight: ${weightMatch[1].trim()}`, margin + 5, yPosition);
         yPosition += 6;
       }
       
-      // Show notes if any (excluding the parsed fields) with text wrapping
-      const remainingNotes = notes.split('|')[0]?.trim(); // Get first part before equipment details
-      if (remainingNotes && remainingNotes !== notes) {
+      // Show notes if any (only actual user notes, not the parsed equipment details)
+      // Get the first part before any pipe separator, but only if it's not an equipment detail field
+      const firstPart = notes.split('|')[0]?.trim();
+      const isActualUserNote = firstPart && 
+        !firstPart.startsWith('Equipment Type:') && 
+        !firstPart.startsWith('Extinguisher Type:') &&
+        !firstPart.startsWith('Visual Inspection:') &&
+        !firstPart.startsWith('Operational Test:') &&
+        !firstPart.startsWith('Pressure Test:') &&
+        !firstPart.startsWith('Accessibility Check:') &&
+        !firstPart.startsWith('Signage Check:') &&
+        !firstPart.startsWith('Net Size:') &&
+        !firstPart.startsWith('Gross Weight:');
+      
+      if (isActualUserNote) {
         const notesLabel = '• Additional Notes: ';
         doc.text(notesLabel, margin + 5, yPosition);
         
         const maxNotesWidth = pageWidth - (2 * margin) - 25; // Add more space to the right
-        const notesLines = doc.splitTextToSize(remainingNotes, maxNotesWidth);
+        const notesLines = doc.splitTextToSize(firstPart, maxNotesWidth);
         const labelWidth = doc.getTextWidth(notesLabel);
         
         notesLines.forEach((line: string, i: number) => {
