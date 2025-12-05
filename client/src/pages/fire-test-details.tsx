@@ -151,7 +151,7 @@ export default function FireTestDetails() {
         data.weight ? `Gross Weight: ${data.weight}` : '',
         `Visual Inspection: ${data.visionInspection ? 'Pass' : 'Fail'}`,
         `Operational Test: ${data.operationalTest ? 'Pass' : 'Fail'}`,
-        data.equipmentType === 'fire_extinguisher' ? `Pressure Test: ${data.pressureTest ? 'Pass' : 'Fail'}` : '',
+        (data.equipmentType === 'fire_extinguisher' || data.equipmentType === 'fire_hose_reel') ? `Pressure Test: ${data.pressureTest ? 'Pass' : 'Fail'}` : '',
         `Accessibility Check: ${data.accessibilityCheck ? 'Pass' : 'Fail'}`,
         `Signage Check: ${data.signageCheck ? 'Pass' : 'Fail'}`,
       ].filter(Boolean).join(' | ');
@@ -465,16 +465,29 @@ export default function FireTestDetails() {
               )}
 
               {watchEquipmentType === 'fire_hose_reel' && (
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="operationalTest"
-                    checked={form.watch('operationalTest')}
-                    onCheckedChange={(checked) => form.setValue('operationalTest', !!checked)}
-                  />
-                  <Label htmlFor="operationalTest" className="text-sm">
-                    Operational Test (Hose reel operation, water flow)
-                  </Label>
-                </div>
+                <>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="operationalTest"
+                      checked={form.watch('operationalTest')}
+                      onCheckedChange={(checked) => form.setValue('operationalTest', !!checked)}
+                    />
+                    <Label htmlFor="operationalTest" className="text-sm">
+                      Operational Test (Hose reel operation, water flow)
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="pressureTest"
+                      checked={form.watch('pressureTest')}
+                      onCheckedChange={(checked) => form.setValue('pressureTest', !!checked)}
+                    />
+                    <Label htmlFor="pressureTest" className="text-sm">
+                      Pressure Gauge Check (Pressure within operating range)
+                    </Label>
+                  </div>
+                </>
               )}
 
               {watchEquipmentType === 'fire_blanket' && (

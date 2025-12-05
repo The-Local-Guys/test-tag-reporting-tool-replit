@@ -1009,25 +1009,27 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       const signageMatch = notes.match(/Signage Check: ([^|]+)/);
       
       doc.setFont('helvetica', 'normal');
-      doc.text(`• Visual Inspection (Physical condition, damage, corrosion): ${visualInspectionMatch?.[1] || 'N/A'}`, margin + 5, yPosition);
+      doc.text(`• Visual Inspection (Physical condition, damage, corrosion): ${visualInspectionMatch?.[1]?.trim() || 'N/A'}`, margin + 5, yPosition);
       yPosition += 6;
-      doc.text(`• Accessibility Check (Clear access, not obstructed): ${accessibilityMatch?.[1] || 'N/A'}`, margin + 5, yPosition);
+      doc.text(`• Accessibility Check (Clear access, not obstructed): ${accessibilityMatch?.[1]?.trim() || 'N/A'}`, margin + 5, yPosition);
       yPosition += 6;
-      doc.text(`• Signage Check (Proper signage and instructions visible): ${signageMatch?.[1] || 'N/A'}`, margin + 5, yPosition);
+      doc.text(`• Signage Check (Proper signage and instructions visible): ${signageMatch?.[1]?.trim() || 'N/A'}`, margin + 5, yPosition);
       yPosition += 6;
       
-      // Equipment-specific tests
-      const equipmentType = equipmentTypeMatch?.[1] || result.classification;
+      // Equipment-specific tests - trim to handle whitespace from regex
+      const equipmentType = (equipmentTypeMatch?.[1]?.trim() || result.classification || '').trim();
       if (equipmentType === 'fire_extinguisher') {
-        doc.text(`• Pressure Gauge Check (Pressure within operating range): ${pressureTestMatch?.[1] || 'N/A'}`, margin + 5, yPosition);
+        doc.text(`• Pressure Gauge Check (Pressure within operating range): ${pressureTestMatch?.[1]?.trim() || 'N/A'}`, margin + 5, yPosition);
         yPosition += 6;
-        doc.text(`• Operational Test (Trigger mechanism, hose, nozzle): ${operationalTestMatch?.[1] || 'N/A'}`, margin + 5, yPosition);
+        doc.text(`• Operational Test (Trigger mechanism, hose, nozzle): ${operationalTestMatch?.[1]?.trim() || 'N/A'}`, margin + 5, yPosition);
         yPosition += 6;
       } else if (equipmentType === 'fire_hose_reel') {
-        doc.text(`• Operational Test (Hose reel operation, water flow): ${operationalTestMatch?.[1] || 'N/A'}`, margin + 5, yPosition);
+        doc.text(`• Operational Test (Hose reel operation, water flow): ${operationalTestMatch?.[1]?.trim() || 'N/A'}`, margin + 5, yPosition);
+        yPosition += 6;
+        doc.text(`• Pressure Gauge Check (Pressure within operating range): ${pressureTestMatch?.[1]?.trim() || 'N/A'}`, margin + 5, yPosition);
         yPosition += 6;
       } else if (equipmentType === 'fire_blanket') {
-        doc.text(`• Operational Test (Easy removal, blanket condition): ${operationalTestMatch?.[1] || 'N/A'}`, margin + 5, yPosition);
+        doc.text(`• Operational Test (Easy removal, blanket condition): ${operationalTestMatch?.[1]?.trim() || 'N/A'}`, margin + 5, yPosition);
         yPosition += 6;
       }
       
