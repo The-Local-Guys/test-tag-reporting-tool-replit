@@ -282,14 +282,16 @@ export default function Setup() {
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="australia" id="australia" />
                 <Label htmlFor="australia">
-                  Australia ({sessionStorage.getItem('selectedService') === 'rcd_reporting' ? 'AS/NZS 3760' : 
+                  Australia ({sessionStorage.getItem('selectedService') === 'electrical' ? 'AS/NZS 3760' :
+                             sessionStorage.getItem('selectedService') === 'rcd_reporting' ? 'AS/NZS 3760' : 
                              sessionStorage.getItem('selectedService') === 'microwave_leakage' ? 'AS/NZS 60335.2.25' : 'AS 1851'})
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="newzealand" id="newzealand" />
                 <Label htmlFor="newzealand">
-                  New Zealand ({sessionStorage.getItem('selectedService') === 'rcd_reporting' ? 'AS/NZS 3760' : 
+                  New Zealand ({sessionStorage.getItem('selectedService') === 'electrical' ? 'AS/NZS 3760' :
+                                sessionStorage.getItem('selectedService') === 'rcd_reporting' ? 'AS/NZS 3760' : 
                                 sessionStorage.getItem('selectedService') === 'microwave_leakage' ? 'AS/NZS 60335.2.25' : 'NZS 4503:2005'})
                 </Label>
               </div>
