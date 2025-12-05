@@ -29,6 +29,7 @@ const fireTestSchema = z.object({
   accessibilityCheck: z.boolean().default(false),
   signageCheck: z.boolean().default(false),
   failureReason: z.enum(['physical_damage', 'pressure_loss', 'corrosion', 'blocked_nozzle', 'damaged_seal', 'expired', 'mounting_issue', 'other']).optional(),
+  actionTaken: z.enum(['given', 'removed']).optional(),
   notes: z.string().optional(),
 });
 
@@ -128,7 +129,7 @@ export default function FireTestDetails() {
         result: data.result,
         frequency: data.frequency,
         failureReason: data.failureReason || null,
-        actionTaken: data.result === 'fail' ? 'removed' : null,
+        actionTaken: data.result === 'fail' ? (data.actionTaken || 'removed') : null,
         notes: data.notes || null,
         photoData: data.result === 'fail' ? photoData : null,
         visionInspection: data.visionInspection,
@@ -163,7 +164,7 @@ export default function FireTestDetails() {
         result: data.result,
         frequency: data.frequency,
         failureReason: data.failureReason || null,
-        actionTaken: data.result === 'fail' ? 'removed' : null,
+        actionTaken: data.result === 'fail' ? (data.actionTaken || 'removed') : null,
         notes: additionalTestDetails || null,
         photoData: data.result === 'fail' ? photoData : null,
         visionInspection: data.visionInspection,
@@ -552,7 +553,7 @@ export default function FireTestDetails() {
                     value={form.watch('failureReason') || ''} 
                     onValueChange={(value) => form.setValue('failureReason', value as any)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger data-testid="select-failure-reason">
                       <SelectValue placeholder="Select failure reason" />
                     </SelectTrigger>
                     <SelectContent>
@@ -564,6 +565,22 @@ export default function FireTestDetails() {
                       <SelectItem value="expired">Expired</SelectItem>
                       <SelectItem value="mounting_issue">Mounting Issue</SelectItem>
                       <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="actionTaken">Action Taken *</Label>
+                  <Select 
+                    value={form.watch('actionTaken') || ''} 
+                    onValueChange={(value) => form.setValue('actionTaken', value as 'given' | 'removed')}
+                  >
+                    <SelectTrigger data-testid="select-action-taken">
+                      <SelectValue placeholder="Select action taken" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="given">Given to Site Contact</SelectItem>
+                      <SelectItem value="removed">Removed from Site</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
