@@ -1091,7 +1091,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   
   // Add RCD-specific disclaimer for RCD Reporting
   if (session.serviceType === 'rcd_reporting') {
-    doc.setFontSize(7);
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'italic');
     const rcdDisclaimerY = footerY + 8;
     doc.text(
