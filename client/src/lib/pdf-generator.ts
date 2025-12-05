@@ -1088,6 +1088,19 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     footerY,
     { align: 'center' }
   );
+  
+  // Add RCD-specific disclaimer for RCD Reporting
+  if (session.serviceType === 'rcd_reporting') {
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'italic');
+    const rcdDisclaimerY = footerY + 8;
+    doc.text(
+      "Lighting circuit & Hard Wired circuit RCD's – Test Button Only. Injection test not within AS/NZS 3760 scope. Recommend periodic testing by a licensed electrician.",
+      pageWidth / 2,
+      rcdDisclaimerY,
+      { align: 'center' }
+    );
+  }
 
   // Add failed items details section
   // Skip this section entirely for microwave leakage testing
