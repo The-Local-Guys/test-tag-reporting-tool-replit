@@ -215,11 +215,20 @@ export function generateExcelReport(data: ReportData): Blob {
         ? 'N/A' 
         : toTestCell((result as any).pressureTest);
       
+      // For fire extinguishers, show the specific extinguisher type (Dry Powder, CO2, etc.)
+      // For other equipment, show the equipment type (Fire Hose Reel, Fire Blanket, etc.)
+      let displayType = 'N/A';
+      if (result.equipmentType === 'fire_extinguisher' && (result as any).extinguisherType) {
+        displayType = ((result as any).extinguisherType as string).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      } else if (result.equipmentType) {
+        displayType = result.equipmentType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      }
+      
       return [
         result.assetNumber, // Asset number
         result.itemName,
         result.location,
-        result.equipmentType ? result.equipmentType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'N/A',
+        displayType,
         result.result.toUpperCase(),
         sizeWeight,
         result.manufacturerInfo || 'N/A',

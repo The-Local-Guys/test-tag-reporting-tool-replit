@@ -419,8 +419,19 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       manufacturerLines = doc.splitTextToSize(result.manufacturerInfo || 'N/A', manufacturerWidth);
       
       // Add word wrapping for type/classification
+      // For fire extinguishers, show the extinguisher type (Dry Powder, CO2, etc.) instead of classification
       const typeWidth = 13; // Width for type column
-      typeLines = doc.splitTextToSize(result.classification.toUpperCase(), typeWidth);
+      let displayType = result.classification.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      
+      // Check if this is a fire extinguisher and extract the specific type from notes
+      if (result.classification === 'fire_extinguisher') {
+        const extinguisherTypeMatch = notes.match(/Extinguisher Type: ([^|]+)/);
+        if (extinguisherTypeMatch) {
+          displayType = extinguisherTypeMatch[1].trim().replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+      }
+      
+      typeLines = doc.splitTextToSize(displayType, typeWidth);
     } else if (session.serviceType === 'emergency_exit_light') {
       // Add word wrapping for manufacturer info in emergency exit light
       const manufacturerWidth = 20;
