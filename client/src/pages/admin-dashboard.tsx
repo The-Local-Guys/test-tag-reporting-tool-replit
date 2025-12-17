@@ -141,7 +141,6 @@ export default function AdminDashboard() {
   
   const [editResultData, setEditResultData] = useState({
     itemName: "",
-    itemType: "",
     location: "",
     assetNumber: "",
     classification: "class1" as any,
@@ -872,7 +871,6 @@ export default function AdminDashboard() {
     setEditingResult(result);
     setEditResultData({
       itemName: result.itemName || "",
-      itemType: result.itemType || "",
       location: result.location || "",
       assetNumber: result.assetNumber || "",
       classification: result.classification || "class1",
@@ -971,7 +969,6 @@ export default function AdminDashboard() {
     // Prepare update data with manually entered asset number
     const updateData = {
       itemName: editResultData.itemName,
-      itemType: editResultData.itemType,
       location: editResultData.location,
       assetNumber: editResultData.assetNumber,
       classification: editResultData.classification,
