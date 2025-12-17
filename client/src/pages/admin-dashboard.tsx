@@ -870,7 +870,7 @@ export default function AdminDashboard() {
   const handleEditResult = (result: any) => {
     setEditingResult(result);
     setEditResultData({
-      itemName: result.itemType || "",
+      itemName: result.itemName || "",
       location: result.location || "",
       assetNumber: result.assetNumber || "",
       classification: result.classification || "class1",
