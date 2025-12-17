@@ -363,8 +363,8 @@ export default function AdminDashboard() {
           result.id === editingResult.id ? { 
             ...result, 
             ...updatedResult,
-            // Ensure itemType is updated from the response
-            itemType: updatedResult.itemName || updatedResult.itemType || result.itemType,
+            // Preserve itemType from response or keep original (itemType is not edited)
+            itemType: updatedResult.itemType || result.itemType,
             assetNumber: updatedResult.assetNumber || result.assetNumber
           } : result
         );
