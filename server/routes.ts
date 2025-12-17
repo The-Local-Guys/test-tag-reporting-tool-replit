@@ -921,6 +921,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const updateData: any = {
           itemName: req.body.itemName,
+          itemType: req.body.itemType,
           location: req.body.location,
           classification: req.body.classification,
           result: req.body.result,
