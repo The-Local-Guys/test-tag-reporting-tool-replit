@@ -2355,7 +2355,7 @@ export default function AdminDashboard() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="editItemName">Item Type</Label>
+                <Label htmlFor="editItemName">Item Name</Label>
                 <Input
                   id="editItemName"
                   type="text"
@@ -2366,7 +2366,7 @@ export default function AdminDashboard() {
                       itemName: e.target.value,
                     }))
                   }
-                  placeholder="Enter item type"
+                  placeholder="Enter item name"
                   required
                 />
               </div>
