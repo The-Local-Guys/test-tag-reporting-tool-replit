@@ -141,6 +141,7 @@ export default function AdminDashboard() {
   
   const [editResultData, setEditResultData] = useState({
     itemName: "",
+    itemType: "",
     location: "",
     assetNumber: "",
     classification: "class1" as any,
@@ -871,6 +872,7 @@ export default function AdminDashboard() {
     setEditingResult(result);
     setEditResultData({
       itemName: result.itemName || "",
+      itemType: result.itemType || "",
       location: result.location || "",
       assetNumber: result.assetNumber || "",
       classification: result.classification || "class1",
@@ -2355,18 +2357,18 @@ export default function AdminDashboard() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="editItemName">Item Name</Label>
+                <Label htmlFor="editItemType">Item Type</Label>
                 <Input
-                  id="editItemName"
+                  id="editItemType"
                   type="text"
-                  value={editResultData.itemName}
+                  value={editResultData.itemType}
                   onChange={(e) =>
                     setEditResultData((prev) => ({
                       ...prev,
-                      itemName: e.target.value,
+                      itemType: e.target.value,
                     }))
                   }
-                  placeholder="Enter item name"
+                  placeholder="Enter item type"
                   required
                 />
               </div>
