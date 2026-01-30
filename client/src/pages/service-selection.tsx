@@ -18,7 +18,7 @@ export default function ServiceSelection() {
 
   // Check for unfinished reports when component mounts
   useEffect(() => {
-    const checkUnfinishedReport = () => {
+    const checkUnfinishedReport = async () => {
       console.log('Checking for unfinished reports on service selection page...');
       console.log('All localStorage keys:', Object.keys(localStorage));
       
@@ -31,6 +31,7 @@ export default function ServiceSelection() {
       // Check for any batched results that are NOT yet saved to server (no serverId)
       let unsavedResults: any[] = [];
       let batchSessionId = null;
+      let allLocalResults: any[] = [];
       
       Object.keys(localStorage).forEach(key => {
         if (key.startsWith('batchedResults_')) {
@@ -39,10 +40,11 @@ export default function ServiceSelection() {
           if (results) {
             try {
               const parsed = JSON.parse(results);
-              // Only consider results without serverId as truly unsaved
+              allLocalResults = parsed;
+              // Only consider results without serverId as potentially unsaved
               const unsaved = parsed.filter((r: any) => !r.serverId);
               if (unsaved.length > 0) {
-                console.log(`Found ${unsaved.length} unsaved results for session ${sessionId}`);
+                console.log(`Found ${unsaved.length} results without serverId for session ${sessionId}`);
                 unsavedResults = unsaved;
                 batchSessionId = sessionId;
               }
@@ -53,13 +55,57 @@ export default function ServiceSelection() {
         }
       });
       
-      console.log('Unfinished check:', { isUnfinished, storedSessionId, unfinishedId, currentSessionId, unsavedResults, batchSessionId });
-      
       // Determine target session ID
       let targetSessionId = storedSessionId || unfinishedId || currentSessionId || batchSessionId;
       
-      // Only show dialog if there are truly unsaved results (without serverId)
+      // If we have results without serverId, verify with the server if they're actually saved
+      // This handles cases where auto-save completed but localStorage wasn't updated (race condition)
       if (unsavedResults.length > 0 && targetSessionId) {
+        try {
+          console.log(`Verifying with server if session ${targetSessionId} has saved results...`);
+          const response = await apiRequest('GET', `/api/sessions/${targetSessionId}/results`);
+          const serverResults = await response.json();
+          
+          if (serverResults && serverResults.length > 0) {
+            // Server has results - update localStorage with serverIds to prevent future warnings
+            console.log(`Server has ${serverResults.length} results for session ${targetSessionId}, updating localStorage`);
+            
+            const updatedLocalResults = allLocalResults.map((localResult: any) => {
+              // Try to match by asset number, item name, or other unique fields
+              const matchingServerResult = serverResults.find((sr: any) => 
+                sr.assetNumber === localResult.assetNumber && 
+                sr.itemName === localResult.itemName
+              );
+              if (matchingServerResult) {
+                return { ...localResult, serverId: matchingServerResult.id };
+              }
+              return localResult;
+            });
+            
+            // Save updated results with serverIds to localStorage
+            localStorage.setItem(`batchedResults_${targetSessionId}`, JSON.stringify(updatedLocalResults));
+            
+            // Recheck unsaved - only those that still don't have a serverId after matching
+            const stillUnsaved = updatedLocalResults.filter((r: any) => !r.serverId);
+            
+            if (stillUnsaved.length === 0) {
+              console.log('All results verified as saved on server, no warning needed');
+              // Clean up unfinished flags since everything is saved
+              localStorage.removeItem('unfinished');
+              localStorage.removeItem('unfinishedSessionId');
+              localStorage.removeItem('unfinishedId');
+              setIsCheckingUnfinished(false);
+              return;
+            } else {
+              console.log(`${stillUnsaved.length} results still not found on server`);
+              unsavedResults = stillUnsaved;
+            }
+          }
+        } catch (error) {
+          console.warn('Error verifying with server:', error);
+          // If we can't verify, still show the dialog for safety
+        }
+        
         console.log('Found truly unsaved results, showing dialog for session:', targetSessionId);
         setUnfinishedSessionId(targetSessionId);
         setUnfinishedResults(unsavedResults);
