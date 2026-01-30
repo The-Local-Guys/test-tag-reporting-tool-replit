@@ -33,6 +33,10 @@ export default function Setup() {
   const [isNavigating, setIsNavigating] = useState(false);
   const [isCustomAssetModalOpen, setIsCustomAssetModalOpen] = useState(false);
   
+  // Track the initial sessionId to distinguish between existing sessions and newly created ones
+  const [initialSessionId] = useState(() => sessionId);
+  const [sessionCreationStarted, setSessionCreationStarted] = useState(false);
+  
   // Load pending custom numbers if no session exists
   const [modalCustomNumbers, setModalCustomNumbers] = useState(() => {
     if (!sessionId) {
@@ -96,6 +100,9 @@ export default function Setup() {
       return;
     }
     
+    // Mark that we've started creating a session
+    setSessionCreationStarted(true);
+    
     createSession({
       ...data,
       serviceType: selectedService as 'electrical' | 'emergency_exit_light' | 'fire_testing' | 'rcd_reporting' | 'microwave_leakage',
@@ -109,8 +116,15 @@ export default function Setup() {
   };
 
   // Wait for session to be created, then navigate with delay to ensure data is loaded
+  // Only navigate if we actually started a session creation (not if there's an old session in localStorage)
   useEffect(() => {
-    if (sessionId && isCreatingSession === false && !isNavigating) {
+    // Only navigate if:
+    // 1. We have a sessionId
+    // 2. Session creation finished (isCreatingSession === false)
+    // 3. We haven't started navigating yet
+    // 4. We explicitly started creating a session (sessionCreationStarted)
+    // 5. The sessionId is different from the initial one (meaning a new session was created)
+    if (sessionId && isCreatingSession === false && !isNavigating && sessionCreationStarted && sessionId !== initialSessionId) {
       setIsNavigating(true);
       
       // Add a delay to ensure session data is fully loaded before navigating
@@ -118,7 +132,7 @@ export default function Setup() {
         navigate('/items');
       }, 800); // 800ms delay to ensure session data is ready
     }
-  }, [sessionId, isCreatingSession, navigate, isNavigating]);
+  }, [sessionId, isCreatingSession, navigate, isNavigating, sessionCreationStarted, initialSessionId]);
 
 
 
