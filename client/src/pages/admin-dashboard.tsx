@@ -1072,8 +1072,9 @@ export default function AdminDashboard() {
 
   /**
    * Check for existing localStorage data and show override confirmation if needed
+   * Now verifies with server to handle race conditions where auto-save completed but localStorage wasn't updated
    */
-  const checkForExistingData = (session: any) => {
+  const checkForExistingData = async (session: any) => {
     // Check for existing unfinished reports
     const existingUnfinished = localStorage.getItem('unfinished');
     const existingSessionId = localStorage.getItem('currentSessionId');
@@ -1081,17 +1082,19 @@ export default function AdminDashboard() {
     
     // Check for any batched results in localStorage that are NOT yet saved to server
     let unsavedResultsCount = 0;
-    let batchSessionId = null;
+    let batchSessionId: string | null = null;
+    let allLocalResults: any[] = [];
     
     for (const key of Object.keys(localStorage)) {
       if (key.startsWith('batchedResults_')) {
         try {
           const results = JSON.parse(localStorage.getItem(key) || '[]');
           if (results.length > 0) {
-            // Only count results that don't have a serverId (truly unsaved)
+            allLocalResults = results;
+            // Only count results that don't have a serverId (potentially unsaved)
             const unsavedResults = results.filter((r: any) => !r.serverId);
             if (unsavedResults.length > 0) {
-              unsavedResultsCount += unsavedResults.length;
+              unsavedResultsCount = unsavedResults.length;
               batchSessionId = key.replace('batchedResults_', '');
             }
           }
@@ -1101,8 +1104,52 @@ export default function AdminDashboard() {
       }
     }
     
+    // If we found results without serverId, verify with server if they're actually saved
+    if (unsavedResultsCount > 0 && batchSessionId) {
+      try {
+        console.log(`Verifying with server if session ${batchSessionId} has saved results...`);
+        const response = await apiRequest('GET', `/api/sessions/${batchSessionId}/results`);
+        const serverResults = await response.json();
+        
+        if (serverResults && serverResults.length > 0) {
+          // Server has results - update localStorage with serverIds
+          console.log(`Server has ${serverResults.length} results, updating localStorage with serverIds`);
+          
+          const updatedLocalResults = allLocalResults.map((localResult: any) => {
+            const matchingServerResult = serverResults.find((sr: any) => 
+              sr.assetNumber === localResult.assetNumber && 
+              sr.itemName === localResult.itemName
+            );
+            if (matchingServerResult) {
+              return { ...localResult, serverId: matchingServerResult.id };
+            }
+            return localResult;
+          });
+          
+          // Save updated results with serverIds to localStorage
+          localStorage.setItem(`batchedResults_${batchSessionId}`, JSON.stringify(updatedLocalResults));
+          
+          // Recheck unsaved count
+          const stillUnsaved = updatedLocalResults.filter((r: any) => !r.serverId);
+          unsavedResultsCount = stillUnsaved.length;
+          
+          if (unsavedResultsCount === 0) {
+            console.log('All results verified as saved on server, proceeding without warning');
+            // Clean up flags since everything is saved
+            localStorage.removeItem('unfinished');
+            localStorage.removeItem('unfinishedSessionId');
+            localStorage.removeItem('unfinishedId');
+            proceedWithContinue(session);
+            return;
+          }
+        }
+      } catch (error) {
+        console.warn('Error verifying with server:', error);
+        // Continue with warning if verification fails
+      }
+    }
+    
     // If there's truly unsaved data (results without serverId), show override confirmation
-    // Note: If all results have serverIds, they're already synced to server and we don't need to warn
     if (unsavedResultsCount > 0) {
       const existingDetails = {
         sessionId: existingSessionId || batchSessionId,
