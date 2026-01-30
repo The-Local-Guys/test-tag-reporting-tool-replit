@@ -639,6 +639,25 @@ export function useSession() {
     },
     onSuccess: (session: TestSession) => {
       console.log('Session created successfully:', session.id);
+      
+      // Clear ALL old session data from localStorage before starting new session
+      // This prevents old results from appearing in new sessions
+      const keysToRemove: string[] = [];
+      for (const key of Object.keys(localStorage)) {
+        // Clear batched results from ANY session
+        if (key.startsWith('batchedResults_')) {
+          keysToRemove.push(key);
+        }
+        // Clear counters from other sessions
+        if (key.match(/^(twelvemonthlyCounter|sixmonthlyCounter|fiveyearlyCounter|twentyfourmonthlyCounter|threemonthlyCounter|monthlyCounter|customStartingNumbers|rcdAssetCounter|microwaveCounter)_\d+$/)) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => {
+        console.log(`Cleaning up old session data: ${key}`);
+        localStorage.removeItem(key);
+      });
+      
       setSessionId(session.id);
       localStorage.setItem('currentSessionId', session.id.toString());
       // Store service type for this session
