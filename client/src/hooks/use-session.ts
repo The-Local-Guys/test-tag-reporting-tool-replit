@@ -18,6 +18,7 @@ export interface SessionData {
 
 export interface BatchedTestResult {
   id: string; // Temporary local ID
+  serverId?: number; // Server-assigned ID after auto-save (for tracking saved results)
   itemName: string;
   itemType: string;
   location: string;
@@ -333,6 +334,7 @@ export function useSession() {
       
       const loadedResults: BatchedTestResult[] = existingResults.map((result: any) => ({
         id: `existing-${result.id}`,
+        serverId: result.id, // Track server ID for auto-save updates
         itemName: result.itemName,
         itemType: result.itemType || result.itemName,
         location: result.location,
@@ -961,6 +963,10 @@ export function useSession() {
     // Note: We don't clear when adding Portable RCD - we only clear when switching equipment type in the form
     
     console.log(`Added result to batch: ${cleanData.itemName} at ${cleanData.location} -> Asset #${assetNumber}`);
+    
+    // Auto-save to server immediately to prevent data loss
+    autoSaveNewResultMutation.mutate(newResult);
+    
     return newResult;
   };
 
@@ -1078,7 +1084,145 @@ export function useSession() {
   });
 
   /**
-   * Updates a batched result locally (before server submission)
+   * Auto-save mutation: Creates a single new result on the server
+   * Called automatically after addToBatch to ensure no data loss
+   */
+  const autoSaveNewResultMutation = useMutation({
+    mutationFn: async (result: BatchedTestResult) => {
+      if (!sessionId) throw new Error('No active session');
+      
+      // Normalize tripTimes if present
+      let tripTimes = result.tripTimes;
+      if (tripTimes && Array.isArray(tripTimes)) {
+        tripTimes = tripTimes.map(t => {
+          const num = Number(t);
+          if (isFinite(num) && num > 0) {
+            return num < 1 ? num * 1000 : num;
+          }
+          return null;
+        }).filter((v): v is number => v !== null);
+      }
+
+      const resultData = {
+        itemName: result.itemName,
+        itemType: result.itemType,
+        location: result.location,
+        classification: result.classification,
+        result: result.result,
+        frequency: result.frequency,
+        assetNumber: result.assetNumber,
+        failureReason: result.failureReason || null,
+        actionTaken: result.actionTaken || null,
+        notes: result.notes || null,
+        photoData: result.photoData || null,
+        visionInspection: result.visionInspection,
+        electricalTest: result.electricalTest,
+        maintenanceType: result.maintenanceType || null,
+        dischargeTest: result.dischargeTest || false,
+        switchingTest: result.switchingTest || false,
+        chargingTest: result.chargingTest || false,
+        manufacturerInfo: result.manufacturerInfo || null,
+        installationDate: result.installationDate || null,
+        pushButtonTest: result.pushButtonTest ?? null,
+        injectionTimedTest: result.injectionTimedTest ?? null,
+        tripTimes: tripTimes && tripTimes.length > 0 ? tripTimes : null,
+        distributionBoardNumber: result.distributionBoardNumber || null,
+        leakageReading: result.leakageReading || null,
+      };
+
+      console.log(`Auto-saving new result to server: ${result.itemName} (Asset #${result.assetNumber})`);
+      
+      const response = await apiRequest('POST', `/api/sessions/${sessionId}/results`, resultData);
+      return { localId: result.id, serverResult: await response.json() };
+    },
+    onSuccess: ({ localId, serverResult }) => {
+      console.log(`Auto-save successful: ${serverResult.itemName} -> Server ID: ${serverResult.id}`);
+      
+      // Update the local result with the server ID
+      setBatchedResults(prev => {
+        const updated = prev.map(r => 
+          r.id === localId ? { ...r, serverId: serverResult.id } : r
+        );
+        if (sessionId) {
+          localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(updated));
+        }
+        return updated;
+      });
+      
+      // Invalidate queries to keep admin dashboard in sync
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/sessions'] });
+    },
+    onError: (error, result) => {
+      console.error(`Auto-save failed for ${result.itemName}:`, error);
+      // Keep the result in local storage - it will be synced later via batch submit
+    },
+  });
+
+  /**
+   * Auto-save mutation: Updates an existing result on the server
+   * Called automatically after updateBatchedResult for server-synced results
+   * Includes all mutable fields to prevent data loss
+   */
+  const autoUpdateResultMutation = useMutation({
+    mutationFn: async ({ serverId, data }: { serverId: number; data: BatchedTestResult }) => {
+      if (!sessionId) throw new Error('No active session');
+      
+      // Normalize tripTimes if present
+      let tripTimes = data.tripTimes;
+      if (tripTimes && Array.isArray(tripTimes)) {
+        tripTimes = tripTimes.map(t => {
+          const num = Number(t);
+          if (isFinite(num) && num > 0) {
+            return num < 1 ? num * 1000 : num;
+          }
+          return null;
+        }).filter((v): v is number => v !== null);
+      }
+
+      // Include all mutable fields to ensure complete sync
+      const updateData = {
+        itemName: data.itemName,
+        itemType: data.itemType,
+        location: data.location,
+        classification: data.classification,
+        result: data.result,
+        frequency: data.frequency,
+        assetNumber: data.assetNumber,
+        failureReason: data.failureReason || null,
+        actionTaken: data.actionTaken || null,
+        notes: data.notes || null,
+        photoData: data.photoData || null,
+        visionInspection: data.visionInspection,
+        electricalTest: data.electricalTest,
+        maintenanceType: data.maintenanceType || null,
+        dischargeTest: data.dischargeTest || false,
+        switchingTest: data.switchingTest || false,
+        chargingTest: data.chargingTest || false,
+        manufacturerInfo: data.manufacturerInfo || null,
+        installationDate: data.installationDate || null,
+        pushButtonTest: data.pushButtonTest ?? null,
+        injectionTimedTest: data.injectionTimedTest ?? null,
+        tripTimes: tripTimes && tripTimes.length > 0 ? tripTimes : null,
+        distributionBoardNumber: data.distributionBoardNumber || null,
+        leakageReading: data.leakageReading || null,
+      };
+
+      console.log(`Auto-updating result on server: ID ${serverId}`);
+      
+      const response = await apiRequest('PATCH', `/api/sessions/${sessionId}/results/${serverId}`, updateData);
+      return response.json();
+    },
+    onSuccess: (serverResult) => {
+      console.log(`Auto-update successful: Server ID ${serverResult.id}`);
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/sessions'] });
+    },
+    onError: (error, { serverId }) => {
+      console.error(`Auto-update failed for server ID ${serverId}:`, error);
+    },
+  });
+
+  /**
+   * Updates a batched result locally and auto-saves to server
    */
   const updateBatchedResult = (id: string, updatedData: Partial<BatchedTestResult>) => {
     try {
@@ -1094,8 +1238,11 @@ export function useSession() {
       
       console.log('Found result to update:', foundResult);
       
+      // Merge the update data with the existing result
+      const mergedResult = { ...foundResult, ...updatedData };
+      
       const updatedResults = batchedResults.map(result => 
-        result.id === id ? { ...result, ...updatedData } : result
+        result.id === id ? mergedResult : result
       );
       
       console.log('Updated results:', updatedResults);
@@ -1104,6 +1251,17 @@ export function useSession() {
       if (sessionId) {
         localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(updatedResults));
         console.log('Saved updated results to localStorage');
+      }
+      
+      // Auto-update on server if this result has been saved before
+      if (foundResult.serverId) {
+        console.log(`Auto-updating result on server (serverId: ${foundResult.serverId})`);
+        autoUpdateResultMutation.mutate({ 
+          serverId: foundResult.serverId, 
+          data: mergedResult 
+        });
+      } else {
+        console.log('Result not yet saved to server, skipping auto-update');
       }
       
       console.log('updateBatchedResult completed successfully');

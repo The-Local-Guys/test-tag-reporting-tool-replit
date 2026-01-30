@@ -919,22 +919,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return;
         }
 
-        const updateData: any = {
-          itemName: req.body.itemName,
-          location: req.body.location,
-          classification: req.body.classification,
-          result: req.body.result,
-          frequency: req.body.frequency,
-          failureReason: req.body.failureReason || null,
-          actionTaken: req.body.actionTaken || null,
-          notes: req.body.notes || null,
-        };
-
-        // Use the asset number provided by the admin (manual entry)
+        // Build update data with only provided fields to prevent overwriting with undefined
+        const updateData: any = {};
+        
+        // Core fields
+        if (req.body.itemName !== undefined) updateData.itemName = req.body.itemName;
+        if (req.body.itemType !== undefined) updateData.itemType = req.body.itemType;
+        if (req.body.location !== undefined) updateData.location = req.body.location;
+        if (req.body.classification !== undefined) updateData.classification = req.body.classification;
+        if (req.body.result !== undefined) updateData.result = req.body.result;
+        if (req.body.frequency !== undefined) updateData.frequency = req.body.frequency;
         if (req.body.assetNumber !== undefined) {
           updateData.assetNumber = req.body.assetNumber;
-          console.log(`Admin manually set asset number for result ${resultId}: ${currentResult.assetNumber} -> ${updateData.assetNumber} (frequency: ${currentResult.frequency} -> ${req.body.frequency})`);
+          console.log(`Asset number updated for result ${resultId}: ${currentResult.assetNumber} -> ${updateData.assetNumber}`);
         }
+        
+        // Optional text fields
+        if (req.body.failureReason !== undefined) updateData.failureReason = req.body.failureReason || null;
+        if (req.body.actionTaken !== undefined) updateData.actionTaken = req.body.actionTaken || null;
+        if (req.body.notes !== undefined) updateData.notes = req.body.notes || null;
+        if (req.body.photoData !== undefined) updateData.photoData = req.body.photoData || null;
+        
+        // Boolean fields
+        if (req.body.visionInspection !== undefined) updateData.visionInspection = req.body.visionInspection;
+        if (req.body.electricalTest !== undefined) updateData.electricalTest = req.body.electricalTest;
+        
+        // Emergency/Fire testing fields
+        if (req.body.maintenanceType !== undefined) updateData.maintenanceType = req.body.maintenanceType || null;
+        if (req.body.dischargeTest !== undefined) updateData.dischargeTest = req.body.dischargeTest;
+        if (req.body.switchingTest !== undefined) updateData.switchingTest = req.body.switchingTest;
+        if (req.body.chargingTest !== undefined) updateData.chargingTest = req.body.chargingTest;
+        if (req.body.manufacturerInfo !== undefined) updateData.manufacturerInfo = req.body.manufacturerInfo || null;
+        if (req.body.installationDate !== undefined) updateData.installationDate = req.body.installationDate || null;
+        
+        // RCD testing fields
+        if (req.body.pushButtonTest !== undefined) updateData.pushButtonTest = req.body.pushButtonTest;
+        if (req.body.injectionTimedTest !== undefined) updateData.injectionTimedTest = req.body.injectionTimedTest;
+        if (req.body.tripTimes !== undefined) updateData.tripTimes = req.body.tripTimes;
+        if (req.body.distributionBoardNumber !== undefined) updateData.distributionBoardNumber = req.body.distributionBoardNumber || null;
+        
+        // Microwave testing fields
+        if (req.body.leakageReading !== undefined) updateData.leakageReading = req.body.leakageReading || null;
 
         const result = await storage.updateTestResult(resultId, updateData);
         res.json(result);
