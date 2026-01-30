@@ -28,8 +28,8 @@ export default function ServiceSelection() {
       const unfinishedId = localStorage.getItem('unfinishedId');
       const currentSessionId = localStorage.getItem('currentSessionId');
       
-      // Also check for any batched results that might exist
-      let foundBatchedResults = null;
+      // Check for any batched results that are NOT yet saved to server (no serverId)
+      let unsavedResults: any[] = [];
       let batchSessionId = null;
       
       Object.keys(localStorage).forEach(key => {
@@ -39,9 +39,11 @@ export default function ServiceSelection() {
           if (results) {
             try {
               const parsed = JSON.parse(results);
-              if (parsed.length > 0) {
-                console.log(`Found batched results for session ${sessionId}:`, parsed);
-                foundBatchedResults = parsed;
+              // Only consider results without serverId as truly unsaved
+              const unsaved = parsed.filter((r: any) => !r.serverId);
+              if (unsaved.length > 0) {
+                console.log(`Found ${unsaved.length} unsaved results for session ${sessionId}`);
+                unsavedResults = unsaved;
                 batchSessionId = sessionId;
               }
             } catch (error) {
@@ -51,16 +53,16 @@ export default function ServiceSelection() {
         }
       });
       
-      console.log('Unfinished check:', { isUnfinished, storedSessionId, unfinishedId, currentSessionId, foundBatchedResults, batchSessionId });
+      console.log('Unfinished check:', { isUnfinished, storedSessionId, unfinishedId, currentSessionId, unsavedResults, batchSessionId });
       
       // Determine target session ID
       let targetSessionId = storedSessionId || unfinishedId || currentSessionId || batchSessionId;
       
-      // If we found any unfinished data, show the dialog
-      if ((isUnfinished === 'true' || foundBatchedResults) && targetSessionId) {
-        console.log('Found unfinished report, showing dialog for session:', targetSessionId);
+      // Only show dialog if there are truly unsaved results (without serverId)
+      if (unsavedResults.length > 0 && targetSessionId) {
+        console.log('Found truly unsaved results, showing dialog for session:', targetSessionId);
         setUnfinishedSessionId(targetSessionId);
-        setUnfinishedResults(foundBatchedResults || []);
+        setUnfinishedResults(unsavedResults);
         setShowUnfinishedDialog(true);
       } else {
         // Clean up any invalid unfinished flags

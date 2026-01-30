@@ -1079,8 +1079,8 @@ export default function AdminDashboard() {
     const existingSessionId = localStorage.getItem('currentSessionId');
     const existingUnfinishedId = localStorage.getItem('unfinishedSessionId');
     
-    // Check for any batched results in localStorage
-    let foundBatchedResults = null;
+    // Check for any batched results in localStorage that are NOT yet saved to server
+    let unsavedResultsCount = 0;
     let batchSessionId = null;
     
     for (const key of Object.keys(localStorage)) {
@@ -1088,9 +1088,12 @@ export default function AdminDashboard() {
         try {
           const results = JSON.parse(localStorage.getItem(key) || '[]');
           if (results.length > 0) {
-            foundBatchedResults = results;
-            batchSessionId = key.replace('batchedResults_', '');
-            break;
+            // Only count results that don't have a serverId (truly unsaved)
+            const unsavedResults = results.filter((r: any) => !r.serverId);
+            if (unsavedResults.length > 0) {
+              unsavedResultsCount += unsavedResults.length;
+              batchSessionId = key.replace('batchedResults_', '');
+            }
           }
         } catch (e) {
           // Ignore invalid JSON
@@ -1098,11 +1101,12 @@ export default function AdminDashboard() {
       }
     }
     
-    // If there's existing data, show override confirmation
-    if (existingUnfinished || existingSessionId || foundBatchedResults) {
+    // If there's truly unsaved data (results without serverId), show override confirmation
+    // Note: If all results have serverIds, they're already synced to server and we don't need to warn
+    if (unsavedResultsCount > 0) {
       const existingDetails = {
         sessionId: existingSessionId || batchSessionId,
-        itemCount: foundBatchedResults ? foundBatchedResults.length : 0,
+        itemCount: unsavedResultsCount,
         hasUnfinished: !!existingUnfinished
       };
       
@@ -1112,7 +1116,7 @@ export default function AdminDashboard() {
       return;
     }
     
-    // No conflicts, proceed directly
+    // No unsaved conflicts, proceed directly
     proceedWithContinue(session);
   };
   
