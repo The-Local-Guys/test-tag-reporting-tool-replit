@@ -1,6 +1,5 @@
 import { useLocation } from "wouter";
-import { useEffect, useState } from "react";
-import { json } from "stream/consumers";
+import { useState } from "react";
 
 export function useConditionalNavigation() {
   const [location, setLocation] = useLocation();
@@ -8,10 +7,27 @@ export function useConditionalNavigation() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const navigate = (target: string) => {
-    // Example: unsaved changes check
-    let hasUnfinishedReport = localStorage.getItem("unfinished"); // Replace with your real condition
-    console.log("**********", hasUnfinishedReport, "type: ", typeof(hasUnfinishedReport))
-    if (location === "/report" && hasUnfinishedReport === "true") {
+    // Check for truly unsaved results (those without serverId)
+    const currentSessionId = localStorage.getItem("currentSessionId");
+    let hasUnsavedResults = false;
+    
+    if (currentSessionId) {
+      const batchedResults = localStorage.getItem(`batchedResults_${currentSessionId}`);
+      if (batchedResults) {
+        try {
+          const results = JSON.parse(batchedResults);
+          // Only consider results without serverId as truly unsaved
+          const unsaved = results.filter((r: any) => !r.serverId);
+          hasUnsavedResults = unsaved.length > 0;
+        } catch (e) {
+          // Ignore parse errors
+        }
+      }
+    }
+    
+    console.log("Navigation check - hasUnsavedResults:", hasUnsavedResults);
+    
+    if (location === "/report" && hasUnsavedResults) {
       setPendingLocation(target);
       setShowConfirm(true);
     } else {
