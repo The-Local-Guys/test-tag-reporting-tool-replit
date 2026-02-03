@@ -497,6 +497,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all draft (unfinished) sessions for current user
+  // Used for database-first architecture to recover multi-day jobs
+  app.get("/api/sessions/drafts", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const draftSessions = await storage.getDraftSessionsByUser(userId);
+      res.json(draftSessions);
+    } catch (error) {
+      console.error("Error fetching draft sessions:", error);
+      res.status(500).json({ message: "Failed to fetch draft sessions" });
+    }
+  });
+
+  // Get all draft sessions across all users (admin only)
+  // Used by admins to view and recover unfinished reports from any technician
+  app.get("/api/admin/sessions/drafts", requireAdmin, async (req, res) => {
+    try {
+      const draftSessions = await storage.getAllDraftSessions();
+      res.json(draftSessions);
+    } catch (error) {
+      console.error("Error fetching all draft sessions:", error);
+      res.status(500).json({ message: "Failed to fetch draft sessions" });
+    }
+  });
+
+  // Finalize a session (mark as completed)
+  app.patch("/api/sessions/:id/finalize", requireAuth, async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const userId = req.session.userId!;
+
+      // Verify session exists and belongs to user
+      const session = await storage.getTestSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      if (session.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const finalizedSession = await storage.finalizeSession(sessionId);
+
+      trackSessionAction(req, 'completed', {
+        sessionId,
+        clientName: finalizedSession.clientName,
+        serviceType: finalizedSession.serviceType,
+      });
+
+      res.json(finalizedSession);
+    } catch (error) {
+      console.error("Error finalizing session:", error);
+      res.status(500).json({ message: "Failed to finalize session" });
+    }
+  });
+
+  // Update custom starting numbers for a session
+  app.patch("/api/sessions/:id/custom-numbers", requireAuth, async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const userId = req.session.userId!;
+      const { customStartingNumbers } = req.body;
+
+      // Verify session exists and belongs to user
+      const session = await storage.getTestSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      if (session.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const updatedSession = await storage.updateCustomStartingNumbers(sessionId, customStartingNumbers);
+      res.json(updatedSession);
+    } catch (error) {
+      console.error("Error updating custom starting numbers:", error);
+      res.status(500).json({ message: "Failed to update custom starting numbers" });
+    }
+  });
+
   // Create a new test session (protected)
   app.post("/api/sessions", requireAuth, async (req, res) => {
     try {

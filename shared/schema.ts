@@ -40,6 +40,10 @@ export const testSessions = pgTable("test_sessions", {
   // Fire testing specific fields
   technicianLicensed: boolean("technician_licensed"), // Licensing acknowledgment for fire testing
   complianceStandard: text("compliance_standard"), // 'AS_1851_AU' or 'NZS_4503_NZ'
+  // Database-first architecture fields
+  status: text("status").notNull().default("draft"), // 'draft' or 'finalized'
+  customStartingNumbers: jsonb("custom_starting_numbers"), // JSON object with custom asset number ranges per frequency
+  lastActivityAt: timestamp("last_activity_at").defaultNow(), // Track last modification for multi-day jobs
   createdAt: timestamp("created_at").defaultNow(),
   deletedAt: timestamp("deleted_at"), // Soft delete - null means active, timestamp means deleted
   deletedBy: integer("deleted_by").references(() => users.id), // User who performed the soft delete
@@ -135,6 +139,7 @@ export const insertTestSessionSchema = createInsertSchema(testSessions).omit({
   createdAt: true,
   deletedAt: true,
   deletedBy: true,
+  lastActivityAt: true, // Auto-set by database
 });
 
 export const insertTestResultSchema = createInsertSchema(testResults).omit({

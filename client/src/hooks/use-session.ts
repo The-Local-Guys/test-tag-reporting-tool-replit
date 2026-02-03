@@ -639,40 +639,28 @@ export function useSession() {
     },
     onSuccess: (session: TestSession) => {
       console.log('Session created successfully:', session.id);
-      
-      // Clear ALL old session data from localStorage before starting new session
-      // This prevents old results from appearing in new sessions
-      const keysToRemove: string[] = [];
-      for (const key of Object.keys(localStorage)) {
-        // Clear batched results from ANY session
-        if (key.startsWith('batchedResults_')) {
-          keysToRemove.push(key);
-        }
-        // Clear counters from other sessions
-        if (key.match(/^(twelvemonthlyCounter|sixmonthlyCounter|fiveyearlyCounter|twentyfourmonthlyCounter|threemonthlyCounter|monthlyCounter|customStartingNumbers|rcdAssetCounter|microwaveCounter)_\d+$/)) {
-          keysToRemove.push(key);
-        }
-      }
-      keysToRemove.forEach(key => {
-        console.log(`Cleaning up old session data: ${key}`);
-        localStorage.removeItem(key);
-      });
-      
+
+      // DATABASE-FIRST FIX: Only clear data for THIS session, NOT other sessions
+      // Other sessions' data should remain in localStorage until they are continued or discarded
+      // This prevents the "88 items → 2 items" data loss bug
+
+      // Clear only the current session's stale data (if any from a failed previous attempt)
+      localStorage.removeItem(`batchedResults_${session.id}`);
+
       setSessionId(session.id);
       localStorage.setItem('currentSessionId', session.id.toString());
       // Store service type for this session
       localStorage.setItem(`session_${session.id}_serviceType`, session.serviceType);
-      // Mark session as unfinished
-      localStorage.setItem('unfinished', 'true');
-      localStorage.setItem('unfinishedSessionId', session.id.toString());
-      console.log('Set unfinished flags for session:', session.id);
+
+      // NOTE: We no longer set 'unfinished' flags - the database status field is the source of truth
+      // Sessions are created with status='draft' and marked 'finalized' when completed
+
       // Clear any existing batched results for this session
       setBatchedResults([]);
-      localStorage.removeItem(`batchedResults_${session.id}`);
-      
+
       // Get default starting numbers based on service type
       const defaults = getDefaultStartingNumbers(session.serviceType);
-      
+
       // Reset all frequency-specific asset counters for new session
       setTwelvemonthlyCounter(defaults.twelvemonthly - 1);
       setSixmonthlyCounter(defaults.sixmonthly - 1);
@@ -688,6 +676,7 @@ export function useSession() {
       localStorage.setItem(`monthlyCounter_${session.id}`, (defaults.monthly - 1).toString());
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sessions/drafts'] });
     },
   });
 
@@ -1424,71 +1413,106 @@ export function useSession() {
   useEffect(() => {
     if (sessionId) {
       localStorage.setItem('currentSessionId', sessionId.toString());
-      
-      // CRITICAL: Only apply pending custom starting numbers for ELECTRICAL sessions
-      // Emergency Exit Light and Fire Equipment Testing must NEVER use custom numbers
-      const pendingCustomNumbers = localStorage.getItem('pendingCustomStartingNumbers');
-      if (pendingCustomNumbers) {
-        try {
-          // Check the service type of the current session
-          const serviceType = sessionData?.session?.serviceType || localStorage.getItem(`session_${sessionId}_serviceType`) || 'electrical';
-          
-          if (serviceType === 'electrical') {
-            const numbers = JSON.parse(pendingCustomNumbers);
-            console.log('Applying pending custom starting numbers to electrical session:', numbers);
-            
-            // Validate that numbers object contains valid numeric values
-            const isValidNumbers = 
-              typeof numbers === 'object' &&
-              Object.values(numbers).every(val => typeof val === 'number' && !isNaN(val) && val > 0);
-            
-            if (!isValidNumbers) {
-              console.warn('Invalid pending custom numbers detected, clearing and using defaults');
+
+      // Check the service type of the current session
+      const serviceType = sessionData?.session?.serviceType || localStorage.getItem(`session_${sessionId}_serviceType`) || 'electrical';
+
+      // DATABASE-FIRST: Load custom starting numbers from session if available
+      // This handles the case when continuing a multi-day job
+      const sessionCustomNumbers = (session as any)?.customStartingNumbers;
+      if (sessionCustomNumbers && serviceType === 'electrical' && Object.keys(sessionCustomNumbers).length > 0) {
+        console.log('Loading custom starting numbers from database session:', sessionCustomNumbers);
+        setCustomStartingNumbers(sessionCustomNumbers);
+
+        // Update counters based on database values
+        const twelvemonthlyValue = (sessionCustomNumbers.twelvemonthly ?? DEFAULT_STARTING_NUMBERS.twelvemonthly) - 1;
+        const sixmonthlyValue = (sessionCustomNumbers.sixmonthly ?? DEFAULT_STARTING_NUMBERS.sixmonthly) - 1;
+        const fiveyearlyValue = (sessionCustomNumbers.fiveyearly ?? DEFAULT_STARTING_NUMBERS.fiveyearly) - 1;
+        const twentyfourmonthlyValue = (sessionCustomNumbers.twentyfourmonthly ?? DEFAULT_STARTING_NUMBERS.twentyfourmonthly) - 1;
+        const threemonthlyValue = (sessionCustomNumbers.threemonthly ?? DEFAULT_STARTING_NUMBERS.threemonthly) - 1;
+        const monthlyValue = (sessionCustomNumbers.monthly ?? DEFAULT_STARTING_NUMBERS.monthly) - 1;
+
+        setTwelvemonthlyCounter(twelvemonthlyValue);
+        setSixmonthlyCounter(sixmonthlyValue);
+        setFiveyearlyCounter(fiveyearlyValue);
+        setTwentyfourmonthlyCounter(twentyfourmonthlyValue);
+        setThreemonthlyCounter(threemonthlyValue);
+        setMonthlyCounter(monthlyValue);
+
+        // Also cache to localStorage
+        localStorage.setItem(`customStartingNumbers_${sessionId}`, JSON.stringify(sessionCustomNumbers));
+      }
+      // FALLBACK: Apply pending custom starting numbers for NEW sessions
+      else {
+        const pendingCustomNumbers = localStorage.getItem('pendingCustomStartingNumbers');
+        if (pendingCustomNumbers) {
+          try {
+            if (serviceType === 'electrical') {
+              const numbers = JSON.parse(pendingCustomNumbers);
+              console.log('Applying pending custom starting numbers to electrical session:', numbers);
+
+              // Validate that numbers object contains valid numeric values
+              const isValidNumbers =
+                typeof numbers === 'object' &&
+                Object.values(numbers).every(val => typeof val === 'number' && !isNaN(val) && val > 0);
+
+              if (!isValidNumbers) {
+                console.warn('Invalid pending custom numbers detected, clearing and using defaults');
+                localStorage.removeItem('pendingCustomStartingNumbers');
+                return;
+              }
+
+              // Save to session-specific storage
+              localStorage.setItem(`customStartingNumbers_${sessionId}`, JSON.stringify(numbers));
+              setCustomStartingNumbers(numbers);
+
+              // Calculate counter values (starting number - 1)
+              const twelvemonthlyValue = (numbers.twelvemonthly ?? DEFAULT_STARTING_NUMBERS.twelvemonthly) - 1;
+              const sixmonthlyValue = (numbers.sixmonthly ?? DEFAULT_STARTING_NUMBERS.sixmonthly) - 1;
+              const fiveyearlyValue = (numbers.fiveyearly ?? DEFAULT_STARTING_NUMBERS.fiveyearly) - 1;
+              const twentyfourmonthlyValue = (numbers.twentyfourmonthly ?? DEFAULT_STARTING_NUMBERS.twentyfourmonthly) - 1;
+              const threemonthlyValue = (numbers.threemonthly ?? DEFAULT_STARTING_NUMBERS.threemonthly) - 1;
+              const monthlyValue = (numbers.monthly ?? DEFAULT_STARTING_NUMBERS.monthly) - 1;
+
+              // Save counters to localStorage so they persist
+              localStorage.setItem(`twelvemonthlyCounter_${sessionId}`, twelvemonthlyValue.toString());
+              localStorage.setItem(`sixmonthlyCounter_${sessionId}`, sixmonthlyValue.toString());
+              localStorage.setItem(`fiveyearlyCounter_${sessionId}`, fiveyearlyValue.toString());
+              localStorage.setItem(`twentyfourmonthlyCounter_${sessionId}`, twentyfourmonthlyValue.toString());
+              localStorage.setItem(`threemonthlyCounter_${sessionId}`, threemonthlyValue.toString());
+              localStorage.setItem(`monthlyCounter_${sessionId}`, monthlyValue.toString());
+
+              // Update state counters
+              setTwelvemonthlyCounter(twelvemonthlyValue);
+              setSixmonthlyCounter(sixmonthlyValue);
+              setFiveyearlyCounter(fiveyearlyValue);
+              setTwentyfourmonthlyCounter(twentyfourmonthlyValue);
+              setThreemonthlyCounter(threemonthlyValue);
+              setMonthlyCounter(monthlyValue);
+
+              // Save to database for persistence (async, don't await)
+              apiRequest('PATCH', `/api/sessions/${sessionId}/custom-numbers`, {
+                customStartingNumbers: numbers
+              }).then(() => {
+                console.log('Custom starting numbers saved to database');
+              }).catch((err) => {
+                console.warn('Failed to save custom numbers to database:', err);
+              });
+
+              // Clear pending custom numbers after applying
               localStorage.removeItem('pendingCustomStartingNumbers');
-              return;
+            } else {
+              // CRITICAL: Clear pending custom numbers for non-electrical sessions
+              // This prevents contamination of future electrical sessions with stale custom numbers
+              console.log(`Clearing pending custom numbers for ${serviceType} session - custom numbers are only for electrical sessions`);
+              localStorage.removeItem('pendingCustomStartingNumbers');
             }
-            
-            // Save to session-specific storage
-            localStorage.setItem(`customStartingNumbers_${sessionId}`, JSON.stringify(numbers));
-            setCustomStartingNumbers(numbers);
-            
-            // Calculate counter values (starting number - 1)
-            const twelvemonthlyValue = (numbers.twelvemonthly ?? DEFAULT_STARTING_NUMBERS.twelvemonthly) - 1;
-            const sixmonthlyValue = (numbers.sixmonthly ?? DEFAULT_STARTING_NUMBERS.sixmonthly) - 1;
-            const fiveyearlyValue = (numbers.fiveyearly ?? DEFAULT_STARTING_NUMBERS.fiveyearly) - 1;
-            const twentyfourmonthlyValue = (numbers.twentyfourmonthly ?? DEFAULT_STARTING_NUMBERS.twentyfourmonthly) - 1;
-            const threemonthlyValue = (numbers.threemonthly ?? DEFAULT_STARTING_NUMBERS.threemonthly) - 1;
-            const monthlyValue = (numbers.monthly ?? DEFAULT_STARTING_NUMBERS.monthly) - 1;
-            
-            // Save counters to localStorage so they persist
-            localStorage.setItem(`twelvemonthlyCounter_${sessionId}`, twelvemonthlyValue.toString());
-            localStorage.setItem(`sixmonthlyCounter_${sessionId}`, sixmonthlyValue.toString());
-            localStorage.setItem(`fiveyearlyCounter_${sessionId}`, fiveyearlyValue.toString());
-            localStorage.setItem(`twentyfourmonthlyCounter_${sessionId}`, twentyfourmonthlyValue.toString());
-            localStorage.setItem(`threemonthlyCounter_${sessionId}`, threemonthlyValue.toString());
-            localStorage.setItem(`monthlyCounter_${sessionId}`, monthlyValue.toString());
-            
-            // Update state counters
-            setTwelvemonthlyCounter(twelvemonthlyValue);
-            setSixmonthlyCounter(sixmonthlyValue);
-            setFiveyearlyCounter(fiveyearlyValue);
-            setTwentyfourmonthlyCounter(twentyfourmonthlyValue);
-            setThreemonthlyCounter(threemonthlyValue);
-            setMonthlyCounter(monthlyValue);
-            
-            // Clear pending custom numbers after applying
-            localStorage.removeItem('pendingCustomStartingNumbers');
-          } else {
-            // CRITICAL: Clear pending custom numbers for non-electrical sessions
-            // This prevents contamination of future electrical sessions with stale custom numbers
-            console.log(`Clearing pending custom numbers for ${serviceType} session - custom numbers are only for electrical sessions`);
-            localStorage.removeItem('pendingCustomStartingNumbers');
+          } catch (error) {
+            console.warn('Error applying pending custom starting numbers:', error);
           }
-        } catch (error) {
-          console.warn('Error applying pending custom starting numbers:', error);
         }
       }
-      
+
       // Restore batched results if they exist for this session
       const storedBatchedResults = localStorage.getItem(`batchedResults_${sessionId}`);
       if (storedBatchedResults && batchedResults.length === 0) {
@@ -1496,15 +1520,15 @@ export function useSession() {
           const results = JSON.parse(storedBatchedResults);
           if (results.length > 0) {
             console.log(`Restoring ${results.length} batched results for session ${sessionId}`);
-            
+
             // Sanitize legacy data by removing deprecated fields
             const sanitizedResults = results.map(sanitizeBatchedResult);
-            
+
             // Save sanitized data back to localStorage
             localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(sanitizedResults));
-            
+
             setBatchedResults(sanitizedResults);
-            
+
             // Restore asset counts
             const monthlyCount = sanitizedResults.filter((r: BatchedTestResult) => r.frequency !== 'fiveyearly').length;
             const fiveYearlyCount = sanitizedResults.filter((r: BatchedTestResult) => r.frequency === 'fiveyearly').length;
@@ -1515,34 +1539,44 @@ export function useSession() {
         }
       }
     }
-  }, [sessionId, batchedResults.length]);
+  }, [sessionId, batchedResults.length, session]);
 
 
 
-  // Save custom starting numbers for the current session
-  const saveCustomStartingNumbers = (numbers: Partial<CustomStartingNumbers>) => {
+  // Save custom starting numbers for the current session (database-first approach)
+  const saveCustomStartingNumbers = async (numbers: Partial<CustomStartingNumbers>) => {
     // CRITICAL: Custom starting numbers are ONLY for electrical sessions
     // Emergency Exit Light and Fire Equipment Testing must use default ranges
     const serviceType = sessionData?.session?.serviceType || localStorage.getItem(`session_${sessionId}_serviceType`) || 'electrical';
-    
+
     if (serviceType !== 'electrical') {
       console.warn('Custom starting numbers are only available for Electrical Test & Tag sessions. Ignoring save request.');
       return;
     }
-    
+
     setCustomStartingNumbers(numbers);
-    
+
+    // Reset counters to the new starting numbers - 1 (because they increment before use)
+    setTwelvemonthlyCounter((numbers.twelvemonthly ?? DEFAULT_STARTING_NUMBERS.twelvemonthly) - 1);
+    setSixmonthlyCounter((numbers.sixmonthly ?? DEFAULT_STARTING_NUMBERS.sixmonthly) - 1);
+    setFiveyearlyCounter((numbers.fiveyearly ?? DEFAULT_STARTING_NUMBERS.fiveyearly) - 1);
+    setTwentyfourmonthlyCounter((numbers.twentyfourmonthly ?? DEFAULT_STARTING_NUMBERS.twentyfourmonthly) - 1);
+    setThreemonthlyCounter((numbers.threemonthly ?? DEFAULT_STARTING_NUMBERS.threemonthly) - 1);
+    setMonthlyCounter((numbers.monthly ?? DEFAULT_STARTING_NUMBERS.monthly) - 1);
+
     if (sessionId) {
-      // If session exists, save to session-specific storage
+      // Save to database (primary source of truth)
+      try {
+        await apiRequest('PATCH', `/api/sessions/${sessionId}/custom-numbers`, {
+          customStartingNumbers: numbers
+        });
+        console.log('Custom starting numbers saved to database for session', sessionId);
+      } catch (error) {
+        console.error('Failed to save custom starting numbers to database:', error);
+      }
+
+      // Also save to localStorage as backup/cache
       localStorage.setItem(`customStartingNumbers_${sessionId}`, JSON.stringify(numbers));
-      
-      // Reset counters to the new starting numbers - 1 (because they increment before use)
-      setTwelvemonthlyCounter((numbers.twelvemonthly ?? DEFAULT_STARTING_NUMBERS.twelvemonthly) - 1);
-      setSixmonthlyCounter((numbers.sixmonthly ?? DEFAULT_STARTING_NUMBERS.sixmonthly) - 1);
-      setFiveyearlyCounter((numbers.fiveyearly ?? DEFAULT_STARTING_NUMBERS.fiveyearly) - 1);
-      setTwentyfourmonthlyCounter((numbers.twentyfourmonthly ?? DEFAULT_STARTING_NUMBERS.twentyfourmonthly) - 1);
-      setThreemonthlyCounter((numbers.threemonthly ?? DEFAULT_STARTING_NUMBERS.threemonthly) - 1);
-      setMonthlyCounter((numbers.monthly ?? DEFAULT_STARTING_NUMBERS.monthly) - 1);
     } else {
       // No session yet, save to temporary storage (will be applied when session is created)
       localStorage.setItem('pendingCustomStartingNumbers', JSON.stringify(numbers));

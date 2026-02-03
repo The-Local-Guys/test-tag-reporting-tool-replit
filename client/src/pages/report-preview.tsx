@@ -455,43 +455,73 @@ export default function ReportPreview() {
   const handleNewJob = async () => {
     setIsFinishingReport(true);
     setShowFinishSuccess(false);
-    
+
     try {
       // Only submit batch if there are results and an active session
       // (batch may have already been submitted when clicking "View Report")
       if (sessionId && batchedResults.length > 0) {
         console.log('Submitting batch results before finishing job...');
         await submitBatch();
-        
-        // Wait a moment to ensure localStorage cleanup completes
-        console.log('Waiting for localStorage cleanup to complete...');
-        await new Promise(resolve => setTimeout(resolve, 2500));
+
+        // Wait a moment to ensure submission completes
+        console.log('Waiting for batch submission to complete...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
       } else {
         console.log('Batch already submitted, skipping submission step');
-        // Still wait a bit for consistent UX
-        await new Promise(resolve => setTimeout(resolve, 500));
       }
-      
+
+      // DATABASE-FIRST: Finalize the session to mark it as completed
+      // This prevents it from appearing in the drafts dialog
+      if (sessionId) {
+        try {
+          console.log('Finalizing session:', sessionId);
+          const response = await fetch(`/api/sessions/${sessionId}/finalize`, {
+            method: 'PATCH',
+            credentials: 'include',
+          });
+
+          if (!response.ok) {
+            console.warn('Failed to finalize session, but continuing...');
+          } else {
+            console.log('Session finalized successfully');
+          }
+        } catch (error) {
+          console.warn('Error finalizing session:', error);
+          // Continue anyway - data is saved, just status wasn't updated
+        }
+      }
+
+      // Clear localStorage UI preferences (not data - it's in DB now)
+      localStorage.removeItem('currentSessionId');
+      localStorage.removeItem('currentLocation');
+      localStorage.removeItem('currentDistributionBoardNumber');
+      localStorage.removeItem('unfinished');
+      localStorage.removeItem('unfinishedSessionId');
+      if (sessionId) {
+        localStorage.removeItem(`batchedResults_${sessionId}`);
+        localStorage.removeItem(`session_${sessionId}_serviceType`);
+      }
+
       // Show success animation
       setShowFinishSuccess(true);
-      
+
       // Wait for success animation then redirect
       setTimeout(() => {
         setIsFinishingReport(false);
         setShowFinishSuccess(false);
         navigate('/');
-        
+
         toast({
           title: "Job Completed",
           description: "Test results saved successfully. Ready for a new job.",
         });
       }, 1500);
-      
+
     } catch (error) {
       console.error('Failed to submit results:', error);
       setIsFinishingReport(false);
       setShowFinishSuccess(false);
-      
+
       toast({
         title: "Submission Failed",
         description: "Failed to save test results. Please try again.",

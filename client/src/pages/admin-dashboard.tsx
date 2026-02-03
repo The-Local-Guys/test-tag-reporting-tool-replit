@@ -41,6 +41,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
@@ -57,6 +58,8 @@ import {
   ChevronLeft,
   ChevronRight,
   PlayCircle,
+  Clock,
+  AlertCircle,
 } from "lucide-react";
 import { generatePDFReport, downloadPDF } from "@/lib/pdf-generator";
 import { generateExcelReport, downloadExcel } from "@/lib/excel-generator";
@@ -130,6 +133,11 @@ export default function AdminDashboard() {
   });
   const [selectedTechnicianFilter, setSelectedTechnicianFilter] =
     useState<string>("all");
+  const [selectedDraftTechnicianFilter, setSelectedDraftTechnicianFilter] =
+    useState<string>("all");
+
+  // Multi-select state for draft reports bulk delete
+  const [selectedDraftIds, setSelectedDraftIds] = useState<Set<number>>(new Set());
 
   // Pagination states
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -192,6 +200,16 @@ export default function AdminDashboard() {
     refetchIntervalInBackground:true
   });
 
+  // Fetch all draft sessions (admin only - for recovery purposes)
+  const { data: adminDraftSessions, isLoading: adminDraftsLoading } = useQuery({
+    queryKey: ["/api/admin/sessions/drafts"],
+    retry: false,
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchInterval: 10000, // Refresh every 10 seconds
+    enabled: typedUser?.role === 'super_admin' || typedUser?.role === 'support_center',
+  });
+
   // Fetch custom form types
   const { data: customFormTypes } = useQuery<any[]>({
     queryKey: ['/api/custom-forms'],
@@ -203,6 +221,7 @@ export default function AdminDashboard() {
     console.log('Admin dashboard mounted, refreshing data...');
     queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
     queryClient.invalidateQueries({ queryKey: ["/api/admin/sessions"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/sessions/drafts"] });
   }, [queryClient]);
 
   // Filter sessions based on selected technician and sort by newest first
@@ -231,6 +250,32 @@ export default function AdminDashboard() {
             (session: any) =>
               session.technicianFullName || session.technicianName,
           ),
+        )),
+      ]
+        .filter(Boolean)
+        .sort()
+    : [];
+
+  // Filter draft sessions based on selected technician and sort by last activity
+  const filteredDraftSessions = Array.isArray(adminDraftSessions)
+    ? adminDraftSessions
+        .filter((session: any) => {
+          if (selectedDraftTechnicianFilter === "all") return true;
+          return session.technicianName === selectedDraftTechnicianFilter;
+        })
+        .sort((a: any, b: any) => {
+          // Sort by last activity descending (most recent first)
+          const dateA = new Date(a.lastActivityAt || a.createdAt);
+          const dateB = new Date(b.lastActivityAt || b.createdAt);
+          return dateB.getTime() - dateA.getTime();
+        })
+    : [];
+
+  // Get unique technician names for draft filter dropdown
+  const uniqueDraftTechnicians = Array.isArray(adminDraftSessions)
+    ? [
+        ...Array.from(new Set(
+          adminDraftSessions.map((session: any) => session.technicianName),
         )),
       ]
         .filter(Boolean)
@@ -290,6 +335,40 @@ export default function AdminDashboard() {
       toast({
         title: "Error",
         description: "Failed to delete report.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Bulk delete drafts mutation
+  const bulkDeleteDraftsMutation = useMutation({
+    mutationFn: async (sessionIds: number[]) => {
+      // Delete sessions sequentially to avoid overwhelming the server
+      const results = [];
+      for (const sessionId of sessionIds) {
+        const response = await fetch(`/api/admin/sessions/${sessionId}`, {
+          method: "DELETE",
+        });
+        if (!response.ok) {
+          throw new Error(`Failed to delete session ${sessionId}`);
+        }
+        results.push(await response.json());
+      }
+      return results;
+    },
+    onSuccess: (_, sessionIds) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/sessions/drafts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/sessions"] });
+      setSelectedDraftIds(new Set());
+      toast({
+        title: "Drafts deleted",
+        description: `Successfully deleted ${sessionIds.length} draft report(s).`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete some draft reports.",
         variant: "destructive",
       });
     },
@@ -1554,6 +1633,17 @@ export default function AdminDashboard() {
             <TabsTrigger value="reports">
               {typedUser?.role === "technician" ? "My Reports" : "All Reports"}
             </TabsTrigger>
+            {(typedUser?.role === "super_admin" ||
+              typedUser?.role === "support_center") && (
+              <TabsTrigger value="drafts">
+                Draft Reports
+                {filteredDraftSessions.length > 0 && (
+                  <Badge variant="secondary" className="ml-2 bg-yellow-100 text-yellow-800">
+                    {filteredDraftSessions.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="users" className="space-y-4">
@@ -1831,6 +1921,244 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Draft Reports Tab - Admin Only */}
+          {(typedUser?.role === "super_admin" ||
+            typedUser?.role === "support_center") && (
+            <TabsContent value="drafts" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5 text-yellow-600" />
+                    <div>
+                      <CardTitle>Draft Reports</CardTitle>
+                      <CardDescription>
+                        Unfinished reports from all technicians. Use this to recover or manage incomplete work.
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {/* Technician Filter and Bulk Actions for Drafts */}
+                  <div className="mb-4 flex flex-wrap items-end gap-4">
+                    <div>
+                      <Label
+                        htmlFor="draftTechnicianFilter"
+                        className="text-sm font-medium"
+                      >
+                        Filter by Technician
+                      </Label>
+                      <Select
+                        value={selectedDraftTechnicianFilter}
+                        onValueChange={(value) => {
+                          setSelectedDraftTechnicianFilter(value);
+                          setSelectedDraftIds(new Set()); // Clear selection when filter changes
+                        }}
+                      >
+                        <SelectTrigger className="w-64">
+                          <SelectValue placeholder="All Technicians" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Technicians</SelectItem>
+                          {uniqueDraftTechnicians.map((technician) => (
+                            <SelectItem key={technician} value={technician}>
+                              {technician}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Bulk Delete Button */}
+                    {selectedDraftIds.size > 0 && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600">
+                          {selectedDraftIds.size} selected
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => {
+                            if (confirm(`Are you sure you want to delete ${selectedDraftIds.size} draft report(s)? This action cannot be undone.`)) {
+                              bulkDeleteDraftsMutation.mutate(Array.from(selectedDraftIds));
+                            }
+                          }}
+                          disabled={bulkDeleteDraftsMutation.isPending}
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          {bulkDeleteDraftsMutation.isPending ? 'Deleting...' : `Delete ${selectedDraftIds.size} Draft(s)`}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {adminDraftsLoading ? (
+                    <div className="flex justify-center py-8">
+                      <LoadingSpinner />
+                    </div>
+                  ) : filteredDraftSessions.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>No draft reports found</p>
+                      <p className="text-sm">All reports have been completed or there are no unfinished sessions.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[50px]">
+                              <Checkbox
+                                checked={
+                                  filteredDraftSessions.length > 0 &&
+                                  selectedDraftIds.size === filteredDraftSessions.length
+                                }
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedDraftIds(new Set(filteredDraftSessions.map((d: any) => d.id)));
+                                  } else {
+                                    setSelectedDraftIds(new Set());
+                                  }
+                                }}
+                                aria-label="Select all"
+                              />
+                            </TableHead>
+                            <TableHead className="min-w-[120px]">Client Name</TableHead>
+                            <TableHead className="min-w-[120px]">Technician</TableHead>
+                            <TableHead className="min-w-[140px]">Service Type</TableHead>
+                            <TableHead className="min-w-[80px]">Items</TableHead>
+                            <TableHead className="min-w-[120px]">Last Activity</TableHead>
+                            <TableHead className="min-w-[100px]">Created</TableHead>
+                            <TableHead className="min-w-[120px]">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredDraftSessions.map((draft: any) => (
+                            <TableRow key={draft.id} className={selectedDraftIds.has(draft.id) ? "bg-blue-50" : "bg-yellow-50/30"}>
+                              <TableCell>
+                                <Checkbox
+                                  checked={selectedDraftIds.has(draft.id)}
+                                  onCheckedChange={(checked) => {
+                                    const newSelected = new Set(selectedDraftIds);
+                                    if (checked) {
+                                      newSelected.add(draft.id);
+                                    } else {
+                                      newSelected.delete(draft.id);
+                                    }
+                                    setSelectedDraftIds(newSelected);
+                                  }}
+                                  aria-label={`Select ${draft.clientName || 'draft'}`}
+                                />
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                {draft.clientName || <span className="text-gray-400 italic">No client name</span>}
+                              </TableCell>
+                              <TableCell className="text-gray-700">
+                                {draft.technicianName || 'Unknown'}
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    draft.serviceType === "emergency_exit_light"
+                                      ? "bg-red-50 text-red-700"
+                                      : draft.serviceType === "fire_testing"
+                                      ? "bg-orange-50 text-orange-700"
+                                      : draft.serviceType === "rcd_reporting"
+                                      ? "bg-purple-50 text-purple-700"
+                                      : draft.serviceType === "microwave_leakage"
+                                      ? "bg-teal-50 text-teal-700"
+                                      : "bg-blue-50 text-blue-700"
+                                  }
+                                >
+                                  {draft.serviceType === "emergency_exit_light"
+                                    ? "Emergency Exit Light"
+                                    : draft.serviceType === "fire_testing"
+                                    ? "Fire Testing"
+                                    : draft.serviceType === "rcd_reporting"
+                                    ? "RCD Reporting"
+                                    : draft.serviceType === "microwave_leakage"
+                                    ? "Microwave Leakage"
+                                    : "Electrical Test & Tag"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-1">
+                                    <div className="w-6 h-6 bg-green-100 text-green-700 rounded-full flex items-center justify-center text-xs font-medium">
+                                      {(draft.totalItems || 0) - (draft.failedItems || 0)}
+                                    </div>
+                                    <span className="text-xs text-green-600">Pass</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <div className="w-6 h-6 bg-red-100 text-red-700 rounded-full flex items-center justify-center text-xs font-medium">
+                                      {draft.failedItems || 0}
+                                    </div>
+                                    <span className="text-xs text-red-600">Fail</span>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1 text-sm text-gray-600">
+                                  <Clock className="w-3 h-3" />
+                                  {draft.lastActivityAt
+                                    ? new Date(draft.lastActivityAt).toLocaleString("en-AU", {
+                                        day: "2-digit",
+                                        month: "2-digit",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })
+                                    : "N/A"}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {new Date(draft.createdAt).toLocaleDateString("en-AU")}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleViewReport(draft)}
+                                    className="p-2 h-8 w-8"
+                                    title="View Draft"
+                                  >
+                                    <FileText className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleContinueReport(draft)}
+                                    className="p-2 h-8 w-8 text-green-600 hover:bg-green-50 hover:border-green-300"
+                                    title="Continue Report"
+                                  >
+                                    <PlayCircle className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      if (confirm('Are you sure you want to delete this draft? This action cannot be undone.')) {
+                                        deleteSessionMutation.mutate(draft.id);
+                                      }
+                                    }}
+                                    className="p-2 h-8 w-8 text-red-600 hover:bg-red-50 hover:border-red-300"
+                                    title="Delete Draft"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
 

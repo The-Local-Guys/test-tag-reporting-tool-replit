@@ -28,7 +28,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   validatePassword(username: string, password: string): Promise<User | null>;
   updateUserPassword(userId: number, newPassword: string): Promise<void>;
-  
+
   // Admin operations
   getAllUsers(): Promise<User[]>;
   updateUserStatus(userId: number, isActive: boolean): Promise<User>;
@@ -37,10 +37,17 @@ export interface IStorage {
   getSessionsByUser(userId: number): Promise<TestSession[]>;
   updateTestSession(sessionId: number, data: Partial<InsertTestSession>): Promise<TestSession>;
   deleteTestSession(sessionId: number, deletedByUserId: number): Promise<void>;
-  
+
   // Test Sessions
   createTestSession(session: InsertTestSession): Promise<TestSession>;
   getTestSession(id: number): Promise<TestSession | undefined>;
+
+  // Draft session management (database-first architecture)
+  getDraftSessionsByUser(userId: number): Promise<(TestSession & { totalItems: number; failedItems: number })[]>;
+  getAllDraftSessions(): Promise<(TestSession & { totalItems: number; failedItems: number })[]>;
+  finalizeSession(sessionId: number): Promise<TestSession>;
+  updateCustomStartingNumbers(sessionId: number, numbers: object): Promise<TestSession>;
+  updateSessionActivity(sessionId: number): Promise<void>;
   
   // Test Results
   createTestResult(result: InsertTestResult): Promise<TestResult>;
@@ -228,6 +235,9 @@ export class DatabaseStorage implements IStorage {
         startingAssetNumber: testSessions.startingAssetNumber,
         technicianLicensed: testSessions.technicianLicensed,
         complianceStandard: testSessions.complianceStandard,
+        status: testSessions.status,
+        customStartingNumbers: testSessions.customStartingNumbers,
+        lastActivityAt: testSessions.lastActivityAt,
         createdAt: testSessions.createdAt,
         deletedAt: testSessions.deletedAt,
         deletedBy: testSessions.deletedBy,
@@ -241,7 +251,7 @@ export class DatabaseStorage implements IStorage {
       .where(isNull(testSessions.deletedAt))
       .groupBy(testSessions.id, users.fullName)
       .orderBy(desc(testSessions.testDate));
-    
+
     return sessionsWithCounts;
   }
 
@@ -266,6 +276,9 @@ export class DatabaseStorage implements IStorage {
         startingAssetNumber: testSessions.startingAssetNumber,
         technicianLicensed: testSessions.technicianLicensed,
         complianceStandard: testSessions.complianceStandard,
+        status: testSessions.status,
+        customStartingNumbers: testSessions.customStartingNumbers,
+        lastActivityAt: testSessions.lastActivityAt,
         createdAt: testSessions.createdAt,
         deletedAt: testSessions.deletedAt,
         deletedBy: testSessions.deletedBy,
@@ -277,7 +290,7 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(testSessions.userId, userId), isNull(testSessions.deletedAt)))
       .groupBy(testSessions.id)
       .orderBy(desc(testSessions.testDate));
-    
+
     return sessionsWithCounts;
   }
 
@@ -366,6 +379,9 @@ export class DatabaseStorage implements IStorage {
         startingAssetNumber: testSessions.startingAssetNumber,
         technicianLicensed: testSessions.technicianLicensed,
         complianceStandard: testSessions.complianceStandard,
+        status: testSessions.status,
+        customStartingNumbers: testSessions.customStartingNumbers,
+        lastActivityAt: testSessions.lastActivityAt,
         createdAt: testSessions.createdAt,
         deletedAt: testSessions.deletedAt,
         deletedBy: testSessions.deletedBy,
@@ -373,6 +389,133 @@ export class DatabaseStorage implements IStorage {
       .from(testSessions)
       .where(and(eq(testSessions.id, id), isNull(testSessions.deletedAt)));
     return session || undefined;
+  }
+
+  /**
+   * Retrieves all draft (unfinished) sessions for a user with item counts
+   * Used to detect and recover multi-day jobs that weren't finalized
+   * @param userId - ID of the user to get draft sessions for
+   * @returns Array of draft sessions with totalItems and failedItems counts
+   */
+  async getDraftSessionsByUser(userId: number): Promise<(TestSession & { totalItems: number; failedItems: number })[]> {
+    const draftSessions = await db
+      .select({
+        id: testSessions.id,
+        serviceType: testSessions.serviceType,
+        testDate: testSessions.testDate,
+        technicianName: testSessions.technicianName,
+        clientName: testSessions.clientName,
+        siteContact: testSessions.siteContact,
+        address: testSessions.address,
+        country: testSessions.country,
+        userId: testSessions.userId,
+        startingAssetNumber: testSessions.startingAssetNumber,
+        technicianLicensed: testSessions.technicianLicensed,
+        complianceStandard: testSessions.complianceStandard,
+        status: testSessions.status,
+        customStartingNumbers: testSessions.customStartingNumbers,
+        lastActivityAt: testSessions.lastActivityAt,
+        createdAt: testSessions.createdAt,
+        deletedAt: testSessions.deletedAt,
+        deletedBy: testSessions.deletedBy,
+        totalItems: sql<number>`count(${testResults.id})`.mapWith(Number),
+        failedItems: sql<number>`count(case when ${testResults.result} = 'fail' then 1 end)`.mapWith(Number),
+      })
+      .from(testSessions)
+      .leftJoin(testResults, and(eq(testSessions.id, testResults.sessionId), isNull(testResults.deletedAt)))
+      .where(and(
+        eq(testSessions.userId, userId),
+        eq(testSessions.status, 'draft'),
+        isNull(testSessions.deletedAt)
+      ))
+      .groupBy(testSessions.id)
+      .orderBy(desc(testSessions.lastActivityAt));
+
+    return draftSessions;
+  }
+
+  /**
+   * Gets all draft sessions across all users (for admin dashboard)
+   * Used by admins to view and recover unfinished reports from any technician
+   * @returns Array of draft sessions with totalItems and failedItems counts
+   */
+  async getAllDraftSessions(): Promise<(TestSession & { totalItems: number; failedItems: number })[]> {
+    const draftSessions = await db
+      .select({
+        id: testSessions.id,
+        serviceType: testSessions.serviceType,
+        testDate: testSessions.testDate,
+        technicianName: testSessions.technicianName,
+        clientName: testSessions.clientName,
+        siteContact: testSessions.siteContact,
+        address: testSessions.address,
+        country: testSessions.country,
+        userId: testSessions.userId,
+        startingAssetNumber: testSessions.startingAssetNumber,
+        technicianLicensed: testSessions.technicianLicensed,
+        complianceStandard: testSessions.complianceStandard,
+        status: testSessions.status,
+        customStartingNumbers: testSessions.customStartingNumbers,
+        lastActivityAt: testSessions.lastActivityAt,
+        createdAt: testSessions.createdAt,
+        deletedAt: testSessions.deletedAt,
+        deletedBy: testSessions.deletedBy,
+        totalItems: sql<number>`count(${testResults.id})`.mapWith(Number),
+        failedItems: sql<number>`count(case when ${testResults.result} = 'fail' then 1 end)`.mapWith(Number),
+      })
+      .from(testSessions)
+      .leftJoin(testResults, and(eq(testSessions.id, testResults.sessionId), isNull(testResults.deletedAt)))
+      .where(and(
+        eq(testSessions.status, 'draft'),
+        isNull(testSessions.deletedAt)
+      ))
+      .groupBy(testSessions.id)
+      .orderBy(desc(testSessions.lastActivityAt));
+
+    return draftSessions;
+  }
+
+  /**
+   * Marks a session as finalized (completed)
+   * Called when user clicks "Finish Report" to indicate the session is complete
+   * @param sessionId - ID of the session to finalize
+   * @returns Updated session object
+   */
+  async finalizeSession(sessionId: number): Promise<TestSession> {
+    const [session] = await db
+      .update(testSessions)
+      .set({ status: 'finalized', lastActivityAt: new Date() })
+      .where(eq(testSessions.id, sessionId))
+      .returning();
+    return session;
+  }
+
+  /**
+   * Saves custom starting asset numbers for a session
+   * Stored in the database to persist across browser sessions and devices
+   * @param sessionId - ID of the session to update
+   * @param numbers - Object containing custom starting numbers per frequency
+   * @returns Updated session object
+   */
+  async updateCustomStartingNumbers(sessionId: number, numbers: object): Promise<TestSession> {
+    const [session] = await db
+      .update(testSessions)
+      .set({ customStartingNumbers: numbers, lastActivityAt: new Date() })
+      .where(eq(testSessions.id, sessionId))
+      .returning();
+    return session;
+  }
+
+  /**
+   * Updates the lastActivityAt timestamp for a session
+   * Called when test results are added/modified to track session activity
+   * @param sessionId - ID of the session to update
+   */
+  async updateSessionActivity(sessionId: number): Promise<void> {
+    await db
+      .update(testSessions)
+      .set({ lastActivityAt: new Date() })
+      .where(eq(testSessions.id, sessionId));
   }
 
   /**
@@ -440,6 +583,12 @@ export class DatabaseStorage implements IStorage {
       ]);
       
       console.log('Successfully inserted test result:', result.rows[0]);
+
+      // Update session's lastActivityAt timestamp for multi-day job tracking
+      if (insertResult.sessionId) {
+        await this.updateSessionActivity(insertResult.sessionId);
+      }
+
       return result.rows[0] as TestResult;
     } catch (error) {
       console.error('Database insert error:', error);
