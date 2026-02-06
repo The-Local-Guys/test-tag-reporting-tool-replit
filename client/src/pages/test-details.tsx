@@ -176,18 +176,27 @@ export default function TestDetails() {
   };
 
   const handleTestResult = async (result: 'pass' | 'fail') => {
-    if (!currentItem) return;
+    console.log('🎯 ********** PASS/FAIL BUTTON CLICKED **********');
+    console.log('🎯 Result:', result, 'Current Item:', currentItem?.name);
+
+    if (!currentItem) {
+      console.log('❌ No current item, returning');
+      return;
+    }
 
     // No need to prevent rapid submissions since using local storage
 
     // Validate the form first
     const isValid = await form.trigger();
+    console.log('🎯 Form validation result:', isValid);
     if (!isValid) {
+      console.log('❌ Form validation failed, returning');
       return; // Don't proceed if validation fails
     }
 
     const formValues = form.getValues();
-    
+    console.log('🎯 Form values:', formValues);
+
     const testData: Omit<InsertTestResult, 'sessionId'> = {
       assetNumber: formValues.assetNumber,
       itemName: currentItem.name,
@@ -203,11 +212,15 @@ export default function TestDetails() {
       electricalTest,
     } as any;
 
+    console.log('🎯 Test data prepared:', testData);
+
     // Save the selected frequency to sessionStorage for next item
     sessionStorage.setItem('lastSelectedFrequency', selectedFrequency);
-    
+
     if (result === 'pass') {
+      console.log('🎯 ********** CALLING addToBatch **********');
       addToBatch(testData);
+      console.log('🎯 ********** addToBatch called, navigating... **********');
       setLocation('/items');
     } else {
       // Store test data and photos for failure details page

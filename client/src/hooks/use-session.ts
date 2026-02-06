@@ -232,30 +232,31 @@ export function useSession() {
     processedServerFingerprintRef.current = fingerprint;
 
     const isInitialLoad = batchedResults.length === 0;
+    console.log('🔄 ********** LOADING RESULTS FROM DATABASE **********');
     console.log(`Loading ${existingResults.length} existing results for session ${sessionId}${isInitialLoad ? '' : ' (merge)'}`);
 
     const loadedResults: BatchedTestResult[] = existingResults.map((result: any) => ({
       id: `existing-${result.id}`,
       serverId: result.id, // Track server ID for auto-save updates
-      itemName: result.itemName,
-      itemType: result.itemType || result.itemName,
+      itemName: result.item_name || result.itemName,
+      itemType: result.item_type || result.itemType || result.itemName,
       location: result.location,
       classification: result.classification,
       result: result.result,
       frequency: result.frequency,
-      failureReason: result.failureReason || undefined,
-      actionTaken: result.actionTaken || undefined,
+      failureReason: result.failure_reason || result.failureReason || undefined,
+      actionTaken: result.action_taken || result.actionTaken || undefined,
       // Clean notes by removing [TRIP_TIMES:[...]] pattern that was used for storage
       notes: (() => {
         const rawNotes = result.notes || '';
         const cleanedNotes = rawNotes.replace(/\s*\[TRIP_TIMES:\[[^\]]*\]\]/g, '').trim();
         return cleanedNotes || undefined;
       })(),
-      photoData: result.photoData || undefined,
-      visionInspection: result.visionInspection,
-      electricalTest: result.electricalTest,
+      photoData: result.photo_data || result.photoData || undefined,
+      visionInspection: result.vision_inspection ?? result.visionInspection,
+      electricalTest: result.electrical_test ?? result.electricalTest,
       timestamp: new Date().toISOString(),
-      assetNumber: result.assetNumber,
+      assetNumber: result.asset_number || result.assetNumber,
       // Emergency-specific fields
       maintenanceType: result.maintenanceType || undefined,
       globeType: result.globeType || undefined,
@@ -313,12 +314,12 @@ export function useSession() {
       setAssetCounts({ monthly: monthlyCount, fiveYearly: fiveYearlyCount });
 
       // Set counters to continue from where they left off
-      const twelvemonthlyAssets = loadedResults.filter(r => r.frequency === 'twelvemonthly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n));
-      const sixmonthlyAssets = loadedResults.filter(r => r.frequency === 'sixmonthly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n));
-      const fiveyearlyAssets = loadedResults.filter(r => r.frequency === 'fiveyearly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n));
-      const twentyfourmonthlyAssets = loadedResults.filter(r => r.frequency === 'twentyfourmonthly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n));
-      const threemonthlyAssets = loadedResults.filter(r => r.frequency === 'threemonthly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n));
-      const monthlyAssets = loadedResults.filter(r => r.frequency === 'monthly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n));
+      const twelvemonthlyAssets = loadedResults.filter(r => r.frequency === 'twelvemonthly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n) && n > 0);
+      const sixmonthlyAssets = loadedResults.filter(r => r.frequency === 'sixmonthly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n) && n > 0);
+      const fiveyearlyAssets = loadedResults.filter(r => r.frequency === 'fiveyearly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n) && n > 0);
+      const twentyfourmonthlyAssets = loadedResults.filter(r => r.frequency === 'twentyfourmonthly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n) && n > 0);
+      const threemonthlyAssets = loadedResults.filter(r => r.frequency === 'threemonthly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n) && n > 0);
+      const monthlyAssets = loadedResults.filter(r => r.frequency === 'monthly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n) && n > 0);
 
       // Get service-type-aware defaults for fallback values
       const serviceTypeDefaults = session ? getDefaultStartingNumbers(session.serviceType) : DEFAULT_STARTING_NUMBERS_ELECTRICAL;
@@ -354,7 +355,18 @@ export function useSession() {
         setMicrowaveCounter(Math.max(...microwaveAssets));
       }
 
+      // Restore last used location from most recent result
+      if (loadedResults.length > 0) {
+        const lastResult = loadedResults[loadedResults.length - 1];
+        if (lastResult.location) {
+          setCurrentLocation(lastResult.location);
+          console.log('📍 Restored location from last result:', lastResult.location);
+        }
+      }
+
+      console.log('⚙️ ********** COUNTERS UPDATED FROM DB **********');
       console.log(`Updated asset counters: 12M=${maxTwelvemonthly}, 6M=${maxSixmonthly}, 5Y=${maxFiveyearly}, 24M=${maxTwentyfourmonthly}, 3M=${maxThreemonthly}, M=${maxMonthly}`);
+      console.log('⚙️ ********** END COUNTER UPDATE **********');
     }
   }, [existingResults, batchedResults.length, sessionId]);
 
@@ -411,9 +423,11 @@ export function useSession() {
       setMonthlyCounter((sessionCustomNumbers.monthly ?? DEFAULT_STARTING_NUMBERS.monthly) - 1);
     }
     // Apply pending custom starting numbers for NEW sessions (stored in React state)
+    // Note: This is a fallback. Normally, pending numbers are applied in createSession onSuccess
+    // to avoid race conditions. This handles edge cases where onSuccess didn't apply them.
     else if (pendingCustomStartingNumbers && serviceType === 'electrical') {
       const numbers = pendingCustomStartingNumbers;
-      console.log('Applying pending custom starting numbers to electrical session:', numbers);
+      console.log('Applying pending custom starting numbers to electrical session (fallback):', numbers);
 
       const isValidNumbers =
         typeof numbers === 'object' &&
@@ -476,6 +490,28 @@ export function useSession() {
       return customStartingNumbers[freq] ?? defaults[freq];
     };
 
+    // Debug logging for troubleshooting
+    console.log('🔍 ********** CALCULATING NEXT ASSET NUMBERS **********');
+    console.log('🔍 Asset Progress Calculation:', {
+      batchedResultsCount: batchedResults.length,
+      batchedResults: batchedResults.map(r => ({
+        id: r.id,
+        assetNumber: r.assetNumber,
+        frequency: r.frequency,
+        itemName: r.itemName
+      })),
+      usedNumbers: Array.from(usedNumbers),
+      customStartingNumbers,
+      counters: {
+        twelvemonthly: twelvemonthlyCounter,
+        sixmonthly: sixmonthlyCounter,
+        fiveyearly: fiveyearlyCounter,
+        twentyfourmonthly: twentyfourmonthlyCounter,
+        threemonthly: threemonthlyCounter,
+        monthly: monthlyCounter,
+      }
+    });
+
     // Find next available numbers for each frequency range
     const nextTwelvemonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(getMinStartNumber('twelvemonthly'), twelvemonthlyCounter + 1));
     const nextSixmonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(getMinStartNumber('sixmonthly'), sixmonthlyCounter + 1));
@@ -483,6 +519,16 @@ export function useSession() {
     const nextTwentyfourmonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(getMinStartNumber('twentyfourmonthly'), twentyfourmonthlyCounter + 1));
     const nextThreemonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(getMinStartNumber('threemonthly'), threemonthlyCounter + 1));
     const nextMonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(getMinStartNumber('monthly'), monthlyCounter + 1));
+
+    console.log('🔍 Next Asset Numbers:', {
+      nextTwelvemonthly,
+      nextSixmonthly,
+      nextFiveyearly,
+      nextTwentyfourmonthly,
+      nextThreemonthly,
+      nextMonthly,
+    });
+    console.log('🔍 ********** END CALCULATION **********');
 
     // Count items by frequency
     const twelvemonthlyCount = batchedResults.filter(r => r.frequency === 'twelvemonthly').length;
@@ -570,13 +616,46 @@ export function useSession() {
       // Get default starting numbers based on service type
       const defaults = getDefaultStartingNumbers(session.serviceType);
 
-      // Reset all frequency-specific asset counters for new session
-      setTwelvemonthlyCounter(defaults.twelvemonthly - 1);
-      setSixmonthlyCounter(defaults.sixmonthly - 1);
-      setFiveyearlyCounter(defaults.fiveyearly - 1);
-      setTwentyfourmonthlyCounter(defaults.twentyfourmonthly - 1);
-      setThreemonthlyCounter(defaults.threemonthly - 1);
-      setMonthlyCounter(defaults.monthly - 1);
+      // Check if we have pending custom starting numbers for electrical service
+      const shouldApplyCustomNumbers =
+        session.serviceType === 'electrical' &&
+        pendingCustomStartingNumbers &&
+        Object.keys(pendingCustomStartingNumbers).length > 0;
+
+      if (shouldApplyCustomNumbers) {
+        // Apply pending custom starting numbers immediately to avoid race condition
+        const customNumbers = pendingCustomStartingNumbers!;
+        console.log('Applying pending custom starting numbers to new session:', customNumbers);
+
+        setCustomStartingNumbers(customNumbers);
+        setTwelvemonthlyCounter((customNumbers.twelvemonthly ?? defaults.twelvemonthly) - 1);
+        setSixmonthlyCounter((customNumbers.sixmonthly ?? defaults.sixmonthly) - 1);
+        setFiveyearlyCounter((customNumbers.fiveyearly ?? defaults.fiveyearly) - 1);
+        setTwentyfourmonthlyCounter((customNumbers.twentyfourmonthly ?? defaults.twentyfourmonthly) - 1);
+        setThreemonthlyCounter((customNumbers.threemonthly ?? defaults.threemonthly) - 1);
+        setMonthlyCounter((customNumbers.monthly ?? defaults.monthly) - 1);
+
+        // Save to database immediately
+        apiRequest('PATCH', `/api/sessions/${session.id}/custom-numbers`, {
+          customStartingNumbers: customNumbers
+        }).then(() => {
+          console.log('Custom starting numbers saved to database for new session');
+        }).catch((err) => {
+          console.warn('Failed to save custom numbers to database:', err);
+        });
+
+        // Clear pending after applying
+        setPendingCustomStartingNumbers(null);
+      } else {
+        // Reset all frequency-specific asset counters for new session using defaults
+        setTwelvemonthlyCounter(defaults.twelvemonthly - 1);
+        setSixmonthlyCounter(defaults.sixmonthly - 1);
+        setFiveyearlyCounter(defaults.fiveyearly - 1);
+        setTwentyfourmonthlyCounter(defaults.twentyfourmonthly - 1);
+        setThreemonthlyCounter(defaults.threemonthly - 1);
+        setMonthlyCounter(defaults.monthly - 1);
+      }
+
       setRcdAssetCounter(0);
       setMicrowaveCounter(0);
       countersInitializedRef.current = session.id;
@@ -628,31 +707,76 @@ export function useSession() {
       assetNumber = cleanData.assetNumber.trim();
       const assetNum = parseInt(assetNumber);
 
+      console.log('📝 Adding result with PROVIDED asset number:', {
+        assetNumber,
+        assetNum,
+        frequency,
+        currentCounter: frequency === 'fiveyearly' ? fiveyearlyCounter :
+                       frequency === 'twelvemonthly' ? twelvemonthlyCounter :
+                       frequency === 'sixmonthly' ? sixmonthlyCounter : 'other'
+      });
+
       // Update the appropriate counter if this number is higher
       if (!isNaN(assetNum)) {
         if (isRCD) {
-          if (assetNum > rcdAssetCounter) setRcdAssetCounter(assetNum);
+          if (assetNum > rcdAssetCounter) {
+            console.log('✅ Updating RCD counter:', rcdAssetCounter, '→', assetNum);
+            setRcdAssetCounter(assetNum);
+          }
         } else if (isMicrowave) {
-          if (assetNum > microwaveCounter) setMicrowaveCounter(assetNum);
+          if (assetNum > microwaveCounter) {
+            console.log('✅ Updating microwave counter:', microwaveCounter, '→', assetNum);
+            setMicrowaveCounter(assetNum);
+          }
         } else {
           switch (frequency) {
             case 'twelvemonthly':
-              if (assetNum > twelvemonthlyCounter) setTwelvemonthlyCounter(assetNum);
+              if (assetNum > twelvemonthlyCounter) {
+                console.log('✅ Updating 12M counter:', twelvemonthlyCounter, '→', assetNum);
+                setTwelvemonthlyCounter(assetNum);
+              } else {
+                console.log('⚠️ NOT updating 12M counter (assetNum <= current):', assetNum, '<=', twelvemonthlyCounter);
+              }
               break;
             case 'sixmonthly':
-              if (assetNum > sixmonthlyCounter) setSixmonthlyCounter(assetNum);
+              if (assetNum > sixmonthlyCounter) {
+                console.log('✅ Updating 6M counter:', sixmonthlyCounter, '→', assetNum);
+                setSixmonthlyCounter(assetNum);
+              } else {
+                console.log('⚠️ NOT updating 6M counter (assetNum <= current):', assetNum, '<=', sixmonthlyCounter);
+              }
               break;
             case 'fiveyearly':
-              if (assetNum > fiveyearlyCounter) setFiveyearlyCounter(assetNum);
+              if (assetNum > fiveyearlyCounter) {
+                console.log('✅ Updating 5Y counter:', fiveyearlyCounter, '→', assetNum);
+                setFiveyearlyCounter(assetNum);
+              } else {
+                console.log('⚠️ NOT updating 5Y counter (assetNum <= current):', assetNum, '<=', fiveyearlyCounter);
+              }
               break;
             case 'twentyfourmonthly':
-              if (assetNum > twentyfourmonthlyCounter) setTwentyfourmonthlyCounter(assetNum);
+              if (assetNum > twentyfourmonthlyCounter) {
+                console.log('✅ Updating 24M counter:', twentyfourmonthlyCounter, '→', assetNum);
+                setTwentyfourmonthlyCounter(assetNum);
+              } else {
+                console.log('⚠️ NOT updating 24M counter (assetNum <= current):', assetNum, '<=', twentyfourmonthlyCounter);
+              }
               break;
             case 'threemonthly':
-              if (assetNum > threemonthlyCounter) setThreemonthlyCounter(assetNum);
+              if (assetNum > threemonthlyCounter) {
+                console.log('✅ Updating 3M counter:', threemonthlyCounter, '→', assetNum);
+                setThreemonthlyCounter(assetNum);
+              } else {
+                console.log('⚠️ NOT updating 3M counter (assetNum <= current):', assetNum, '<=', threemonthlyCounter);
+              }
               break;
             case 'monthly':
-              if (assetNum > monthlyCounter) setMonthlyCounter(assetNum);
+              if (assetNum > monthlyCounter) {
+                console.log('✅ Updating M counter:', monthlyCounter, '→', assetNum);
+                setMonthlyCounter(assetNum);
+              } else {
+                console.log('⚠️ NOT updating M counter (assetNum <= current):', assetNum, '<=', monthlyCounter);
+              }
               break;
           }
         }
@@ -766,9 +890,21 @@ export function useSession() {
       leakageReading: cleanData.leakageReading || undefined,
     };
 
+    console.log('💾 ********** CREATED NEW RESULT **********');
+    console.log('💾 Created new result object:', {
+      id: newResult.id,
+      itemName: newResult.itemName,
+      assetNumber: newResult.assetNumber,
+      frequency: newResult.frequency,
+      providedAssetNumber: cleanData.assetNumber,
+    });
+
     // Add to batched results
     const updatedResults = [...batchedResults, newResult];
     setBatchedResults(updatedResults);
+
+    console.log('✅ Added to batchedResults. New count:', updatedResults.length);
+    console.log('✅ ********** END CREATE RESULT **********');
 
     // Update asset counts state
     const freq = cleanData.frequency;
@@ -926,6 +1062,7 @@ export function useSession() {
         leakageReading: result.leakageReading || null,
       };
 
+      console.log('💾 ********** AUTO-SAVING TO DATABASE **********');
       console.log(`Auto-saving new result to server: ${result.itemName} (Asset #${result.assetNumber})`);
 
       const response = await apiRequest('POST', `/api/sessions/${sessionId}/results`, resultData);
@@ -937,7 +1074,8 @@ export function useSession() {
       setSaveStatus(prev => ({ ...prev, pendingCount: prev.pendingCount + 1 }));
     },
     onSuccess: ({ localId, serverResult }) => {
-      console.log(`Auto-save successful: ${serverResult.itemName} -> Server ID: ${serverResult.id}`);
+      console.log('✅ ********** AUTO-SAVE SUCCESSFUL **********');
+      console.log(`Auto-save successful: ${serverResult.item_name} -> Server ID: ${serverResult.id}, Asset: ${serverResult.asset_number}`);
 
       // Update the local result with the server ID
       setBatchedResults(prev =>
