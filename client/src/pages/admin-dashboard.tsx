@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Modal } from "@/components/ui/modal";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -167,6 +168,13 @@ export default function AdminDashboard() {
   const [deletingResult, setDeletingResult] = useState<any>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Delete session/draft confirmation state
+  const [deleteReportConfirmOpen, setDeleteReportConfirmOpen] = useState(false);
+  const [pendingDeleteSessionId, setPendingDeleteSessionId] = useState<number | null>(null);
+  const [deleteDraftConfirmOpen, setDeleteDraftConfirmOpen] = useState(false);
+  const [pendingDeleteDraftId, setPendingDeleteDraftId] = useState<number | null>(null);
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
 
 
   // Fetch all users
@@ -1768,9 +1776,8 @@ export default function AdminDashboard() {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => {
-                                    if (confirm('Are you sure you want to delete this report? This action cannot be undone.')) {
-                                      deleteSessionMutation.mutate(session.id);
-                                    }
+                                    setPendingDeleteSessionId(session.id);
+                                    setDeleteReportConfirmOpen(true);
                                   }}
                                   className="p-2 h-8 w-8 text-red-600 hover:bg-red-50 hover:border-red-300"
                                   title="Delete Report"
@@ -1846,11 +1853,7 @@ export default function AdminDashboard() {
                         <Button
                           size="sm"
                           variant="destructive"
-                          onClick={() => {
-                            if (confirm(`Are you sure you want to delete ${selectedDraftIds.size} draft report(s)? This action cannot be undone.`)) {
-                              bulkDeleteDraftsMutation.mutate(Array.from(selectedDraftIds));
-                            }
-                          }}
+                          onClick={() => setBulkDeleteConfirmOpen(true)}
                           disabled={bulkDeleteDraftsMutation.isPending}
                         >
                           <Trash2 className="w-4 h-4 mr-1" />
@@ -2006,9 +2009,8 @@ export default function AdminDashboard() {
                                     size="sm"
                                     variant="outline"
                                     onClick={() => {
-                                      if (confirm('Are you sure you want to delete this draft? This action cannot be undone.')) {
-                                        deleteSessionMutation.mutate(draft.id);
-                                      }
+                                      setPendingDeleteDraftId(draft.id);
+                                      setDeleteDraftConfirmOpen(true);
                                     }}
                                     className="p-2 h-8 w-8 text-red-600 hover:bg-red-50 hover:border-red-300"
                                     title="Delete Draft"
@@ -3384,6 +3386,81 @@ export default function AdminDashboard() {
         isVisible={isDeleting}
         message="Deleting test result..."
       />
+
+      {/* Delete Report Confirmation Dialog */}
+      <AlertDialog open={deleteReportConfirmOpen} onOpenChange={setDeleteReportConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Report?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this report? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingDeleteSessionId(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingDeleteSessionId !== null) {
+                  deleteSessionMutation.mutate(pendingDeleteSessionId);
+                  setPendingDeleteSessionId(null);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Draft Confirmation Dialog */}
+      <AlertDialog open={deleteDraftConfirmOpen} onOpenChange={setDeleteDraftConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Draft?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this draft? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingDeleteDraftId(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingDeleteDraftId !== null) {
+                  deleteSessionMutation.mutate(pendingDeleteDraftId);
+                  setPendingDeleteDraftId(null);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Drafts Confirmation Dialog */}
+      <AlertDialog open={bulkDeleteConfirmOpen} onOpenChange={setBulkDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Drafts?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedDraftIds.size} draft report(s)? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                bulkDeleteDraftsMutation.mutate(Array.from(selectedDraftIds));
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </div>
   );

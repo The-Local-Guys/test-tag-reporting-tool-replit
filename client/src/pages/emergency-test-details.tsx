@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { ArrowLeft, CheckCircle, XCircle, Camera, Save, X } from 'lucide-react';
 import { WorkflowProgressBar } from '@/components/workflow-progress-bar';
 import { SaveStatusIndicator } from '@/components/save-status-indicator';
@@ -609,16 +610,31 @@ export default function EmergencyTestDetails() {
                         className="w-full rounded-lg border border-gray-200"
                         data-testid="img-captured-photo"
                       />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={removePhoto}
-                        className="absolute top-2 right-2"
-                        data-testid="button-remove-photo"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            className="absolute top-2 right-2"
+                            data-testid="button-remove-photo"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Remove Photo?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This photo will be removed. You'll need to retake it if needed.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={removePhoto} className="bg-red-600 hover:bg-red-700">Remove</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   )}
                 </div>
