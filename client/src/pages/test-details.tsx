@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { WorkflowProgressBar } from '@/components/workflow-progress-bar';
+import { SaveStatusIndicator } from '@/components/save-status-indicator';
 import { useSession, DEFAULT_STARTING_NUMBERS } from '@/hooks/use-session';
 import { useLocation, useSearch } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
@@ -46,8 +47,8 @@ const testDetailsSchema = z.object({
 export default function TestDetails() {
   const [selectedClass, setSelectedClass] = useState('class1');
   const [selectedFrequency, setSelectedFrequency] = useState(() => {
-    // Get the last selected frequency from localStorage, default to 'twelvemonthly'
-    return localStorage.getItem('lastSelectedFrequency') || 'twelvemonthly';
+    // Get the last selected frequency from sessionStorage, default to 'twelvemonthly'
+    return sessionStorage.getItem('lastSelectedFrequency') || 'twelvemonthly';
   });
   const [currentItem, setCurrentItem] = useState<{name: string, type: string} | null>(null);
   const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]);
@@ -202,8 +203,8 @@ export default function TestDetails() {
       electricalTest,
     } as any;
 
-    // Save the selected frequency to localStorage for next item
-    localStorage.setItem('lastSelectedFrequency', selectedFrequency);
+    // Save the selected frequency to sessionStorage for next item
+    sessionStorage.setItem('lastSelectedFrequency', selectedFrequency);
     
     if (result === 'pass') {
       addToBatch(testData);
@@ -263,6 +264,9 @@ export default function TestDetails() {
 
       {/* Workflow Progress Bar */}
       <WorkflowProgressBar serviceType="electrical" currentStep="test" />
+      <div className="flex justify-center py-1">
+        <SaveStatusIndicator />
+      </div>
 
       {/* Item Preview */}
       <div className="bg-white border-b border-gray-200 p-4">
@@ -375,8 +379,8 @@ export default function TestDetails() {
             setSelectedFrequency(value);
             // Reset manual edit flag so asset number updates based on new frequency
             setHasManuallyEditedAssetNumber(false);
-            // Save the selected frequency to localStorage for next item
-            localStorage.setItem('lastSelectedFrequency', value);
+            // Save the selected frequency to sessionStorage for next item
+            sessionStorage.setItem('lastSelectedFrequency', value);
           }}>
             <SelectTrigger className="text-base">
               <SelectValue placeholder="Select test frequency" />

@@ -27,27 +27,19 @@ import { CustomAssetNumbersModal } from '@/components/CustomAssetNumbersModal';
  * Creates the testing context for either electrical or emergency exit light testing
  */
 export default function Setup() {
-  const { createSession, isCreatingSession, clearSession, sessionId, customStartingNumbers, saveCustomStartingNumbers, resetCustomStartingNumbers } = useSession();
+  const { createSession, isCreatingSession, clearSession, sessionId, customStartingNumbers, saveCustomStartingNumbers, resetCustomStartingNumbers, pendingCustomStartingNumbers } = useSession();
   const { user } = useAuth();
   const { navigate } = useSpaNavigation();
   const [isNavigating, setIsNavigating] = useState(false);
   const [isCustomAssetModalOpen, setIsCustomAssetModalOpen] = useState(false);
-  
+
   // Track the initial sessionId to distinguish between existing sessions and newly created ones
   const [initialSessionId] = useState(() => sessionId);
   const [sessionCreationStarted, setSessionCreationStarted] = useState(false);
-  
-  // Load pending custom numbers if no session exists
+
   const [modalCustomNumbers, setModalCustomNumbers] = useState(() => {
-    if (!sessionId) {
-      const pending = localStorage.getItem('pendingCustomStartingNumbers');
-      if (pending) {
-        try {
-          return JSON.parse(pending);
-        } catch {
-          return customStartingNumbers;
-        }
-      }
+    if (!sessionId && pendingCustomStartingNumbers) {
+      return pendingCustomStartingNumbers;
     }
     return customStartingNumbers;
   });
@@ -116,7 +108,6 @@ export default function Setup() {
   };
 
   // Wait for session to be created, then navigate with delay to ensure data is loaded
-  // Only navigate if we actually started a session creation (not if there's an old session in localStorage)
   useEffect(() => {
     // Only navigate if:
     // 1. We have a sessionId

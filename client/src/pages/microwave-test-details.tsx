@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { WorkflowProgressBar } from '@/components/workflow-progress-bar';
+import { SaveStatusIndicator } from '@/components/save-status-indicator';
 import { useSession } from '@/hooks/use-session';
 import { useLocation, useSearch } from 'wouter';
 import { nanoid } from 'nanoid';
@@ -136,6 +137,9 @@ export default function MicrowaveTestDetails() {
 
       {/* Workflow Progress Bar */}
       <WorkflowProgressBar serviceType="microwave_leakage" currentStep="test" />
+      <div className="flex justify-center py-1">
+        <SaveStatusIndicator />
+      </div>
 
       {/* Item Info */}
       <div className="bg-green-50 border-b border-green-100 p-4">

@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, CheckCircle, XCircle, Camera, Save, X } from 'lucide-react';
 import { WorkflowProgressBar } from '@/components/workflow-progress-bar';
+import { SaveStatusIndicator } from '@/components/save-status-indicator';
 import { useSession } from '@/hooks/use-session';
 import { useToast } from '@/hooks/use-toast';
 
@@ -60,9 +61,9 @@ export default function FireTestDetails() {
     return 'fire_extinguisher';
   };
 
-  // Get last selected frequency from localStorage or default based on country
+  // Get last selected frequency from sessionStorage or default based on country
   const getLastSelectedFrequency = (): 'sixmonthly' | 'annually' => {
-    const stored = localStorage.getItem('lastSelectedFrequency_fire');
+    const stored = sessionStorage.getItem('lastSelectedFrequency_fire');
     if (stored === 'sixmonthly' || stored === 'annually') {
       return stored;
     }
@@ -173,7 +174,7 @@ export default function FireTestDetails() {
       });
 
       // Save selected frequency for next item
-      localStorage.setItem('lastSelectedFrequency_fire', data.frequency);
+      sessionStorage.setItem('lastSelectedFrequency_fire', data.frequency);
 
       toast({
         title: 'Test Recorded',
@@ -275,6 +276,9 @@ export default function FireTestDetails() {
 
       {/* Workflow Progress Bar */}
       <WorkflowProgressBar serviceType="fire_testing" currentStep="test" />
+      <div className="flex justify-center py-1">
+        <SaveStatusIndicator />
+      </div>
 
       {/* Item Info */}
       <div className="bg-orange-50 border-b border-orange-100 p-4">
@@ -544,7 +548,7 @@ export default function FireTestDetails() {
                 value={form.watch('frequency')} 
                 onValueChange={(value) => {
                   form.setValue('frequency', value as 'sixmonthly' | 'annually');
-                  localStorage.setItem('lastSelectedFrequency_fire', value);
+                  sessionStorage.setItem('lastSelectedFrequency_fire', value);
                 }}
               >
                 <SelectTrigger>

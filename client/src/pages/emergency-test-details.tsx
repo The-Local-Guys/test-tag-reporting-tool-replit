@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, CheckCircle, XCircle, Camera, Save, X } from 'lucide-react';
 import { WorkflowProgressBar } from '@/components/workflow-progress-bar';
+import { SaveStatusIndicator } from '@/components/save-status-indicator';
 import { useSession } from '@/hooks/use-session';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
@@ -57,9 +58,9 @@ export default function EmergencyTestDetails() {
   const itemName = urlParams.get('item') || 'Emergency Equipment';
   const itemType = urlParams.get('type') || 'emergency-equipment';
 
-  // Get last selected frequency from localStorage or default to 'sixmonthly'
+  // Get last selected frequency from sessionStorage or default to 'sixmonthly'
   const getLastSelectedFrequency = (): 'sixmonthly' | 'annually' => {
-    return (localStorage.getItem('lastSelectedFrequency_emergency') as 'sixmonthly' | 'annually') || 'sixmonthly';
+    return (sessionStorage.getItem('lastSelectedFrequency_emergency') as 'sixmonthly' | 'annually') || 'sixmonthly';
   };
 
   const form = useForm<EmergencyTestForm>({
@@ -169,7 +170,7 @@ export default function EmergencyTestDetails() {
       });
 
       // Save selected frequency for next item
-      localStorage.setItem('lastSelectedFrequency_emergency', data.frequency);
+      sessionStorage.setItem('lastSelectedFrequency_emergency', data.frequency);
 
       toast({
         title: 'Test Recorded',
@@ -265,6 +266,9 @@ export default function EmergencyTestDetails() {
 
       {/* Workflow Progress Bar */}
       <WorkflowProgressBar serviceType="emergency_exit_light" currentStep="test" />
+      <div className="flex justify-center py-1">
+        <SaveStatusIndicator />
+      </div>
 
       {/* Item Info */}
       <div className="bg-red-50 border-b border-red-100 p-4">
@@ -523,7 +527,7 @@ export default function EmergencyTestDetails() {
                 value={form.watch('frequency')} 
                 onValueChange={(value) => {
                   form.setValue('frequency', value as any);
-                  localStorage.setItem('lastSelectedFrequency_emergency', value);
+                  sessionStorage.setItem('lastSelectedFrequency_emergency', value);
                 }}
               >
                 <SelectTrigger>

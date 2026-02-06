@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, CheckCircle, XCircle, Plus, X } from 'lucide-react';
 import { WorkflowProgressBar } from '@/components/workflow-progress-bar';
+import { SaveStatusIndicator } from '@/components/save-status-indicator';
 import { useSession } from '@/hooks/use-session';
 import { useToast } from '@/hooks/use-toast';
 import type { InsertTestResult } from '@shared/schema';
@@ -265,6 +266,9 @@ export default function RCDTestDetails() {
 
       {/* Workflow Progress Bar */}
       <WorkflowProgressBar serviceType="rcd_reporting" currentStep="test" />
+      <div className="flex justify-center py-1">
+        <SaveStatusIndicator />
+      </div>
 
       {/* Item Info */}
       <div className="bg-purple-50 border-b border-purple-100 p-4">

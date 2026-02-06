@@ -7,32 +7,9 @@ export function useConditionalNavigation() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const navigate = (target: string) => {
-    // Check for truly unsaved results (those without serverId)
-    const currentSessionId = localStorage.getItem("currentSessionId");
-    let hasUnsavedResults = false;
-    
-    if (currentSessionId) {
-      const batchedResults = localStorage.getItem(`batchedResults_${currentSessionId}`);
-      if (batchedResults) {
-        try {
-          const results = JSON.parse(batchedResults);
-          // Only consider results without serverId as truly unsaved
-          const unsaved = results.filter((r: any) => !r.serverId);
-          hasUnsavedResults = unsaved.length > 0;
-        } catch (e) {
-          // Ignore parse errors
-        }
-      }
-    }
-    
-    console.log("Navigation check - hasUnsavedResults:", hasUnsavedResults);
-    
-    if (location === "/report" && hasUnsavedResults) {
-      setPendingLocation(target);
-      setShowConfirm(true);
-    } else {
-      setLocation(target);
-    }
+    // With database-only architecture, all results are auto-saved to the server.
+    // No need to check localStorage for unsaved data.
+    setLocation(target);
   };
 
   const confirmNavigation = () => {

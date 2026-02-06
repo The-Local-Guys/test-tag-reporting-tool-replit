@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/modal';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ArrowLeft, Download, Mail, Share, Plus, Edit2, FileText, Trash2, Check, CheckCircle } from 'lucide-react';
 import { WorkflowProgressBar, type ServiceType } from '@/components/workflow-progress-bar';
+import { SaveStatusIndicator } from '@/components/save-status-indicator';
 import { useSession, type BatchedTestResult } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
 import { downloadPDF } from '@/lib/pdf-generator';
@@ -491,16 +492,9 @@ export default function ReportPreview() {
         }
       }
 
-      // Clear localStorage UI preferences (not data - it's in DB now)
-      localStorage.removeItem('currentSessionId');
-      localStorage.removeItem('currentLocation');
-      localStorage.removeItem('currentDistributionBoardNumber');
-      localStorage.removeItem('unfinished');
-      localStorage.removeItem('unfinishedSessionId');
-      if (sessionId) {
-        localStorage.removeItem(`batchedResults_${sessionId}`);
-        localStorage.removeItem(`session_${sessionId}_serviceType`);
-      }
+      // Clear sessionStorage navigation bridge
+      sessionStorage.removeItem('currentSessionId');
+      sessionStorage.removeItem('selectedService');
 
       // Show success animation
       setShowFinishSuccess(true);
@@ -713,27 +707,8 @@ export default function ReportPreview() {
       if (editResultData.assetNumber) {
         setManuallyEnteredAssetNumbers(prev => new Set(Array.from(prev).concat(editResultData.assetNumber)));
         
-        // Save to localStorage so auto-generation logic can access it
-        const sessionId = sessionData?.session?.id;
-        if (sessionId) {
-          const manuallyEnteredKey = `manuallyEnteredAssetNumbers_${sessionId}`;
-          const currentManual = localStorage.getItem(manuallyEnteredKey);
-          let manualNumbers: string[] = [];
-          
-          if (currentManual) {
-            try {
-              manualNumbers = JSON.parse(currentManual);
-            } catch (error) {
-              console.warn('Error parsing existing manual asset numbers:', error);
-            }
-          }
-          
-          if (!manualNumbers.includes(editResultData.assetNumber)) {
-            manualNumbers.push(editResultData.assetNumber);
-            localStorage.setItem(manuallyEnteredKey, JSON.stringify(manualNumbers));
-            console.log(`Manually entered asset number tracked: ${editResultData.assetNumber}`);
-          }
-        }
+        // manuallyEnteredAssetNumbers is tracked in React state via setManuallyEnteredAssetNumbers above
+        console.log(`Manually entered asset number tracked: ${editResultData.assetNumber}`);
       }
 
       // Use the original batched ID for updating local storage
@@ -820,10 +795,13 @@ export default function ReportPreview() {
       </div>
 
       {/* Workflow Progress Bar */}
-      <WorkflowProgressBar 
-        serviceType={(session?.serviceType || 'electrical') as ServiceType} 
-        currentStep="complete" 
+      <WorkflowProgressBar
+        serviceType={(session?.serviceType || 'electrical') as ServiceType}
+        currentStep="complete"
       />
+      <div className="flex justify-center py-1">
+        <SaveStatusIndicator />
+      </div>
 
       {/* Report Summary */}
       <div className="bg-white border-b border-gray-200 p-4">

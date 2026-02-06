@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { WorkflowProgressBar, type ServiceType } from '@/components/workflow-progress-bar';
+import { SaveStatusIndicator } from '@/components/save-status-indicator';
 import type { Environment } from '@shared/schema';
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
 
@@ -126,14 +127,14 @@ export default function ItemSelection() {
   const typedUser = user as { fullName?: string; role?: string } | undefined;
   const userRole = typedUser?.role;
 
-  // Initialize environment selection from localStorage (global, like frequency)
+  // Initialize environment selection from sessionStorage (global, like frequency)
   const [selectedEnvironmentId, setSelectedEnvironmentId] = useState<string>(() => {
-    return localStorage.getItem('lastSelectedEnvironment') || 'default';
+    return sessionStorage.getItem('lastSelectedEnvironment') || 'default';
   });
 
-  // Initialize microwave brand selection from localStorage
+  // Initialize microwave brand selection from sessionStorage
   const [selectedMicrowaveBrand, setSelectedMicrowaveBrand] = useState<string>(() => {
-    return localStorage.getItem('selectedMicrowaveBrand') || '';
+    return sessionStorage.getItem('selectedMicrowaveBrand') || '';
   });
 
   // State for custom microwave brand input (when "Other" is selected)
@@ -148,17 +149,17 @@ export default function ItemSelection() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Save selected environment to localStorage whenever it changes (global persistence)
+  // Save selected environment to sessionStorage whenever it changes (global persistence)
   useEffect(() => {
     if (selectedEnvironmentId) {
-      localStorage.setItem('lastSelectedEnvironment', selectedEnvironmentId);
+      sessionStorage.setItem('lastSelectedEnvironment', selectedEnvironmentId);
     }
   }, [selectedEnvironmentId]);
 
-  // Save selected microwave brand to localStorage whenever it changes
+  // Save selected microwave brand to sessionStorage whenever it changes
   useEffect(() => {
     if (selectedMicrowaveBrand) {
-      localStorage.setItem('selectedMicrowaveBrand', selectedMicrowaveBrand);
+      sessionStorage.setItem('selectedMicrowaveBrand', selectedMicrowaveBrand);
     }
   }, [selectedMicrowaveBrand]);
 
@@ -302,10 +303,13 @@ export default function ItemSelection() {
       </div>
 
       {/* Workflow Progress Bar */}
-      <WorkflowProgressBar 
-        serviceType={selectedService as ServiceType} 
-        currentStep="items" 
+      <WorkflowProgressBar
+        serviceType={selectedService as ServiceType}
+        currentStep="items"
       />
+      <div className="flex justify-center py-1">
+        <SaveStatusIndicator />
+      </div>
 
       {/* Quick Stats */}
       <div className="bg-white border-b border-gray-200 p-4">

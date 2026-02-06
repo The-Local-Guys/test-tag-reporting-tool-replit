@@ -4,6 +4,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, AlertCircle, Save, XCircle, Camera, X } from 'lucide-react';
 import { WorkflowProgressBar, type ServiceType } from '@/components/workflow-progress-bar';
+import { SaveStatusIndicator } from '@/components/save-status-indicator';
 import { useSession } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
 import type { InsertTestResult } from '@shared/schema';
@@ -206,6 +207,9 @@ export default function FailureDetails() {
 
       {/* Workflow Progress Bar */}
       <WorkflowProgressBar serviceType={serviceType} currentStep="test" />
+      <div className="flex justify-center py-1">
+        <SaveStatusIndicator />
+      </div>
 
       {/* Failed Item Preview */}
       <div className="bg-red-50 border-b border-red-100 p-4">

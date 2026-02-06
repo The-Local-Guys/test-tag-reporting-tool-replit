@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import type { TestSession, TestResult, InsertTestSession, InsertTestResult } from '@shared/schema';
@@ -54,13 +54,11 @@ export interface BatchedTestResult {
   leakageReading?: string;
 }
 
-/**
- * Helper function to sanitize batched results by removing legacy fields
- * Strips out itemCode and any other deprecated fields from localStorage data
- */
-function sanitizeBatchedResult(result: any): BatchedTestResult {
-  const { itemCode, ...rest } = result;
-  return rest as BatchedTestResult;
+export interface SaveStatus {
+  savedCount: number;     // items with serverId
+  pendingCount: number;   // auto-saves in flight
+  failedCount: number;    // failed after retries
+  isOnline: boolean;
 }
 
 /**
@@ -71,12 +69,12 @@ function sanitizeBatchedResult(result: any): BatchedTestResult {
  */
 const getNextAvailableAssetNumber = (usedNumbers: Set<number>, start: number): number => {
   let candidate = start;
-  
+
   // Keep incrementing until we find an unused number
   while (usedNumbers.has(candidate)) {
     candidate++;
   }
-  
+
   return candidate;
 };
 
@@ -112,8 +110,6 @@ export type CustomStartingNumbers = typeof DEFAULT_STARTING_NUMBERS;
 
 /**
  * Get default starting numbers based on service type
- * @param serviceType - The service type (electrical, emergency_exit_light, fire_testing, rcd_reporting)
- * @returns Default starting numbers for that service type
  */
 const getDefaultStartingNumbers = (serviceType?: string): typeof DEFAULT_STARTING_NUMBERS => {
   if (serviceType === 'electrical') {
@@ -123,199 +119,96 @@ const getDefaultStartingNumbers = (serviceType?: string): typeof DEFAULT_STARTIN
 };
 
 /**
- * Helper function to get starting asset number for each frequency
- * @param frequency - The test frequency (twelvemonthly, sixmonthly, etc.)
- * @param customStartingNumbers - Optional custom starting numbers per frequency
- * @returns Starting asset number for that frequency range
- */
-const getStartingAssetNumber = (
-  frequency: string, 
-  customStartingNumbers?: Partial<CustomStartingNumbers>
-): number => {
-  const defaults = DEFAULT_STARTING_NUMBERS;
-  const custom = customStartingNumbers || {};
-  
-  switch (frequency) {
-    case 'twelvemonthly':
-      return custom.twelvemonthly ?? defaults.twelvemonthly;
-    case 'sixmonthly':
-      return custom.sixmonthly ?? defaults.sixmonthly;
-    case 'fiveyearly':
-      return custom.fiveyearly ?? defaults.fiveyearly;
-    case 'twentyfourmonthly':
-      return custom.twentyfourmonthly ?? defaults.twentyfourmonthly;
-    case 'threemonthly':
-      return custom.threemonthly ?? defaults.threemonthly;
-    case 'monthly':
-      return custom.monthly ?? defaults.monthly;
-    default:
-      return custom.twelvemonthly ?? defaults.twelvemonthly;
-  }
-};
-
-/**
  * Main hook for managing test sessions and results with batched submission
- * Stores results locally until final report submission to reduce server requests
- * Features automatic asset numbering and comprehensive duplicate prevention
- * @returns Object with session data, batched results, mutations, and state management functions
+ *
+ * DATABASE-ONLY ARCHITECTURE: Zero localStorage usage.
+ * - React state (in-memory) for current session data
+ * - Database (server) for persistence via auto-save
+ * - On page refresh, data loads from /api/sessions/drafts + /api/sessions/{id}/results
  */
 export function useSession() {
+  // Initialize sessionId from sessionStorage if available (navigation bridge between pages)
   const [sessionId, setSessionId] = useState<number | null>(() => {
-    const stored = localStorage.getItem('currentSessionId');
-    return stored ? parseInt(stored) : null;
+    const stored = sessionStorage.getItem('currentSessionId');
+    return stored ? parseInt(stored, 10) : null;
   });
+  const [currentLocation, setCurrentLocation] = useState<string>('');
+  const [currentDistributionBoardNumber, setCurrentDistributionBoardNumber] = useState<string>('');
 
-  const [currentLocation, setCurrentLocation] = useState<string>(() => {
-    return localStorage.getItem('currentLocation') || '';
-  });
+  // Custom starting numbers (per session) - loaded from DB session record
+  const [customStartingNumbers, setCustomStartingNumbers] = useState<Partial<CustomStartingNumbers>>({});
 
-  const [currentDistributionBoardNumber, setCurrentDistributionBoardNumber] = useState<string>(() => {
-    return localStorage.getItem('currentDistributionBoardNumber') || '';
-  });
-
-  // Custom starting numbers (per session)
-  const [customStartingNumbers, setCustomStartingNumbers] = useState<Partial<CustomStartingNumbers>>(() => {
-    if (!sessionId) return {};
-    const stored = localStorage.getItem(`customStartingNumbers_${sessionId}`);
-    return stored ? JSON.parse(stored) : {};
-  });
+  // Pending custom starting numbers for sessions not yet created
+  const [pendingCustomStartingNumbers, setPendingCustomStartingNumbers] = useState<Partial<CustomStartingNumbers> | null>(null);
 
   // Asset count state for tracking current counts
-  const [assetCounts, setAssetCounts] = useState<{ monthly: number; fiveYearly: number }>(() => {
-    if (!sessionId) return { monthly: 0, fiveYearly: 0 };
-    
-    // Calculate from existing batched results
-    const stored = localStorage.getItem(`batchedResults_${sessionId}`);
-    if (stored) {
-      const results: BatchedTestResult[] = JSON.parse(stored);
-      const monthlyCount = results.filter(r => r.frequency !== 'fiveyearly').length;
-      const fiveYearlyCount = results.filter(r => r.frequency === 'fiveyearly').length;
-      return { monthly: monthlyCount, fiveYearly: fiveYearlyCount };
-    }
-    
-    return { monthly: 0, fiveYearly: 0 };
-  });
+  const [assetCounts, setAssetCounts] = useState<{ monthly: number; fiveYearly: number }>({ monthly: 0, fiveYearly: 0 });
 
-  // Helper to get starting number from pending or session-specific custom numbers
-  const getInitialStartNumber = (frequency: keyof CustomStartingNumbers, sessionIdParam: number | null): number => {
-    // Get service type from localStorage to determine correct defaults
-    let serviceType = 'electrical'; // default to electrical for backwards compatibility
-    if (sessionIdParam) {
-      const storedServiceType = localStorage.getItem(`session_${sessionIdParam}_serviceType`);
-      if (storedServiceType) {
-        serviceType = storedServiceType;
-      }
-    }
-    
-    const defaults = getDefaultStartingNumbers(serviceType);
-    
-    // Check for session-specific custom numbers first (only for electrical sessions)
-    if (sessionIdParam && serviceType === 'electrical') {
-      const sessionCustom = localStorage.getItem(`customStartingNumbers_${sessionIdParam}`);
-      if (sessionCustom) {
-        try {
-          const custom = JSON.parse(sessionCustom);
-          return (custom[frequency] ?? defaults[frequency]) - 1;
-        } catch {
-          // Fall through to default
-        }
-      }
-    }
-    
-    // CRITICAL: Only check pending custom numbers for electrical sessions
-    // Emergency Exit Light and Fire Equipment Testing must use service-type-specific defaults
-    if (serviceType === 'electrical') {
-      const pendingCustom = localStorage.getItem('pendingCustomStartingNumbers');
-      if (pendingCustom) {
-        try {
-          const custom = JSON.parse(pendingCustom);
-          return (custom[frequency] ?? defaults[frequency]) - 1;
-        } catch {
-          // Fall through to default
-        }
-      }
-    }
-    
-    // Use default based on service type
-    return defaults[frequency] - 1;
-  };
+  // Track manually entered asset numbers in React state (was localStorage)
+  const [manuallyEnteredAssetNumbers, setManuallyEnteredAssetNumbers] = useState<Set<string>>(new Set());
 
   // Asset number counters - separate counter for each frequency
-  // 12 Monthly: 1-10,000
-  const [twelvemonthlyCounter, setTwelvemonthlyCounter] = useState<number>(() => {
-    if (!sessionId) return getInitialStartNumber('twelvemonthly', null);
-    const stored = localStorage.getItem(`twelvemonthlyCounter_${sessionId}`);
-    return stored ? parseInt(stored) : getInitialStartNumber('twelvemonthly', sessionId);
-  });
-
-  // 6 Monthly: 10,001-20,000
-  const [sixmonthlyCounter, setSixmonthlyCounter] = useState<number>(() => {
-    if (!sessionId) return getInitialStartNumber('sixmonthly', null);
-    const stored = localStorage.getItem(`sixmonthlyCounter_${sessionId}`);
-    return stored ? parseInt(stored) : getInitialStartNumber('sixmonthly', sessionId);
-  });
-
-  // 5 Yearly: 20,001-30,000
-  const [fiveyearlyCounter, setFiveyearlyCounter] = useState<number>(() => {
-    if (!sessionId) return getInitialStartNumber('fiveyearly', null);
-    const stored = localStorage.getItem(`fiveyearlyCounter_${sessionId}`);
-    return stored ? parseInt(stored) : getInitialStartNumber('fiveyearly', sessionId);
-  });
-
-  // 24 Monthly: 30,001-40,000
-  const [twentyfourmonthlyCounter, setTwentyfourmonthlyCounter] = useState<number>(() => {
-    if (!sessionId) return getInitialStartNumber('twentyfourmonthly', null);
-    const stored = localStorage.getItem(`twentyfourmonthlyCounter_${sessionId}`);
-    return stored ? parseInt(stored) : getInitialStartNumber('twentyfourmonthly', sessionId);
-  });
-
-  // 3 Monthly: 40,001-50,000
-  const [threemonthlyCounter, setThreemonthlyCounter] = useState<number>(() => {
-    if (!sessionId) return getInitialStartNumber('threemonthly', null);
-    const stored = localStorage.getItem(`threemonthlyCounter_${sessionId}`);
-    return stored ? parseInt(stored) : getInitialStartNumber('threemonthly', sessionId);
-  });
-
-  // Monthly: 50,001+
-  const [monthlyCounter, setMonthlyCounter] = useState<number>(() => {
-    if (!sessionId) return getInitialStartNumber('monthly', null);
-    const stored = localStorage.getItem(`monthlyCounter_${sessionId}`);
-    return stored ? parseInt(stored) : getInitialStartNumber('monthly', sessionId);
-  });
+  const [twelvemonthlyCounter, setTwelvemonthlyCounter] = useState<number>(0);
+  const [sixmonthlyCounter, setSixmonthlyCounter] = useState<number>(10000);
+  const [fiveyearlyCounter, setFiveyearlyCounter] = useState<number>(20000);
+  const [twentyfourmonthlyCounter, setTwentyfourmonthlyCounter] = useState<number>(30000);
+  const [threemonthlyCounter, setThreemonthlyCounter] = useState<number>(40000);
+  const [monthlyCounter, setMonthlyCounter] = useState<number>(50000);
 
   // RCD Asset Counter (separate for RCD reporting)
-  const [rcdAssetCounter, setRcdAssetCounter] = useState<number>(() => {
-    if (!sessionId) return 0;
-    const stored = localStorage.getItem(`rcdCounter_${sessionId}`);
-    return stored ? parseInt(stored) : 0;
-  });
+  const [rcdAssetCounter, setRcdAssetCounter] = useState<number>(0);
 
   // Microwave Asset Counter (separate for microwave leakage testing)
-  const [microwaveCounter, setMicrowaveCounter] = useState<number>(() => {
-    if (!sessionId) return 0;
-    const stored = localStorage.getItem(`microwaveCounter_${sessionId}`);
-    return stored ? parseInt(stored) : 0;
+  const [microwaveCounter, setMicrowaveCounter] = useState<number>(0);
+
+  // Batched results in memory only - DB is the persistence layer
+  const [batchedResults, setBatchedResults] = useState<BatchedTestResult[]>([]);
+
+  // Save status tracking
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>({
+    savedCount: 0,
+    pendingCount: 0,
+    failedCount: 0,
+    isOnline: navigator.onLine,
   });
 
-  // Batched results stored in local storage
-  const [batchedResults, setBatchedResults] = useState<BatchedTestResult[]>(() => {
-    if (!sessionId) return [];
-    const stored = localStorage.getItem(`batchedResults_${sessionId}`);
-    if (!stored) return [];
-    
-    // Parse and sanitize legacy data by removing deprecated fields
-    const parsed = JSON.parse(stored);
-    const sanitized = parsed.map(sanitizeBatchedResult);
-    
-    // Save sanitized data back to localStorage
-    localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(sanitized));
-    
-    return sanitized;
-  });
+  // Track if counters have been initialized for the current session
+  const countersInitializedRef = useRef<number | null>(null);
+
+  // Track which server results we've already processed (fingerprint = sorted IDs)
+  // This allows re-processing when server data changes (e.g., auto-save completes on another page)
+  const processedServerFingerprintRef = useRef<string>('');
 
   const queryClient = useQueryClient();
 
-  // Get current session basic info (not results - those are batched locally)
+  // Online/offline detection
+  useEffect(() => {
+    const handleOnline = () => setSaveStatus(prev => ({ ...prev, isOnline: true }));
+    const handleOffline = () => setSaveStatus(prev => ({ ...prev, isOnline: false }));
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Sync sessionId to sessionStorage for cross-page navigation
+  useEffect(() => {
+    if (sessionId !== null) {
+      sessionStorage.setItem('currentSessionId', sessionId.toString());
+    } else {
+      sessionStorage.removeItem('currentSessionId');
+    }
+  }, [sessionId]);
+
+  // Update save status counts whenever batchedResults change
+  useEffect(() => {
+    const saved = batchedResults.filter(r => r.serverId).length;
+    setSaveStatus(prev => ({ ...prev, savedCount: saved }));
+  }, [batchedResults]);
+
+  // Get current session basic info
   const { data: session, isLoading } = useQuery<TestSession>({
     queryKey: [`/api/sessions/${sessionId}`],
     enabled: !!sessionId,
@@ -328,128 +221,139 @@ export function useSession() {
   });
 
   // Effect to handle loading existing results when they become available
+  // Uses fingerprint-based dedup so it re-processes when server data changes
+  // (e.g., auto-save completes after navigating to a different page)
   useEffect(() => {
-    if (existingResults && existingResults.length > 0 && batchedResults.length === 0 && sessionId) {
-      console.log(`Loading ${existingResults.length} existing results for session ${sessionId}`);
-      
-      const loadedResults: BatchedTestResult[] = existingResults.map((result: any) => ({
-        id: `existing-${result.id}`,
-        serverId: result.id, // Track server ID for auto-save updates
-        itemName: result.itemName,
-        itemType: result.itemType || result.itemName,
-        location: result.location,
-        classification: result.classification,
-        result: result.result,
-        frequency: result.frequency,
-        failureReason: result.failureReason || undefined,
-        actionTaken: result.actionTaken || undefined,
-        // Clean notes by removing [TRIP_TIMES:[...]] pattern that was used for storage
-        notes: (() => {
-          const rawNotes = result.notes || '';
-          const cleanedNotes = rawNotes.replace(/\s*\[TRIP_TIMES:\[[^\]]*\]\]/g, '').trim();
-          return cleanedNotes || undefined;
-        })(),
-        photoData: result.photoData || undefined,
-        visionInspection: result.visionInspection,
-        electricalTest: result.electricalTest,
-        timestamp: new Date().toISOString(),
-        assetNumber: result.assetNumber,
-        // Emergency-specific fields
-        maintenanceType: result.maintenanceType || undefined,
-        globeType: result.globeType || undefined,
-        dischargeTest: result.dischargeTest || undefined,
-        switchingTest: result.switchingTest || undefined,
-        chargingTest: result.chargingTest || undefined,
-        manufacturerInfo: result.manufacturerInfo || undefined,
-        installationDate: result.installationDate || undefined,
-        // Lux testing fields
-        luxTest: result.luxTest || undefined,
-        luxReading: result.luxReading || undefined,
-        luxCompliant: result.luxCompliant || undefined,
-        // RCD testing fields
-        pushButtonTest: result.pushButtonTest ?? result.push_button_test ?? undefined,
-        injectionTimedTest: result.injectionTimedTest ?? result.injection_timed_test ?? undefined,
-        // Parse tripTimes from multiple sources with validation:
-        // 1. Parse from notes field [TRIP_TIMES:[...]] (most reliable for stored data)
-        // 2. tripTimes array (if available and contains valid values)
-        // 3. Fall back to trip_time single value from database
-        tripTimes: (() => {
-          // First priority: Parse from notes field (this has the full array)
-          const notesValue = result.notes || '';
-          const tripTimesMatch = notesValue.match(/\[TRIP_TIMES:\[([^\]]*)\]\]/);
-          if (tripTimesMatch && tripTimesMatch[1]) {
-            const parsedTimes = tripTimesMatch[1].split(',').map((t: string) => Number(t.trim())).filter((t: number) => t > 0);
-            if (parsedTimes.length > 0) {
-              console.log(`Parsed tripTimes from notes: [${parsedTimes.join(',')}]`);
-              return parsedTimes;
-            }
+    if (!existingResults || existingResults.length === 0 || !sessionId) return;
+
+    // Build a fingerprint of server result IDs to detect changes
+    const fingerprint = existingResults.map((r: any) => r.id).sort((a: number, b: number) => a - b).join(',');
+    if (fingerprint === processedServerFingerprintRef.current) return;
+    processedServerFingerprintRef.current = fingerprint;
+
+    const isInitialLoad = batchedResults.length === 0;
+    console.log(`Loading ${existingResults.length} existing results for session ${sessionId}${isInitialLoad ? '' : ' (merge)'}`);
+
+    const loadedResults: BatchedTestResult[] = existingResults.map((result: any) => ({
+      id: `existing-${result.id}`,
+      serverId: result.id, // Track server ID for auto-save updates
+      itemName: result.itemName,
+      itemType: result.itemType || result.itemName,
+      location: result.location,
+      classification: result.classification,
+      result: result.result,
+      frequency: result.frequency,
+      failureReason: result.failureReason || undefined,
+      actionTaken: result.actionTaken || undefined,
+      // Clean notes by removing [TRIP_TIMES:[...]] pattern that was used for storage
+      notes: (() => {
+        const rawNotes = result.notes || '';
+        const cleanedNotes = rawNotes.replace(/\s*\[TRIP_TIMES:\[[^\]]*\]\]/g, '').trim();
+        return cleanedNotes || undefined;
+      })(),
+      photoData: result.photoData || undefined,
+      visionInspection: result.visionInspection,
+      electricalTest: result.electricalTest,
+      timestamp: new Date().toISOString(),
+      assetNumber: result.assetNumber,
+      // Emergency-specific fields
+      maintenanceType: result.maintenanceType || undefined,
+      globeType: result.globeType || undefined,
+      dischargeTest: result.dischargeTest || undefined,
+      switchingTest: result.switchingTest || undefined,
+      chargingTest: result.chargingTest || undefined,
+      manufacturerInfo: result.manufacturerInfo || undefined,
+      installationDate: result.installationDate || undefined,
+      // Lux testing fields
+      luxTest: result.luxTest || undefined,
+      luxReading: result.luxReading || undefined,
+      luxCompliant: result.luxCompliant || undefined,
+      // RCD testing fields
+      pushButtonTest: result.pushButtonTest ?? result.push_button_test ?? undefined,
+      injectionTimedTest: result.injectionTimedTest ?? result.injection_timed_test ?? undefined,
+      tripTimes: (() => {
+        const notesValue = result.notes || '';
+        const tripTimesMatch = notesValue.match(/\[TRIP_TIMES:\[([^\]]*)\]\]/);
+        if (tripTimesMatch && tripTimesMatch[1]) {
+          const parsedTimes = tripTimesMatch[1].split(',').map((t: string) => Number(t.trim())).filter((t: number) => t > 0);
+          if (parsedTimes.length > 0) {
+            return parsedTimes;
           }
-          // Second: Try direct tripTimes array (only if values are valid > 0)
-          if (result.tripTimes && Array.isArray(result.tripTimes) && result.tripTimes.length > 0) {
-            const validTimes = result.tripTimes.map((t: any) => Number(t)).filter((t: number) => t > 0);
-            if (validTimes.length > 0) {
-              console.log(`Using existing tripTimes array: [${validTimes.join(',')}]`);
-              return validTimes;
-            }
+        }
+        if (result.tripTimes && Array.isArray(result.tripTimes) && result.tripTimes.length > 0) {
+          const validTimes = result.tripTimes.map((t: any) => Number(t)).filter((t: number) => t > 0);
+          if (validTimes.length > 0) {
+            return validTimes;
           }
-          // Fall back to single trip_time value from database
-          const singleTripTime = result.trip_time || result.tripTime;
-          if (singleTripTime != null && Number(singleTripTime) > 0) {
-            console.log(`Using single trip_time value: ${singleTripTime}`);
-            return [Number(singleTripTime)];
-          }
-          return undefined;
-        })(),
-        distributionBoardNumber: result.distributionBoardNumber ?? result.distribution_board_number ?? undefined,
-        // Microwave leakage testing fields
-        leakageReading: result.leakageReading || undefined,
-      }));
-      
-      setBatchedResults(loadedResults);
-      
-      // Store in localStorage for validation and duplicate checking
-      localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(loadedResults));
-      console.log(`Stored ${loadedResults.length} results in localStorage for session ${sessionId}`);
-      
+        }
+        const singleTripTime = result.trip_time || result.tripTime;
+        if (singleTripTime != null && Number(singleTripTime) > 0) {
+          return [Number(singleTripTime)];
+        }
+        return undefined;
+      })(),
+      distributionBoardNumber: result.distributionBoardNumber ?? result.distribution_board_number ?? undefined,
+      leakageReading: result.leakageReading || undefined,
+    }));
+
+    // Merge strategy: on initial load replace entirely, on subsequent updates
+    // keep any pending (unsaved) local items and replace saved items with fresh server data
+    setBatchedResults(prev => {
+      if (prev.length === 0) return loadedResults;
+      const pendingItems = prev.filter(r => !r.serverId);
+      return [...loadedResults, ...pendingItems];
+    });
+
+    // Only recalculate counters on initial load (counters are already correct
+    // from addToBatch increments during the current session)
+    if (isInitialLoad) {
       // Calculate and update asset counts based on loaded results
       const monthlyCount = loadedResults.filter(r => r.frequency !== 'fiveyearly').length;
       const fiveYearlyCount = loadedResults.filter(r => r.frequency === 'fiveyearly').length;
       setAssetCounts({ monthly: monthlyCount, fiveYearly: fiveYearlyCount });
-      
+
       // Set counters to continue from where they left off
-      // Find the highest asset numbers for each frequency to continue sequence
       const twelvemonthlyAssets = loadedResults.filter(r => r.frequency === 'twelvemonthly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n));
       const sixmonthlyAssets = loadedResults.filter(r => r.frequency === 'sixmonthly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n));
       const fiveyearlyAssets = loadedResults.filter(r => r.frequency === 'fiveyearly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n));
       const twentyfourmonthlyAssets = loadedResults.filter(r => r.frequency === 'twentyfourmonthly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n));
       const threemonthlyAssets = loadedResults.filter(r => r.frequency === 'threemonthly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n));
       const monthlyAssets = loadedResults.filter(r => r.frequency === 'monthly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n));
-      
+
       // Get service-type-aware defaults for fallback values
       const serviceTypeDefaults = session ? getDefaultStartingNumbers(session.serviceType) : DEFAULT_STARTING_NUMBERS_ELECTRICAL;
-      
+
       const maxTwelvemonthly = twelvemonthlyAssets.length > 0 ? Math.max(...twelvemonthlyAssets) : (serviceTypeDefaults.twelvemonthly - 1);
       const maxSixmonthly = sixmonthlyAssets.length > 0 ? Math.max(...sixmonthlyAssets) : (serviceTypeDefaults.sixmonthly - 1);
       const maxFiveyearly = fiveyearlyAssets.length > 0 ? Math.max(...fiveyearlyAssets) : (serviceTypeDefaults.fiveyearly - 1);
       const maxTwentyfourmonthly = twentyfourmonthlyAssets.length > 0 ? Math.max(...twentyfourmonthlyAssets) : (serviceTypeDefaults.twentyfourmonthly - 1);
       const maxThreemonthly = threemonthlyAssets.length > 0 ? Math.max(...threemonthlyAssets) : (serviceTypeDefaults.threemonthly - 1);
       const maxMonthly = monthlyAssets.length > 0 ? Math.max(...monthlyAssets) : (serviceTypeDefaults.monthly - 1);
-      
+
       setTwelvemonthlyCounter(maxTwelvemonthly);
       setSixmonthlyCounter(maxSixmonthly);
       setFiveyearlyCounter(maxFiveyearly);
       setTwentyfourmonthlyCounter(maxTwentyfourmonthly);
       setThreemonthlyCounter(maxThreemonthly);
       setMonthlyCounter(maxMonthly);
-      
-      // Store counters in localStorage
-      localStorage.setItem(`twelvemonthlyCounter_${sessionId}`, maxTwelvemonthly.toString());
-      localStorage.setItem(`sixmonthlyCounter_${sessionId}`, maxSixmonthly.toString());
-      localStorage.setItem(`fiveyearlyCounter_${sessionId}`, maxFiveyearly.toString());
-      localStorage.setItem(`twentyfourmonthlyCounter_${sessionId}`, maxTwentyfourmonthly.toString());
-      localStorage.setItem(`threemonthlyCounter_${sessionId}`, maxThreemonthly.toString());
-      localStorage.setItem(`monthlyCounter_${sessionId}`, maxMonthly.toString());
-      
+
+      // Also set RCD and microwave counters from loaded results
+      const rcdAssets = loadedResults
+        .filter(r => r.classification === 'rcd' || r.pushButtonTest !== undefined || r.injectionTimedTest !== undefined)
+        .map(r => parseInt(r.assetNumber || '0'))
+        .filter(n => !isNaN(n) && n > 0);
+      if (rcdAssets.length > 0) {
+        setRcdAssetCounter(Math.max(...rcdAssets));
+      }
+
+      const microwaveAssets = loadedResults
+        .filter(r => r.classification === 'microwave' || r.leakageReading !== undefined)
+        .map(r => parseInt(r.assetNumber || '0'))
+        .filter(n => !isNaN(n) && n > 0);
+      if (microwaveAssets.length > 0) {
+        setMicrowaveCounter(Math.max(...microwaveAssets));
+      }
+
       console.log(`Updated asset counters: 12M=${maxTwelvemonthly}, 6M=${maxSixmonthly}, 5Y=${maxFiveyearly}, 24M=${maxTwentyfourmonthly}, 3M=${maxThreemonthly}, M=${maxMonthly}`);
     }
   }, [existingResults, batchedResults.length, sessionId]);
@@ -457,64 +361,98 @@ export function useSession() {
   // Initialize counters based on service type when a new session is created
   useEffect(() => {
     if (!session || !sessionId) return;
-    
-    // Check if counters need to be initialized for this session
-    const hasStoredCounters = localStorage.getItem(`twelvemonthlyCounter_${sessionId}`) !== null;
-    const storedServiceType = localStorage.getItem(`session_${sessionId}_serviceType`);
-    
-    // Skip if counters already initialized for this exact session AND service type matches
-    if (hasStoredCounters && storedServiceType === session.serviceType) {
-      console.log(`Counters already initialized for session ${sessionId} (${session.serviceType})`);
+
+    // Skip if counters already initialized for this exact session
+    if (countersInitializedRef.current === sessionId) {
       return;
     }
-    
+
+    // Only initialize if we don't have existing results loaded yet
+    // (existingResults effect handles counter setup when resuming)
+    if (existingResults && existingResults.length > 0) {
+      countersInitializedRef.current = sessionId;
+      return;
+    }
+
     // Get service-type-aware defaults
     const serviceTypeDefaults = getDefaultStartingNumbers(session.serviceType);
-    
-    // Initialize all counters based on service type
-    const initialTwelvemonthly = serviceTypeDefaults.twelvemonthly - 1;
-    const initialSixmonthly = serviceTypeDefaults.sixmonthly - 1;
-    const initialFiveyearly = serviceTypeDefaults.fiveyearly - 1;
-    const initialTwentyfourmonthly = serviceTypeDefaults.twentyfourmonthly - 1;
-    const initialThreemonthly = serviceTypeDefaults.threemonthly - 1;
-    const initialMonthly = serviceTypeDefaults.monthly - 1;
-    
-    console.log(`Initializing counters for ${session.serviceType} service (session ${sessionId}): 12M=${initialTwelvemonthly}, 6M=${initialSixmonthly}, 5Y=${initialFiveyearly}, 24M=${initialTwentyfourmonthly}, 3M=${initialThreemonthly}, M=${initialMonthly}`);
-    
-    // Update state
-    setTwelvemonthlyCounter(initialTwelvemonthly);
-    setSixmonthlyCounter(initialSixmonthly);
-    setFiveyearlyCounter(initialFiveyearly);
-    setTwentyfourmonthlyCounter(initialTwentyfourmonthly);
-    setThreemonthlyCounter(initialThreemonthly);
-    setMonthlyCounter(initialMonthly);
-    
-    // Store in localStorage
-    localStorage.setItem(`twelvemonthlyCounter_${sessionId}`, initialTwelvemonthly.toString());
-    localStorage.setItem(`sixmonthlyCounter_${sessionId}`, initialSixmonthly.toString());
-    localStorage.setItem(`fiveyearlyCounter_${sessionId}`, initialFiveyearly.toString());
-    localStorage.setItem(`twentyfourmonthlyCounter_${sessionId}`, initialTwentyfourmonthly.toString());
-    localStorage.setItem(`threemonthlyCounter_${sessionId}`, initialThreemonthly.toString());
-    localStorage.setItem(`monthlyCounter_${sessionId}`, initialMonthly.toString());
-  }, [session?.id, sessionId, session?.serviceType]);
 
-  // Ensure service type is always persisted to localStorage
-  // This is critical for addToBatch to correctly determine starting asset ranges
+    // Initialize all counters based on service type
+    setTwelvemonthlyCounter(serviceTypeDefaults.twelvemonthly - 1);
+    setSixmonthlyCounter(serviceTypeDefaults.sixmonthly - 1);
+    setFiveyearlyCounter(serviceTypeDefaults.fiveyearly - 1);
+    setTwentyfourmonthlyCounter(serviceTypeDefaults.twentyfourmonthly - 1);
+    setThreemonthlyCounter(serviceTypeDefaults.threemonthly - 1);
+    setMonthlyCounter(serviceTypeDefaults.monthly - 1);
+
+    countersInitializedRef.current = sessionId;
+
+    console.log(`Initialized counters for ${session.serviceType} service (session ${sessionId})`);
+  }, [session?.id, sessionId, session?.serviceType, existingResults]);
+
+  // Load custom starting numbers from DB session when session changes
   useEffect(() => {
-    if (session && sessionId) {
-      const stored = localStorage.getItem(`session_${sessionId}_serviceType`);
-      if (!stored || stored !== session.serviceType) {
-        console.log(`Backfilling service type for session ${sessionId}: ${session.serviceType}`);
-        localStorage.setItem(`session_${sessionId}_serviceType`, session.serviceType);
-      }
+    if (!session || !sessionId) return;
+
+    const serviceType = session.serviceType || 'electrical';
+
+    // DATABASE-FIRST: Load custom starting numbers from session if available
+    const sessionCustomNumbers = (session as any)?.customStartingNumbers;
+    if (sessionCustomNumbers && serviceType === 'electrical' && Object.keys(sessionCustomNumbers).length > 0) {
+      console.log('Loading custom starting numbers from database session:', sessionCustomNumbers);
+      setCustomStartingNumbers(sessionCustomNumbers);
+
+      // Update counters based on database values
+      setTwelvemonthlyCounter((sessionCustomNumbers.twelvemonthly ?? DEFAULT_STARTING_NUMBERS.twelvemonthly) - 1);
+      setSixmonthlyCounter((sessionCustomNumbers.sixmonthly ?? DEFAULT_STARTING_NUMBERS.sixmonthly) - 1);
+      setFiveyearlyCounter((sessionCustomNumbers.fiveyearly ?? DEFAULT_STARTING_NUMBERS.fiveyearly) - 1);
+      setTwentyfourmonthlyCounter((sessionCustomNumbers.twentyfourmonthly ?? DEFAULT_STARTING_NUMBERS.twentyfourmonthly) - 1);
+      setThreemonthlyCounter((sessionCustomNumbers.threemonthly ?? DEFAULT_STARTING_NUMBERS.threemonthly) - 1);
+      setMonthlyCounter((sessionCustomNumbers.monthly ?? DEFAULT_STARTING_NUMBERS.monthly) - 1);
     }
-  }, [session, sessionId]);
+    // Apply pending custom starting numbers for NEW sessions (stored in React state)
+    else if (pendingCustomStartingNumbers && serviceType === 'electrical') {
+      const numbers = pendingCustomStartingNumbers;
+      console.log('Applying pending custom starting numbers to electrical session:', numbers);
+
+      const isValidNumbers =
+        typeof numbers === 'object' &&
+        Object.values(numbers).every(val => typeof val === 'number' && !isNaN(val as number) && (val as number) > 0);
+
+      if (isValidNumbers) {
+        setCustomStartingNumbers(numbers);
+
+        setTwelvemonthlyCounter((numbers.twelvemonthly ?? DEFAULT_STARTING_NUMBERS.twelvemonthly) - 1);
+        setSixmonthlyCounter((numbers.sixmonthly ?? DEFAULT_STARTING_NUMBERS.sixmonthly) - 1);
+        setFiveyearlyCounter((numbers.fiveyearly ?? DEFAULT_STARTING_NUMBERS.fiveyearly) - 1);
+        setTwentyfourmonthlyCounter((numbers.twentyfourmonthly ?? DEFAULT_STARTING_NUMBERS.twentyfourmonthly) - 1);
+        setThreemonthlyCounter((numbers.threemonthly ?? DEFAULT_STARTING_NUMBERS.threemonthly) - 1);
+        setMonthlyCounter((numbers.monthly ?? DEFAULT_STARTING_NUMBERS.monthly) - 1);
+
+        // Save to database for persistence
+        apiRequest('PATCH', `/api/sessions/${sessionId}/custom-numbers`, {
+          customStartingNumbers: numbers
+        }).then(() => {
+          console.log('Custom starting numbers saved to database');
+        }).catch((err) => {
+          console.warn('Failed to save custom numbers to database:', err);
+        });
+      }
+
+      // Clear pending after applying
+      setPendingCustomStartingNumbers(null);
+    } else if (pendingCustomStartingNumbers && serviceType !== 'electrical') {
+      // Clear pending custom numbers for non-electrical sessions
+      console.log(`Clearing pending custom numbers for ${serviceType} session`);
+      setPendingCustomStartingNumbers(null);
+    }
+  }, [session?.id, sessionId, session?.serviceType, pendingCustomStartingNumbers]);
 
   // Calculate local asset progress from actual used numbers (accounts for gaps)
   const getLocalAssetProgress = () => {
     // Collect all existing asset numbers
     const usedNumbers = new Set<number>();
-    
+
     // Add numbers from batched results
     batchedResults.forEach((result: BatchedTestResult) => {
       const assetNum = parseInt(result.assetNumber || '');
@@ -522,19 +460,14 @@ export function useSession() {
         usedNumbers.add(assetNum);
       }
     });
-    
-    // Add manually entered asset numbers from localStorage to prevent conflicts
-    const manuallyEnteredKey = `manuallyEnteredAssetNumbers_${sessionId}`;
-    const manuallyEnteredStored = localStorage.getItem(manuallyEnteredKey);
-    if (manuallyEnteredStored) {
-      const manuallyEnteredAssetNumbers = new Set<string>(JSON.parse(manuallyEnteredStored));
-      Array.from(manuallyEnteredAssetNumbers).forEach(manualNumber => {
-        const assetNum = parseInt(manualNumber);
-        if (!isNaN(assetNum) && assetNum > 0) {
-          usedNumbers.add(assetNum);
-        }
-      });
-    }
+
+    // Add manually entered asset numbers from React state to prevent conflicts
+    manuallyEnteredAssetNumbers.forEach(manualNumber => {
+      const assetNum = parseInt(manualNumber);
+      if (!isNaN(assetNum) && assetNum > 0) {
+        usedNumbers.add(assetNum);
+      }
+    });
 
     // Get minimum starting numbers (custom or default based on service type)
     const serviceType = session?.serviceType || 'electrical';
@@ -550,7 +483,7 @@ export function useSession() {
     const nextTwentyfourmonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(getMinStartNumber('twentyfourmonthly'), twentyfourmonthlyCounter + 1));
     const nextThreemonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(getMinStartNumber('threemonthly'), threemonthlyCounter + 1));
     const nextMonthly = getNextAvailableAssetNumber(usedNumbers, Math.max(getMinStartNumber('monthly'), monthlyCounter + 1));
-    
+
     // Count items by frequency
     const twelvemonthlyCount = batchedResults.filter(r => r.frequency === 'twelvemonthly').length;
     const sixmonthlyCount = batchedResults.filter(r => r.frequency === 'sixmonthly').length;
@@ -558,7 +491,7 @@ export function useSession() {
     const twentyfourmonthlyCount = batchedResults.filter(r => r.frequency === 'twentyfourmonthly').length;
     const threemonthlyCount = batchedResults.filter(r => r.frequency === 'threemonthly').length;
     const monthlyCount = batchedResults.filter(r => r.frequency === 'monthly').length;
-    
+
     return {
       nextTwelvemonthly,
       nextSixmonthly,
@@ -580,49 +513,39 @@ export function useSession() {
     session,
     results: [], // Empty since we're using batched results
     summary: (() => {
-      // For RCD reporting, count push button and time tests individually
+      // For RCD reporting, count all items and track test types separately
       if (session.serviceType === 'rcd_reporting') {
-        let totalTests = 0;
-        let passedTests = 0;
-        let failedTests = 0;
+        const totalItems = batchedResults.length;
+        const passedItems = batchedResults.filter(r => r.result === 'pass').length;
+        const failedItems = batchedResults.filter(r => r.result === 'fail').length;
         let numberOfPushButtons = 0;
         let numberOfTimeTests = 0;
 
         batchedResults.forEach(result => {
-          const hasPushButton = (result as any).pushButtonTest === true;
-          const hasTimeTest = (result as any).injectionTimedTest === true;
-          
-          if (hasPushButton) {
+          if ((result as any).pushButtonTest === true) {
             numberOfPushButtons++;
-            totalTests++;
-            if (result.result === 'pass') passedTests++;
-            else failedTests++;
           }
-          
-          if (hasTimeTest) {
+          if ((result as any).injectionTimedTest === true) {
             numberOfTimeTests++;
-            totalTests++;
-            if (result.result === 'pass') passedTests++;
-            else failedTests++;
           }
         });
 
         return {
-          totalItems: totalTests,
-          passedItems: passedTests,
-          failedItems: failedTests,
-          passRate: totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0,
+          totalItems,
+          passedItems,
+          failedItems,
+          passRate: totalItems > 0 ? Math.round((passedItems / totalItems) * 100) : 0,
           numberOfPushButtons,
           numberOfTimeTests,
         };
       }
-      
+
       // For other service types, count normally
       return {
         totalItems: batchedResults.length,
         passedItems: batchedResults.filter(r => r.result === 'pass').length,
         failedItems: batchedResults.filter(r => r.result === 'fail').length,
-        passRate: batchedResults.length > 0 ? 
+        passRate: batchedResults.length > 0 ?
           Math.round((batchedResults.filter(r => r.result === 'pass').length / batchedResults.length) * 100) : 0,
       };
     })()
@@ -630,7 +553,6 @@ export function useSession() {
 
   /**
    * Creates a new testing session with client and technician details
-   * Sets up the testing context for recording test results locally
    */
   const createSessionMutation = useMutation({
     mutationFn: async (data: InsertTestSession) => {
@@ -640,20 +562,7 @@ export function useSession() {
     onSuccess: (session: TestSession) => {
       console.log('Session created successfully:', session.id);
 
-      // DATABASE-FIRST FIX: Only clear data for THIS session, NOT other sessions
-      // Other sessions' data should remain in localStorage until they are continued or discarded
-      // This prevents the "88 items → 2 items" data loss bug
-
-      // Clear only the current session's stale data (if any from a failed previous attempt)
-      localStorage.removeItem(`batchedResults_${session.id}`);
-
       setSessionId(session.id);
-      localStorage.setItem('currentSessionId', session.id.toString());
-      // Store service type for this session
-      localStorage.setItem(`session_${session.id}_serviceType`, session.serviceType);
-
-      // NOTE: We no longer set 'unfinished' flags - the database status field is the source of truth
-      // Sessions are created with status='draft' and marked 'finalized' when completed
 
       // Clear any existing batched results for this session
       setBatchedResults([]);
@@ -668,12 +577,10 @@ export function useSession() {
       setTwentyfourmonthlyCounter(defaults.twentyfourmonthly - 1);
       setThreemonthlyCounter(defaults.threemonthly - 1);
       setMonthlyCounter(defaults.monthly - 1);
-      localStorage.setItem(`twelvemonthlyCounter_${session.id}`, (defaults.twelvemonthly - 1).toString());
-      localStorage.setItem(`sixmonthlyCounter_${session.id}`, (defaults.sixmonthly - 1).toString());
-      localStorage.setItem(`fiveyearlyCounter_${session.id}`, (defaults.fiveyearly - 1).toString());
-      localStorage.setItem(`twentyfourmonthlyCounter_${session.id}`, (defaults.twentyfourmonthly - 1).toString());
-      localStorage.setItem(`threemonthlyCounter_${session.id}`, (defaults.threemonthly - 1).toString());
-      localStorage.setItem(`monthlyCounter_${session.id}`, (defaults.monthly - 1).toString());
+      setRcdAssetCounter(0);
+      setMicrowaveCounter(0);
+      countersInitializedRef.current = session.id;
+
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/sessions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/sessions/drafts'] });
@@ -682,21 +589,19 @@ export function useSession() {
 
   /**
    * Adds test result to local batch storage with proper asset numbering
-   * Results are stored locally until final report submission
-   * Now accepts manually entered asset numbers from the test details form
-   * Includes defensive sanitization to strip any legacy/unexpected fields
+   * Results are auto-saved to server immediately after being added to state
    */
   const addToBatch = (data: Omit<InsertTestResult, 'sessionId'>) => {
     if (!sessionId) throw new Error('No active session');
-    
+
     // Defensive sanitization: strip itemCode and any other unexpected fields from incoming data
     const { itemCode, ...cleanData } = data as any;
-    
+
     const frequency = cleanData.frequency;
-    
+
     // Collect all existing asset numbers to avoid conflicts
     const usedNumbers = new Set<number>();
-    
+
     // Add numbers from current batched results
     batchedResults.forEach(result => {
       const assetNum = parseInt(result.assetNumber || '');
@@ -704,87 +609,50 @@ export function useSession() {
         usedNumbers.add(assetNum);
       }
     });
-    
-    // Add manually entered asset numbers from localStorage
-    // These are tracked when users manually edit asset numbers in report preview
-    const manuallyEnteredKey = `manuallyEnteredAssetNumbers_${sessionId}`;
-    const manuallyEnteredData = localStorage.getItem(manuallyEnteredKey);
-    if (manuallyEnteredData) {
-      try {
-        const manualNumbers = JSON.parse(manuallyEnteredData);
-        if (Array.isArray(manualNumbers)) {
-          manualNumbers.forEach(num => {
-            const assetNum = parseInt(num);
-            if (!isNaN(assetNum) && assetNum > 0) {
-              usedNumbers.add(assetNum);
-            }
-          });
-        }
-      } catch (error) {
-        console.warn('Error parsing manually entered asset numbers:', error);
+
+    // Add manually entered asset numbers from React state
+    manuallyEnteredAssetNumbers.forEach(num => {
+      const assetNum = parseInt(num);
+      if (!isNaN(assetNum) && assetNum > 0) {
+        usedNumbers.add(assetNum);
       }
-    }
-    
+    });
+
     // Use provided asset number or auto-generate
     let assetNumber: string;
     const isRCD = cleanData.classification === 'rcd' || sessionData?.session?.serviceType === 'rcd_reporting';
     const isMicrowave = cleanData.classification === 'microwave' || sessionData?.session?.serviceType === 'microwave_leakage';
-    
+
     // If asset number is provided, use it and update counters accordingly
     if (cleanData.assetNumber && cleanData.assetNumber.trim() !== '') {
       assetNumber = cleanData.assetNumber.trim();
       const assetNum = parseInt(assetNumber);
-      
+
       // Update the appropriate counter if this number is higher
       if (!isNaN(assetNum)) {
         if (isRCD) {
-          if (assetNum > rcdAssetCounter) {
-            setRcdAssetCounter(assetNum);
-            localStorage.setItem(`rcdCounter_${sessionId}`, assetNum.toString());
-          }
+          if (assetNum > rcdAssetCounter) setRcdAssetCounter(assetNum);
         } else if (isMicrowave) {
-          if (assetNum > microwaveCounter) {
-            setMicrowaveCounter(assetNum);
-            localStorage.setItem(`microwaveCounter_${sessionId}`, assetNum.toString());
-          }
+          if (assetNum > microwaveCounter) setMicrowaveCounter(assetNum);
         } else {
-          // Update the appropriate frequency counter
           switch (frequency) {
             case 'twelvemonthly':
-              if (assetNum > twelvemonthlyCounter) {
-                setTwelvemonthlyCounter(assetNum);
-                localStorage.setItem(`twelvemonthlyCounter_${sessionId}`, assetNum.toString());
-              }
+              if (assetNum > twelvemonthlyCounter) setTwelvemonthlyCounter(assetNum);
               break;
             case 'sixmonthly':
-              if (assetNum > sixmonthlyCounter) {
-                setSixmonthlyCounter(assetNum);
-                localStorage.setItem(`sixmonthlyCounter_${sessionId}`, assetNum.toString());
-              }
+              if (assetNum > sixmonthlyCounter) setSixmonthlyCounter(assetNum);
               break;
             case 'fiveyearly':
-              if (assetNum > fiveyearlyCounter) {
-                setFiveyearlyCounter(assetNum);
-                localStorage.setItem(`fiveyearlyCounter_${sessionId}`, assetNum.toString());
-              }
+              if (assetNum > fiveyearlyCounter) setFiveyearlyCounter(assetNum);
               break;
             case 'twentyfourmonthly':
-              if (assetNum > twentyfourmonthlyCounter) {
-                setTwentyfourmonthlyCounter(assetNum);
-                localStorage.setItem(`twentyfourmonthlyCounter_${sessionId}`, assetNum.toString());
-              }
+              if (assetNum > twentyfourmonthlyCounter) setTwentyfourmonthlyCounter(assetNum);
               break;
             case 'threemonthly':
-              if (assetNum > threemonthlyCounter) {
-                setThreemonthlyCounter(assetNum);
-                localStorage.setItem(`threemonthlyCounter_${sessionId}`, assetNum.toString());
-              }
+              if (assetNum > threemonthlyCounter) setThreemonthlyCounter(assetNum);
               break;
             case 'monthly':
-              if (assetNum > monthlyCounter) {
-                setMonthlyCounter(assetNum);
-                localStorage.setItem(`monthlyCounter_${sessionId}`, assetNum.toString());
-              }
+              if (assetNum > monthlyCounter) setMonthlyCounter(assetNum);
               break;
           }
         }
@@ -792,34 +660,21 @@ export function useSession() {
     } else {
       // Auto-generate asset number based on frequency
       if (isRCD) {
-        // For RCD reporting, use simple sequential numbering starting from 1
         let candidate = Math.max(1, rcdAssetCounter + 1);
-        while (usedNumbers.has(candidate)) {
-          candidate++;
-        }
+        while (usedNumbers.has(candidate)) candidate++;
         assetNumber = candidate.toString();
         setRcdAssetCounter(candidate);
-        localStorage.setItem(`rcdCounter_${sessionId}`, candidate.toString());
       } else if (isMicrowave) {
-        // For microwave leakage testing, use simple sequential numbering starting from 1
         let candidate = Math.max(1, microwaveCounter + 1);
-        while (usedNumbers.has(candidate)) {
-          candidate++;
-        }
+        while (usedNumbers.has(candidate)) candidate++;
         assetNumber = candidate.toString();
         setMicrowaveCounter(candidate);
-        localStorage.setItem(`microwaveCounter_${sessionId}`, candidate.toString());
       } else {
         // Get service type to determine correct starting ranges
-        // Priority: 1. Session data, 2. localStorage, 3. Default to 'electrical' for backwards compatibility
-        const sessionServiceType = sessionData?.session?.serviceType || 
-                                   localStorage.getItem(`session_${sessionId}_serviceType`) || 
-                                   'electrical';
+        const sessionServiceType = sessionData?.session?.serviceType || 'electrical';
         const defaultStartingNumbers = getDefaultStartingNumbers(sessionServiceType);
-        
-        // IMPORTANT: Custom starting numbers are ONLY for electrical sessions
-        // Emergency Exit Light and Fire Equipment Testing always use service-type defaults
-        const startingNumbers = sessionServiceType === 'electrical' 
+
+        const startingNumbers = sessionServiceType === 'electrical'
           ? {
               twelvemonthly: customStartingNumbers.twelvemonthly ?? defaultStartingNumbers.twelvemonthly,
               sixmonthly: customStartingNumbers.sixmonthly ?? defaultStartingNumbers.sixmonthly,
@@ -829,86 +684,57 @@ export function useSession() {
               monthly: customStartingNumbers.monthly ?? defaultStartingNumbers.monthly,
             }
           : defaultStartingNumbers;
-        
-        // Use frequency-specific ranges based on service type
+
         let candidate: number;
-        
+
         switch (frequency) {
           case 'twelvemonthly':
             candidate = Math.max(startingNumbers.twelvemonthly, twelvemonthlyCounter + 1);
-            while (usedNumbers.has(candidate)) {
-              candidate++;
-            }
+            while (usedNumbers.has(candidate)) candidate++;
             assetNumber = candidate.toString();
             setTwelvemonthlyCounter(candidate);
-            localStorage.setItem(`twelvemonthlyCounter_${sessionId}`, candidate.toString());
             break;
-            
           case 'sixmonthly':
             candidate = Math.max(startingNumbers.sixmonthly, sixmonthlyCounter + 1);
-            while (usedNumbers.has(candidate)) {
-              candidate++;
-            }
+            while (usedNumbers.has(candidate)) candidate++;
             assetNumber = candidate.toString();
             setSixmonthlyCounter(candidate);
-            localStorage.setItem(`sixmonthlyCounter_${sessionId}`, candidate.toString());
             break;
-            
           case 'fiveyearly':
             candidate = Math.max(startingNumbers.fiveyearly, fiveyearlyCounter + 1);
-            while (usedNumbers.has(candidate)) {
-              candidate++;
-            }
+            while (usedNumbers.has(candidate)) candidate++;
             assetNumber = candidate.toString();
             setFiveyearlyCounter(candidate);
-            localStorage.setItem(`fiveyearlyCounter_${sessionId}`, candidate.toString());
             break;
-            
           case 'twentyfourmonthly':
             candidate = Math.max(startingNumbers.twentyfourmonthly, twentyfourmonthlyCounter + 1);
-            while (usedNumbers.has(candidate)) {
-              candidate++;
-            }
+            while (usedNumbers.has(candidate)) candidate++;
             assetNumber = candidate.toString();
             setTwentyfourmonthlyCounter(candidate);
-            localStorage.setItem(`twentyfourmonthlyCounter_${sessionId}`, candidate.toString());
             break;
-            
           case 'threemonthly':
             candidate = Math.max(startingNumbers.threemonthly, threemonthlyCounter + 1);
-            while (usedNumbers.has(candidate)) {
-              candidate++;
-            }
+            while (usedNumbers.has(candidate)) candidate++;
             assetNumber = candidate.toString();
             setThreemonthlyCounter(candidate);
-            localStorage.setItem(`threemonthlyCounter_${sessionId}`, candidate.toString());
             break;
-            
           case 'monthly':
             candidate = Math.max(startingNumbers.monthly, monthlyCounter + 1);
-            while (usedNumbers.has(candidate)) {
-              candidate++;
-            }
+            while (usedNumbers.has(candidate)) candidate++;
             assetNumber = candidate.toString();
             setMonthlyCounter(candidate);
-            localStorage.setItem(`monthlyCounter_${sessionId}`, candidate.toString());
             break;
-            
           default:
-            // Fallback to twelvemonthly range
             candidate = Math.max(startingNumbers.twelvemonthly, twelvemonthlyCounter + 1);
-            while (usedNumbers.has(candidate)) {
-              candidate++;
-            }
+            while (usedNumbers.has(candidate)) candidate++;
             assetNumber = candidate.toString();
             setTwelvemonthlyCounter(candidate);
-            localStorage.setItem(`twelvemonthlyCounter_${sessionId}`, candidate.toString());
         }
       }
     }
-    
+
     const newResult: BatchedTestResult = {
-      id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `temp_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
       itemName: cleanData.itemName,
       itemType: cleanData.itemType,
       location: cleanData.location,
@@ -923,7 +749,6 @@ export function useSession() {
       visionInspection: cleanData.visionInspection ?? true,
       electricalTest: cleanData.electricalTest ?? true,
       timestamp: new Date().toISOString(),
-      // Emergency-specific fields
       maintenanceType: cleanData.maintenanceType || undefined,
       globeType: cleanData.globeType || undefined,
       dischargeTest: cleanData.dischargeTest || undefined,
@@ -934,138 +759,96 @@ export function useSession() {
       luxCompliant: cleanData.luxCompliant || undefined,
       manufacturerInfo: cleanData.manufacturerInfo || undefined,
       installationDate: cleanData.installationDate || undefined,
-      // RCD-specific fields
       pushButtonTest: (cleanData as any).pushButtonTest ?? undefined,
       injectionTimedTest: (cleanData as any).injectionTimedTest ?? undefined,
       tripTimes: (cleanData as any).tripTimes ?? undefined,
       distributionBoardNumber: (cleanData as any).distributionBoardNumber || undefined,
-      // Microwave-specific fields
       leakageReading: cleanData.leakageReading || undefined,
     };
-    
+
     // Add to batched results
     const updatedResults = [...batchedResults, newResult];
     setBatchedResults(updatedResults);
-    
-    // Update asset counts state (simplified for all frequencies)
+
+    // Update asset counts state
     const freq = cleanData.frequency;
     setAssetCounts(prevCounts => ({
       ...prevCounts,
       [freq === 'fiveyearly' ? 'fiveYearly' : 'monthly']: prevCounts[freq === 'fiveyearly' ? 'fiveYearly' : 'monthly'] + 1,
     }));
-    
-    // Save to localStorage
-    localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(updatedResults));
-    
+
     // Update current location
     setCurrentLocation(cleanData.location);
-    localStorage.setItem('currentLocation', cleanData.location);
-    
+
     // Update current distribution board number (for RCD reporting - Fixed RCD only)
-    // Only save if this is a Fixed RCD test with a distribution board number
     const isFixedRcd = cleanData.itemName?.toLowerCase().includes('fixed rcd');
     if (isFixedRcd && (cleanData as any).distributionBoardNumber) {
       setCurrentDistributionBoardNumber((cleanData as any).distributionBoardNumber);
-      localStorage.setItem('currentDistributionBoardNumber', (cleanData as any).distributionBoardNumber);
     }
-    // Note: We don't clear when adding Portable RCD - we only clear when switching equipment type in the form
-    
+
     console.log(`Added result to batch: ${cleanData.itemName} at ${cleanData.location} -> Asset #${assetNumber}`);
-    
+
     // Auto-save to server immediately to prevent data loss
     autoSaveNewResultMutation.mutate(newResult);
-    
+
     return newResult;
   };
 
   /**
    * Submits all batched results to the server in a single request
-   * This replaces individual result submissions and improves performance
    */
   const submitBatchMutation = useMutation({
     mutationFn: async () => {
       if (!sessionId || batchedResults.length === 0) {
         throw new Error('No active session or no results to submit');
       }
-      
+
       console.log(`Submitting batch of ${batchedResults.length} results to server`);
-      
-      // Normalize tripTimes values: convert arrays, handle old format, handle legacy single tripTime, and coerce to numbers
+
+      // Normalize tripTimes values
       const normalizedResults = batchedResults.map(result => {
         const tripTimes = (result as any).tripTimes;
-        const legacyTripTime = (result as any).tripTime; // Check for old single tripTime field
-        
-        // Handle legacy single tripTime - convert to array (ONLY if tripTimes doesn't exist)
+        const legacyTripTime = (result as any).tripTime;
+
         if (legacyTripTime != null && tripTimes == null) {
           const tripTimeNum = Number(legacyTripTime);
           if (isFinite(tripTimeNum) && tripTimeNum > 0) {
-            // Convert old seconds format if needed
             const normalized = tripTimeNum < 1 ? tripTimeNum * 1000 : tripTimeNum;
-            console.log(`Converting legacy tripTime ${legacyTripTime} to tripTimes array: [${normalized}]`);
-            return {
-              ...result,
-              tripTimes: [normalized],
-              tripTime: undefined // Remove legacy field
-            };
+            return { ...result, tripTimes: [normalized], tripTime: undefined };
           }
         }
-        // Handle array of trip times (ONLY if legacy conversion didn't happen)
         else if (tripTimes != null && Array.isArray(tripTimes)) {
           const normalized = tripTimes.map(tripTime => {
             const tripTimeNum = Number(tripTime);
             if (isFinite(tripTimeNum) && tripTimeNum > 0) {
-              // If value is < 1, it's in old seconds format - convert to milliseconds
-              if (tripTimeNum < 1) {
-                console.log(`Converting trip time ${tripTime} from seconds to milliseconds: ${tripTimeNum * 1000}`);
-                return tripTimeNum * 1000;
-              }
-              return tripTimeNum;
+              return tripTimeNum < 1 ? tripTimeNum * 1000 : tripTimeNum;
             }
-            console.warn(`Invalid trip time value: ${tripTime}`);
             return null;
           }).filter((v): v is number => v !== null);
-          
+
           if (normalized.length > 0) {
-            return {
-              ...result,
-              tripTimes: normalized
-            };
+            return { ...result, tripTimes: normalized };
           } else {
-            console.warn(`All trip time values were invalid for result ${result.id}, removing tripTimes field`);
-            return {
-              ...result,
-              tripTimes: undefined
-            };
+            return { ...result, tripTimes: undefined };
           }
         }
-        
+
         return result;
       });
-      
+
       const response = await apiRequest('POST', `/api/sessions/${sessionId}/batch-results`, {
         results: normalizedResults
       });
-      
+
       return response.json();
     },
     onSuccess: (data: any) => {
       const submittedResults = data.savedResults || [];
       console.log(`Successfully submitted ${submittedResults.length} results to server`);
-      
-      // Clear ALL unfinished report indicators since report is now completed
-      localStorage.removeItem('unfinished');
-      localStorage.removeItem('unfinishedSessionId');
-      localStorage.removeItem('unfinishedId');
-      localStorage.removeItem('currentSessionId');
-      
+
       // Clear batched results after successful submission
       setBatchedResults([]);
-      if (sessionId) {
-        localStorage.removeItem(`batchedResults_${sessionId}`);
-        localStorage.removeItem(`monthlyCounter_${sessionId}`);
-        localStorage.removeItem(`fiveYearlyCounter_${sessionId}`);
-      }
-      
+
       // Reset all asset counters and counts for next session
       setTwelvemonthlyCounter(0);
       setSixmonthlyCounter(10000);
@@ -1074,12 +857,16 @@ export function useSession() {
       setThreemonthlyCounter(40000);
       setMonthlyCounter(50000);
       setAssetCounts({ monthly: 0, fiveYearly: 0 });
-      
+      setRcdAssetCounter(0);
+      setMicrowaveCounter(0);
+      setManuallyEnteredAssetNumbers(new Set());
+
       // Clear session ID to ensure no unfinished detection
       setSessionId(null);
-      
-      console.log('Cleared all localStorage unfinished flags and session data');
-      
+      countersInitializedRef.current = null;
+
+      console.log('Cleared session data after successful submission');
+
       // Refresh session data
       queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
@@ -1094,11 +881,12 @@ export function useSession() {
   /**
    * Auto-save mutation: Creates a single new result on the server
    * Called automatically after addToBatch to ensure no data loss
+   * Includes retry with exponential backoff for resilience
    */
   const autoSaveNewResultMutation = useMutation({
     mutationFn: async (result: BatchedTestResult) => {
       if (!sessionId) throw new Error('No active session');
-      
+
       // Normalize tripTimes if present
       let tripTimes = result.tripTimes;
       if (tripTimes && Array.isArray(tripTimes)) {
@@ -1139,43 +927,53 @@ export function useSession() {
       };
 
       console.log(`Auto-saving new result to server: ${result.itemName} (Asset #${result.assetNumber})`);
-      
+
       const response = await apiRequest('POST', `/api/sessions/${sessionId}/results`, resultData);
       return { localId: result.id, serverResult: await response.json() };
     },
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    onMutate: () => {
+      setSaveStatus(prev => ({ ...prev, pendingCount: prev.pendingCount + 1 }));
+    },
     onSuccess: ({ localId, serverResult }) => {
       console.log(`Auto-save successful: ${serverResult.itemName} -> Server ID: ${serverResult.id}`);
-      
+
       // Update the local result with the server ID
-      setBatchedResults(prev => {
-        const updated = prev.map(r => 
-          r.id === localId ? { ...r, serverId: serverResult.id } : r
-        );
-        if (sessionId) {
-          localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(updated));
-        }
-        return updated;
-      });
-      
-      // Invalidate queries to keep admin dashboard in sync
+      setBatchedResults(prev =>
+        prev.map(r => r.id === localId ? { ...r, serverId: serverResult.id } : r)
+      );
+
+      setSaveStatus(prev => ({
+        ...prev,
+        pendingCount: Math.max(0, prev.pendingCount - 1),
+      }));
+
+      // Update the query cache so other pages get fresh data immediately on navigation
+      queryClient.setQueryData<TestResult[]>(
+        [`/api/sessions/${sessionId}/results`],
+        (old) => old ? [...old, serverResult] : [serverResult]
+      );
       queryClient.invalidateQueries({ queryKey: ['/api/admin/sessions'] });
     },
     onError: (error, result) => {
       console.error(`Auto-save failed for ${result.itemName}:`, error);
-      // Keep the result in local storage - it will be synced later via batch submit
+      setSaveStatus(prev => ({
+        ...prev,
+        pendingCount: Math.max(0, prev.pendingCount - 1),
+        failedCount: prev.failedCount + 1,
+      }));
     },
   });
 
   /**
    * Auto-save mutation: Updates an existing result on the server
-   * Called automatically after updateBatchedResult for server-synced results
-   * Includes all mutable fields to prevent data loss
+   * Includes retry with exponential backoff for resilience
    */
   const autoUpdateResultMutation = useMutation({
     mutationFn: async ({ serverId, data }: { serverId: number; data: BatchedTestResult }) => {
       if (!sessionId) throw new Error('No active session');
-      
-      // Normalize tripTimes if present
+
       let tripTimes = data.tripTimes;
       if (tripTimes && Array.isArray(tripTimes)) {
         tripTimes = tripTimes.map(t => {
@@ -1187,7 +985,6 @@ export function useSession() {
         }).filter((v): v is number => v !== null);
       }
 
-      // Include all mutable fields to ensure complete sync
       const updateData = {
         itemName: data.itemName,
         itemType: data.itemType,
@@ -1216,12 +1013,18 @@ export function useSession() {
       };
 
       console.log(`Auto-updating result on server: ID ${serverId}`);
-      
+
       const response = await apiRequest('PATCH', `/api/sessions/${sessionId}/results/${serverId}`, updateData);
       return response.json();
     },
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     onSuccess: (serverResult) => {
       console.log(`Auto-update successful: Server ID ${serverResult.id}`);
+      queryClient.setQueryData<TestResult[]>(
+        [`/api/sessions/${sessionId}/results`],
+        (old) => old?.map(r => r.id === serverResult.id ? serverResult : r) ?? []
+      );
       queryClient.invalidateQueries({ queryKey: ['/api/admin/sessions'] });
     },
     onError: (error, { serverId }) => {
@@ -1234,45 +1037,28 @@ export function useSession() {
    */
   const updateBatchedResult = (id: string, updatedData: Partial<BatchedTestResult>) => {
     try {
-      console.log('updateBatchedResult called with:', { id, updatedData });
-      console.log('Current batchedResults:', batchedResults);
-      
       const foundResult = batchedResults.find(result => result.id === id);
       if (!foundResult) {
         console.error(`No batched result found with ID: ${id}`);
-        console.log('Available IDs:', batchedResults.map(r => r.id));
         throw new Error(`No batched result found with ID: ${id}`);
       }
-      
-      console.log('Found result to update:', foundResult);
-      
+
       // Merge the update data with the existing result
       const mergedResult = { ...foundResult, ...updatedData };
-      
-      const updatedResults = batchedResults.map(result => 
+
+      const updatedResults = batchedResults.map(result =>
         result.id === id ? mergedResult : result
       );
-      
-      console.log('Updated results:', updatedResults);
-      
+
       setBatchedResults(updatedResults);
-      if (sessionId) {
-        localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(updatedResults));
-        console.log('Saved updated results to localStorage');
-      }
-      
+
       // Auto-update on server if this result has been saved before
       if (foundResult.serverId) {
-        console.log(`Auto-updating result on server (serverId: ${foundResult.serverId})`);
-        autoUpdateResultMutation.mutate({ 
-          serverId: foundResult.serverId, 
-          data: mergedResult 
+        autoUpdateResultMutation.mutate({
+          serverId: foundResult.serverId,
+          data: mergedResult
         });
-      } else {
-        console.log('Result not yet saved to server, skipping auto-update');
       }
-      
-      console.log('updateBatchedResult completed successfully');
     } catch (error) {
       console.error('Error in updateBatchedResult:', error);
       throw error;
@@ -1286,72 +1072,49 @@ export function useSession() {
     const resultToRemove = batchedResults.find(result => result.id === id);
     if (resultToRemove) {
       const freq = resultToRemove.frequency;
-      
+
       // Update asset counts state
       setAssetCounts(prevCounts => ({
         ...prevCounts,
         [freq === 'fiveyearly' ? 'fiveYearly' : 'monthly']: Math.max(0, prevCounts[freq === 'fiveyearly' ? 'fiveYearly' : 'monthly'] - 1),
       }));
     }
-    
+
     const updatedResults = batchedResults.filter(result => result.id !== id);
     setBatchedResults(updatedResults);
-    if (sessionId) {
-      localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(updatedResults));
-    }
   };
 
   /**
-   * Renumbers all assets when frequency categories change
-   */
-
-
-  /**
    * Renumber assets to ensure unique asset numbers within the session
-   * Takes into account manually edited asset numbers and finds next available slots
-   * @param updatedResultId - ID of the result being changed
-   * @param newFrequency - New frequency for the changing result
-   * @returns Asset number assigned to the updated result
    */
   const renumberAssets = (updatedResultId: string, newFrequency: string): string => {
-    // Guard against missing results
     if (!batchedResults.length) {
       console.warn('renumberAssets: No batched results available');
       return newFrequency === 'fiveyearly' ? '10001' : '1';
     }
 
-    // Get all existing asset numbers, excluding the one being changed
     const usedNumbers = new Set<number>();
-    
+
     batchedResults.forEach((result: BatchedTestResult) => {
-      // Skip the result being changed, as it will get a new number
-      if (result.id === updatedResultId) {
-        return;
-      }
-      
-      // Parse asset number and add to used set if valid
+      if (result.id === updatedResultId) return;
       const assetNum = parseInt(result.assetNumber || '');
       if (!isNaN(assetNum) && assetNum > 0) {
         usedNumbers.add(assetNum);
       }
     });
 
-    // Find next available asset number for the new frequency
     const startNumber = newFrequency === 'fiveyearly' ? 10001 : 1;
     const nextAvailable = getNextAvailableAssetNumber(usedNumbers, startNumber);
     const newAssetNumber = nextAvailable.toString();
 
-    // Update the specific result with new frequency and asset number
-    const updatedResults = batchedResults.map(r => 
-      r.id === updatedResultId 
+    const updatedResults = batchedResults.map(r =>
+      r.id === updatedResultId
         ? { ...r, frequency: newFrequency, assetNumber: newAssetNumber }
         : r
     );
 
-    // Update state with the modified results
     setBatchedResults(updatedResults);
 
-    // Recalculate asset counts after the change
     const monthlyCount = updatedResults.filter(r => r.frequency !== 'fiveyearly').length;
     const fiveYearlyCount = updatedResults.filter(r => r.frequency === 'fiveyearly').length;
 
@@ -1359,14 +1122,6 @@ export function useSession() {
       monthly: monthlyCount,
       fiveYearly: fiveYearlyCount
     });
-
-    // Note: Counters are managed individually per frequency now
-    // They are updated automatically when adding/removing results
-
-    // Save updated results to localStorage
-    if (sessionId) {
-      localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(updatedResults));
-    }
 
     return newAssetNumber;
   };
@@ -1376,17 +1131,14 @@ export function useSession() {
       if (!sessionId) throw new Error('No active session');
       const response = await fetch(`/api/sessions/${sessionId}/results/${id}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      if (!response.ok) {
-        throw new Error('Failed to update test result');
-      }
+      if (!response.ok) throw new Error('Failed to update test result');
       return response.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/results`] });
       queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/report`] });
       queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/asset-progress`] });
     },
@@ -1395,168 +1147,29 @@ export function useSession() {
   const deleteResultMutation = useMutation({
     mutationFn: async (resultId: number) => {
       if (!sessionId) throw new Error('No active session');
-      const response = await fetch(`/api/sessions/${sessionId}/results/${resultId}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) {
-        throw new Error('Failed to delete test result');
-      }
+      const response = await fetch(`/api/sessions/${sessionId}/results/${resultId}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('Failed to delete test result');
       return response.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/results`] });
       queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/report`] });
       queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/asset-progress`] });
     },
   });
 
-  // Save session ID to localStorage when it changes and restore session data
-  useEffect(() => {
-    if (sessionId) {
-      localStorage.setItem('currentSessionId', sessionId.toString());
-
-      // Check the service type of the current session
-      const serviceType = sessionData?.session?.serviceType || localStorage.getItem(`session_${sessionId}_serviceType`) || 'electrical';
-
-      // DATABASE-FIRST: Load custom starting numbers from session if available
-      // This handles the case when continuing a multi-day job
-      const sessionCustomNumbers = (session as any)?.customStartingNumbers;
-      if (sessionCustomNumbers && serviceType === 'electrical' && Object.keys(sessionCustomNumbers).length > 0) {
-        console.log('Loading custom starting numbers from database session:', sessionCustomNumbers);
-        setCustomStartingNumbers(sessionCustomNumbers);
-
-        // Update counters based on database values
-        const twelvemonthlyValue = (sessionCustomNumbers.twelvemonthly ?? DEFAULT_STARTING_NUMBERS.twelvemonthly) - 1;
-        const sixmonthlyValue = (sessionCustomNumbers.sixmonthly ?? DEFAULT_STARTING_NUMBERS.sixmonthly) - 1;
-        const fiveyearlyValue = (sessionCustomNumbers.fiveyearly ?? DEFAULT_STARTING_NUMBERS.fiveyearly) - 1;
-        const twentyfourmonthlyValue = (sessionCustomNumbers.twentyfourmonthly ?? DEFAULT_STARTING_NUMBERS.twentyfourmonthly) - 1;
-        const threemonthlyValue = (sessionCustomNumbers.threemonthly ?? DEFAULT_STARTING_NUMBERS.threemonthly) - 1;
-        const monthlyValue = (sessionCustomNumbers.monthly ?? DEFAULT_STARTING_NUMBERS.monthly) - 1;
-
-        setTwelvemonthlyCounter(twelvemonthlyValue);
-        setSixmonthlyCounter(sixmonthlyValue);
-        setFiveyearlyCounter(fiveyearlyValue);
-        setTwentyfourmonthlyCounter(twentyfourmonthlyValue);
-        setThreemonthlyCounter(threemonthlyValue);
-        setMonthlyCounter(monthlyValue);
-
-        // Also cache to localStorage
-        localStorage.setItem(`customStartingNumbers_${sessionId}`, JSON.stringify(sessionCustomNumbers));
-      }
-      // FALLBACK: Apply pending custom starting numbers for NEW sessions
-      else {
-        const pendingCustomNumbers = localStorage.getItem('pendingCustomStartingNumbers');
-        if (pendingCustomNumbers) {
-          try {
-            if (serviceType === 'electrical') {
-              const numbers = JSON.parse(pendingCustomNumbers);
-              console.log('Applying pending custom starting numbers to electrical session:', numbers);
-
-              // Validate that numbers object contains valid numeric values
-              const isValidNumbers =
-                typeof numbers === 'object' &&
-                Object.values(numbers).every(val => typeof val === 'number' && !isNaN(val) && val > 0);
-
-              if (!isValidNumbers) {
-                console.warn('Invalid pending custom numbers detected, clearing and using defaults');
-                localStorage.removeItem('pendingCustomStartingNumbers');
-                return;
-              }
-
-              // Save to session-specific storage
-              localStorage.setItem(`customStartingNumbers_${sessionId}`, JSON.stringify(numbers));
-              setCustomStartingNumbers(numbers);
-
-              // Calculate counter values (starting number - 1)
-              const twelvemonthlyValue = (numbers.twelvemonthly ?? DEFAULT_STARTING_NUMBERS.twelvemonthly) - 1;
-              const sixmonthlyValue = (numbers.sixmonthly ?? DEFAULT_STARTING_NUMBERS.sixmonthly) - 1;
-              const fiveyearlyValue = (numbers.fiveyearly ?? DEFAULT_STARTING_NUMBERS.fiveyearly) - 1;
-              const twentyfourmonthlyValue = (numbers.twentyfourmonthly ?? DEFAULT_STARTING_NUMBERS.twentyfourmonthly) - 1;
-              const threemonthlyValue = (numbers.threemonthly ?? DEFAULT_STARTING_NUMBERS.threemonthly) - 1;
-              const monthlyValue = (numbers.monthly ?? DEFAULT_STARTING_NUMBERS.monthly) - 1;
-
-              // Save counters to localStorage so they persist
-              localStorage.setItem(`twelvemonthlyCounter_${sessionId}`, twelvemonthlyValue.toString());
-              localStorage.setItem(`sixmonthlyCounter_${sessionId}`, sixmonthlyValue.toString());
-              localStorage.setItem(`fiveyearlyCounter_${sessionId}`, fiveyearlyValue.toString());
-              localStorage.setItem(`twentyfourmonthlyCounter_${sessionId}`, twentyfourmonthlyValue.toString());
-              localStorage.setItem(`threemonthlyCounter_${sessionId}`, threemonthlyValue.toString());
-              localStorage.setItem(`monthlyCounter_${sessionId}`, monthlyValue.toString());
-
-              // Update state counters
-              setTwelvemonthlyCounter(twelvemonthlyValue);
-              setSixmonthlyCounter(sixmonthlyValue);
-              setFiveyearlyCounter(fiveyearlyValue);
-              setTwentyfourmonthlyCounter(twentyfourmonthlyValue);
-              setThreemonthlyCounter(threemonthlyValue);
-              setMonthlyCounter(monthlyValue);
-
-              // Save to database for persistence (async, don't await)
-              apiRequest('PATCH', `/api/sessions/${sessionId}/custom-numbers`, {
-                customStartingNumbers: numbers
-              }).then(() => {
-                console.log('Custom starting numbers saved to database');
-              }).catch((err) => {
-                console.warn('Failed to save custom numbers to database:', err);
-              });
-
-              // Clear pending custom numbers after applying
-              localStorage.removeItem('pendingCustomStartingNumbers');
-            } else {
-              // CRITICAL: Clear pending custom numbers for non-electrical sessions
-              // This prevents contamination of future electrical sessions with stale custom numbers
-              console.log(`Clearing pending custom numbers for ${serviceType} session - custom numbers are only for electrical sessions`);
-              localStorage.removeItem('pendingCustomStartingNumbers');
-            }
-          } catch (error) {
-            console.warn('Error applying pending custom starting numbers:', error);
-          }
-        }
-      }
-
-      // Restore batched results if they exist for this session
-      const storedBatchedResults = localStorage.getItem(`batchedResults_${sessionId}`);
-      if (storedBatchedResults && batchedResults.length === 0) {
-        try {
-          const results = JSON.parse(storedBatchedResults);
-          if (results.length > 0) {
-            console.log(`Restoring ${results.length} batched results for session ${sessionId}`);
-
-            // Sanitize legacy data by removing deprecated fields
-            const sanitizedResults = results.map(sanitizeBatchedResult);
-
-            // Save sanitized data back to localStorage
-            localStorage.setItem(`batchedResults_${sessionId}`, JSON.stringify(sanitizedResults));
-
-            setBatchedResults(sanitizedResults);
-
-            // Restore asset counts
-            const monthlyCount = sanitizedResults.filter((r: BatchedTestResult) => r.frequency !== 'fiveyearly').length;
-            const fiveYearlyCount = sanitizedResults.filter((r: BatchedTestResult) => r.frequency === 'fiveyearly').length;
-            setAssetCounts({ monthly: monthlyCount, fiveYearly: fiveYearlyCount });
-          }
-        } catch (error) {
-          console.warn('Error restoring batched results:', error);
-        }
-      }
-    }
-  }, [sessionId, batchedResults.length, session]);
-
-
-
   // Save custom starting numbers for the current session (database-first approach)
   const saveCustomStartingNumbers = async (numbers: Partial<CustomStartingNumbers>) => {
-    // CRITICAL: Custom starting numbers are ONLY for electrical sessions
-    // Emergency Exit Light and Fire Equipment Testing must use default ranges
-    const serviceType = sessionData?.session?.serviceType || localStorage.getItem(`session_${sessionId}_serviceType`) || 'electrical';
+    const serviceType = session?.serviceType || 'electrical';
 
     if (serviceType !== 'electrical') {
-      console.warn('Custom starting numbers are only available for Electrical Test & Tag sessions. Ignoring save request.');
+      console.warn('Custom starting numbers are only available for Electrical Test & Tag sessions.');
       return;
     }
 
     setCustomStartingNumbers(numbers);
 
-    // Reset counters to the new starting numbers - 1 (because they increment before use)
+    // Reset counters to the new starting numbers - 1
     setTwelvemonthlyCounter((numbers.twelvemonthly ?? DEFAULT_STARTING_NUMBERS.twelvemonthly) - 1);
     setSixmonthlyCounter((numbers.sixmonthly ?? DEFAULT_STARTING_NUMBERS.sixmonthly) - 1);
     setFiveyearlyCounter((numbers.fiveyearly ?? DEFAULT_STARTING_NUMBERS.fiveyearly) - 1);
@@ -1574,30 +1187,25 @@ export function useSession() {
       } catch (error) {
         console.error('Failed to save custom starting numbers to database:', error);
       }
-
-      // Also save to localStorage as backup/cache
-      localStorage.setItem(`customStartingNumbers_${sessionId}`, JSON.stringify(numbers));
     } else {
-      // No session yet, save to temporary storage (will be applied when session is created)
-      localStorage.setItem('pendingCustomStartingNumbers', JSON.stringify(numbers));
+      // No session yet, save to React state (will be applied when session is created)
+      setPendingCustomStartingNumbers(numbers);
     }
   };
 
   // Reset custom starting numbers to defaults
   const resetCustomStartingNumbers = () => {
     if (!sessionId) return;
-    
-    // CRITICAL: Custom starting numbers are ONLY for electrical sessions
-    const serviceType = sessionData?.session?.serviceType || localStorage.getItem(`session_${sessionId}_serviceType`) || 'electrical';
-    
+
+    const serviceType = session?.serviceType || 'electrical';
+
     if (serviceType !== 'electrical') {
-      console.warn('Custom starting numbers are only available for Electrical Test & Tag sessions. Ignoring reset request.');
+      console.warn('Custom starting numbers are only available for Electrical Test & Tag sessions.');
       return;
     }
-    
+
     setCustomStartingNumbers({});
-    localStorage.removeItem(`customStartingNumbers_${sessionId}`);
-    
+
     // Reset counters to defaults - 1
     setTwelvemonthlyCounter(DEFAULT_STARTING_NUMBERS.twelvemonthly - 1);
     setSixmonthlyCounter(DEFAULT_STARTING_NUMBERS.sixmonthly - 1);
@@ -1609,27 +1217,13 @@ export function useSession() {
 
   // Clear session
   const clearSession = () => {
-    if (sessionId) {
-      localStorage.removeItem(`batchedResults_${sessionId}`);
-      localStorage.removeItem(`monthlyCounter_${sessionId}`);
-      localStorage.removeItem(`fiveYearlyCounter_${sessionId}`);
-      localStorage.removeItem(`rcdCounter_${sessionId}`);
-      localStorage.removeItem(`customStartingNumbers_${sessionId}`);
-      localStorage.removeItem(`twelvemonthlyCounter_${sessionId}`);
-      localStorage.removeItem(`sixmonthlyCounter_${sessionId}`);
-      localStorage.removeItem(`fiveyearlyCounter_${sessionId}`);
-      localStorage.removeItem(`twentyfourmonthlyCounter_${sessionId}`);
-      localStorage.removeItem(`threemonthlyCounter_${sessionId}`);
-      localStorage.removeItem(`monthlyCounter_${sessionId}`);
-    }
-    // Clear unfinished flags
-    localStorage.removeItem('unfinished');
-    localStorage.removeItem('unfinishedSessionId');
     setSessionId(null);
     setCurrentLocation('');
     setCurrentDistributionBoardNumber('');
     setBatchedResults([]);
     setCustomStartingNumbers({});
+    setPendingCustomStartingNumbers(null);
+    setManuallyEnteredAssetNumbers(new Set());
     // Reset all frequency-specific counters
     setTwelvemonthlyCounter(0);
     setSixmonthlyCounter(10000);
@@ -1640,23 +1234,57 @@ export function useSession() {
     setRcdAssetCounter(0);
     setMicrowaveCounter(0);
     setAssetCounts({ monthly: 0, fiveYearly: 0 });
-    localStorage.removeItem('currentSessionId');
-    localStorage.removeItem('currentLocation');
-    localStorage.removeItem('currentDistributionBoardNumber');
-    localStorage.removeItem('lastSelectedFrequency');
+    countersInitializedRef.current = null;
+    // Reset save status for clean slate
+    setSaveStatus({ savedCount: 0, pendingCount: 0, failedCount: 0, isOnline: navigator.onLine });
     queryClient.clear();
   };
+
+  // Periodic sync safety net: retry unsaved results every 30 seconds
+  useEffect(() => {
+    if (!sessionId) return;
+
+    const syncUnsaved = () => {
+      // Skip if there are already saves in flight to avoid duplicates
+      if (autoSaveNewResultMutation.isPending) return;
+
+      const unsaved = batchedResults.filter(r => !r.serverId);
+      if (unsaved.length > 0 && navigator.onLine) {
+        console.log(`Periodic sync: retrying ${unsaved.length} unsaved results`);
+        // Reset failedCount since we're retrying
+        setSaveStatus(prev => ({ ...prev, failedCount: 0 }));
+        unsaved.forEach(result => {
+          autoSaveNewResultMutation.mutate(result);
+        });
+      }
+    };
+
+    const interval = setInterval(syncUnsaved, 30000);
+
+    // Also sync when coming back online
+    const handleOnline = () => {
+      console.log('Back online - syncing unsaved results');
+      syncUnsaved();
+    };
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [sessionId, batchedResults]);
 
   return {
     // Session management
     sessionId,
+    setSessionId,
     sessionData,
     currentLocation,
     setCurrentLocation,
     currentDistributionBoardNumber,
     setCurrentDistributionBoardNumber,
     isLoading,
-    
+
     // Batched results
     batchedResults,
     setBatchedResults,
@@ -1666,30 +1294,36 @@ export function useSession() {
     renumberAssets,
     submitBatch: submitBatchMutation.mutate,
     isSubmittingBatch: submitBatchMutation.isPending,
-    
+
     // Local asset progress
     assetProgress: getLocalAssetProgress(),
     assetCounts,
     rcdAssetCounter,
     microwaveCounter,
-    
+
     // Custom asset numbers
     customStartingNumbers,
     saveCustomStartingNumbers,
     resetCustomStartingNumbers,
-    
+    pendingCustomStartingNumbers,
+    setPendingCustomStartingNumbers,
+
+    // Manually entered asset numbers (for report preview edits)
+    manuallyEnteredAssetNumbers,
+    setManuallyEnteredAssetNumbers,
+
     // Session operations
     createSession: createSessionMutation.mutate,
     isCreatingSession: createSessionMutation.isPending,
     clearSession,
-    
+
     // Legacy operations (for admin use)
     updateResult: updateResultMutation.mutate,
     deleteResult: deleteResultMutation.mutate,
     isUpdatingResult: updateResultMutation.isPending,
     isDeletingResult: deleteResultMutation.isPending,
-    
-    // Utility functions
 
+    // Save status
+    saveStatus,
   };
 }

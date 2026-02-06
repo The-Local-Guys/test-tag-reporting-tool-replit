@@ -3,27 +3,10 @@ import { apiRequest } from "@/lib/queryClient";
 import { useSpaNavigation } from "./useSpaNavigation";
 import { type User, type LoginData, type InsertUser } from "@shared/schema";
 
-// Helper function to check for unsaved test results
 export function hasUnsavedTestResults(): boolean {
-  // Check for any batched results in localStorage
-  for (const key of Object.keys(localStorage)) {
-    if (key.startsWith('batchedResults_')) {
-      try {
-        const results = JSON.parse(localStorage.getItem(key) || '[]');
-        if (results.length > 0) {
-          return true;
-        }
-      } catch (e) {
-        // Ignore invalid JSON
-      }
-    }
-  }
-  
-  // Check for unfinished session flags
-  const unfinished = localStorage.getItem('unfinished');
-  const currentSessionId = localStorage.getItem('currentSessionId');
-  
-  return !!(unfinished || currentSessionId);
+  // With database-only architecture, all results are auto-saved to the server.
+  // No localStorage to check - data is safe.
+  return false;
 }
 
 export function useAuth() {
@@ -100,8 +83,6 @@ export function useAuth() {
       // Clear login mode and selected service from session storage
       sessionStorage.removeItem('loginMode');
       sessionStorage.removeItem('selectedService');
-      // Clear any localStorage data
-      localStorage.clear();
       // Redirect to root page after successful logout (will show login since user is not authenticated)
       navigateWithReplace('/');
     },

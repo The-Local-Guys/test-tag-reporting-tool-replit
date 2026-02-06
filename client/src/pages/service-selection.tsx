@@ -26,7 +26,6 @@ export default function ServiceSelection() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showDraftsDialog, setShowDraftsDialog] = useState(false);
-  const [selectedDraft, setSelectedDraft] = useState<DraftSession | null>(null);
   const [isDiscarding, setIsDiscarding] = useState(false);
 
   // Fetch draft sessions from server (database-first approach)
@@ -76,10 +75,10 @@ export default function ServiceSelection() {
 
   const handleContinueDraft = (draft: DraftSession) => {
     console.log('Continuing draft session:', draft.id);
-    // Set the current session ID
-    localStorage.setItem('currentSessionId', draft.id.toString());
+    // Set the current session ID via sessionStorage (picked up by useSession hook)
+    sessionStorage.setItem('currentSessionId', draft.id.toString());
     // Store service type for the session
-    localStorage.setItem(`session_${draft.id}_serviceType`, draft.serviceType);
+    sessionStorage.setItem('selectedService', draft.serviceType);
     // Navigate directly to items page (skip setup since session already exists)
     navigate('/items');
     setShowDraftsDialog(false);
@@ -90,17 +89,6 @@ export default function ServiceSelection() {
     try {
       console.log('Discarding draft session:', draft.id);
       await apiRequest('DELETE', `/api/sessions/${draft.id}`);
-
-      // Clean up any localStorage data for this session
-      localStorage.removeItem(`batchedResults_${draft.id}`);
-      localStorage.removeItem(`session_${draft.id}_serviceType`);
-      localStorage.removeItem(`twelvemonthlyCounter_${draft.id}`);
-      localStorage.removeItem(`sixmonthlyCounter_${draft.id}`);
-      localStorage.removeItem(`fiveyearlyCounter_${draft.id}`);
-      localStorage.removeItem(`twentyfourmonthlyCounter_${draft.id}`);
-      localStorage.removeItem(`threemonthlyCounter_${draft.id}`);
-      localStorage.removeItem(`monthlyCounter_${draft.id}`);
-      localStorage.removeItem(`customStartingNumbers_${draft.id}`);
 
       // Refresh draft sessions list
       queryClient.invalidateQueries({ queryKey: ['/api/sessions/drafts'] });
@@ -128,10 +116,8 @@ export default function ServiceSelection() {
   };
 
   const handleStartNewReport = () => {
-    // Clear any stale currentSessionId
-    localStorage.removeItem('currentSessionId');
-    localStorage.removeItem('unfinished');
-    localStorage.removeItem('unfinishedSessionId');
+    // Clear any stale currentSessionId from sessionStorage
+    sessionStorage.removeItem('currentSessionId');
     setShowDraftsDialog(false);
   };
 

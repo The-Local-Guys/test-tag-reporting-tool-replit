@@ -31,16 +31,6 @@ import {
 import { Modal } from "@/components/ui/modal";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -93,9 +83,6 @@ export default function AdminDashboard() {
   const [isViewReportModalOpen, setIsViewReportModalOpen] = useState(false);
   const [viewingSession, setViewingSession] = useState<any>(null);
   const [isContinuing, setIsContinuing] = useState(false);
-  const [showOverrideConfirm, setShowOverrideConfirm] = useState(false);
-  const [pendingContinueSession, setPendingContinueSession] = useState<any>(null);
-  const [existingReportDetails, setExistingReportDetails] = useState<any>(null);
   const [isEditResultModalOpen, setIsEditResultModalOpen] = useState(false);
   const [editingResult, setEditingResult] = useState<any>(null);
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
@@ -1150,130 +1137,29 @@ export default function AdminDashboard() {
   };
 
   /**
-   * Check for existing localStorage data and show override confirmation if needed
-   * Now verifies with server to handle race conditions where auto-save completed but localStorage wasn't updated
+   * Check for existing data conflicts (database-first approach - no localStorage)
    */
   const checkForExistingData = async (session: any) => {
-    // Check for existing unfinished reports
-    const existingUnfinished = localStorage.getItem('unfinished');
-    const existingSessionId = localStorage.getItem('currentSessionId');
-    const existingUnfinishedId = localStorage.getItem('unfinishedSessionId');
-    
-    // Check for any batched results in localStorage that are NOT yet saved to server
-    let unsavedResultsCount = 0;
-    let batchSessionId: string | null = null;
-    let allLocalResults: any[] = [];
-    
-    for (const key of Object.keys(localStorage)) {
-      if (key.startsWith('batchedResults_')) {
-        try {
-          const results = JSON.parse(localStorage.getItem(key) || '[]');
-          if (results.length > 0) {
-            allLocalResults = results;
-            // Only count results that don't have a serverId (potentially unsaved)
-            const unsavedResults = results.filter((r: any) => !r.serverId);
-            if (unsavedResults.length > 0) {
-              unsavedResultsCount = unsavedResults.length;
-              batchSessionId = key.replace('batchedResults_', '');
-            }
-          }
-        } catch (e) {
-          // Ignore invalid JSON
-        }
-      }
-    }
-    
-    // If we found results without serverId, verify with server if they're actually saved
-    if (unsavedResultsCount > 0 && batchSessionId) {
-      try {
-        console.log(`Verifying with server if session ${batchSessionId} has saved results...`);
-        const response = await apiRequest('GET', `/api/sessions/${batchSessionId}/results`);
-        const serverResults = await response.json();
-        
-        if (serverResults && serverResults.length > 0) {
-          // Server has results - update localStorage with serverIds
-          console.log(`Server has ${serverResults.length} results, updating localStorage with serverIds`);
-          
-          const updatedLocalResults = allLocalResults.map((localResult: any) => {
-            const matchingServerResult = serverResults.find((sr: any) => 
-              sr.assetNumber === localResult.assetNumber && 
-              sr.itemName === localResult.itemName
-            );
-            if (matchingServerResult) {
-              return { ...localResult, serverId: matchingServerResult.id };
-            }
-            return localResult;
-          });
-          
-          // Save updated results with serverIds to localStorage
-          localStorage.setItem(`batchedResults_${batchSessionId}`, JSON.stringify(updatedLocalResults));
-          
-          // Recheck unsaved count
-          const stillUnsaved = updatedLocalResults.filter((r: any) => !r.serverId);
-          unsavedResultsCount = stillUnsaved.length;
-          
-          if (unsavedResultsCount === 0) {
-            console.log('All results verified as saved on server, proceeding without warning');
-            // Clean up flags since everything is saved
-            localStorage.removeItem('unfinished');
-            localStorage.removeItem('unfinishedSessionId');
-            localStorage.removeItem('unfinishedId');
-            proceedWithContinue(session);
-            return;
-          }
-        }
-      } catch (error) {
-        console.warn('Error verifying with server:', error);
-        // Continue with warning if verification fails
-      }
-    }
-    
-    // If there's truly unsaved data (results without serverId), show override confirmation
-    if (unsavedResultsCount > 0) {
-      const existingDetails = {
-        sessionId: existingSessionId || batchSessionId,
-        itemCount: unsavedResultsCount,
-        hasUnfinished: !!existingUnfinished
-      };
-      
-      setExistingReportDetails(existingDetails);
-      setPendingContinueSession(session);
-      setShowOverrideConfirm(true);
-      return;
-    }
-    
-    // No unsaved conflicts, proceed directly
+    // No localStorage to check - all data is in the database
+    // Proceed directly to continue
     proceedWithContinue(session);
   };
-  
+
   /**
    * Handle continuing an existing report after conflict resolution
    */
   const proceedWithContinue = (session: any) => {
     console.log(`Starting continue for session ${session.id}`);
-    
+
     // Show loading screen
     setIsContinuing(true);
-    
-    // Clear any existing session data to prevent conflicts
-    localStorage.removeItem('currentSessionId');
-    localStorage.removeItem('unfinished');
-    localStorage.removeItem('unfinishedSessionId');
-    
-    // Remove any existing batched results for ALL sessions
-    for (const key of Object.keys(localStorage)) {
-      if (key.startsWith('batchedResults_') || key.startsWith('monthlyCounter_') || key.startsWith('fiveYearlyCounter_')) {
-        localStorage.removeItem(key);
-      }
-    }
-    
-    // Set new session data for continuation
-    localStorage.setItem('currentSessionId', session.id.toString());
-    localStorage.setItem('unfinished', 'true');
-    localStorage.setItem('unfinishedSessionId', session.id.toString());
-    
+
+    // Set session ID in sessionStorage for cross-page navigation bridge
+    sessionStorage.setItem('currentSessionId', session.id.toString());
+    sessionStorage.setItem('selectedService', session.serviceType || 'electrical');
+
     console.log(`Set continuation flags for session ${session.id}, navigating to items`);
-    
+
     // Add a longer delay to show the loading screen and ensure smooth transition
     setTimeout(() => {
       window.location.href = '/items';
@@ -1287,24 +1173,6 @@ export default function AdminDashboard() {
     checkForExistingData(session);
   };
   
-  /**
-   * Handle override confirmation - proceed with continue
-   */
-  const handleOverrideConfirm = () => {
-    setShowOverrideConfirm(false);
-    proceedWithContinue(pendingContinueSession);
-    setPendingContinueSession(null);
-    setExistingReportDetails(null);
-  };
-  
-  /**
-   * Handle override cancellation - reset state
-   */
-  const handleOverrideCancel = () => {
-    setShowOverrideConfirm(false);
-    setPendingContinueSession(null);
-    setExistingReportDetails(null);
-  };
 
   /**
    * Validate new item asset number for duplicates and range requirements
@@ -1476,9 +1344,9 @@ export default function AdminDashboard() {
       const filename = `${session.clientName}-${session.testDate}`;
 
       if (format === "pdf") {
-        await downloadPDF(reportData, filename);
+        await downloadPDF(reportData, `${filename}.pdf`);
       } else {
-        downloadExcel(reportData, filename);
+        downloadExcel(reportData, `${filename}.xlsx`);
       }
 
       toast({
@@ -3517,42 +3385,6 @@ export default function AdminDashboard() {
         message="Deleting test result..."
       />
 
-      {/* Override Confirmation Dialog */}
-      <AlertDialog open={showOverrideConfirm} onOpenChange={setShowOverrideConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Continue with Different Report?</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have an existing in-progress report that will be overridden:
-              <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                <div className="text-sm text-gray-700">
-                  {existingReportDetails?.hasUnfinished && (
-                    <div>• Current session: {existingReportDetails.sessionId}</div>
-                  )}
-                  {existingReportDetails?.itemCount > 0 && (
-                    <div>• {existingReportDetails.itemCount} unsaved test results</div>
-                  )}
-                </div>
-              </div>
-              <div className="mt-3 text-sm">
-                Continuing with <strong>Session {pendingContinueSession?.id}</strong> will clear all existing in-progress data. 
-                Are you sure you want to proceed?
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleOverrideCancel}>
-              Keep Current Report
-            </AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleOverrideConfirm}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Yes, Override Report
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
