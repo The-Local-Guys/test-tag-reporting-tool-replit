@@ -804,7 +804,7 @@ export default function AdminDashboard() {
   /**
    * Renumber assets to ensure unique asset numbers within the session
    * Takes into account manually edited asset numbers and finds next available slots
-   * Uses proper frequency ranges based on service type
+   * Uses proper frequency ranges based on service type and custom starting numbers
    * @param changingResultId - ID of the result being changed (optional)
    * @param newFrequency - New frequency for the changing result (optional)
    * @returns Next available asset number for the frequency type
@@ -820,10 +820,23 @@ export default function AdminDashboard() {
     const serviceType = viewingSession?.session?.serviceType || 'electrical';
     const isElectrical = serviceType === 'electrical';
 
+    // Get custom starting numbers from the session if they exist
+    const customStartingNumbers = viewingSession?.session?.customStartingNumbers || {};
+
     // Define starting numbers based on service type and frequency
     const getStartingNumber = (freq: string): number => {
+      // For electrical services, check if custom starting numbers are set
+      if (isElectrical && customStartingNumbers && Object.keys(customStartingNumbers).length > 0) {
+        const customNumber = customStartingNumbers[freq];
+        if (customNumber !== undefined) {
+          console.log(`Admin: Using custom starting number for ${freq}: ${customNumber}`);
+          return customNumber;
+        }
+      }
+
+      // Fall back to default ranges
       if (isElectrical) {
-        // Electrical service type ranges
+        // Electrical service type default ranges
         const ranges: Record<string, number> = {
           'twelvemonthly': 1,
           'sixmonthly': 10001,

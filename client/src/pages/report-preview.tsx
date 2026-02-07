@@ -68,7 +68,7 @@ function formatAssetNumberWithFrequency(
  * Shows pass/fail statistics and enables report customization options
  */
 export default function ReportPreview() {
-  const { sessionData, batchedResults, submitBatch, isSubmittingBatch, updateBatchedResult, removeBatchedResult, clearSession, assetProgress, renumberAssets, sessionId } = useSession();
+  const { sessionData, batchedResults, submitBatch, isSubmittingBatch, updateBatchedResult, removeBatchedResult, clearSession, assetProgress, renumberAssets, sessionId, customStartingNumbers } = useSession();
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const [editingResult, setEditingResult] = useState<TestResult | null>(null);
@@ -226,7 +226,7 @@ export default function ReportPreview() {
   /**
    * Generate unique asset number for auto-assignment
    * Takes into account both existing results and manually entered numbers
-   * Uses proper frequency ranges based on service type
+   * Uses proper frequency ranges based on service type and custom starting numbers
    */
   const generateUniqueAssetNumber = (editingResultId: string, newFrequency: string): string => {
     // Get service type to determine correct starting ranges
@@ -235,8 +235,18 @@ export default function ReportPreview() {
 
     // Define starting numbers based on service type and frequency
     const getStartingNumber = (freq: string): number => {
+      // For electrical services, check if custom starting numbers are set
+      if (isElectrical && customStartingNumbers && Object.keys(customStartingNumbers).length > 0) {
+        const customNumber = customStartingNumbers[freq as keyof typeof customStartingNumbers];
+        if (customNumber !== undefined) {
+          console.log(`Using custom starting number for ${freq}: ${customNumber}`);
+          return customNumber;
+        }
+      }
+
+      // Fall back to default ranges
       if (isElectrical) {
-        // Electrical service type ranges
+        // Electrical service type default ranges
         const ranges: Record<string, number> = {
           'twelvemonthly': 1,
           'sixmonthly': 10001,
