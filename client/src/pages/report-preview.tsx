@@ -197,8 +197,8 @@ export default function ReportPreview() {
   };
 
   /**
-   * Validate asset number for duplicates and range requirements
-   * Now includes manually entered asset numbers to prevent conflicts
+   * Validate asset number for duplicates and basic validity
+   * Range validation removed since auto-generation handles correct ranges
    */
   const validateAssetNumber = (assetNumber: string, frequency: string): string => {
     if (!assetNumber.trim()) {
@@ -210,24 +210,12 @@ export default function ReportPreview() {
       return "Asset number must be a positive number";
     }
 
-    // Validate range based on frequency
-    if (frequency === 'fiveyearly') {
-      if (assetNum < 10000) {
-        return "5-yearly items must have asset numbers starting from 10000";
-      }
-    } else {
-      // Monthly frequencies should be 1-9999
-      if (assetNum >= 10000) {
-        return "Monthly frequency items must have asset numbers below 10000";
-      }
-    }
-
     // Check for duplicates in batched results (excluding the one being edited)
     const editingResultId = editingResult ? (editingResult as any).originalBatchedId : null;
-    const isDuplicate = batchedResults.some((result: BatchedTestResult) => 
+    const isDuplicate = batchedResults.some((result: BatchedTestResult) =>
       result.assetNumber === assetNumber && result.id !== editingResultId
     );
-    
+
     if (isDuplicate) {
       return `Asset number ${assetNumber} is already in use`;
     }
@@ -238,31 +226,66 @@ export default function ReportPreview() {
   /**
    * Generate unique asset number for auto-assignment
    * Takes into account both existing results and manually entered numbers
+   * Uses proper frequency ranges based on service type
    */
   const generateUniqueAssetNumber = (editingResultId: string, newFrequency: string): string => {
+    // Get service type to determine correct starting ranges
+    const serviceType = sessionData?.session?.serviceType || 'electrical';
+    const isElectrical = serviceType === 'electrical';
+
+    // Define starting numbers based on service type and frequency
+    const getStartingNumber = (freq: string): number => {
+      if (isElectrical) {
+        // Electrical service type ranges
+        const ranges: Record<string, number> = {
+          'twelvemonthly': 1,
+          'sixmonthly': 10001,
+          'fiveyearly': 20001,
+          'twentyfourmonthly': 30001,
+          'threemonthly': 40001,
+          'monthly': 50001,
+        };
+        return ranges[freq] || 1;
+      } else {
+        // Other service types (Emergency, Fire, RCD)
+        const ranges: Record<string, number> = {
+          'sixmonthly': 1,
+          'twelvemonthly': 10001,
+          'fiveyearly': 20001,
+          'twentyfourmonthly': 30001,
+          'threemonthly': 40001,
+          'monthly': 50001,
+        };
+        return ranges[freq] || 1;
+      }
+    };
+
+    // Get starting number for the new frequency
+    const startNumber = getStartingNumber(newFrequency);
+
     // Guard against missing results
     if (!batchedResults.length && manuallyEnteredAssetNumbers.size === 0) {
-      console.warn('generateUniqueAssetNumber: No existing results or manual numbers');
-      return newFrequency === 'fiveyearly' ? '10001' : '1';
+      console.log(`generateUniqueAssetNumber: No existing results, returning start number ${startNumber} for ${newFrequency}`);
+      return startNumber.toString();
     }
 
     // Get all existing asset numbers, excluding the one being changed
     const usedNumbers = new Set<number>();
-    
+
     // Add numbers from batched results
     batchedResults.forEach((result: BatchedTestResult) => {
       // Skip the result being changed, as it will get a new number
       if (result.id === editingResultId) {
         return;
       }
-      
+
       // Parse asset number and add to used set if valid
       const assetNum = parseInt(result.assetNumber || '');
       if (!isNaN(assetNum) && assetNum > 0) {
         usedNumbers.add(assetNum);
       }
     });
-    
+
     // Add manually entered asset numbers to prevent conflicts
     Array.from(manuallyEnteredAssetNumbers).forEach(manualNumber => {
       const assetNum = parseInt(manualNumber);
@@ -271,10 +294,10 @@ export default function ReportPreview() {
       }
     });
 
-    // Find next available asset number for the new frequency
-    const startNumber = newFrequency === 'fiveyearly' ? 10001 : 1;
+    // Find next available asset number for the new frequency range
     const nextAvailable = getNextAvailableAssetNumber(usedNumbers, startNumber);
-    
+
+    console.log(`generateUniqueAssetNumber: Generated ${nextAvailable} for ${newFrequency} (start: ${startNumber})`);
     return nextAvailable.toString();
   };
 
@@ -556,7 +579,8 @@ export default function ReportPreview() {
       globeType: result.globeType || null,
     };
 
-    setDeletingResult(testResult);
+    // Store the original batched ID for proper deletion (similar to edit functionality)
+    setDeletingResult({ ...testResult, originalBatchedId: result.id } as any);
     setShowDeleteConfirm(true);
   };
 
@@ -564,22 +588,29 @@ export default function ReportPreview() {
     if (!deletingResult) return;
 
     try {
-      // Find the batched result to remove
-      const originalBatchedId = batchedResults.find(r => 
-        parseInt(r.id.replace('temp_', '')) === deletingResult.id
-      )?.id;
+      // Use the original batched ID for deletion
+      const originalBatchedId = (deletingResult as any).originalBatchedId;
 
       if (originalBatchedId) {
+        console.log('Deleting result with ID:', originalBatchedId);
         removeBatchedResult(originalBatchedId);
         toast({
           title: "Item Deleted",
           description: "Test result has been removed from the report.",
+        });
+      } else {
+        console.error('No original batched ID found for deletion');
+        toast({
+          title: "Delete Failed",
+          description: "Could not find the result to delete.",
+          variant: "destructive",
         });
       }
 
       setShowDeleteConfirm(false);
       setDeletingResult(null);
     } catch (error) {
+      console.error('Error deleting result:', error);
       toast({
         title: "Delete Failed",
         description: "There was an error removing the test result.",
@@ -598,31 +629,25 @@ export default function ReportPreview() {
   };
 
   /**
-   * Handle frequency changes - clear asset number when frequency changes category
+   * Handle frequency changes - auto-generate new asset number following report page logic
    */
   const handleFrequencyChange = (newFrequency: string) => {
-    const currentFrequency = editResultData.frequency;
-    const currentIsFiveYearly = currentFrequency === 'fiveyearly';
-    const newIsFiveYearly = newFrequency === 'fiveyearly';
-    
-    // If frequency category changed, clear asset number and show validation error
-    if (currentIsFiveYearly !== newIsFiveYearly) {
-      setEditResultData(prev => ({ 
-        ...prev, 
-        frequency: newFrequency,
-        assetNumber: "" // Clear asset number when frequency category changes
-      }));
-      setAssetNumberError("Asset number is required"); // Show validation error for empty field
-    } else {
-      // If frequency didn't change category, keep existing asset number
-      setEditResultData(prev => ({ 
-        ...prev, 
-        frequency: newFrequency
-      }));
-      // Re-validate current asset number with new frequency
-      const error = validateAssetNumber(editResultData.assetNumber, newFrequency);
-      setAssetNumberError(error);
-    }
+    // Always auto-generate new asset number when frequency changes
+    // This follows the same logic as when creating new items on report pages
+    const editingResultId = editingResult ? (editingResult as any).originalBatchedId : '';
+    const newAssetNumber = generateUniqueAssetNumber(editingResultId, newFrequency);
+
+    console.log(`Frequency changed to ${newFrequency}, auto-generated asset number: ${newAssetNumber}`);
+
+    setEditResultData(prev => ({
+      ...prev,
+      frequency: newFrequency,
+      assetNumber: newAssetNumber
+    }));
+
+    // Validate the new asset number
+    const error = validateAssetNumber(newAssetNumber, newFrequency);
+    setAssetNumberError(error);
   };
 
   const handleEditResult = (result: BatchedTestResult) => {

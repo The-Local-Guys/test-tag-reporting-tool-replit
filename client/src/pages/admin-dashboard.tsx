@@ -804,6 +804,7 @@ export default function AdminDashboard() {
   /**
    * Renumber assets to ensure unique asset numbers within the session
    * Takes into account manually edited asset numbers and finds next available slots
+   * Uses proper frequency ranges based on service type
    * @param changingResultId - ID of the result being changed (optional)
    * @param newFrequency - New frequency for the changing result (optional)
    * @returns Next available asset number for the frequency type
@@ -812,18 +813,49 @@ export default function AdminDashboard() {
     // Guard against missing session data
     if (!viewingSession?.results) {
       console.warn('renumberAssets: viewingSession or results is missing');
-      return newFrequency === 'fiveyearly' ? '10001' : '1';
+      return '1';
     }
+
+    // Get service type to determine correct starting ranges
+    const serviceType = viewingSession?.session?.serviceType || 'electrical';
+    const isElectrical = serviceType === 'electrical';
+
+    // Define starting numbers based on service type and frequency
+    const getStartingNumber = (freq: string): number => {
+      if (isElectrical) {
+        // Electrical service type ranges
+        const ranges: Record<string, number> = {
+          'twelvemonthly': 1,
+          'sixmonthly': 10001,
+          'fiveyearly': 20001,
+          'twentyfourmonthly': 30001,
+          'threemonthly': 40001,
+          'monthly': 50001,
+        };
+        return ranges[freq] || 1;
+      } else {
+        // Other service types (Emergency, Fire, RCD)
+        const ranges: Record<string, number> = {
+          'sixmonthly': 1,
+          'twelvemonthly': 10001,
+          'fiveyearly': 20001,
+          'twentyfourmonthly': 30001,
+          'threemonthly': 40001,
+          'monthly': 50001,
+        };
+        return ranges[freq] || 1;
+      }
+    };
 
     // Get all existing asset numbers, excluding the one being changed
     const usedNumbers = new Set<number>();
-    
+
     viewingSession.results.forEach((result: any) => {
       // Skip the result being changed, as it will get a new number
       if (changingResultId && result.id === changingResultId) {
         return;
       }
-      
+
       // Parse asset number and add to used set if valid
       const assetNum = parseInt(result.assetNumber);
       if (!isNaN(assetNum) && assetNum > 0) {
@@ -833,13 +865,15 @@ export default function AdminDashboard() {
 
     // If we're updating a specific result's frequency, get the next available number for that frequency
     if (newFrequency) {
-      const startNumber = newFrequency === 'fiveyearly' ? 10001 : 1;
+      const startNumber = getStartingNumber(newFrequency);
       const nextAvailable = getNextAvailableAssetNumber(usedNumbers, startNumber);
+      console.log(`Admin: Generated asset number ${nextAvailable} for ${newFrequency} (start: ${startNumber})`);
       return nextAvailable.toString();
     }
 
-    // If no specific frequency provided, default to monthly frequency logic
-    const nextAvailable = getNextAvailableAssetNumber(usedNumbers, 1);
+    // If no specific frequency provided, default to twelvemonthly frequency logic
+    const startNumber = getStartingNumber('twelvemonthly');
+    const nextAvailable = getNextAvailableAssetNumber(usedNumbers, startNumber);
     return nextAvailable.toString();
   };
 
@@ -961,8 +995,8 @@ export default function AdminDashboard() {
   };
 
   /**
-   * Validate asset number for duplicates and range requirements
-   * Checks if the entered asset number already exists and follows frequency rules
+   * Validate asset number for duplicates and basic validity
+   * Range validation removed since auto-generation handles correct ranges
    */
   const validateAssetNumber = (assetNumber: string, frequency: string): string => {
     if (!assetNumber.trim()) {
@@ -974,24 +1008,12 @@ export default function AdminDashboard() {
       return "Asset number must be a positive number";
     }
 
-    // Validate range based on frequency
-    if (frequency === 'fiveyearly') {
-      if (assetNum < 10000) {
-        return "5-yearly items must have asset numbers starting from 10000";
-      }
-    } else {
-      // Monthly frequencies should be 1-9999
-      if (assetNum >= 10000) {
-        return "Monthly frequency items must have asset numbers below 10000";
-      }
-    }
-
     if (!viewingSession?.results) {
       return "";
     }
 
     // Check for duplicates (excluding the current item being edited)
-    const isDuplicate = viewingSession.results.some((result: any) => 
+    const isDuplicate = viewingSession.results.some((result: any) =>
       result.assetNumber === assetNumber && result.id !== editingResult?.id
     );
 
@@ -1012,15 +1034,23 @@ export default function AdminDashboard() {
   };
 
   /**
-   * Handle frequency changes - clear asset number when frequency changes
+   * Handle frequency changes - auto-generate new asset number following report page logic
    */
   const handleFrequencyChange = (newFrequency: string) => {
-    setEditResultData(prev => ({ 
-      ...prev, 
+    // Auto-generate new asset number when frequency changes
+    const newAssetNumber = renumberAssets(editingResult?.id, newFrequency);
+
+    console.log(`Admin: Frequency changed to ${newFrequency}, auto-generated asset number: ${newAssetNumber}`);
+
+    setEditResultData(prev => ({
+      ...prev,
       frequency: newFrequency,
-      assetNumber: "" // Clear asset number when frequency changes
+      assetNumber: newAssetNumber
     }));
-    setAssetNumberError("Asset number is required"); // Show validation error for empty field
+
+    // Validate the new asset number
+    const error = validateAssetNumber(newAssetNumber, newFrequency);
+    setAssetNumberError(error);
   };
 
   /**
@@ -1183,7 +1213,8 @@ export default function AdminDashboard() {
   
 
   /**
-   * Validate new item asset number for duplicates and range requirements
+   * Validate new item asset number for duplicates and basic validity
+   * Range validation removed since auto-generation handles correct ranges
    */
   const validateNewItemAssetNumber = (assetNumber: string, frequency: string): string => {
     if (!assetNumber.trim()) {
@@ -1195,18 +1226,6 @@ export default function AdminDashboard() {
       return "Asset number must be a positive number";
     }
 
-    // Validate range based on frequency
-    if (frequency === 'fiveyearly') {
-      if (assetNum < 10000) {
-        return "5-yearly items must have asset numbers starting from 10000";
-      }
-    } else {
-      // Monthly frequencies should be 1-9999
-      if (assetNum >= 10000) {
-        return "Monthly frequency items must have asset numbers below 10000";
-      }
-    }
-
     if (!addingToSession) {
       return "";
     }
@@ -1214,7 +1233,7 @@ export default function AdminDashboard() {
     // Get current session results for duplicate checking
     // We'll validate against the session we're adding to
     if (viewingSession && viewingSession.session.id === addingToSession.id) {
-      const isDuplicate = viewingSession.results.some((result: any) => 
+      const isDuplicate = viewingSession.results.some((result: any) =>
         result.assetNumber === assetNumber
       );
       if (isDuplicate) {
@@ -1265,15 +1284,23 @@ export default function AdminDashboard() {
   };
 
   /**
-   * Handle new item frequency changes - clear asset number when frequency changes
+   * Handle new item frequency changes - auto-generate new asset number
    */
   const handleNewItemFrequencyChange = (newFrequency: string) => {
-    setNewItemData(prev => ({ 
-      ...prev, 
+    // Auto-generate new asset number when frequency changes for new items
+    const newAssetNumber = renumberAssets(undefined, newFrequency);
+
+    console.log(`Admin: New item frequency changed to ${newFrequency}, auto-generated asset number: ${newAssetNumber}`);
+
+    setNewItemData(prev => ({
+      ...prev,
       frequency: newFrequency,
-      assetNumber: "" // Clear asset number when frequency changes
+      assetNumber: newAssetNumber
     }));
-    setNewItemAssetNumberError("Asset number is required"); // Show validation error for empty field
+
+    // Validate the new asset number
+    const error = validateNewItemAssetNumber(newAssetNumber, newFrequency);
+    setNewItemAssetNumberError(error);
   };
 
   const handleSaveNewItem = async () => {

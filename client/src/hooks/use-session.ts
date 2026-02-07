@@ -1205,6 +1205,7 @@ export function useSession() {
 
   /**
    * Removes a result from the local batch and updates asset counts
+   * Also deletes from server if the result has been saved
    */
   const removeBatchedResult = (id: string) => {
     const resultToRemove = batchedResults.find(result => result.id === id);
@@ -1216,6 +1217,12 @@ export function useSession() {
         ...prevCounts,
         [freq === 'fiveyearly' ? 'fiveYearly' : 'monthly']: Math.max(0, prevCounts[freq === 'fiveyearly' ? 'fiveYearly' : 'monthly'] - 1),
       }));
+
+      // If the result has been saved to the server, delete it from database
+      if (resultToRemove.serverId && sessionId) {
+        console.log(`Deleting result from server: ID ${resultToRemove.serverId}`);
+        deleteResultMutation.mutate(resultToRemove.serverId);
+      }
     }
 
     const updatedResults = batchedResults.filter(result => result.id !== id);
