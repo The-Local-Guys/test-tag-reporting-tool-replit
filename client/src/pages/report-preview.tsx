@@ -1056,14 +1056,15 @@ export default function ReportPreview() {
 
           <div>
             <Label htmlFor="edit-frequency">Test Frequency</Label>
-            <Select 
-              value={editResultData.frequency} 
+            <Select
+              value={editResultData.frequency}
               onValueChange={handleFrequencyChange}
             >
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Select frequency" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="monthly">Monthly</SelectItem>
                 <SelectItem value="threemonthly">3 Monthly</SelectItem>
                 <SelectItem value="sixmonthly">6 Monthly</SelectItem>
                 <SelectItem value="twelvemonthly">12 Monthly</SelectItem>

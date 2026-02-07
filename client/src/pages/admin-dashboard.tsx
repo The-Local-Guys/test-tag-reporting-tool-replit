@@ -2722,6 +2722,7 @@ export default function AdminDashboard() {
                     <SelectValue placeholder="Select frequency" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="monthly">Monthly</SelectItem>
                     <SelectItem value="threemonthly">3 Monthly</SelectItem>
                     <SelectItem value="sixmonthly">6 Monthly</SelectItem>
                     <SelectItem value="twelvemonthly">12 Monthly</SelectItem>
@@ -2971,9 +2972,10 @@ export default function AdminDashboard() {
                   onValueChange={handleNewItemFrequencyChange}
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select frequency" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="monthly">Monthly</SelectItem>
                     <SelectItem value="threemonthly">3 Monthly</SelectItem>
                     <SelectItem value="sixmonthly">6 Monthly</SelectItem>
                     <SelectItem value="twelvemonthly">12 Monthly</SelectItem>
