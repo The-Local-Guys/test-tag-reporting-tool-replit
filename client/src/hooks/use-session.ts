@@ -163,6 +163,35 @@ export function useSession() {
   // Microwave Asset Counter (separate for microwave leakage testing)
   const [microwaveCounter, setMicrowaveCounter] = useState<number>(0);
 
+  // === Ref mirrors for synchronous counter access (prevents duplicate asset numbers) ===
+  // React setState is async/batched, so rapid back-to-back addToBatch calls read stale state.
+  // Refs are updated synchronously alongside setState to ensure correct reads.
+  const twelvemonthlyCounterRef = useRef(0);
+  const sixmonthlyCounterRef = useRef(10000);
+  const fiveyearlyCounterRef = useRef(20000);
+  const twentyfourmonthlyCounterRef = useRef(30000);
+  const threemonthlyCounterRef = useRef(40000);
+  const monthlyCounterRef = useRef(50000);
+  const rcdAssetCounterRef = useRef(0);
+  const microwaveCounterRef = useRef(0);
+  const batchedResultsRef = useRef<BatchedTestResult[]>([]);
+
+  /** Update both the ref (synchronous) and state (async) for a counter */
+  const updateCounter = (
+    setter: React.Dispatch<React.SetStateAction<number>>,
+    ref: React.MutableRefObject<number>,
+    value: number
+  ) => {
+    ref.current = value;
+    setter(value);
+  };
+
+  /** Update both the ref (synchronous) and state (async) for batchedResults */
+  const updateBatchedResultsState = (value: BatchedTestResult[]) => {
+    batchedResultsRef.current = value;
+    setBatchedResults(value);
+  };
+
   // Batched results in memory only - DB is the persistence layer
   const [batchedResults, setBatchedResults] = useState<BatchedTestResult[]>([]);
 
@@ -303,9 +332,15 @@ export function useSession() {
     // Merge strategy: on initial load replace entirely, on subsequent updates
     // keep any pending (unsaved) local items and replace saved items with fresh server data
     setBatchedResults(prev => {
-      if (prev.length === 0) return loadedResults;
-      const pendingItems = prev.filter(r => !r.serverId);
-      return [...loadedResults, ...pendingItems];
+      let merged: BatchedTestResult[];
+      if (prev.length === 0) {
+        merged = loadedResults;
+      } else {
+        const pendingItems = prev.filter(r => !r.serverId);
+        merged = [...loadedResults, ...pendingItems];
+      }
+      batchedResultsRef.current = merged;
+      return merged;
     });
 
     // Only recalculate counters on initial load (counters are already correct
@@ -334,12 +369,12 @@ export function useSession() {
       const maxThreemonthly = threemonthlyAssets.length > 0 ? Math.max(...threemonthlyAssets) : (serviceTypeDefaults.threemonthly - 1);
       const maxMonthly = monthlyAssets.length > 0 ? Math.max(...monthlyAssets) : (serviceTypeDefaults.monthly - 1);
 
-      setTwelvemonthlyCounter(maxTwelvemonthly);
-      setSixmonthlyCounter(maxSixmonthly);
-      setFiveyearlyCounter(maxFiveyearly);
-      setTwentyfourmonthlyCounter(maxTwentyfourmonthly);
-      setThreemonthlyCounter(maxThreemonthly);
-      setMonthlyCounter(maxMonthly);
+      updateCounter(setTwelvemonthlyCounter, twelvemonthlyCounterRef, maxTwelvemonthly);
+      updateCounter(setSixmonthlyCounter, sixmonthlyCounterRef, maxSixmonthly);
+      updateCounter(setFiveyearlyCounter, fiveyearlyCounterRef, maxFiveyearly);
+      updateCounter(setTwentyfourmonthlyCounter, twentyfourmonthlyCounterRef, maxTwentyfourmonthly);
+      updateCounter(setThreemonthlyCounter, threemonthlyCounterRef, maxThreemonthly);
+      updateCounter(setMonthlyCounter, monthlyCounterRef, maxMonthly);
 
       // Also set RCD and microwave counters from loaded results
       const rcdAssets = loadedResults
@@ -353,10 +388,10 @@ export function useSession() {
         const startingMin = (session?.serviceType === 'rcd_reporting' && session?.startingAssetNumber)
           ? session.startingAssetNumber - 1
           : 0;
-        setRcdAssetCounter(Math.max(maxFromResults, startingMin));
+        updateCounter(setRcdAssetCounter, rcdAssetCounterRef, Math.max(maxFromResults, startingMin));
       } else if (session?.serviceType === 'rcd_reporting' && session?.startingAssetNumber) {
         // Fallback: use session starting asset number if no RCD results found (e.g., old data with null fields)
-        setRcdAssetCounter(session.startingAssetNumber - 1);
+        updateCounter(setRcdAssetCounter, rcdAssetCounterRef, session.startingAssetNumber - 1);
       }
 
       const microwaveAssets = loadedResults
@@ -364,7 +399,7 @@ export function useSession() {
         .map(r => parseInt(r.assetNumber || '0'))
         .filter(n => !isNaN(n) && n > 0);
       if (microwaveAssets.length > 0) {
-        setMicrowaveCounter(Math.max(...microwaveAssets));
+        updateCounter(setMicrowaveCounter, microwaveCounterRef, Math.max(...microwaveAssets));
       }
 
       // Restore last used location from most recent result
@@ -402,16 +437,16 @@ export function useSession() {
     const serviceTypeDefaults = getDefaultStartingNumbers(session.serviceType);
 
     // Initialize all counters based on service type
-    setTwelvemonthlyCounter(serviceTypeDefaults.twelvemonthly - 1);
-    setSixmonthlyCounter(serviceTypeDefaults.sixmonthly - 1);
-    setFiveyearlyCounter(serviceTypeDefaults.fiveyearly - 1);
-    setTwentyfourmonthlyCounter(serviceTypeDefaults.twentyfourmonthly - 1);
-    setThreemonthlyCounter(serviceTypeDefaults.threemonthly - 1);
-    setMonthlyCounter(serviceTypeDefaults.monthly - 1);
+    updateCounter(setTwelvemonthlyCounter, twelvemonthlyCounterRef, serviceTypeDefaults.twelvemonthly - 1);
+    updateCounter(setSixmonthlyCounter, sixmonthlyCounterRef, serviceTypeDefaults.sixmonthly - 1);
+    updateCounter(setFiveyearlyCounter, fiveyearlyCounterRef, serviceTypeDefaults.fiveyearly - 1);
+    updateCounter(setTwentyfourmonthlyCounter, twentyfourmonthlyCounterRef, serviceTypeDefaults.twentyfourmonthly - 1);
+    updateCounter(setThreemonthlyCounter, threemonthlyCounterRef, serviceTypeDefaults.threemonthly - 1);
+    updateCounter(setMonthlyCounter, monthlyCounterRef, serviceTypeDefaults.monthly - 1);
 
     // For RCD sessions, initialize rcdAssetCounter from session's startingAssetNumber
     if (session.serviceType === 'rcd_reporting' && session.startingAssetNumber) {
-      setRcdAssetCounter(session.startingAssetNumber - 1);
+      updateCounter(setRcdAssetCounter, rcdAssetCounterRef, session.startingAssetNumber - 1);
     }
 
     countersInitializedRef.current = sessionId;
@@ -432,12 +467,12 @@ export function useSession() {
       setCustomStartingNumbers(sessionCustomNumbers);
 
       // Update counters based on database values
-      setTwelvemonthlyCounter((sessionCustomNumbers.twelvemonthly ?? DEFAULT_STARTING_NUMBERS.twelvemonthly) - 1);
-      setSixmonthlyCounter((sessionCustomNumbers.sixmonthly ?? DEFAULT_STARTING_NUMBERS.sixmonthly) - 1);
-      setFiveyearlyCounter((sessionCustomNumbers.fiveyearly ?? DEFAULT_STARTING_NUMBERS.fiveyearly) - 1);
-      setTwentyfourmonthlyCounter((sessionCustomNumbers.twentyfourmonthly ?? DEFAULT_STARTING_NUMBERS.twentyfourmonthly) - 1);
-      setThreemonthlyCounter((sessionCustomNumbers.threemonthly ?? DEFAULT_STARTING_NUMBERS.threemonthly) - 1);
-      setMonthlyCounter((sessionCustomNumbers.monthly ?? DEFAULT_STARTING_NUMBERS.monthly) - 1);
+      updateCounter(setTwelvemonthlyCounter, twelvemonthlyCounterRef, (sessionCustomNumbers.twelvemonthly ?? DEFAULT_STARTING_NUMBERS.twelvemonthly) - 1);
+      updateCounter(setSixmonthlyCounter, sixmonthlyCounterRef, (sessionCustomNumbers.sixmonthly ?? DEFAULT_STARTING_NUMBERS.sixmonthly) - 1);
+      updateCounter(setFiveyearlyCounter, fiveyearlyCounterRef, (sessionCustomNumbers.fiveyearly ?? DEFAULT_STARTING_NUMBERS.fiveyearly) - 1);
+      updateCounter(setTwentyfourmonthlyCounter, twentyfourmonthlyCounterRef, (sessionCustomNumbers.twentyfourmonthly ?? DEFAULT_STARTING_NUMBERS.twentyfourmonthly) - 1);
+      updateCounter(setThreemonthlyCounter, threemonthlyCounterRef, (sessionCustomNumbers.threemonthly ?? DEFAULT_STARTING_NUMBERS.threemonthly) - 1);
+      updateCounter(setMonthlyCounter, monthlyCounterRef, (sessionCustomNumbers.monthly ?? DEFAULT_STARTING_NUMBERS.monthly) - 1);
     }
     // Apply pending custom starting numbers for NEW sessions (stored in React state)
     // Note: This is a fallback. Normally, pending numbers are applied in createSession onSuccess
@@ -453,12 +488,12 @@ export function useSession() {
       if (isValidNumbers) {
         setCustomStartingNumbers(numbers);
 
-        setTwelvemonthlyCounter((numbers.twelvemonthly ?? DEFAULT_STARTING_NUMBERS.twelvemonthly) - 1);
-        setSixmonthlyCounter((numbers.sixmonthly ?? DEFAULT_STARTING_NUMBERS.sixmonthly) - 1);
-        setFiveyearlyCounter((numbers.fiveyearly ?? DEFAULT_STARTING_NUMBERS.fiveyearly) - 1);
-        setTwentyfourmonthlyCounter((numbers.twentyfourmonthly ?? DEFAULT_STARTING_NUMBERS.twentyfourmonthly) - 1);
-        setThreemonthlyCounter((numbers.threemonthly ?? DEFAULT_STARTING_NUMBERS.threemonthly) - 1);
-        setMonthlyCounter((numbers.monthly ?? DEFAULT_STARTING_NUMBERS.monthly) - 1);
+        updateCounter(setTwelvemonthlyCounter, twelvemonthlyCounterRef, (numbers.twelvemonthly ?? DEFAULT_STARTING_NUMBERS.twelvemonthly) - 1);
+        updateCounter(setSixmonthlyCounter, sixmonthlyCounterRef, (numbers.sixmonthly ?? DEFAULT_STARTING_NUMBERS.sixmonthly) - 1);
+        updateCounter(setFiveyearlyCounter, fiveyearlyCounterRef, (numbers.fiveyearly ?? DEFAULT_STARTING_NUMBERS.fiveyearly) - 1);
+        updateCounter(setTwentyfourmonthlyCounter, twentyfourmonthlyCounterRef, (numbers.twentyfourmonthly ?? DEFAULT_STARTING_NUMBERS.twentyfourmonthly) - 1);
+        updateCounter(setThreemonthlyCounter, threemonthlyCounterRef, (numbers.threemonthly ?? DEFAULT_STARTING_NUMBERS.threemonthly) - 1);
+        updateCounter(setMonthlyCounter, monthlyCounterRef, (numbers.monthly ?? DEFAULT_STARTING_NUMBERS.monthly) - 1);
 
         // Save to database for persistence
         apiRequest('PATCH', `/api/sessions/${sessionId}/custom-numbers`, {
@@ -628,7 +663,7 @@ export function useSession() {
       setSessionId(session.id);
 
       // Clear any existing batched results for this session
-      setBatchedResults([]);
+      updateBatchedResultsState([]);
 
       // Get default starting numbers based on service type
       const defaults = getDefaultStartingNumbers(session.serviceType);
@@ -645,12 +680,12 @@ export function useSession() {
         console.log('Applying pending custom starting numbers to new session:', customNumbers);
 
         setCustomStartingNumbers(customNumbers);
-        setTwelvemonthlyCounter((customNumbers.twelvemonthly ?? defaults.twelvemonthly) - 1);
-        setSixmonthlyCounter((customNumbers.sixmonthly ?? defaults.sixmonthly) - 1);
-        setFiveyearlyCounter((customNumbers.fiveyearly ?? defaults.fiveyearly) - 1);
-        setTwentyfourmonthlyCounter((customNumbers.twentyfourmonthly ?? defaults.twentyfourmonthly) - 1);
-        setThreemonthlyCounter((customNumbers.threemonthly ?? defaults.threemonthly) - 1);
-        setMonthlyCounter((customNumbers.monthly ?? defaults.monthly) - 1);
+        updateCounter(setTwelvemonthlyCounter, twelvemonthlyCounterRef, (customNumbers.twelvemonthly ?? defaults.twelvemonthly) - 1);
+        updateCounter(setSixmonthlyCounter, sixmonthlyCounterRef, (customNumbers.sixmonthly ?? defaults.sixmonthly) - 1);
+        updateCounter(setFiveyearlyCounter, fiveyearlyCounterRef, (customNumbers.fiveyearly ?? defaults.fiveyearly) - 1);
+        updateCounter(setTwentyfourmonthlyCounter, twentyfourmonthlyCounterRef, (customNumbers.twentyfourmonthly ?? defaults.twentyfourmonthly) - 1);
+        updateCounter(setThreemonthlyCounter, threemonthlyCounterRef, (customNumbers.threemonthly ?? defaults.threemonthly) - 1);
+        updateCounter(setMonthlyCounter, monthlyCounterRef, (customNumbers.monthly ?? defaults.monthly) - 1);
 
         // Save to database immediately
         apiRequest('PATCH', `/api/sessions/${session.id}/custom-numbers`, {
@@ -665,21 +700,21 @@ export function useSession() {
         setPendingCustomStartingNumbers(null);
       } else {
         // Reset all frequency-specific asset counters for new session using defaults
-        setTwelvemonthlyCounter(defaults.twelvemonthly - 1);
-        setSixmonthlyCounter(defaults.sixmonthly - 1);
-        setFiveyearlyCounter(defaults.fiveyearly - 1);
-        setTwentyfourmonthlyCounter(defaults.twentyfourmonthly - 1);
-        setThreemonthlyCounter(defaults.threemonthly - 1);
-        setMonthlyCounter(defaults.monthly - 1);
+        updateCounter(setTwelvemonthlyCounter, twelvemonthlyCounterRef, defaults.twelvemonthly - 1);
+        updateCounter(setSixmonthlyCounter, sixmonthlyCounterRef, defaults.sixmonthly - 1);
+        updateCounter(setFiveyearlyCounter, fiveyearlyCounterRef, defaults.fiveyearly - 1);
+        updateCounter(setTwentyfourmonthlyCounter, twentyfourmonthlyCounterRef, defaults.twentyfourmonthly - 1);
+        updateCounter(setThreemonthlyCounter, threemonthlyCounterRef, defaults.threemonthly - 1);
+        updateCounter(setMonthlyCounter, monthlyCounterRef, defaults.monthly - 1);
       }
 
       // For RCD sessions, use startingAssetNumber if provided (allows custom starting numbers)
       if (session.serviceType === 'rcd_reporting' && session.startingAssetNumber) {
-        setRcdAssetCounter(session.startingAssetNumber - 1);
+        updateCounter(setRcdAssetCounter, rcdAssetCounterRef, session.startingAssetNumber - 1);
       } else {
-        setRcdAssetCounter(0);
+        updateCounter(setRcdAssetCounter, rcdAssetCounterRef, 0);
       }
-      setMicrowaveCounter(0);
+      updateCounter(setMicrowaveCounter, microwaveCounterRef, 0);
       countersInitializedRef.current = session.id;
 
       queryClient.invalidateQueries({ queryKey: ['/api/sessions'] });
@@ -701,10 +736,11 @@ export function useSession() {
     const frequency = cleanData.frequency;
 
     // Collect all existing asset numbers to avoid conflicts
+    // Read from ref for synchronous accuracy (state may be stale in rapid calls)
     const usedNumbers = new Set<number>();
 
-    // Add numbers from current batched results
-    batchedResults.forEach(result => {
+    // Add numbers from current batched results (ref for synchronous read)
+    batchedResultsRef.current.forEach(result => {
       const assetNum = parseInt(result.assetNumber || '');
       if (!isNaN(assetNum) && assetNum > 0) {
         usedNumbers.add(assetNum);
@@ -733,88 +769,88 @@ export function useSession() {
         assetNumber,
         assetNum,
         frequency,
-        currentCounter: frequency === 'fiveyearly' ? fiveyearlyCounter :
-                       frequency === 'twelvemonthly' ? twelvemonthlyCounter :
-                       frequency === 'sixmonthly' ? sixmonthlyCounter : 'other'
+        currentCounter: frequency === 'fiveyearly' ? fiveyearlyCounterRef.current :
+                       frequency === 'twelvemonthly' ? twelvemonthlyCounterRef.current :
+                       frequency === 'sixmonthly' ? sixmonthlyCounterRef.current : 'other'
       });
 
-      // Update the appropriate counter if this number is higher
+      // Update the appropriate counter if this number is higher (read refs for synchronous accuracy)
       if (!isNaN(assetNum)) {
         if (isRCD) {
-          if (assetNum > rcdAssetCounter) {
-            console.log('✅ Updating RCD counter:', rcdAssetCounter, '→', assetNum);
-            setRcdAssetCounter(assetNum);
+          if (assetNum > rcdAssetCounterRef.current) {
+            console.log('✅ Updating RCD counter:', rcdAssetCounterRef.current, '→', assetNum);
+            updateCounter(setRcdAssetCounter, rcdAssetCounterRef, assetNum);
           }
         } else if (isMicrowave) {
-          if (assetNum > microwaveCounter) {
-            console.log('✅ Updating microwave counter:', microwaveCounter, '→', assetNum);
-            setMicrowaveCounter(assetNum);
+          if (assetNum > microwaveCounterRef.current) {
+            console.log('✅ Updating microwave counter:', microwaveCounterRef.current, '→', assetNum);
+            updateCounter(setMicrowaveCounter, microwaveCounterRef, assetNum);
           }
         } else {
           switch (frequency) {
             case 'twelvemonthly':
-              if (assetNum > twelvemonthlyCounter) {
-                console.log('✅ Updating 12M counter:', twelvemonthlyCounter, '→', assetNum);
-                setTwelvemonthlyCounter(assetNum);
+              if (assetNum > twelvemonthlyCounterRef.current) {
+                console.log('✅ Updating 12M counter:', twelvemonthlyCounterRef.current, '→', assetNum);
+                updateCounter(setTwelvemonthlyCounter, twelvemonthlyCounterRef, assetNum);
               } else {
-                console.log('⚠️ NOT updating 12M counter (assetNum <= current):', assetNum, '<=', twelvemonthlyCounter);
+                console.log('⚠️ NOT updating 12M counter (assetNum <= current):', assetNum, '<=', twelvemonthlyCounterRef.current);
               }
               break;
             case 'sixmonthly':
-              if (assetNum > sixmonthlyCounter) {
-                console.log('✅ Updating 6M counter:', sixmonthlyCounter, '→', assetNum);
-                setSixmonthlyCounter(assetNum);
+              if (assetNum > sixmonthlyCounterRef.current) {
+                console.log('✅ Updating 6M counter:', sixmonthlyCounterRef.current, '→', assetNum);
+                updateCounter(setSixmonthlyCounter, sixmonthlyCounterRef, assetNum);
               } else {
-                console.log('⚠️ NOT updating 6M counter (assetNum <= current):', assetNum, '<=', sixmonthlyCounter);
+                console.log('⚠️ NOT updating 6M counter (assetNum <= current):', assetNum, '<=', sixmonthlyCounterRef.current);
               }
               break;
             case 'fiveyearly':
-              if (assetNum > fiveyearlyCounter) {
-                console.log('✅ Updating 5Y counter:', fiveyearlyCounter, '→', assetNum);
-                setFiveyearlyCounter(assetNum);
+              if (assetNum > fiveyearlyCounterRef.current) {
+                console.log('✅ Updating 5Y counter:', fiveyearlyCounterRef.current, '→', assetNum);
+                updateCounter(setFiveyearlyCounter, fiveyearlyCounterRef, assetNum);
               } else {
-                console.log('⚠️ NOT updating 5Y counter (assetNum <= current):', assetNum, '<=', fiveyearlyCounter);
+                console.log('⚠️ NOT updating 5Y counter (assetNum <= current):', assetNum, '<=', fiveyearlyCounterRef.current);
               }
               break;
             case 'twentyfourmonthly':
-              if (assetNum > twentyfourmonthlyCounter) {
-                console.log('✅ Updating 24M counter:', twentyfourmonthlyCounter, '→', assetNum);
-                setTwentyfourmonthlyCounter(assetNum);
+              if (assetNum > twentyfourmonthlyCounterRef.current) {
+                console.log('✅ Updating 24M counter:', twentyfourmonthlyCounterRef.current, '→', assetNum);
+                updateCounter(setTwentyfourmonthlyCounter, twentyfourmonthlyCounterRef, assetNum);
               } else {
-                console.log('⚠️ NOT updating 24M counter (assetNum <= current):', assetNum, '<=', twentyfourmonthlyCounter);
+                console.log('⚠️ NOT updating 24M counter (assetNum <= current):', assetNum, '<=', twentyfourmonthlyCounterRef.current);
               }
               break;
             case 'threemonthly':
-              if (assetNum > threemonthlyCounter) {
-                console.log('✅ Updating 3M counter:', threemonthlyCounter, '→', assetNum);
-                setThreemonthlyCounter(assetNum);
+              if (assetNum > threemonthlyCounterRef.current) {
+                console.log('✅ Updating 3M counter:', threemonthlyCounterRef.current, '→', assetNum);
+                updateCounter(setThreemonthlyCounter, threemonthlyCounterRef, assetNum);
               } else {
-                console.log('⚠️ NOT updating 3M counter (assetNum <= current):', assetNum, '<=', threemonthlyCounter);
+                console.log('⚠️ NOT updating 3M counter (assetNum <= current):', assetNum, '<=', threemonthlyCounterRef.current);
               }
               break;
             case 'monthly':
-              if (assetNum > monthlyCounter) {
-                console.log('✅ Updating M counter:', monthlyCounter, '→', assetNum);
-                setMonthlyCounter(assetNum);
+              if (assetNum > monthlyCounterRef.current) {
+                console.log('✅ Updating M counter:', monthlyCounterRef.current, '→', assetNum);
+                updateCounter(setMonthlyCounter, monthlyCounterRef, assetNum);
               } else {
-                console.log('⚠️ NOT updating M counter (assetNum <= current):', assetNum, '<=', monthlyCounter);
+                console.log('⚠️ NOT updating M counter (assetNum <= current):', assetNum, '<=', monthlyCounterRef.current);
               }
               break;
           }
         }
       }
     } else {
-      // Auto-generate asset number based on frequency
+      // Auto-generate asset number based on frequency (read refs for synchronous accuracy)
       if (isRCD) {
-        let candidate = Math.max(1, rcdAssetCounter + 1);
+        let candidate = Math.max(1, rcdAssetCounterRef.current + 1);
         while (usedNumbers.has(candidate)) candidate++;
         assetNumber = candidate.toString();
-        setRcdAssetCounter(candidate);
+        updateCounter(setRcdAssetCounter, rcdAssetCounterRef, candidate);
       } else if (isMicrowave) {
-        let candidate = Math.max(1, microwaveCounter + 1);
+        let candidate = Math.max(1, microwaveCounterRef.current + 1);
         while (usedNumbers.has(candidate)) candidate++;
         assetNumber = candidate.toString();
-        setMicrowaveCounter(candidate);
+        updateCounter(setMicrowaveCounter, microwaveCounterRef, candidate);
       } else {
         // Get service type to determine correct starting ranges
         const sessionServiceType = sessionData?.session?.serviceType || 'electrical';
@@ -835,46 +871,46 @@ export function useSession() {
 
         switch (frequency) {
           case 'twelvemonthly':
-            candidate = Math.max(startingNumbers.twelvemonthly, twelvemonthlyCounter + 1);
+            candidate = Math.max(startingNumbers.twelvemonthly, twelvemonthlyCounterRef.current + 1);
             while (usedNumbers.has(candidate)) candidate++;
             assetNumber = candidate.toString();
-            setTwelvemonthlyCounter(candidate);
+            updateCounter(setTwelvemonthlyCounter, twelvemonthlyCounterRef, candidate);
             break;
           case 'sixmonthly':
-            candidate = Math.max(startingNumbers.sixmonthly, sixmonthlyCounter + 1);
+            candidate = Math.max(startingNumbers.sixmonthly, sixmonthlyCounterRef.current + 1);
             while (usedNumbers.has(candidate)) candidate++;
             assetNumber = candidate.toString();
-            setSixmonthlyCounter(candidate);
+            updateCounter(setSixmonthlyCounter, sixmonthlyCounterRef, candidate);
             break;
           case 'fiveyearly':
-            candidate = Math.max(startingNumbers.fiveyearly, fiveyearlyCounter + 1);
+            candidate = Math.max(startingNumbers.fiveyearly, fiveyearlyCounterRef.current + 1);
             while (usedNumbers.has(candidate)) candidate++;
             assetNumber = candidate.toString();
-            setFiveyearlyCounter(candidate);
+            updateCounter(setFiveyearlyCounter, fiveyearlyCounterRef, candidate);
             break;
           case 'twentyfourmonthly':
-            candidate = Math.max(startingNumbers.twentyfourmonthly, twentyfourmonthlyCounter + 1);
+            candidate = Math.max(startingNumbers.twentyfourmonthly, twentyfourmonthlyCounterRef.current + 1);
             while (usedNumbers.has(candidate)) candidate++;
             assetNumber = candidate.toString();
-            setTwentyfourmonthlyCounter(candidate);
+            updateCounter(setTwentyfourmonthlyCounter, twentyfourmonthlyCounterRef, candidate);
             break;
           case 'threemonthly':
-            candidate = Math.max(startingNumbers.threemonthly, threemonthlyCounter + 1);
+            candidate = Math.max(startingNumbers.threemonthly, threemonthlyCounterRef.current + 1);
             while (usedNumbers.has(candidate)) candidate++;
             assetNumber = candidate.toString();
-            setThreemonthlyCounter(candidate);
+            updateCounter(setThreemonthlyCounter, threemonthlyCounterRef, candidate);
             break;
           case 'monthly':
-            candidate = Math.max(startingNumbers.monthly, monthlyCounter + 1);
+            candidate = Math.max(startingNumbers.monthly, monthlyCounterRef.current + 1);
             while (usedNumbers.has(candidate)) candidate++;
             assetNumber = candidate.toString();
-            setMonthlyCounter(candidate);
+            updateCounter(setMonthlyCounter, monthlyCounterRef, candidate);
             break;
           default:
-            candidate = Math.max(startingNumbers.twelvemonthly, twelvemonthlyCounter + 1);
+            candidate = Math.max(startingNumbers.twelvemonthly, twelvemonthlyCounterRef.current + 1);
             while (usedNumbers.has(candidate)) candidate++;
             assetNumber = candidate.toString();
-            setTwelvemonthlyCounter(candidate);
+            updateCounter(setTwelvemonthlyCounter, twelvemonthlyCounterRef, candidate);
         }
       }
     }
@@ -922,9 +958,9 @@ export function useSession() {
       providedAssetNumber: cleanData.assetNumber,
     });
 
-    // Add to batched results
-    const updatedResults = [...batchedResults, newResult];
-    setBatchedResults(updatedResults);
+    // Add to batched results (update ref synchronously for rapid calls)
+    const updatedResults = [...batchedResultsRef.current, newResult];
+    updateBatchedResultsState(updatedResults);
 
     console.log('✅ Added to batchedResults. New count:', updatedResults.length);
     console.log('✅ ********** END CREATE RESULT **********');
@@ -1009,18 +1045,18 @@ export function useSession() {
       console.log(`Successfully submitted ${submittedResults.length} results to server`);
 
       // Clear batched results after successful submission
-      setBatchedResults([]);
+      updateBatchedResultsState([]);
 
       // Reset all asset counters and counts for next session
-      setTwelvemonthlyCounter(0);
-      setSixmonthlyCounter(10000);
-      setFiveyearlyCounter(20000);
-      setTwentyfourmonthlyCounter(30000);
-      setThreemonthlyCounter(40000);
-      setMonthlyCounter(50000);
+      updateCounter(setTwelvemonthlyCounter, twelvemonthlyCounterRef, 0);
+      updateCounter(setSixmonthlyCounter, sixmonthlyCounterRef, 10000);
+      updateCounter(setFiveyearlyCounter, fiveyearlyCounterRef, 20000);
+      updateCounter(setTwentyfourmonthlyCounter, twentyfourmonthlyCounterRef, 30000);
+      updateCounter(setThreemonthlyCounter, threemonthlyCounterRef, 40000);
+      updateCounter(setMonthlyCounter, monthlyCounterRef, 50000);
       setAssetCounts({ monthly: 0, fiveYearly: 0 });
-      setRcdAssetCounter(0);
-      setMicrowaveCounter(0);
+      updateCounter(setRcdAssetCounter, rcdAssetCounterRef, 0);
+      updateCounter(setMicrowaveCounter, microwaveCounterRef, 0);
       setManuallyEnteredAssetNumbers(new Set());
 
       // Clear session ID to ensure no unfinished detection
@@ -1105,9 +1141,11 @@ export function useSession() {
       console.log(`Auto-save successful: ${serverResult.item_name} -> Server ID: ${serverResult.id}, Asset: ${serverResult.asset_number}`);
 
       // Update the local result with the server ID
-      setBatchedResults(prev =>
-        prev.map(r => r.id === localId ? { ...r, serverId: serverResult.id } : r)
-      );
+      setBatchedResults(prev => {
+        const updated = prev.map(r => r.id === localId ? { ...r, serverId: serverResult.id } : r);
+        batchedResultsRef.current = updated;
+        return updated;
+      });
 
       setSaveStatus(prev => ({
         ...prev,
@@ -1216,7 +1254,7 @@ export function useSession() {
         result.id === id ? mergedResult : result
       );
 
-      setBatchedResults(updatedResults);
+      updateBatchedResultsState(updatedResults);
 
       // Auto-update on server if this result has been saved before
       if (foundResult.serverId) {
@@ -1254,7 +1292,7 @@ export function useSession() {
     }
 
     const updatedResults = batchedResults.filter(result => result.id !== id);
-    setBatchedResults(updatedResults);
+    updateBatchedResultsState(updatedResults);
   };
 
   /**
@@ -1286,7 +1324,7 @@ export function useSession() {
         : r
     );
 
-    setBatchedResults(updatedResults);
+    updateBatchedResultsState(updatedResults);
 
     const monthlyCount = updatedResults.filter(r => r.frequency !== 'fiveyearly').length;
     const fiveYearlyCount = updatedResults.filter(r => r.frequency === 'fiveyearly').length;
@@ -1343,12 +1381,12 @@ export function useSession() {
     setCustomStartingNumbers(numbers);
 
     // Reset counters to the new starting numbers - 1
-    setTwelvemonthlyCounter((numbers.twelvemonthly ?? DEFAULT_STARTING_NUMBERS.twelvemonthly) - 1);
-    setSixmonthlyCounter((numbers.sixmonthly ?? DEFAULT_STARTING_NUMBERS.sixmonthly) - 1);
-    setFiveyearlyCounter((numbers.fiveyearly ?? DEFAULT_STARTING_NUMBERS.fiveyearly) - 1);
-    setTwentyfourmonthlyCounter((numbers.twentyfourmonthly ?? DEFAULT_STARTING_NUMBERS.twentyfourmonthly) - 1);
-    setThreemonthlyCounter((numbers.threemonthly ?? DEFAULT_STARTING_NUMBERS.threemonthly) - 1);
-    setMonthlyCounter((numbers.monthly ?? DEFAULT_STARTING_NUMBERS.monthly) - 1);
+    updateCounter(setTwelvemonthlyCounter, twelvemonthlyCounterRef, (numbers.twelvemonthly ?? DEFAULT_STARTING_NUMBERS.twelvemonthly) - 1);
+    updateCounter(setSixmonthlyCounter, sixmonthlyCounterRef, (numbers.sixmonthly ?? DEFAULT_STARTING_NUMBERS.sixmonthly) - 1);
+    updateCounter(setFiveyearlyCounter, fiveyearlyCounterRef, (numbers.fiveyearly ?? DEFAULT_STARTING_NUMBERS.fiveyearly) - 1);
+    updateCounter(setTwentyfourmonthlyCounter, twentyfourmonthlyCounterRef, (numbers.twentyfourmonthly ?? DEFAULT_STARTING_NUMBERS.twentyfourmonthly) - 1);
+    updateCounter(setThreemonthlyCounter, threemonthlyCounterRef, (numbers.threemonthly ?? DEFAULT_STARTING_NUMBERS.threemonthly) - 1);
+    updateCounter(setMonthlyCounter, monthlyCounterRef, (numbers.monthly ?? DEFAULT_STARTING_NUMBERS.monthly) - 1);
 
     if (sessionId) {
       // Save to database (primary source of truth)
@@ -1380,12 +1418,12 @@ export function useSession() {
     setCustomStartingNumbers({});
 
     // Reset counters to defaults - 1
-    setTwelvemonthlyCounter(DEFAULT_STARTING_NUMBERS.twelvemonthly - 1);
-    setSixmonthlyCounter(DEFAULT_STARTING_NUMBERS.sixmonthly - 1);
-    setFiveyearlyCounter(DEFAULT_STARTING_NUMBERS.fiveyearly - 1);
-    setTwentyfourmonthlyCounter(DEFAULT_STARTING_NUMBERS.twentyfourmonthly - 1);
-    setThreemonthlyCounter(DEFAULT_STARTING_NUMBERS.threemonthly - 1);
-    setMonthlyCounter(DEFAULT_STARTING_NUMBERS.monthly - 1);
+    updateCounter(setTwelvemonthlyCounter, twelvemonthlyCounterRef, DEFAULT_STARTING_NUMBERS.twelvemonthly - 1);
+    updateCounter(setSixmonthlyCounter, sixmonthlyCounterRef, DEFAULT_STARTING_NUMBERS.sixmonthly - 1);
+    updateCounter(setFiveyearlyCounter, fiveyearlyCounterRef, DEFAULT_STARTING_NUMBERS.fiveyearly - 1);
+    updateCounter(setTwentyfourmonthlyCounter, twentyfourmonthlyCounterRef, DEFAULT_STARTING_NUMBERS.twentyfourmonthly - 1);
+    updateCounter(setThreemonthlyCounter, threemonthlyCounterRef, DEFAULT_STARTING_NUMBERS.threemonthly - 1);
+    updateCounter(setMonthlyCounter, monthlyCounterRef, DEFAULT_STARTING_NUMBERS.monthly - 1);
   };
 
   // Clear session
@@ -1394,19 +1432,19 @@ export function useSession() {
     setCurrentLocation('');
     setCurrentDistributionBoardNumber('');
     setCurrentCircuitBreakerNumber('');
-    setBatchedResults([]);
+    updateBatchedResultsState([]);
     setCustomStartingNumbers({});
     setPendingCustomStartingNumbers(null);
     setManuallyEnteredAssetNumbers(new Set());
     // Reset all frequency-specific counters
-    setTwelvemonthlyCounter(0);
-    setSixmonthlyCounter(10000);
-    setFiveyearlyCounter(20000);
-    setTwentyfourmonthlyCounter(30000);
-    setThreemonthlyCounter(40000);
-    setMonthlyCounter(50000);
-    setRcdAssetCounter(0);
-    setMicrowaveCounter(0);
+    updateCounter(setTwelvemonthlyCounter, twelvemonthlyCounterRef, 0);
+    updateCounter(setSixmonthlyCounter, sixmonthlyCounterRef, 10000);
+    updateCounter(setFiveyearlyCounter, fiveyearlyCounterRef, 20000);
+    updateCounter(setTwentyfourmonthlyCounter, twentyfourmonthlyCounterRef, 30000);
+    updateCounter(setThreemonthlyCounter, threemonthlyCounterRef, 40000);
+    updateCounter(setMonthlyCounter, monthlyCounterRef, 50000);
+    updateCounter(setRcdAssetCounter, rcdAssetCounterRef, 0);
+    updateCounter(setMicrowaveCounter, microwaveCounterRef, 0);
     setAssetCounts({ monthly: 0, fiveYearly: 0 });
     countersInitializedRef.current = null;
     // Reset save status for clean slate
