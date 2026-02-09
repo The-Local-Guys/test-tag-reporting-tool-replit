@@ -202,7 +202,8 @@ export default function RCDTestDetails() {
           itemName: currentItemName,
           itemType: currentItemType,
           location: data.location,
-          assetNumber: data.assetNumber,
+          // Don't pass assetNumber - let addToBatch auto-generate it using the ref
+          // to avoid stale state causing duplicate asset numbers
           classification: data.equipmentType,
           result: data.result,
           frequency: 'annually',
@@ -226,7 +227,8 @@ export default function RCDTestDetails() {
         itemName: currentItemName,
         itemType: currentItemType,
         location: data.location,
-        assetNumber: data.assetNumber,
+        // Don't pass assetNumber - let addToBatch auto-generate it using the ref
+        // to avoid stale state causing duplicate asset numbers
         classification: data.equipmentType, // Use equipment type as classification
         result: data.result,
         frequency: 'annually', // Default frequency for RCD testing
