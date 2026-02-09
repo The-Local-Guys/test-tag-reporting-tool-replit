@@ -313,9 +313,10 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     doc.text('Location', margin + 105, yPosition);
     doc.text('Comments', margin + 135, yPosition);
   } else {
-    // For RCD reporting, change "Item" to "Distribution Board"
+    // For RCD reporting, change "Item" to "Equipment Type"
     if (session.serviceType === 'rcd_reporting') {
-      doc.text('Distribution Board', margin + 12, yPosition);
+      doc.text('Equipment', margin + 12, yPosition);
+      doc.text('Type', margin + 12, yPosition + 3);
     } else {
       doc.text('Item', margin + 12, yPosition);
     }
@@ -345,23 +346,26 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       doc.text('Due Date', margin + 140, yPosition);
       doc.text('Failure Reason', margin + 158, yPosition);
     } else if (session.serviceType === 'rcd_reporting') {
-      // New order: Asset# < Distribution Board > Push Button > Timed Test > Trip Time > Result > Location > Comments > Failure Reason > Action Taken
-      
+      // Order: Asset# | Equipment Type | DB / CB | Push Button | Timed Test | Trip Time | Result | Location | Comments | Failure Reason | Action Taken
+
+      // DB / CB header in 2 lines
+      doc.text('DB / CB', margin + 30, yPosition);
+
       // Push Button header in 2 lines
-      doc.text('Push Button', margin + 48, yPosition);
-      doc.text('( 6 monthly )', margin + 48, yPosition + 3);
-      
+      doc.text('Push Button', margin + 52, yPosition);
+      doc.text('( 6 monthly )', margin + 52, yPosition + 3);
+
       // Timed Test header in 2 lines
-      doc.text('Timed Test', margin + 66, yPosition);
-      doc.text('( 12 Monthly )', margin + 66, yPosition + 3);
-      
+      doc.text('Timed Test', margin + 70, yPosition);
+      doc.text('( 12 Monthly )', margin + 70, yPosition + 3);
+
       // Trip Time header in 2 lines
-      doc.text('Trip Time', margin + 84, yPosition);
-      doc.text('(ms)', margin + 84, yPosition + 3);
-      
-      doc.text('Result', margin + 98, yPosition);
-      doc.text('Location', margin + 113, yPosition);
-      doc.text('Comments', margin + 133, yPosition);
+      doc.text('Trip Time', margin + 88, yPosition);
+      doc.text('(ms)', margin + 88, yPosition + 3);
+
+      doc.text('Result', margin + 102, yPosition);
+      doc.text('Location', margin + 115, yPosition);
+      doc.text('Comments', margin + 135, yPosition);
       doc.text('Failure Reason', margin + 153, yPosition);
       doc.text('Action Taken', margin + 173, yPosition);
     } else {
@@ -388,12 +392,10 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     const itemNameWidth = 17; // Width for item name column
     const locationWidth = 17; // Width for location column
     
-    // For Fixed RCD, include distribution board number with item name if available
+    // For RCD, show just equipment type (Fixed RCD / Portable RCD) - DB/CB is in its own column
     let displayItemName = result.itemName;
-    if (session.serviceType === 'rcd_reporting' && 
-        result.classification === 'fixed-rcd' && 
-        (result as any).distributionBoardNumber) {
-      displayItemName = `${result.itemName} (${(result as any).distributionBoardNumber})`;
+    if (session.serviceType === 'rcd_reporting') {
+      displayItemName = (result.classification === 'fixed-rcd' || (!result.classification && result.itemName?.includes('Fixed'))) ? 'Fixed RCD' : 'Portable RCD';
     }
     
     // Split text to fit column widths
@@ -658,54 +660,64 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         doc.text(line, margin + 140, rowStartY + (i * lineHeight));
       });
     } else if (session.serviceType === 'rcd_reporting') {
-      // New order: Asset# < Distribution Board > Push Button > Timed Test > Trip Time > Result > Location > Comments
-      
+      // Order: Asset# | Equipment Type | DB / CB | Push Button | Timed Test | Trip Time | Result | Location | Comments
+
+      // DB / CB column (margin + 30) - show combined distribution board / circuit breaker
+      const dbNum = (result as any).distributionBoardNumber || (result as any).distribution_board_number || '';
+      const cbNum = (result as any).circuitBreakerNumber || (result as any).circuit_breaker_number || '';
+      let dbCbText = '-';
+      if (dbNum && cbNum) {
+        dbCbText = `${dbNum} / ${cbNum}`;
+      } else if (dbNum) {
+        dbCbText = dbNum;
+      } else if (cbNum) {
+        dbCbText = `- / ${cbNum}`;
+      }
+      const dbCbLines = doc.splitTextToSize(dbCbText, 20);
+      dbCbLines.forEach((line: string, i: number) => {
+        doc.text(line, margin + 30, rowStartY + (i * lineHeight));
+      });
+
       // Show test results with proper null handling and color coding
       const pushButtonValue = (result as any).pushButtonTest;
       const injectionTimedValue = (result as any).injectionTimedTest;
       const tripTimesArray = (result as any).tripTimes;
-      
-      // Push Button Test (margin + 48)
+
+      // Push Button Test (margin + 52)
       if (pushButtonValue === true) {
         doc.setTextColor(0, 128, 0); // Green
-        doc.text('Yes', margin + 48, rowStartY);
+        doc.text('Yes', margin + 52, rowStartY);
       } else if (pushButtonValue === false) {
         doc.setTextColor(0, 0, 0); // Black
-        doc.text('No', margin + 48, rowStartY);
+        doc.text('No', margin + 52, rowStartY);
       } else {
-        doc.text('N/A', margin + 48, rowStartY);
+        doc.text('N/A', margin + 52, rowStartY);
       }
       doc.setTextColor(0, 0, 0); // Reset to black
-      
-      // Injection/Timed Test (margin + 66) - just Yes/No without trip time
+
+      // Injection/Timed Test (margin + 70) - just Yes/No without trip time
       if (injectionTimedValue === true) {
         doc.setTextColor(0, 128, 0); // Green
-        doc.text('Yes', margin + 66, rowStartY);
+        doc.text('Yes', margin + 70, rowStartY);
       } else if (injectionTimedValue === false) {
         doc.setTextColor(0, 0, 0); // Black
-        doc.text('No', margin + 66, rowStartY);
+        doc.text('No', margin + 70, rowStartY);
       } else {
-        doc.text('N/A', margin + 66, rowStartY);
+        doc.text('N/A', margin + 70, rowStartY);
       }
       doc.setTextColor(0, 0, 0); // Reset to black
-      
-      // Trip Times (margin + 84) - display all trip times for Fixed RCD, simple for Portable RCD
-      // Try multiple sources for trip times:
-      // 1. tripTimes array (from localStorage/camelCase)
-      // 2. trip_time single value (from database snake_case)
-      // 3. Parse from notes field [TRIP_TIMES:[...]]
+
+      // Trip Times (margin + 88) - display all trip times for Fixed RCD, simple for Portable RCD
       let validTripTimes: number[] = [];
-      
+
       if (Array.isArray(tripTimesArray) && tripTimesArray.length > 0) {
         validTripTimes = tripTimesArray.filter((t: any) => t != null && t > 0);
       } else {
-        // Try to get from snake_case trip_time (database format - single value)
         const tripTimeValue = (result as any).trip_time || (result as any).tripTime;
         if (tripTimeValue != null && Number(tripTimeValue) > 0) {
           validTripTimes = [Number(tripTimeValue)];
         }
-        
-        // Try to parse from notes field for full array
+
         const notesValue = result.notes || '';
         const tripTimesMatch = notesValue.match(/\[TRIP_TIMES:\[([^\]]*)\]\]/);
         if (tripTimesMatch && tripTimesMatch[1]) {
@@ -715,43 +727,40 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
           }
         }
       }
-      
+
       if (validTripTimes.length > 0) {
-        // Check if this is Fixed RCD or Portable RCD
-        const isFixedRCD = result.itemName && result.itemName.includes('Fixed RCD');
-        
+        const isFixedRCD = result.classification === 'fixed-rcd' || (!result.classification && result.itemName?.includes('Fixed'));
+
         if (isFixedRCD) {
-          // Fixed RCD: Show all trip times individually (1 - 2000ms, 2 - 3000ms, 3 - 3000ms)
           validTripTimes.forEach((tripTime: number, index: number) => {
             const tripTimeText = `${index + 1} - ${tripTime}ms`;
-            doc.text(tripTimeText, margin + 84, rowStartY + (index * lineHeight));
+            doc.text(tripTimeText, margin + 88, rowStartY + (index * lineHeight));
           });
         } else {
-          // Portable RCD: Show simple format (2000ms)
-          doc.text(`${validTripTimes[0]}ms`, margin + 84, rowStartY);
+          doc.text(`${validTripTimes[0]}ms`, margin + 88, rowStartY);
         }
       } else {
-        doc.text('-', margin + 84, rowStartY);
+        doc.text('-', margin + 88, rowStartY);
       }
-      
-      // Color code the result (margin + 98)
+
+      // Color code the result (margin + 102)
       if (result.result === 'pass') {
         doc.setTextColor(0, 128, 0); // Green
-        doc.text('PASS', margin + 98, rowStartY);
+        doc.text('PASS', margin + 102, rowStartY);
       } else {
         doc.setTextColor(255, 0, 0); // Red
-        doc.text('FAIL', margin + 98, rowStartY);
+        doc.text('FAIL', margin + 102, rowStartY);
       }
       doc.setTextColor(0, 0, 0); // Reset to black
-      
-      // Show location with word wrapping (margin + 113)
+
+      // Show location with word wrapping (margin + 115)
       locationLines.forEach((line: string, i: number) => {
-        doc.text(line, margin + 113, rowStartY + (i * lineHeight));
+        doc.text(line, margin + 115, rowStartY + (i * lineHeight));
       });
-      
-      // Show comments with word wrapping (margin + 133) - use pre-calculated lines
+
+      // Show comments with word wrapping (margin + 135) - use pre-calculated lines
       commentsLines.forEach((line: string, i: number) => {
-        doc.text(line, margin + 133, rowStartY + (i * lineHeight));
+        doc.text(line, margin + 135, rowStartY + (i * lineHeight));
       });
     } else if (session.serviceType !== 'microwave_leakage') {
       // For regular electrical testing (exclude microwave_leakage), show classification/type with word wrapping

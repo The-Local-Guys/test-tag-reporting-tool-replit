@@ -32,6 +32,7 @@ export default function Setup() {
   const { navigate } = useSpaNavigation();
   const [isNavigating, setIsNavigating] = useState(false);
   const [isCustomAssetModalOpen, setIsCustomAssetModalOpen] = useState(false);
+  const [rcdStartingNumber, setRcdStartingNumber] = useState<string>('');
 
   // Track the initial sessionId to distinguish between existing sessions and newly created ones
   const [initialSessionId] = useState(() => sessionId);
@@ -103,6 +104,10 @@ export default function Setup() {
       ...(selectedService === 'fire_testing' && {
         technicianLicensed: data.technicianLicensed,
         complianceStandard: data.country === 'newzealand' ? 'NZS_4503_NZ' : 'AS_1851_AU'
+      }),
+      // RCD custom starting asset number
+      ...(selectedService === 'rcd_reporting' && rcdStartingNumber && {
+        startingAssetNumber: parseInt(rcdStartingNumber, 10)
       })
     });
   };
@@ -348,6 +353,27 @@ export default function Setup() {
               {form.formState.errors.technicianLicensed && (
                 <p className="text-sm text-red-600 font-medium">{form.formState.errors.technicianLicensed.message}</p>
               )}
+            </div>
+          )}
+
+          {/* RCD Starting Asset Number */}
+          {sessionStorage.getItem('selectedService') === 'rcd_reporting' && (
+            <div className="space-y-2">
+              <Label htmlFor="rcdStartingNumber">Starting Asset Number (Optional)</Label>
+              <Input
+                id="rcdStartingNumber"
+                type="number"
+                inputMode="numeric"
+                min="1"
+                value={rcdStartingNumber}
+                onChange={(e) => setRcdStartingNumber(e.target.value)}
+                placeholder="Default: 1"
+                className="text-base"
+                data-testid="input-rcd-starting-number"
+              />
+              <p className="text-xs text-gray-500">
+                Set a custom starting number to avoid duplicate asset numbers across reports for the same client.
+              </p>
             </div>
           )}
 

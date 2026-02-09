@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Modal } from '@/components/ui/modal';
@@ -101,6 +102,12 @@ export default function ReportPreview() {
     failureReason: null as any,
     actionTaken: null as any,
     notes: null as any,
+    // RCD-specific fields
+    pushButtonTest: null as boolean | null,
+    injectionTimedTest: null as boolean | null,
+    tripTimes: [] as number[],
+    distributionBoardNumber: null as string | null,
+    circuitBreakerNumber: null as string | null,
   });
   const [assetNumberError, setAssetNumberError] = useState<string>("");
   
@@ -705,6 +712,12 @@ export default function ReportPreview() {
       failureReason: result.failureReason || null,
       actionTaken: result.actionTaken || null,
       notes: result.notes || null,
+      // RCD-specific fields
+      pushButtonTest: (result as any).pushButtonTest ?? null,
+      injectionTimedTest: (result as any).injectionTimedTest ?? null,
+      tripTimes: (result as any).tripTimes || [],
+      distributionBoardNumber: (result as any).distributionBoardNumber || null,
+      circuitBreakerNumber: (result as any).circuitBreakerNumber || null,
     });
     
     // Clear any previous asset number errors
@@ -769,6 +782,11 @@ export default function ReportPreview() {
         failureReason: null,
         actionTaken: null,
         notes: null,
+        pushButtonTest: null,
+        injectionTimedTest: null,
+        tripTimes: [],
+        distributionBoardNumber: null,
+        circuitBreakerNumber: null,
       });
       setAssetNumberError("");
 
@@ -1032,18 +1050,27 @@ export default function ReportPreview() {
 
           <div>
             <Label htmlFor="edit-classification">Classification</Label>
-            <Select 
-              value={editResultData.classification} 
+            <Select
+              value={editResultData.classification}
               onValueChange={(value) => setEditResultData(prev => ({ ...prev, classification: value as any }))}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="class1">Class 1</SelectItem>
-                <SelectItem value="class2">Class 2</SelectItem>
-                <SelectItem value="epod">EPOD</SelectItem>
-                <SelectItem value="rcd">RCD</SelectItem>
+                {session?.serviceType === 'rcd_reporting' ? (
+                  <>
+                    <SelectItem value="fixed-rcd">Fixed RCD</SelectItem>
+                    <SelectItem value="portable-rcd">Portable RCD</SelectItem>
+                  </>
+                ) : (
+                  <>
+                    <SelectItem value="class1">Class 1</SelectItem>
+                    <SelectItem value="class2">Class 2</SelectItem>
+                    <SelectItem value="epod">EPOD</SelectItem>
+                    <SelectItem value="rcd">RCD</SelectItem>
+                  </>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -1064,25 +1091,90 @@ export default function ReportPreview() {
             </Select>
           </div>
 
-          <div>
-            <Label htmlFor="edit-frequency">Test Frequency</Label>
-            <Select
-              value={editResultData.frequency}
-              onValueChange={handleFrequencyChange}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select frequency" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="monthly">Monthly</SelectItem>
-                <SelectItem value="threemonthly">3 Monthly</SelectItem>
-                <SelectItem value="sixmonthly">6 Monthly</SelectItem>
-                <SelectItem value="twelvemonthly">12 Monthly</SelectItem>
-                <SelectItem value="twentyfourmonthly">24 Monthly</SelectItem>
-                <SelectItem value="fiveyearly">5 Yearly</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {session?.serviceType !== 'rcd_reporting' && (
+            <div>
+              <Label htmlFor="edit-frequency">Test Frequency</Label>
+              <Select
+                value={editResultData.frequency}
+                onValueChange={handleFrequencyChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select frequency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="threemonthly">3 Monthly</SelectItem>
+                  <SelectItem value="sixmonthly">6 Monthly</SelectItem>
+                  <SelectItem value="twelvemonthly">12 Monthly</SelectItem>
+                  <SelectItem value="twentyfourmonthly">24 Monthly</SelectItem>
+                  <SelectItem value="fiveyearly">5 Yearly</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* RCD-specific fields */}
+          {session?.serviceType === 'rcd_reporting' && (
+            <>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="edit-pushButtonTest"
+                  checked={editResultData.pushButtonTest === true}
+                  onCheckedChange={(checked) => setEditResultData(prev => ({ ...prev, pushButtonTest: !!checked }))}
+                />
+                <Label htmlFor="edit-pushButtonTest">Push Button Test</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="edit-injectionTimedTest"
+                  checked={editResultData.injectionTimedTest === true}
+                  onCheckedChange={(checked) => setEditResultData(prev => ({ ...prev, injectionTimedTest: !!checked }))}
+                />
+                <Label htmlFor="edit-injectionTimedTest">Injection/Timed Test</Label>
+              </div>
+
+              {editResultData.injectionTimedTest && (
+                <div>
+                  <Label>Trip Times (ms, comma-separated)</Label>
+                  <Input
+                    value={(editResultData.tripTimes || []).join(', ')}
+                    onChange={(e) => {
+                      const times = e.target.value.split(',').map(t => Number(t.trim())).filter(t => t > 0);
+                      setEditResultData(prev => ({ ...prev, tripTimes: times }));
+                    }}
+                    placeholder="e.g., 30, 28, 31"
+                    className="text-base"
+                  />
+                </div>
+              )}
+
+              {editResultData.classification === 'fixed-rcd' && (
+                <>
+                  <div>
+                    <Label htmlFor="edit-distributionBoardNumber">Distribution Board Number</Label>
+                    <Input
+                      id="edit-distributionBoardNumber"
+                      value={editResultData.distributionBoardNumber || ''}
+                      onChange={(e) => setEditResultData(prev => ({ ...prev, distributionBoardNumber: e.target.value || null }))}
+                      placeholder="e.g., DB-1"
+                      className="text-base"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-circuitBreakerNumber">Circuit Breaker Number</Label>
+                    <Input
+                      id="edit-circuitBreakerNumber"
+                      value={editResultData.circuitBreakerNumber || ''}
+                      onChange={(e) => setEditResultData(prev => ({ ...prev, circuitBreakerNumber: e.target.value || null }))}
+                      placeholder="e.g., CB3"
+                      className="text-base"
+                    />
+                  </div>
+                </>
+              )}
+            </>
+          )}
 
           {editResultData.result === 'fail' && (
             <>
@@ -1105,12 +1197,12 @@ export default function ReportPreview() {
                 </Select>
               </div>
 
-              {/* Action Taken field - only show for electrical testing, not for emergency exit lights */}
+              {/* Action Taken field - only show for electrical and RCD testing, not for emergency exit lights */}
               {sessionData?.session?.serviceType !== 'emergency_exit_light' && (
                 <div>
                   <Label htmlFor="edit-actionTaken">Action Taken</Label>
-                  <Select 
-                    value={editResultData.actionTaken || ''} 
+                  <Select
+                    value={editResultData.actionTaken || ''}
                     onValueChange={(value) => setEditResultData(prev => ({ ...prev, actionTaken: value || null }))}
                   >
                     <SelectTrigger>
@@ -1119,6 +1211,12 @@ export default function ReportPreview() {
                     <SelectContent>
                       <SelectItem value="given">Given to Site Contact</SelectItem>
                       <SelectItem value="removed">Removed from Site</SelectItem>
+                      {session?.serviceType === 'rcd_reporting' && (
+                        <>
+                          <SelectItem value="notified">Site Contact Notified</SelectItem>
+                          <SelectItem value="off_position">RCD left in off position</SelectItem>
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>

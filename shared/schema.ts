@@ -95,6 +95,7 @@ export const testResults = pgTable("test_results", {
   injectionTimedTest: boolean("injection_timed_test"), // Injection/Timed test completed
   tripTimes: numeric("trip_time").array(), // Array of trip times in milliseconds for timed test (for Fixed RCD, up to 3 values)
   distributionBoardNumber: text("distribution_board_number"), // Distribution board number for Fixed RCD
+  circuitBreakerNumber: text("circuit_breaker_number"), // Circuit breaker number for Fixed RCD
   // Microwave leakage testing specific fields
   leakageReading: text("leakage_reading"), // Microwave radiation leakage reading
   createdAt: timestamp("created_at").defaultNow(),

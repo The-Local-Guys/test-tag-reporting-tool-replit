@@ -537,8 +537,8 @@ export class DatabaseStorage implements IStorage {
       // Use the pool directly for raw SQL execution with all fields including emergency-specific, RCD-specific, and microwave-specific ones
       const query = `
         INSERT INTO test_results 
-        (session_id, asset_number, item_name, item_type, location, classification, result, frequency, failure_reason, action_taken, notes, photo_data, vision_inspection, electrical_test, maintenance_type, globe_type, discharge_test, switching_test, charging_test, manufacturer_info, installation_date, push_button_test, injection_timed_test, trip_time, distribution_board_number, leakage_reading)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
+        (session_id, asset_number, item_name, item_type, location, classification, result, frequency, failure_reason, action_taken, notes, photo_data, vision_inspection, electrical_test, maintenance_type, globe_type, discharge_test, switching_test, charging_test, manufacturer_info, installation_date, push_button_test, injection_timed_test, trip_time, distribution_board_number, circuit_breaker_number, leakage_reading)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)
         RETURNING *
       `;
       
@@ -578,6 +578,7 @@ export class DatabaseStorage implements IStorage {
           ? Number(insertResult.tripTimes[0])
           : null,
         insertResult.distributionBoardNumber ?? null,
+        insertResult.circuitBreakerNumber ?? null,
         // Microwave specific fields
         insertResult.leakageReading ?? null,
       ]);

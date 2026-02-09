@@ -774,6 +774,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             injectionTimedTest: batchedResult.injectionTimedTest ?? null,
             tripTimes: batchedResult.tripTimes ?? null,
             distributionBoardNumber: batchedResult.distributionBoardNumber || null,
+            circuitBreakerNumber: batchedResult.circuitBreakerNumber || null,
             // Map microwave test fields from batch data
             leakageReading: batchedResult.leakageReading || null,
           };
@@ -906,6 +907,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           req.body.chargingTest !== undefined ? req.body.chargingTest : false,
         manufacturerInfo: req.body.manufacturerInfo || null,
         installationDate: req.body.installationDate || null,
+        // RCD test specific fields
+        pushButtonTest: req.body.pushButtonTest ?? null,
+        injectionTimedTest: req.body.injectionTimedTest ?? null,
+        tripTimes: req.body.tripTimes ?? null,
+        distributionBoardNumber: req.body.distributionBoardNumber || null,
+        circuitBreakerNumber: req.body.circuitBreakerNumber || null,
         // Microwave test specific fields (AS/NZS 60335.2.25)
         leakageReading: req.body.leakageReading || null,
       };
@@ -1036,7 +1043,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (req.body.injectionTimedTest !== undefined) updateData.injectionTimedTest = req.body.injectionTimedTest;
         if (req.body.tripTimes !== undefined) updateData.tripTimes = req.body.tripTimes;
         if (req.body.distributionBoardNumber !== undefined) updateData.distributionBoardNumber = req.body.distributionBoardNumber || null;
-        
+        if (req.body.circuitBreakerNumber !== undefined) updateData.circuitBreakerNumber = req.body.circuitBreakerNumber || null;
+
         // Microwave testing fields
         if (req.body.leakageReading !== undefined) updateData.leakageReading = req.body.leakageReading || null;
 

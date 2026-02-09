@@ -24,6 +24,7 @@ const rcdTestSchema = z.object({
   assetNumber: z.string().optional(), // Auto-generated
   equipmentType: z.enum(['fixed-rcd', 'portable-rcd']),
   distributionBoardNumber: z.string().optional(), // Only for Fixed RCD
+  circuitBreakerNumber: z.string().optional(), // Only for Fixed RCD
   pushButtonTest: z.boolean(),
   injectionTimedTest: z.boolean(),
   tripTimes: z.array(
@@ -58,7 +59,7 @@ type RCDTestForm = z.infer<typeof rcdTestSchema>;
 export default function RCDTestDetails() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { sessionData, addToBatch, currentLocation, rcdAssetCounter, currentDistributionBoardNumber } = useSession();
+  const { sessionData, addToBatch, currentLocation, rcdAssetCounter, currentDistributionBoardNumber, currentCircuitBreakerNumber } = useSession();
 
   // Get URL parameters
   const urlParams = new URLSearchParams(window.location.search);
@@ -88,6 +89,7 @@ export default function RCDTestDetails() {
       assetNumber: nextAssetNumber.toString(),
       equipmentType: getEquipmentType(initialItemType),
       distributionBoardNumber: getEquipmentType(initialItemType) === 'fixed-rcd' ? currentDistributionBoardNumber : '',
+      circuitBreakerNumber: getEquipmentType(initialItemType) === 'fixed-rcd' ? currentCircuitBreakerNumber : '',
       pushButtonTest: false,
       injectionTimedTest: false,
       tripTimes: [], // Start with empty array since injectionTimedTest is false
@@ -105,6 +107,13 @@ export default function RCDTestDetails() {
   const watchResult = form.watch('result');
   const watchEquipmentType = form.watch('equipmentType');
   const watchInjectionTimedTest = form.watch('injectionTimedTest');
+
+  // Update asset number when rcdAssetCounter changes (e.g., after session load sets starting number)
+  useEffect(() => {
+    if (nextAssetNumber > 1) {
+      form.setValue('assetNumber', nextAssetNumber.toString());
+    }
+  }, [nextAssetNumber, form]);
 
   // Update location field when currentLocation changes
   useEffect(() => {
@@ -125,6 +134,17 @@ export default function RCDTestDetails() {
       form.setValue('distributionBoardNumber', '');
     }
   }, [currentDistributionBoardNumber, watchEquipmentType, form]);
+
+  // Update circuit breaker number field when currentCircuitBreakerNumber changes or equipment type changes
+  useEffect(() => {
+    if (watchEquipmentType === 'fixed-rcd') {
+      if (currentCircuitBreakerNumber) {
+        form.setValue('circuitBreakerNumber', currentCircuitBreakerNumber);
+      }
+    } else {
+      form.setValue('circuitBreakerNumber', '');
+    }
+  }, [currentCircuitBreakerNumber, watchEquipmentType, form]);
 
   // Update item name and type when equipment type changes
   useEffect(() => {
@@ -190,6 +210,7 @@ export default function RCDTestDetails() {
           injectionTimedTest: data.injectionTimedTest,
           tripTimes: tripTimesArray,
           distributionBoardNumber: data.distributionBoardNumber || null,
+          circuitBreakerNumber: data.circuitBreakerNumber || null,
           notes: data.notes || null,
           visionInspection: false,
           electricalTest: false,
@@ -213,6 +234,7 @@ export default function RCDTestDetails() {
         injectionTimedTest: data.injectionTimedTest,
         tripTimes: tripTimesArray,
         distributionBoardNumber: data.distributionBoardNumber || null,
+        circuitBreakerNumber: data.circuitBreakerNumber || null,
         notes: data.notes || null,
         // RCD testing doesn't require vision/electrical test flags
         visionInspection: false,
@@ -357,6 +379,20 @@ export default function RCDTestDetails() {
                 {form.formState.errors.distributionBoardNumber && (
                   <p className="text-red-500 text-sm mt-1">{form.formState.errors.distributionBoardNumber.message}</p>
                 )}
+              </div>
+            )}
+
+            {/* Circuit Breaker Number - Only for Fixed RCD */}
+            {watchEquipmentType === 'fixed-rcd' && (
+              <div>
+                <Label htmlFor="circuitBreakerNumber">Circuit Breaker Number</Label>
+                <Input
+                  id="circuitBreakerNumber"
+                  {...form.register('circuitBreakerNumber')}
+                  placeholder="e.g., CB1, CB3"
+                  className="text-base"
+                  data-testid="input-circuit-breaker-number"
+                />
               </div>
             )}
           </CardContent>

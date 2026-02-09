@@ -136,7 +136,7 @@ export function generateExcelReport(data: ReportData): Blob {
     : session.serviceType === 'fire_testing'
     ? ['Asset #', 'Item Name', 'Location', 'Type', 'Result', 'Size/Weight', 'Manufacturer', 'Frequency', 'Next Due Date', 'Failure Reason', 'Notes', 'Visual Inspection', 'Accessibility', 'Signage', 'Operational Test', 'Pressure Test']
     : session.serviceType === 'rcd_reporting'
-    ? ['Asset #', 'Item Name', 'Location', 'Equipment Type', 'Result', 'Push Button Test', 'Injection/Timed Test', 'Trip Time (ms)', 'Notes']
+    ? ['Asset #', 'Equipment Type', 'DB / CB', 'Push Button Test', 'Timed Test', 'Trip Time (ms)', 'Result', 'Location', 'Comments', 'Failure Reason', 'Action Taken']
     : ['Asset #', 'Item Name', 'Location', 'Classification', 'Result', 'Vision Inspection', 'Electrical Test', 'Frequency', 'Next Due Date', 'Failure Reason', 'Action Taken', 'Notes'];
   
   // Test results data - different structure for emergency exit light testing
@@ -244,24 +244,49 @@ export function generateExcelReport(data: ReportData): Blob {
       ];
     } else if (session.serviceType === 'rcd_reporting') {
       // RCD reporting specific format
-      const equipmentTypeDisplay = result.classification === 'fixed-rcd' ? 'Fixed RCD' : 'Portable RCD';
-      const toTestCell = (value: boolean | null | undefined) => value == null ? 'N/A' : (value ? 'PASS' : 'FAIL');
+      const equipmentTypeDisplay = (result.classification === 'fixed-rcd' || (!result.classification && result.itemName?.includes('Fixed'))) ? 'Fixed RCD' : 'Portable RCD';
+      const toTestCell = (value: boolean | null | undefined) => value == null ? 'N/A' : (value ? 'Yes' : 'No');
       const tripTimesArray = (result as any).tripTimes;
-      // Handle multiple trip times - join with commas if array, otherwise empty
       const tripTimeDisplay = Array.isArray(tripTimesArray) && tripTimesArray.length > 0
-        ? tripTimesArray.filter((t: any) => t != null && t > 0).join(', ')
-        : '';
-      
+        ? tripTimesArray.filter((t: any) => t != null && t > 0).join(', ') || '-'
+        : '-';
+
+      // DB / CB column
+      const dbNum = (result as any).distributionBoardNumber || (result as any).distribution_board_number || '';
+      const cbNum = (result as any).circuitBreakerNumber || (result as any).circuit_breaker_number || '';
+      let dbCbDisplay = '';
+      if (dbNum && cbNum) {
+        dbCbDisplay = `${dbNum} / ${cbNum}`;
+      } else if (dbNum) {
+        dbCbDisplay = dbNum;
+      } else if (cbNum) {
+        dbCbDisplay = `- / ${cbNum}`;
+      }
+
+      // Format action taken
+      let rcdActionTaken = result.actionTaken || '';
+      if (rcdActionTaken) {
+        rcdActionTaken = rcdActionTaken.split(', ').map(action => {
+          if (action === 'notified') return 'Site Contact Notified';
+          if (action === 'off_position') return 'RCD left in off position';
+          if (action === 'given') return 'Given to Site Contact';
+          if (action === 'removed') return 'Removed from Site';
+          return action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }).join(', ');
+      }
+
       return [
-        result.assetNumber, // Asset number
-        result.itemName,
-        result.location,
+        result.assetNumber,
         equipmentTypeDisplay,
-        result.result.toUpperCase(),
+        dbCbDisplay,
         toTestCell((result as any).pushButtonTest),
         toTestCell((result as any).injectionTimedTest),
-        tripTimeDisplay, // Trip times in milliseconds (comma-separated)
-        result.notes || ''
+        tripTimeDisplay,
+        result.result.toUpperCase(),
+        result.location,
+        result.notes || '',
+        displayFailureReason,
+        rcdActionTaken
       ];
     } else {
       // Format action taken for display
@@ -357,14 +382,16 @@ export function generateExcelReport(data: ReportData): Blob {
     // RCD reporting
     columnWidths = [
       { wch: 10 }, // Asset #
-      { wch: 20 }, // Item Name
-      { wch: 15 }, // Location
       { wch: 15 }, // Equipment Type
-      { wch: 8 },  // Result
+      { wch: 15 }, // DB / CB
       { wch: 15 }, // Push Button Test
-      { wch: 18 }, // Injection/Timed Test
+      { wch: 15 }, // Timed Test
       { wch: 12 }, // Trip Time (ms)
-      { wch: 25 }  // Notes
+      { wch: 8 },  // Result
+      { wch: 15 }, // Location
+      { wch: 20 }, // Comments
+      { wch: 18 }, // Failure Reason
+      { wch: 18 }  // Action Taken
     ];
   } else {
     // Electrical testing

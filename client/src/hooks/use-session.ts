@@ -50,6 +50,7 @@ export interface BatchedTestResult {
   injectionTimedTest?: boolean;
   tripTimes?: number[]; // Array of trip times in milliseconds (for Fixed RCD, up to 3 values)
   distributionBoardNumber?: string;
+  circuitBreakerNumber?: string;
   // Microwave leakage testing fields
   leakageReading?: string;
 }
@@ -134,6 +135,7 @@ export function useSession() {
   });
   const [currentLocation, setCurrentLocation] = useState<string>('');
   const [currentDistributionBoardNumber, setCurrentDistributionBoardNumber] = useState<string>('');
+  const [currentCircuitBreakerNumber, setCurrentCircuitBreakerNumber] = useState<string>('');
 
   // Custom starting numbers (per session) - loaded from DB session record
   const [customStartingNumbers, setCustomStartingNumbers] = useState<Partial<CustomStartingNumbers>>({});
@@ -294,6 +296,7 @@ export function useSession() {
         return undefined;
       })(),
       distributionBoardNumber: result.distributionBoardNumber ?? result.distribution_board_number ?? undefined,
+      circuitBreakerNumber: result.circuitBreakerNumber ?? result.circuit_breaker_number ?? undefined,
       leakageReading: result.leakageReading || undefined,
     }));
 
@@ -340,11 +343,20 @@ export function useSession() {
 
       // Also set RCD and microwave counters from loaded results
       const rcdAssets = loadedResults
-        .filter(r => r.classification === 'rcd' || r.pushButtonTest !== undefined || r.injectionTimedTest !== undefined)
+        .filter(r => r.classification === 'rcd' || r.classification === 'fixed-rcd' || r.classification === 'portable-rcd' || r.pushButtonTest !== undefined || r.injectionTimedTest !== undefined)
         .map(r => parseInt(r.assetNumber || '0'))
         .filter(n => !isNaN(n) && n > 0);
       if (rcdAssets.length > 0) {
-        setRcdAssetCounter(Math.max(...rcdAssets));
+        const maxFromResults = Math.max(...rcdAssets);
+        // Also consider session's startingAssetNumber - counter should be at least startingAssetNumber - 1
+        // This handles the case where old items have wrong asset numbers (e.g., "1" instead of "100")
+        const startingMin = (session?.serviceType === 'rcd_reporting' && session?.startingAssetNumber)
+          ? session.startingAssetNumber - 1
+          : 0;
+        setRcdAssetCounter(Math.max(maxFromResults, startingMin));
+      } else if (session?.serviceType === 'rcd_reporting' && session?.startingAssetNumber) {
+        // Fallback: use session starting asset number if no RCD results found (e.g., old data with null fields)
+        setRcdAssetCounter(session.startingAssetNumber - 1);
       }
 
       const microwaveAssets = loadedResults
@@ -396,6 +408,11 @@ export function useSession() {
     setTwentyfourmonthlyCounter(serviceTypeDefaults.twentyfourmonthly - 1);
     setThreemonthlyCounter(serviceTypeDefaults.threemonthly - 1);
     setMonthlyCounter(serviceTypeDefaults.monthly - 1);
+
+    // For RCD sessions, initialize rcdAssetCounter from session's startingAssetNumber
+    if (session.serviceType === 'rcd_reporting' && session.startingAssetNumber) {
+      setRcdAssetCounter(session.startingAssetNumber - 1);
+    }
 
     countersInitializedRef.current = sessionId;
 
@@ -656,7 +673,12 @@ export function useSession() {
         setMonthlyCounter(defaults.monthly - 1);
       }
 
-      setRcdAssetCounter(0);
+      // For RCD sessions, use startingAssetNumber if provided (allows custom starting numbers)
+      if (session.serviceType === 'rcd_reporting' && session.startingAssetNumber) {
+        setRcdAssetCounter(session.startingAssetNumber - 1);
+      } else {
+        setRcdAssetCounter(0);
+      }
       setMicrowaveCounter(0);
       countersInitializedRef.current = session.id;
 
@@ -887,6 +909,7 @@ export function useSession() {
       injectionTimedTest: (cleanData as any).injectionTimedTest ?? undefined,
       tripTimes: (cleanData as any).tripTimes ?? undefined,
       distributionBoardNumber: (cleanData as any).distributionBoardNumber || undefined,
+      circuitBreakerNumber: (cleanData as any).circuitBreakerNumber || undefined,
       leakageReading: cleanData.leakageReading || undefined,
     };
 
@@ -916,10 +939,13 @@ export function useSession() {
     // Update current location
     setCurrentLocation(cleanData.location);
 
-    // Update current distribution board number (for RCD reporting - Fixed RCD only)
+    // Update current distribution board number and circuit breaker number (for RCD reporting - Fixed RCD only)
     const isFixedRcd = cleanData.itemName?.toLowerCase().includes('fixed rcd');
     if (isFixedRcd && (cleanData as any).distributionBoardNumber) {
       setCurrentDistributionBoardNumber((cleanData as any).distributionBoardNumber);
+    }
+    if (isFixedRcd && (cleanData as any).circuitBreakerNumber) {
+      setCurrentCircuitBreakerNumber((cleanData as any).circuitBreakerNumber);
     }
 
     console.log(`Added result to batch: ${cleanData.itemName} at ${cleanData.location} -> Asset #${assetNumber}`);
@@ -1059,6 +1085,7 @@ export function useSession() {
         injectionTimedTest: result.injectionTimedTest ?? null,
         tripTimes: tripTimes && tripTimes.length > 0 ? tripTimes : null,
         distributionBoardNumber: result.distributionBoardNumber || null,
+        circuitBreakerNumber: result.circuitBreakerNumber || null,
         leakageReading: result.leakageReading || null,
       };
 
@@ -1147,6 +1174,7 @@ export function useSession() {
         injectionTimedTest: data.injectionTimedTest ?? null,
         tripTimes: tripTimes && tripTimes.length > 0 ? tripTimes : null,
         distributionBoardNumber: data.distributionBoardNumber || null,
+        circuitBreakerNumber: data.circuitBreakerNumber || null,
         leakageReading: data.leakageReading || null,
       };
 
@@ -1365,6 +1393,7 @@ export function useSession() {
     setSessionId(null);
     setCurrentLocation('');
     setCurrentDistributionBoardNumber('');
+    setCurrentCircuitBreakerNumber('');
     setBatchedResults([]);
     setCustomStartingNumbers({});
     setPendingCustomStartingNumbers(null);
@@ -1428,6 +1457,8 @@ export function useSession() {
     setCurrentLocation,
     currentDistributionBoardNumber,
     setCurrentDistributionBoardNumber,
+    currentCircuitBreakerNumber,
+    setCurrentCircuitBreakerNumber,
     isLoading,
 
     // Batched results

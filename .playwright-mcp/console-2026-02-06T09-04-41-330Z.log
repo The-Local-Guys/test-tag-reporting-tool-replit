@@ -1,2 +1,0 @@
-[   11745ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ http://localhost:5000/:0
-[   12206ms] [WARNING] [PostHog] API key not configured. Analytics disabled. @ http://localhost:5000/src/lib/posthog.ts:80
