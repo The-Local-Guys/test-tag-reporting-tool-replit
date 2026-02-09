@@ -246,10 +246,32 @@ export function generateExcelReport(data: ReportData): Blob {
       // RCD reporting specific format
       const equipmentTypeDisplay = (result.classification === 'fixed-rcd' || (!result.classification && result.itemName?.includes('Fixed'))) ? 'Fixed RCD' : 'Portable RCD';
       const toTestCell = (value: boolean | null | undefined) => value == null ? 'N/A' : (value ? 'Yes' : 'No');
-      const tripTimesArray = (result as any).tripTimes;
-      const tripTimeDisplay = Array.isArray(tripTimesArray) && tripTimesArray.length > 0
-        ? tripTimesArray.filter((t: any) => t != null && t > 0).join(', ') || '-'
-        : '-';
+      // Extract trip times with notes fallback (notes contain full array as [TRIP_TIMES:[25,30]])
+      let tripTimesArray = (result as any).tripTimes;
+      let validTripTimes: number[] = [];
+
+      if (Array.isArray(tripTimesArray) && tripTimesArray.length > 0) {
+        validTripTimes = tripTimesArray.map((t: any) => Number(t)).filter((t: number) => isFinite(t) && t > 0);
+      }
+
+      // Fallback: parse from notes field
+      if (validTripTimes.length === 0) {
+        const notesValue = result.notes || '';
+        const tripTimesMatch = notesValue.match(/\[TRIP_TIMES:\[([^\]]*)\]\]/);
+        if (tripTimesMatch && tripTimesMatch[1]) {
+          validTripTimes = tripTimesMatch[1].split(',').map((t: string) => Number(t.trim())).filter((t: number) => isFinite(t) && t > 0);
+        }
+      }
+
+      // Fallback: legacy single trip time field
+      if (validTripTimes.length === 0) {
+        const singleTripTime = (result as any).trip_time || (result as any).tripTime;
+        if (singleTripTime != null && Number(singleTripTime) > 0) {
+          validTripTimes = [Number(singleTripTime)];
+        }
+      }
+
+      const tripTimeDisplay = validTripTimes.length > 0 ? validTripTimes.join(', ') : '-';
 
       // DB / CB column
       const dbNum = (result as any).distributionBoardNumber || (result as any).distribution_board_number || '';
