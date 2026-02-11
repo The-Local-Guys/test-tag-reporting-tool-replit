@@ -203,6 +203,7 @@ export const testResultValues = ['pass', 'fail'] as const;
 export const failureReasons = ['vision', 'earth', 'insulation', 'polarity', 'other'] as const;
 export const emergencyFailureReasons = ['physical_damage', 'battery_failure', 'lamp_failure', 'wiring_fault', 'charging_fault', 'insufficient_illumination', 'mounting_issue', 'other'] as const;
 export const fireFailureReasons = ['physical_damage', 'pressure_loss', 'corrosion', 'blocked_nozzle', 'damaged_seal', 'expired', 'mounting_issue', 'other'] as const;
+export const rcdFailureReasons = ['push_button', 'injection_timed', 'tripping_time', 'no_trip', 'visual', 'other'] as const;
 export const actionsTaken = ['given', 'removed'] as const;
 export const countries = ['australia', 'newzealand', 'national_client'] as const;
 export const frequencies = ['threemonthly', 'sixmonthly', 'twelvemonthly', 'twentyfourmonthly', 'fiveyearly'] as const;

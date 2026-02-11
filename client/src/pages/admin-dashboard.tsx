@@ -56,6 +56,7 @@ import { generatePDFReport, downloadPDF } from "@/lib/pdf-generator";
 import { generateExcelReport, downloadExcel } from "@/lib/excel-generator";
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
 import { CertificatesTab } from "@/features/certificates/CertificatesTab";
+import { failureReasons, emergencyFailureReasons, fireFailureReasons, rcdFailureReasons } from "@shared/schema";
 
 /**
  * Administrative dashboard for managing users, sessions, and system oversight
@@ -987,6 +988,55 @@ export default function AdminDashboard() {
       sessionId: editingSession.id,
       data: editSessionData,
     });
+  };
+
+  // Helper function to get appropriate failure reasons based on service type
+  const getFailureReasons = () => {
+    const serviceType = viewingSession?.session?.serviceType;
+    switch (serviceType) {
+      case 'emergency_exit_light':
+        return emergencyFailureReasons;
+      case 'fire_testing':
+        return fireFailureReasons;
+      case 'rcd_reporting':
+        return rcdFailureReasons;
+      default:
+        return failureReasons; // electrical testing
+    }
+  };
+
+  // Helper function to convert snake_case to display labels
+  const getFailureReasonLabel = (reason: string) => {
+    const labelMap: { [key: string]: string } = {
+      // Electrical testing reasons
+      'vision': 'Vision',
+      'earth': 'Earth',
+      'insulation': 'Insulation',
+      'polarity': 'Polarity',
+      // Emergency exit light reasons
+      'physical_damage': 'Physical Damage',
+      'battery_failure': 'Battery Failure',
+      'lamp_failure': 'Lamp/LED Failure',
+      'wiring_fault': 'Wiring Fault',
+      'charging_fault': 'Charging Fault',
+      'insufficient_illumination': 'Insufficient Illumination',
+      'mounting_issue': 'Mounting Issue',
+      // Fire testing reasons
+      'pressure_loss': 'Pressure Loss',
+      'corrosion': 'Corrosion',
+      'blocked_nozzle': 'Blocked Nozzle',
+      'damaged_seal': 'Damaged Seal',
+      'expired': 'Expired',
+      // RCD testing reasons
+      'push_button': 'Push Button Test Failed',
+      'injection_timed': 'Injection/Timed Test Failed',
+      'tripping_time': 'Incorrect Tripping Time',
+      'no_trip': 'Failed to Trip',
+      'visual': 'Visual Damage/Defect',
+      // Common
+      'other': 'Other'
+    };
+    return labelMap[reason] || reason;
   };
 
   const handleEditResult = (result: any) => {
@@ -2700,8 +2750,8 @@ export default function AdminDashboard() {
               </p>
             </div>
 
-            {/* Hide classification and frequency for Microwave Leakage Testing */}
-            {viewingSession?.session?.serviceType !== 'microwave_leakage' && (
+            {/* Hide classification and frequency for Microwave Leakage Testing, RCD Reporting, and Fire Equipment Testing */}
+            {viewingSession?.session?.serviceType !== 'microwave_leakage' && viewingSession?.session?.serviceType !== 'rcd_reporting' && viewingSession?.session?.serviceType !== 'fire_testing' && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="editClassification">Classification</Label>
@@ -2772,56 +2822,153 @@ export default function AdminDashboard() {
               </Select>
             </div>
 
-            {editResultData.result === "fail" && (
+            {/* Hide failure reason and action taken for Microwave Leakage Testing */}
+            {editResultData.result === "fail" && viewingSession?.session?.serviceType !== 'microwave_leakage' && (
               <>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="editFailureReason">Failure Reason</Label>
-                    <Select
-                      value={editResultData.failureReason || ""}
-                      onValueChange={(value) =>
-                        setEditResultData((prev) => ({
-                          ...prev,
-                          failureReason: value,
-                        }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select failure reason" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="vision">
-                          Visual Inspection
-                        </SelectItem>
-                        <SelectItem value="earth">Earth</SelectItem>
-                        <SelectItem value="insulation">Insulation</SelectItem>
-                        <SelectItem value="polarity">Polarity</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="editFailureReason">
+                      Failure Reason{viewingSession?.session?.serviceType === 'rcd_reporting' && ' (Multiple)'}
+                    </Label>
+                    {viewingSession?.session?.serviceType === 'rcd_reporting' ? (
+                      <div className="space-y-2">
+                        {editResultData.failureReason && (
+                          <div className="flex flex-wrap gap-2">
+                            {editResultData.failureReason.split(',').map((reason: string) => (
+                              <span key={reason} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
+                                {getFailureReasonLabel(reason.trim())}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <div className="border rounded-md p-3 space-y-2">
+                          {getFailureReasons().map((reason) => {
+                            const selectedReasons = editResultData.failureReason?.split(',').map((r: string) => r.trim()) || [];
+                            const isChecked = selectedReasons.includes(reason);
+                            return (
+                              <div key={reason} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`reason-${reason}`}
+                                  checked={isChecked}
+                                  onCheckedChange={(checked) => {
+                                    const currentReasons = editResultData.failureReason?.split(',').map((r: string) => r.trim()).filter((r: string) => r) || [];
+                                    let newReasons: string[];
+                                    if (checked) {
+                                      newReasons = [...currentReasons, reason];
+                                    } else {
+                                      newReasons = currentReasons.filter((r: string) => r !== reason);
+                                    }
+                                    setEditResultData((prev) => ({
+                                      ...prev,
+                                      failureReason: newReasons.length > 0 ? newReasons.join(',') : null,
+                                    }));
+                                  }}
+                                />
+                                <Label htmlFor={`reason-${reason}`} className="cursor-pointer">
+                                  {getFailureReasonLabel(reason)}
+                                </Label>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <Select
+                        value={editResultData.failureReason || ""}
+                        onValueChange={(value) =>
+                          setEditResultData((prev) => ({
+                            ...prev,
+                            failureReason: value,
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select failure reason" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getFailureReasons().map((reason) => (
+                            <SelectItem key={reason} value={reason}>
+                              {getFailureReasonLabel(reason)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="editActionTaken">Action Taken</Label>
-                    <Select
-                      value={editResultData.actionTaken || ""}
-                      onValueChange={(value) =>
-                        setEditResultData((prev) => ({
-                          ...prev,
-                          actionTaken: value,
-                        }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select action taken" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="given">Given to User</SelectItem>
-                        <SelectItem value="removed">
-                          Removed from Service
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="editActionTaken">
+                      Action Taken{viewingSession?.session?.serviceType === 'rcd_reporting' && ' (Multiple)'}
+                    </Label>
+                    {viewingSession?.session?.serviceType === 'rcd_reporting' ? (
+                      <div className="space-y-2">
+                        {editResultData.actionTaken && (
+                          <div className="flex flex-wrap gap-2">
+                            {editResultData.actionTaken.split(',').map((action: string) => (
+                              <span key={action} className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">
+                                {action.trim() === 'notified' ? 'Site Contact Notified' :
+                                 action.trim() === 'off_position' ? 'RCD left in off position' :
+                                 action.trim() === 'given' ? 'Given to User' :
+                                 action.trim() === 'removed' ? 'Removed from Service' : action.trim()}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <div className="border rounded-md p-3 space-y-2">
+                          {[
+                            { value: 'notified', label: 'Site Contact Notified' },
+                            { value: 'off_position', label: 'RCD left in off position' }
+                          ].map((action) => {
+                            const selectedActions = editResultData.actionTaken?.split(',').map((a: string) => a.trim()) || [];
+                            const isChecked = selectedActions.includes(action.value);
+                            return (
+                              <div key={action.value} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`action-${action.value}`}
+                                  checked={isChecked}
+                                  onCheckedChange={(checked) => {
+                                    const currentActions = editResultData.actionTaken?.split(',').map((a: string) => a.trim()).filter((a: string) => a) || [];
+                                    let newActions: string[];
+                                    if (checked) {
+                                      newActions = [...currentActions, action.value];
+                                    } else {
+                                      newActions = currentActions.filter((a: string) => a !== action.value);
+                                    }
+                                    setEditResultData((prev) => ({
+                                      ...prev,
+                                      actionTaken: newActions.length > 0 ? newActions.join(',') : null,
+                                    }));
+                                  }}
+                                />
+                                <Label htmlFor={`action-${action.value}`} className="cursor-pointer">
+                                  {action.label}
+                                </Label>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <Select
+                        value={editResultData.actionTaken || ""}
+                        onValueChange={(value) =>
+                          setEditResultData((prev) => ({
+                            ...prev,
+                            actionTaken: value,
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select action taken" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="given">Given to User</SelectItem>
+                          <SelectItem value="removed">
+                            Removed from Service
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                 </div>
 
