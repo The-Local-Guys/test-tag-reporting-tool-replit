@@ -2700,53 +2700,59 @@ export default function AdminDashboard() {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="editClassification">Classification</Label>
-                <Select
-                  value={editResultData.classification}
-                  onValueChange={(value) =>
-                    setEditResultData((prev) => ({
-                      ...prev,
-                      classification: value,
-                    }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select classification" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="class1">Class 1</SelectItem>
-                    <SelectItem value="class2">Class 2</SelectItem>
-                    <SelectItem value="epod">EPOD</SelectItem>
-                    <SelectItem value="rcd">RCD</SelectItem>
-                    <SelectItem value="3phase">3 Phase</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Hide classification and frequency for Microwave Leakage Testing */}
+            {viewingSession?.session?.serviceType !== 'microwave_leakage' && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editClassification">Classification</Label>
+                  <Select
+                    value={editResultData.classification}
+                    onValueChange={(value) =>
+                      setEditResultData((prev) => ({
+                        ...prev,
+                        classification: value,
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select classification" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="class1">Class 1</SelectItem>
+                      <SelectItem value="class2">Class 2</SelectItem>
+                      <SelectItem value="epod">EPOD</SelectItem>
+                      <SelectItem value="rcd">RCD</SelectItem>
+                      <SelectItem value="3phase">3 Phase</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="editFrequency">Test Frequency</Label>
-                <Select
-                  value={editResultData.frequency}
-                  onValueChange={handleFrequencyChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select frequency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="threemonthly">3 Monthly</SelectItem>
-                    <SelectItem value="sixmonthly">6 Monthly</SelectItem>
-                    <SelectItem value="twelvemonthly">12 Monthly</SelectItem>
-                    <SelectItem value="twentyfourmonthly">
-                      24 Monthly
-                    </SelectItem>
-                    <SelectItem value="fiveyearly">5 Yearly</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="space-y-2">
+                  <Label htmlFor="editFrequency">Test Frequency</Label>
+                  <Select
+                    value={editResultData.frequency}
+                    onValueChange={handleFrequencyChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select frequency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                      <SelectItem value="threemonthly">3 Monthly</SelectItem>
+                      <SelectItem value="sixmonthly">6 Monthly</SelectItem>
+                      {/* Show 'annually' for emergency exit light, 'twelvemonthly' for others */}
+                      {viewingSession?.session?.serviceType === 'emergency_exit_light' ? (
+                        <SelectItem value="annually">12 Monthly</SelectItem>
+                      ) : (
+                        <SelectItem value="twelvemonthly">12 Monthly</SelectItem>
+                      )}
+                      <SelectItem value="twentyfourmonthly">24 Monthly</SelectItem>
+                      <SelectItem value="fiveyearly">5 Yearly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="editResult">Test Result</Label>

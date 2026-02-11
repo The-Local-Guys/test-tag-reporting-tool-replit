@@ -715,6 +715,7 @@ export default function ReportPreview() {
 
     // Store the original batched result for updating
     console.log('Setting editing result with batched ID:', result.id);
+    console.log('Session service type:', sessionData?.session?.serviceType);
     setEditingResult({ ...testResult, originalBatchedId: result.id } as any);
     
     // Set form data for manual editing
@@ -1065,32 +1066,35 @@ export default function ReportPreview() {
             )}
           </div>
 
-          <div>
-            <Label htmlFor="edit-classification">Classification</Label>
-            <Select
-              value={editResultData.classification}
-              onValueChange={(value) => setEditResultData(prev => ({ ...prev, classification: value as any }))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {session?.serviceType === 'rcd_reporting' ? (
-                  <>
-                    <SelectItem value="fixed-rcd">Fixed RCD</SelectItem>
-                    <SelectItem value="portable-rcd">Portable RCD</SelectItem>
-                  </>
-                ) : (
-                  <>
-                    <SelectItem value="class1">Class 1</SelectItem>
-                    <SelectItem value="class2">Class 2</SelectItem>
-                    <SelectItem value="epod">EPOD</SelectItem>
-                    <SelectItem value="rcd">RCD</SelectItem>
-                  </>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Hide classification for Microwave Leakage Testing */}
+          {session?.serviceType !== 'microwave_leakage' && (
+            <div>
+              <Label htmlFor="edit-classification">Classification</Label>
+              <Select
+                value={editResultData.classification}
+                onValueChange={(value) => setEditResultData(prev => ({ ...prev, classification: value as any }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {session?.serviceType === 'rcd_reporting' ? (
+                    <>
+                      <SelectItem value="fixed-rcd">Fixed RCD</SelectItem>
+                      <SelectItem value="portable-rcd">Portable RCD</SelectItem>
+                    </>
+                  ) : (
+                    <>
+                      <SelectItem value="class1">Class 1</SelectItem>
+                      <SelectItem value="class2">Class 2</SelectItem>
+                      <SelectItem value="epod">EPOD</SelectItem>
+                      <SelectItem value="rcd">RCD</SelectItem>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div>
             <Label htmlFor="edit-result">Test Result</Label>
@@ -1108,7 +1112,8 @@ export default function ReportPreview() {
             </Select>
           </div>
 
-          {session?.serviceType !== 'rcd_reporting' && (
+          {/* Hide frequency for RCD Reporting and Microwave Leakage Testing */}
+          {session?.serviceType !== 'rcd_reporting' && session?.serviceType !== 'microwave_leakage' && (
             <div>
               <Label htmlFor="edit-frequency">Test Frequency</Label>
               <Select
@@ -1122,7 +1127,12 @@ export default function ReportPreview() {
                   <SelectItem value="monthly">Monthly</SelectItem>
                   <SelectItem value="threemonthly">3 Monthly</SelectItem>
                   <SelectItem value="sixmonthly">6 Monthly</SelectItem>
-                  <SelectItem value="twelvemonthly">12 Monthly</SelectItem>
+                  {/* Show 'annually' for emergency exit light, 'twelvemonthly' for others */}
+                  {session?.serviceType === 'emergency_exit_light' ? (
+                    <SelectItem value="annually">12 Monthly</SelectItem>
+                  ) : (
+                    <SelectItem value="twelvemonthly">12 Monthly</SelectItem>
+                  )}
                   <SelectItem value="twentyfourmonthly">24 Monthly</SelectItem>
                   <SelectItem value="fiveyearly">5 Yearly</SelectItem>
                 </SelectContent>
