@@ -326,7 +326,7 @@ export function useSession() {
       })(),
       distributionBoardNumber: result.distributionBoardNumber ?? result.distribution_board_number ?? undefined,
       circuitBreakerNumber: result.circuitBreakerNumber ?? result.circuit_breaker_number ?? undefined,
-      leakageReading: result.leakageReading || undefined,
+      leakageReading: result.leakageReading || result.leakage_reading || undefined,
     }));
 
     // Merge strategy: on initial load replace entirely, on subsequent updates
