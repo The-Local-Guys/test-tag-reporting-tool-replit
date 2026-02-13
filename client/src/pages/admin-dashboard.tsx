@@ -147,6 +147,39 @@ export default function AdminDashboard() {
     failureReason: null as any,
     actionTaken: null as any,
     notes: null as any,
+    // Service-specific boolean criteria fields
+    visionInspection: false as boolean,
+    electricalTest: false as boolean,
+    dischargeTest: false as boolean,
+    switchingTest: false as boolean,
+    chargingTest: false as boolean,
+    // Emergency Exit Light specific fields
+    luxTest: false as boolean,
+    luxReading: null as number | null,
+    luxCompliant: false as boolean,
+    manufacturerInfo: null as string | null,
+    installationDate: null as string | null,
+    maintenanceType: null as string | null,
+    globeType: null as string | null,
+    // Fire Testing specific fields
+    pressureTest: false as boolean,
+    accessibilityCheck: false as boolean,
+    signageCheck: false as boolean,
+    operationalTest: false as boolean,
+    fireVisualInspection: false as boolean,
+    equipmentType: null as string | null,
+    extinguisherType: null as string | null,
+    size: null as string | null,
+    weight: null as string | null,
+    testType: null as string | null,
+    // Microwave Leakage specific fields
+    leakageReading: null as string | null,
+    // RCD-specific fields
+    pushButtonTest: false as boolean,
+    injectionTimedTest: false as boolean,
+    tripTimes: [] as any[],
+    distributionBoardNumber: null as string | null,
+    circuitBreakerNumber: null as string | null,
   });
 
   const [assetNumberError, setAssetNumberError] = useState<string>("");
@@ -1042,16 +1075,49 @@ export default function AdminDashboard() {
   const handleEditResult = (result: any) => {
     setEditingResult(result);
     setEditResultData({
-      itemName: result.itemName || "",
-      itemType: result.itemType || "",
+      itemName: result.itemName || result.item_name || "",
+      itemType: result.itemType || result.item_type || "",
       location: result.location || "",
-      assetNumber: result.assetNumber || "",
+      assetNumber: result.assetNumber || result.asset_number || "",
       classification: result.classification || "class1",
       result: result.result || "pass",
       frequency: result.frequency || "twelvemonthly",
-      failureReason: result.failureReason,
-      actionTaken: result.actionTaken,
-      notes: result.notes,
+      failureReason: result.failureReason || result.failure_reason || null,
+      actionTaken: result.actionTaken || result.action_taken || null,
+      notes: result.notes || null,
+      // Service-specific boolean criteria fields
+      visionInspection: result.visionInspection ?? result.vision_inspection ?? false,
+      electricalTest: result.electricalTest ?? result.electrical_test ?? false,
+      dischargeTest: result.dischargeTest ?? result.discharge_test ?? false,
+      switchingTest: result.switchingTest ?? result.switching_test ?? false,
+      chargingTest: result.chargingTest ?? result.charging_test ?? false,
+      // Emergency Exit Light specific fields
+      luxTest: result.luxTest ?? result.lux_test ?? false,
+      luxReading: result.luxReading ?? result.lux_reading ?? null,
+      luxCompliant: result.luxCompliant ?? result.lux_compliant ?? false,
+      manufacturerInfo: result.manufacturerInfo ?? result.manufacturer_info ?? null,
+      installationDate: result.installationDate ?? result.installation_date ?? null,
+      maintenanceType: result.maintenanceType ?? result.maintenance_type ?? null,
+      globeType: result.globeType ?? result.globe_type ?? null,
+      // Fire Testing specific fields
+      pressureTest: result.pressureTest ?? result.pressure_test ?? false,
+      accessibilityCheck: result.accessibilityCheck ?? result.accessibility_check ?? false,
+      signageCheck: result.signageCheck ?? result.signage_check ?? false,
+      operationalTest: result.operationalTest ?? result.operational_test ?? false,
+      fireVisualInspection: result.fireVisualInspection ?? result.fire_visual_inspection ?? false,
+      equipmentType: result.equipmentType ?? result.equipment_type ?? null,
+      extinguisherType: result.extinguisherType ?? result.extinguisher_type ?? null,
+      size: result.size ?? null,
+      weight: result.weight ?? null,
+      testType: result.testType ?? result.test_type ?? null,
+      // Microwave Leakage specific fields
+      leakageReading: result.leakageReading ?? result.leakage_reading ?? null,
+      // RCD-specific fields
+      pushButtonTest: result.pushButtonTest ?? result.push_button_test ?? false,
+      injectionTimedTest: result.injectionTimedTest ?? result.injection_timed_test ?? false,
+      tripTimes: result.tripTimes ?? result.trip_times ?? [],
+      distributionBoardNumber: result.distributionBoardNumber ?? result.distribution_board_number ?? null,
+      circuitBreakerNumber: result.circuitBreakerNumber ?? result.circuit_breaker_number ?? null,
     });
     setAssetNumberError(""); // Clear any previous errors
     setIsEditResultModalOpen(true);
@@ -2988,6 +3054,288 @@ export default function AdminDashboard() {
                   />
                 </div>
               </>
+            )}
+
+            {/* Service-specific fields based on service type */}
+            {viewingSession?.session?.serviceType && (
+              <div className="space-y-4 border-t pt-4 mt-4">
+                <h3 className="font-medium text-gray-900">Test Criteria</h3>
+
+                {/* Common test criteria checkboxes for electrical and emergency */}
+                {(viewingSession?.session?.serviceType === 'electrical' || viewingSession?.session?.serviceType === 'emergency_exit_light') && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="visionInspection"
+                        checked={editResultData.visionInspection}
+                        onCheckedChange={(checked) => setEditResultData(prev => ({ ...prev, visionInspection: !!checked }))}
+                      />
+                      <Label htmlFor="visionInspection" className="cursor-pointer">Vision Inspection</Label>
+                    </div>
+
+                    {viewingSession?.session?.serviceType === 'electrical' && (
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="electricalTest"
+                          checked={editResultData.electricalTest}
+                          onCheckedChange={(checked) => setEditResultData(prev => ({ ...prev, electricalTest: !!checked }))}
+                        />
+                        <Label htmlFor="electricalTest" className="cursor-pointer">Electrical Test</Label>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Emergency Exit Light specific fields */}
+                {viewingSession?.session?.serviceType === 'emergency_exit_light' && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="switchingTest"
+                          checked={editResultData.switchingTest}
+                          onCheckedChange={(checked) => setEditResultData(prev => ({ ...prev, switchingTest: !!checked }))}
+                        />
+                        <Label htmlFor="switchingTest" className="cursor-pointer">Switching Test</Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="chargingTest"
+                          checked={editResultData.chargingTest}
+                          onCheckedChange={(checked) => setEditResultData(prev => ({ ...prev, chargingTest: !!checked }))}
+                        />
+                        <Label htmlFor="chargingTest" className="cursor-pointer">Charging Test</Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="dischargeTest"
+                          checked={editResultData.dischargeTest}
+                          onCheckedChange={(checked) => setEditResultData(prev => ({ ...prev, dischargeTest: !!checked }))}
+                        />
+                        <Label htmlFor="dischargeTest" className="cursor-pointer">Discharge Test (90 min)</Label>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Maintenance Type</Label>
+                        <Select
+                          value={editResultData.maintenanceType || ""}
+                          onValueChange={(value) => setEditResultData(prev => ({ ...prev, maintenanceType: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="maintained">Maintained</SelectItem>
+                            <SelectItem value="non_maintained">Non-Maintained</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Globe Type</Label>
+                        <Select
+                          value={editResultData.globeType || ""}
+                          onValueChange={(value) => setEditResultData(prev => ({ ...prev, globeType: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="led">LED</SelectItem>
+                            <SelectItem value="fluorescent">Fluorescent</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Manufacturer Info (Optional)</Label>
+                      <Input
+                        value={editResultData.manufacturerInfo || ""}
+                        onChange={(e) => setEditResultData(prev => ({ ...prev, manufacturerInfo: e.target.value || null }))}
+                        placeholder="Enter manufacturer and model"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Fire Testing specific fields */}
+                {viewingSession?.session?.serviceType === 'fire_testing' && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Equipment Type</Label>
+                        <Select
+                          value={editResultData.equipmentType || ""}
+                          onValueChange={(value) => setEditResultData(prev => ({ ...prev, equipmentType: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select equipment type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="fire_extinguisher">Fire Extinguisher</SelectItem>
+                            <SelectItem value="fire_blanket">Fire Blanket</SelectItem>
+                            <SelectItem value="fire_hose_reel">Fire Hose Reel</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {editResultData.equipmentType === 'fire_extinguisher' && (
+                        <div className="space-y-2">
+                          <Label>Extinguisher Type</Label>
+                          <Select
+                            value={editResultData.extinguisherType || ""}
+                            onValueChange={(value) => setEditResultData(prev => ({ ...prev, extinguisherType: value }))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="dry_powder">Dry Powder</SelectItem>
+                              <SelectItem value="water">Water</SelectItem>
+                              <SelectItem value="co2">CO2</SelectItem>
+                              <SelectItem value="wet_chemical">Wet Chemical</SelectItem>
+                              <SelectItem value="foam">Foam</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+
+                    {editResultData.equipmentType === 'fire_extinguisher' && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Size</Label>
+                          <Input
+                            value={editResultData.size || ""}
+                            onChange={(e) => setEditResultData(prev => ({ ...prev, size: e.target.value || null }))}
+                            placeholder="e.g., 4.5kg"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Weight</Label>
+                          <Input
+                            value={editResultData.weight || ""}
+                            onChange={(e) => setEditResultData(prev => ({ ...prev, weight: e.target.value || null }))}
+                            placeholder="Current weight"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="fireVisualInspection"
+                          checked={editResultData.fireVisualInspection}
+                          onCheckedChange={(checked) => setEditResultData(prev => ({ ...prev, fireVisualInspection: !!checked }))}
+                        />
+                        <Label htmlFor="fireVisualInspection" className="cursor-pointer">Visual Inspection</Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="accessibilityCheck"
+                          checked={editResultData.accessibilityCheck}
+                          onCheckedChange={(checked) => setEditResultData(prev => ({ ...prev, accessibilityCheck: !!checked }))}
+                        />
+                        <Label htmlFor="accessibilityCheck" className="cursor-pointer">Accessibility Check</Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="signageCheck"
+                          checked={editResultData.signageCheck}
+                          onCheckedChange={(checked) => setEditResultData(prev => ({ ...prev, signageCheck: !!checked }))}
+                        />
+                        <Label htmlFor="signageCheck" className="cursor-pointer">Signage Check</Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="operationalTest"
+                          checked={editResultData.operationalTest}
+                          onCheckedChange={(checked) => setEditResultData(prev => ({ ...prev, operationalTest: !!checked }))}
+                        />
+                        <Label htmlFor="operationalTest" className="cursor-pointer">Operational Test</Label>
+                      </div>
+
+                      {editResultData.equipmentType === 'fire_extinguisher' && (
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="pressureTest"
+                            checked={editResultData.pressureTest}
+                            onCheckedChange={(checked) => setEditResultData(prev => ({ ...prev, pressureTest: !!checked }))}
+                          />
+                          <Label htmlFor="pressureTest" className="cursor-pointer">Pressure Test</Label>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {/* RCD Testing specific fields */}
+                {viewingSession?.session?.serviceType === 'rcd_reporting' && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="pushButtonTest"
+                          checked={editResultData.pushButtonTest}
+                          onCheckedChange={(checked) => setEditResultData(prev => ({ ...prev, pushButtonTest: !!checked }))}
+                        />
+                        <Label htmlFor="pushButtonTest" className="cursor-pointer">Push Button Test</Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="injectionTimedTest"
+                          checked={editResultData.injectionTimedTest}
+                          onCheckedChange={(checked) => setEditResultData(prev => ({ ...prev, injectionTimedTest: !!checked }))}
+                        />
+                        <Label htmlFor="injectionTimedTest" className="cursor-pointer">Injection/Timed Test</Label>
+                      </div>
+                    </div>
+
+                    {editResultData.classification === 'fixed-rcd' && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Distribution Board Number</Label>
+                          <Input
+                            value={editResultData.distributionBoardNumber || ""}
+                            onChange={(e) => setEditResultData(prev => ({ ...prev, distributionBoardNumber: e.target.value || null }))}
+                            placeholder="Enter board number"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Circuit Breaker Number</Label>
+                          <Input
+                            value={editResultData.circuitBreakerNumber || ""}
+                            onChange={(e) => setEditResultData(prev => ({ ...prev, circuitBreakerNumber: e.target.value || null }))}
+                            placeholder="Enter breaker number"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Microwave Leakage specific fields */}
+                {viewingSession?.session?.serviceType === 'microwave_leakage' && (
+                  <div className="space-y-2">
+                    <Label>Leakage Reading</Label>
+                    <Input
+                      value={editResultData.leakageReading || ""}
+                      onChange={(e) => setEditResultData(prev => ({ ...prev, leakageReading: e.target.value || null }))}
+                      placeholder="Enter leakage reading"
+                    />
+                  </div>
+                )}
+              </div>
             )}
 
             <div className="flex justify-end space-x-2 pt-4">
