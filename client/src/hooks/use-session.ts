@@ -289,28 +289,17 @@ export function useSession() {
       timestamp: new Date().toISOString(),
       assetNumber: result.asset_number || result.assetNumber,
       // Emergency-specific fields
-      maintenanceType: result.maintenance_type ?? result.maintenanceType ?? undefined,
-      globeType: result.globe_type ?? result.globeType ?? undefined,
-      dischargeTest: result.discharge_test ?? result.dischargeTest ?? undefined,
-      switchingTest: result.switching_test ?? result.switchingTest ?? undefined,
-      chargingTest: result.charging_test ?? result.chargingTest ?? undefined,
-      manufacturerInfo: result.manufacturer_info ?? result.manufacturerInfo ?? undefined,
-      installationDate: result.installation_date ?? result.installationDate ?? undefined,
+      maintenanceType: result.maintenanceType || undefined,
+      globeType: result.globeType || undefined,
+      dischargeTest: result.dischargeTest || undefined,
+      switchingTest: result.switchingTest || undefined,
+      chargingTest: result.chargingTest || undefined,
+      manufacturerInfo: result.manufacturerInfo || undefined,
+      installationDate: result.installationDate || undefined,
       // Lux testing fields
-      luxTest: result.lux_test ?? result.luxTest ?? undefined,
-      luxReading: result.lux_reading ?? result.luxReading ?? undefined,
-      luxCompliant: result.lux_compliant ?? result.luxCompliant ?? undefined,
-      // Fire testing fields
-      equipmentType: result.equipment_type ?? result.equipmentType ?? undefined,
-      extinguisherType: result.extinguisher_type ?? result.extinguisherType ?? undefined,
-      size: result.size ?? undefined,
-      weight: result.weight ?? undefined,
-      testType: result.test_type ?? result.testType ?? undefined,
-      fireVisualInspection: result.fire_visual_inspection ?? result.fireVisualInspection ?? undefined,
-      pressureTest: result.pressure_test ?? result.pressureTest ?? undefined,
-      accessibilityCheck: result.accessibility_check ?? result.accessibilityCheck ?? undefined,
-      signageCheck: result.signage_check ?? result.signageCheck ?? undefined,
-      operationalTest: result.operational_test ?? result.operationalTest ?? undefined,
+      luxTest: result.luxTest || undefined,
+      luxReading: result.luxReading || undefined,
+      luxCompliant: result.luxCompliant || undefined,
       // RCD testing fields
       pushButtonTest: result.pushButtonTest ?? result.push_button_test ?? undefined,
       injectionTimedTest: result.injectionTimedTest ?? result.injection_timed_test ?? undefined,
@@ -968,13 +957,6 @@ export function useSession() {
       frequency: newResult.frequency,
       providedAssetNumber: cleanData.assetNumber,
     });
-    console.log('💾 Emergency fields:', {
-      globeType: newResult.globeType,
-      maintenanceType: newResult.maintenanceType,
-      luxTest: newResult.luxTest,
-      luxReading: newResult.luxReading,
-      luxCompliant: newResult.luxCompliant,
-    });
 
     // Add to batched results (update ref synchronously for rapid calls)
     const updatedResults = [...batchedResultsRef.current, newResult];
@@ -1129,32 +1111,17 @@ export function useSession() {
         photoData: result.photoData || null,
         visionInspection: result.visionInspection,
         electricalTest: result.electricalTest,
-        // Emergency Exit Light specific fields
         maintenanceType: result.maintenanceType || null,
-        globeType: result.globeType || null,
         dischargeTest: result.dischargeTest ?? false,
         switchingTest: result.switchingTest ?? false,
         chargingTest: result.chargingTest ?? false,
-        luxTest: result.luxTest ?? false,
-        luxReading: result.luxReading || null,
-        luxCompliant: result.luxCompliant ?? false,
         manufacturerInfo: result.manufacturerInfo || null,
         installationDate: result.installationDate || null,
-        // Fire Testing specific fields
-        pressureTest: result.pressureTest ?? false,
-        accessibilityCheck: result.accessibilityCheck ?? false,
-        signageCheck: result.signageCheck ?? false,
-        operationalTest: result.operationalTest ?? false,
-        extinguisherType: result.extinguisherType || null,
-        size: result.size || null,
-        weight: result.weight || null,
-        // RCD specific fields
         pushButtonTest: result.pushButtonTest ?? null,
         injectionTimedTest: result.injectionTimedTest ?? null,
         tripTimes: tripTimes && tripTimes.length > 0 ? tripTimes : null,
         distributionBoardNumber: result.distributionBoardNumber || null,
         circuitBreakerNumber: result.circuitBreakerNumber || null,
-        // Microwave Leakage specific field
         leakageReading: result.leakageReading || null,
       };
 
@@ -1172,55 +1139,10 @@ export function useSession() {
     onSuccess: ({ localId, serverResult }) => {
       console.log('✅ ********** AUTO-SAVE SUCCESSFUL **********');
       console.log(`Auto-save successful: ${serverResult.item_name} -> Server ID: ${serverResult.id}, Asset: ${serverResult.asset_number}`);
-      console.log('✅ Server returned fields:', {
-        globeType: serverResult.globe_type,
-        maintenanceType: serverResult.maintenance_type,
-        luxTest: serverResult.lux_test,
-      });
 
-      // Update the local result with the full server response (merge all fields from server)
+      // Update the local result with the server ID
       setBatchedResults(prev => {
-        const updated = prev.map(r => {
-          if (r.id === localId) {
-            // Merge server result back into local state (convert snake_case to camelCase)
-            return {
-              ...r,
-              serverId: serverResult.id,
-              // Update all fields from server response to ensure consistency
-              // Emergency exit light fields
-              globeType: serverResult.globe_type || r.globeType,
-              maintenanceType: serverResult.maintenance_type || r.maintenanceType,
-              luxTest: serverResult.lux_test ?? r.luxTest,
-              luxReading: serverResult.lux_reading || r.luxReading,
-              luxCompliant: serverResult.lux_compliant ?? r.luxCompliant,
-              dischargeTest: serverResult.discharge_test ?? r.dischargeTest,
-              switchingTest: serverResult.switching_test ?? r.switchingTest,
-              chargingTest: serverResult.charging_test ?? r.chargingTest,
-              manufacturerInfo: serverResult.manufacturer_info || r.manufacturerInfo,
-              installationDate: serverResult.installation_date || r.installationDate,
-              // Fire testing fields
-              equipmentType: serverResult.equipment_type || r.equipmentType,
-              extinguisherType: serverResult.extinguisher_type || r.extinguisherType,
-              size: serverResult.size || r.size,
-              weight: serverResult.weight || r.weight,
-              testType: serverResult.test_type || r.testType,
-              fireVisualInspection: serverResult.fire_visual_inspection ?? r.fireVisualInspection,
-              pressureTest: serverResult.pressure_test ?? r.pressureTest,
-              accessibilityCheck: serverResult.accessibility_check ?? r.accessibilityCheck,
-              signageCheck: serverResult.signage_check ?? r.signageCheck,
-              operationalTest: serverResult.operational_test ?? r.operationalTest,
-              // RCD testing fields
-              pushButtonTest: serverResult.push_button_test ?? r.pushButtonTest,
-              injectionTimedTest: serverResult.injection_timed_test ?? r.injectionTimedTest,
-              tripTimes: serverResult.trip_times || r.tripTimes,
-              distributionBoardNumber: serverResult.distribution_board_number || r.distributionBoardNumber,
-              circuitBreakerNumber: serverResult.circuit_breaker_number || r.circuitBreakerNumber,
-              // Microwave testing fields
-              leakageReading: serverResult.leakage_reading || r.leakageReading,
-            };
-          }
-          return r;
-        });
+        const updated = prev.map(r => r.id === localId ? { ...r, serverId: serverResult.id } : r);
         batchedResultsRef.current = updated;
         return updated;
       });
@@ -1280,35 +1202,17 @@ export function useSession() {
         photoData: data.photoData || null,
         visionInspection: data.visionInspection,
         electricalTest: data.electricalTest,
-        // Emergency exit light fields
         maintenanceType: data.maintenanceType || null,
-        globeType: data.globeType || null,
         dischargeTest: data.dischargeTest ?? false,
         switchingTest: data.switchingTest ?? false,
         chargingTest: data.chargingTest ?? false,
-        luxTest: data.luxTest ?? false,
-        luxReading: data.luxReading || null,
-        luxCompliant: data.luxCompliant ?? false,
         manufacturerInfo: data.manufacturerInfo || null,
         installationDate: data.installationDate || null,
-        // Fire testing fields
-        equipmentType: data.equipmentType || null,
-        extinguisherType: data.extinguisherType || null,
-        size: data.size || null,
-        weight: data.weight || null,
-        testType: data.testType || null,
-        fireVisualInspection: data.fireVisualInspection ?? false,
-        accessibilityCheck: data.accessibilityCheck ?? false,
-        signageCheck: data.signageCheck ?? false,
-        operationalTest: data.operationalTest ?? false,
-        pressureTest: data.pressureTest ?? false,
-        // RCD testing fields
         pushButtonTest: data.pushButtonTest ?? null,
         injectionTimedTest: data.injectionTimedTest ?? null,
         tripTimes: tripTimes && tripTimes.length > 0 ? tripTimes : null,
         distributionBoardNumber: data.distributionBoardNumber || null,
         circuitBreakerNumber: data.circuitBreakerNumber || null,
-        // Microwave testing fields
         leakageReading: data.leakageReading || null,
       };
 
@@ -1319,67 +1223,8 @@ export function useSession() {
     },
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
-    onSuccess: (serverResult, { serverId, data }) => {
+    onSuccess: (serverResult) => {
       console.log(`Auto-update successful: Server ID ${serverResult.id}`);
-
-      // Update local batched results with server response to ensure UI reflects saved data
-      setBatchedResults(prev => {
-        const updated = prev.map(r => {
-          if (r.serverId === serverId) {
-            // Merge server response back into local state (convert snake_case to camelCase)
-            return {
-              ...r,
-              // Emergency exit light fields
-              globeType: serverResult.globe_type ?? r.globeType,
-              maintenanceType: serverResult.maintenance_type ?? r.maintenanceType,
-              luxTest: serverResult.lux_test ?? r.luxTest,
-              luxReading: serverResult.lux_reading ?? r.luxReading,
-              luxCompliant: serverResult.lux_compliant ?? r.luxCompliant,
-              dischargeTest: serverResult.discharge_test ?? r.dischargeTest,
-              switchingTest: serverResult.switching_test ?? r.switchingTest,
-              chargingTest: serverResult.charging_test ?? r.chargingTest,
-              manufacturerInfo: serverResult.manufacturer_info ?? r.manufacturerInfo,
-              installationDate: serverResult.installation_date ?? r.installationDate,
-              // Fire testing fields
-              equipmentType: serverResult.equipment_type ?? r.equipmentType,
-              extinguisherType: serverResult.extinguisher_type ?? r.extinguisherType,
-              size: serverResult.size ?? r.size,
-              weight: serverResult.weight ?? r.weight,
-              testType: serverResult.test_type ?? r.testType,
-              fireVisualInspection: serverResult.fire_visual_inspection ?? r.fireVisualInspection,
-              pressureTest: serverResult.pressure_test ?? r.pressureTest,
-              accessibilityCheck: serverResult.accessibility_check ?? r.accessibilityCheck,
-              signageCheck: serverResult.signage_check ?? r.signageCheck,
-              operationalTest: serverResult.operational_test ?? r.operationalTest,
-              // RCD testing fields
-              pushButtonTest: serverResult.push_button_test ?? r.pushButtonTest,
-              injectionTimedTest: serverResult.injection_timed_test ?? r.injectionTimedTest,
-              tripTimes: serverResult.trip_times ?? r.tripTimes,
-              distributionBoardNumber: serverResult.distribution_board_number ?? r.distributionBoardNumber,
-              circuitBreakerNumber: serverResult.circuit_breaker_number ?? r.circuitBreakerNumber,
-              // Microwave testing fields
-              leakageReading: serverResult.leakage_reading ?? r.leakageReading,
-              // Core fields
-              itemName: serverResult.item_name ?? r.itemName,
-              itemType: serverResult.item_type ?? r.itemType,
-              location: serverResult.location ?? r.location,
-              classification: serverResult.classification ?? r.classification,
-              result: serverResult.result ?? r.result,
-              frequency: serverResult.frequency ?? r.frequency,
-              assetNumber: serverResult.asset_number ?? r.assetNumber,
-              failureReason: serverResult.failure_reason ?? r.failureReason,
-              actionTaken: serverResult.action_taken ?? r.actionTaken,
-              notes: serverResult.notes ?? r.notes,
-              visionInspection: serverResult.vision_inspection ?? r.visionInspection,
-              electricalTest: serverResult.electrical_test ?? r.electricalTest,
-            };
-          }
-          return r;
-        });
-        batchedResultsRef.current = updated;
-        return updated;
-      });
-
       queryClient.setQueryData<TestResult[]>(
         [`/api/sessions/${sessionId}/results`],
         (old) => old?.map(r => r.id === serverResult.id ? serverResult : r) ?? []

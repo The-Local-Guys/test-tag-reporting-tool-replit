@@ -119,10 +119,6 @@ export default function EmergencyTestDetails() {
       return;
     }
 
-    // Get current form state values (including defaults that user didn't change)
-    const currentGlobeType = form.getValues('globeType');
-    const currentMaintenanceType = form.getValues('maintenanceType');
-
     try {
       console.log('Submitting emergency test result:', {
         assetNumber: 'Auto-generated',
@@ -139,16 +135,14 @@ export default function EmergencyTestDetails() {
         visionInspection: data.visualInspection,
         electricalTest: data.dischargeTest,
         // Emergency specific fields
-        maintenanceType: currentMaintenanceType,
-        globeType: currentGlobeType,
+        maintenanceType: data.maintenanceType || null,
+        globeType: data.globeType || null,
         dischargeTest: data.dischargeTest,
         switchingTest: data.switchingTest,
         chargingTest: data.chargingTest,
         manufacturerInfo: data.manufacturerInfo || null,
         installationDate: data.installationDate || null,
       });
-
-      console.log('Current form values - globeType:', currentGlobeType, 'maintenanceType:', currentMaintenanceType);
 
       addToBatch({
         itemName: itemName,
@@ -162,10 +156,10 @@ export default function EmergencyTestDetails() {
         notes: data.notes || null,
         photoData: data.result === 'fail' ? photoData : null,
         visionInspection: data.visualInspection,
-        electricalTest: data.dischargeTest, // Using electricalTest field for discharge test
-        // Emergency specific fields for PDF generation - use watched values to capture defaults
-        maintenanceType: currentMaintenanceType || null,
-        globeType: currentGlobeType || null,
+        electricalTest: data.dischargeTest, // Using electricalTest field for discharge test 
+        // Emergency specific fields for PDF generation
+        maintenanceType: data.maintenanceType || null,
+        globeType: data.globeType || null,
         dischargeTest: data.dischargeTest,
         switchingTest: data.switchingTest,
         chargingTest: data.chargingTest,
