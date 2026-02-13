@@ -102,6 +102,12 @@ export default function ReportPreview() {
     failureReason: null as any,
     actionTaken: null as any,
     notes: null as any,
+    // Service-specific boolean criteria fields
+    visionInspection: true as boolean,
+    electricalTest: true as boolean,
+    dischargeTest: false as boolean,
+    switchingTest: false as boolean,
+    chargingTest: false as boolean,
     // RCD-specific fields
     pushButtonTest: null as boolean | null,
     injectionTimedTest: null as boolean | null,
@@ -713,9 +719,9 @@ export default function ReportPreview() {
       createdAt: new Date(result.timestamp),
 
       maintenanceType: result.maintenanceType || null,
-      dischargeTest: result.dischargeTest || false,
-      switchingTest: result.switchingTest || false,
-      chargingTest: result.chargingTest || false,
+      dischargeTest: result.dischargeTest ?? false,
+      switchingTest: result.switchingTest ?? false,
+      chargingTest: result.chargingTest ?? false,
       manufacturerInfo: result.manufacturerInfo || null,
       installationDate: result.installationDate || null,
       globeType: result.globeType || null,
@@ -725,7 +731,7 @@ export default function ReportPreview() {
     console.log('Setting editing result with batched ID:', result.id);
     console.log('Session service type:', sessionData?.session?.serviceType);
     setEditingResult({ ...testResult, originalBatchedId: result.id } as any);
-    
+
     // Set form data for manual editing
     setEditResultData({
       itemName: result.itemName,
@@ -738,6 +744,12 @@ export default function ReportPreview() {
       failureReason: result.failureReason || null,
       actionTaken: result.actionTaken || null,
       notes: result.notes || null,
+      // Service-specific boolean criteria fields
+      visionInspection: result.visionInspection ?? true,
+      electricalTest: result.electricalTest ?? true,
+      dischargeTest: result.dischargeTest ?? false,
+      switchingTest: result.switchingTest ?? false,
+      chargingTest: result.chargingTest ?? false,
       // RCD-specific fields
       pushButtonTest: (result as any).pushButtonTest ?? null,
       injectionTimedTest: (result as any).injectionTimedTest ?? null,
@@ -808,6 +820,11 @@ export default function ReportPreview() {
         failureReason: null,
         actionTaken: null,
         notes: null,
+        visionInspection: true,
+        electricalTest: true,
+        dischargeTest: false,
+        switchingTest: false,
+        chargingTest: false,
         pushButtonTest: null,
         injectionTimedTest: null,
         tripTimes: [],
@@ -1200,6 +1217,91 @@ export default function ReportPreview() {
                 </>
               )}
             </>
+          )}
+
+          {/* Emergency Exit Light criteria fields */}
+          {session?.serviceType === 'emergency_exit_light' && (
+            <div className="space-y-3">
+              <Label className="text-sm font-medium text-gray-700">Test Criteria</Label>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="edit-visionInspection"
+                  checked={editResultData.visionInspection}
+                  onCheckedChange={(checked) => setEditResultData(prev => ({ ...prev, visionInspection: !!checked }))}
+                />
+                <Label htmlFor="edit-visionInspection">Vision Inspection</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="edit-dischargeTest"
+                  checked={editResultData.dischargeTest}
+                  onCheckedChange={(checked) => setEditResultData(prev => ({ ...prev, dischargeTest: !!checked }))}
+                />
+                <Label htmlFor="edit-dischargeTest">Discharge Test</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="edit-switchingTest"
+                  checked={editResultData.switchingTest}
+                  onCheckedChange={(checked) => setEditResultData(prev => ({ ...prev, switchingTest: !!checked }))}
+                />
+                <Label htmlFor="edit-switchingTest">Switching Test</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="edit-chargingTest"
+                  checked={editResultData.chargingTest}
+                  onCheckedChange={(checked) => setEditResultData(prev => ({ ...prev, chargingTest: !!checked }))}
+                />
+                <Label htmlFor="edit-chargingTest">Charging Test</Label>
+              </div>
+            </div>
+          )}
+
+          {/* Fire Testing criteria fields */}
+          {session?.serviceType === 'fire_testing' && (
+            <div className="space-y-3">
+              <Label className="text-sm font-medium text-gray-700">Test Criteria</Label>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="edit-visionInspection-fire"
+                  checked={editResultData.visionInspection}
+                  onCheckedChange={(checked) => setEditResultData(prev => ({ ...prev, visionInspection: !!checked }))}
+                />
+                <Label htmlFor="edit-visionInspection-fire">Visual Inspection</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="edit-electricalTest-fire"
+                  checked={editResultData.electricalTest}
+                  onCheckedChange={(checked) => setEditResultData(prev => ({ ...prev, electricalTest: !!checked }))}
+                />
+                <Label htmlFor="edit-electricalTest-fire">Operational Test</Label>
+              </div>
+            </div>
+          )}
+
+          {/* Electrical (PAT) criteria fields */}
+          {session?.serviceType === 'electrical' && (
+            <div className="space-y-3">
+              <Label className="text-sm font-medium text-gray-700">Test Criteria</Label>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="edit-visionInspection-pat"
+                  checked={editResultData.visionInspection}
+                  onCheckedChange={(checked) => setEditResultData(prev => ({ ...prev, visionInspection: !!checked }))}
+                />
+                <Label htmlFor="edit-visionInspection-pat">Vision Inspection</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="edit-electricalTest-pat"
+                  checked={editResultData.electricalTest}
+                  onCheckedChange={(checked) => setEditResultData(prev => ({ ...prev, electricalTest: !!checked }))}
+                />
+                <Label htmlFor="edit-electricalTest-pat">Electrical Test</Label>
+              </div>
+            </div>
           )}
 
           {/* Hide failure reason and action taken for Microwave Leakage Testing */}
