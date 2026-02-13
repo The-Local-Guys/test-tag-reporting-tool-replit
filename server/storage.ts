@@ -534,11 +534,14 @@ export class DatabaseStorage implements IStorage {
       // Use the asset number provided by the client (from batched results)
       const assetNumber = insertResult.assetNumber || '1';
       
-      // Use the pool directly for raw SQL execution with all fields including emergency-specific, RCD-specific, and microwave-specific ones
+      // Use the pool directly for raw SQL execution with all fields including emergency-specific, fire-specific, RCD-specific, and microwave-specific ones
       const query = `
-        INSERT INTO test_results 
-        (session_id, asset_number, item_name, item_type, location, classification, result, frequency, failure_reason, action_taken, notes, photo_data, vision_inspection, electrical_test, maintenance_type, globe_type, discharge_test, switching_test, charging_test, manufacturer_info, installation_date, push_button_test, injection_timed_test, trip_time, distribution_board_number, circuit_breaker_number, leakage_reading)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)
+        INSERT INTO test_results
+        (session_id, asset_number, item_name, item_type, location, classification, result, frequency, failure_reason, action_taken, notes, photo_data, vision_inspection, electrical_test,
+        maintenance_type, globe_type, discharge_test, switching_test, charging_test, lux_test, lux_reading, lux_compliant, manufacturer_info, installation_date,
+        equipment_type, extinguisher_type, size, weight, test_type, fire_visual_inspection, pressure_test, accessibility_check, signage_check, operational_test,
+        push_button_test, injection_timed_test, trip_time, distribution_board_number, circuit_breaker_number, leakage_reading)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40)
         RETURNING *
       `;
       
@@ -562,13 +565,27 @@ export class DatabaseStorage implements IStorage {
         insertResult.visionInspection !== undefined ? insertResult.visionInspection : true,
         insertResult.electricalTest !== undefined ? insertResult.electricalTest : true,
         // Emergency exit light specific fields
-        insertResult.maintenanceType,
-        insertResult.globeType,
+        insertResult.maintenanceType ?? null,
+        insertResult.globeType ?? null,
         insertResult.dischargeTest !== undefined ? insertResult.dischargeTest : false,
         insertResult.switchingTest !== undefined ? insertResult.switchingTest : false,
         insertResult.chargingTest !== undefined ? insertResult.chargingTest : false,
-        insertResult.manufacturerInfo,
-        insertResult.installationDate,
+        insertResult.luxTest !== undefined ? insertResult.luxTest : false,
+        insertResult.luxReading ?? null,
+        insertResult.luxCompliant !== undefined ? insertResult.luxCompliant : false,
+        insertResult.manufacturerInfo ?? null,
+        insertResult.installationDate ?? null,
+        // Fire testing specific fields
+        insertResult.equipmentType ?? null,
+        insertResult.extinguisherType ?? null,
+        insertResult.size ?? null,
+        insertResult.weight ?? null,
+        insertResult.testType ?? null,
+        insertResult.fireVisualInspection !== undefined ? insertResult.fireVisualInspection : false,
+        insertResult.pressureTest !== undefined ? insertResult.pressureTest : false,
+        insertResult.accessibilityCheck !== undefined ? insertResult.accessibilityCheck : false,
+        insertResult.signageCheck !== undefined ? insertResult.signageCheck : false,
+        insertResult.operationalTest !== undefined ? insertResult.operationalTest : false,
         // RCD specific fields
         insertResult.pushButtonTest ?? null,
         insertResult.injectionTimedTest ?? null,

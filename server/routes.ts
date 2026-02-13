@@ -764,11 +764,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
             electricalTest: batchedResult.electricalTest,
             // Map emergency/electrical test fields from batch data
             maintenanceType: batchedResult.maintenanceType || null,
+            globeType: batchedResult.globeType || null,
             dischargeTest: batchedResult.dischargeTest || false,
             switchingTest: batchedResult.switchingTest || false,
             chargingTest: batchedResult.chargingTest || false,
+            luxTest: batchedResult.luxTest ?? false,
+            luxReading: batchedResult.luxReading || null,
+            luxCompliant: batchedResult.luxCompliant ?? false,
             manufacturerInfo: batchedResult.manufacturerInfo || null,
             installationDate: batchedResult.installationDate || null,
+            // Map fire testing fields from batch data
+            equipmentType: batchedResult.equipmentType || null,
+            extinguisherType: batchedResult.extinguisherType || null,
+            size: batchedResult.size || null,
+            weight: batchedResult.weight || null,
+            testType: batchedResult.testType || null,
+            fireVisualInspection: batchedResult.fireVisualInspection ?? false,
+            accessibilityCheck: batchedResult.accessibilityCheck ?? false,
+            signageCheck: batchedResult.signageCheck ?? false,
+            operationalTest: batchedResult.operationalTest ?? false,
+            pressureTest: batchedResult.pressureTest ?? false,
             // Map RCD test fields from batch data
             pushButtonTest: batchedResult.pushButtonTest ?? null,
             injectionTimedTest: batchedResult.injectionTimedTest ?? null,
@@ -899,14 +914,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
             : true,
         // Emergency exit light specific fields (AS 2293.2:2019)
         maintenanceType: req.body.maintenanceType || null,
+        globeType: req.body.globeType || null,
         dischargeTest:
           req.body.dischargeTest !== undefined ? req.body.dischargeTest : false,
         switchingTest:
           req.body.switchingTest !== undefined ? req.body.switchingTest : false,
         chargingTest:
           req.body.chargingTest !== undefined ? req.body.chargingTest : false,
+        luxTest: req.body.luxTest ?? false,
+        luxReading: req.body.luxReading || null,
+        luxCompliant: req.body.luxCompliant ?? false,
         manufacturerInfo: req.body.manufacturerInfo || null,
         installationDate: req.body.installationDate || null,
+        // Fire testing specific fields (AS 1851 / NZS 4503:2005)
+        equipmentType: req.body.equipmentType || null,
+        extinguisherType: req.body.extinguisherType || null,
+        size: req.body.size || null,
+        weight: req.body.weight || null,
+        testType: req.body.testType || null,
+        fireVisualInspection: req.body.fireVisualInspection ?? false,
+        accessibilityCheck: req.body.accessibilityCheck ?? false,
+        signageCheck: req.body.signageCheck ?? false,
+        operationalTest: req.body.operationalTest ?? false,
+        pressureTest: req.body.pressureTest ?? false,
         // RCD test specific fields
         pushButtonTest: req.body.pushButtonTest ?? null,
         injectionTimedTest: req.body.injectionTimedTest ?? null,
@@ -1030,14 +1060,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (req.body.visionInspection !== undefined) updateData.visionInspection = req.body.visionInspection;
         if (req.body.electricalTest !== undefined) updateData.electricalTest = req.body.electricalTest;
         
-        // Emergency/Fire testing fields
+        // Emergency exit light testing fields
         if (req.body.maintenanceType !== undefined) updateData.maintenanceType = req.body.maintenanceType || null;
+        if (req.body.globeType !== undefined) updateData.globeType = req.body.globeType || null;
         if (req.body.dischargeTest !== undefined) updateData.dischargeTest = req.body.dischargeTest;
         if (req.body.switchingTest !== undefined) updateData.switchingTest = req.body.switchingTest;
         if (req.body.chargingTest !== undefined) updateData.chargingTest = req.body.chargingTest;
+        if (req.body.luxTest !== undefined) updateData.luxTest = req.body.luxTest;
+        if (req.body.luxReading !== undefined) updateData.luxReading = req.body.luxReading || null;
+        if (req.body.luxCompliant !== undefined) updateData.luxCompliant = req.body.luxCompliant;
         if (req.body.manufacturerInfo !== undefined) updateData.manufacturerInfo = req.body.manufacturerInfo || null;
         if (req.body.installationDate !== undefined) updateData.installationDate = req.body.installationDate || null;
-        
+
+        // Fire testing fields
+        if (req.body.equipmentType !== undefined) updateData.equipmentType = req.body.equipmentType || null;
+        if (req.body.extinguisherType !== undefined) updateData.extinguisherType = req.body.extinguisherType || null;
+        if (req.body.size !== undefined) updateData.size = req.body.size || null;
+        if (req.body.weight !== undefined) updateData.weight = req.body.weight || null;
+        if (req.body.testType !== undefined) updateData.testType = req.body.testType || null;
+        if (req.body.fireVisualInspection !== undefined) updateData.fireVisualInspection = req.body.fireVisualInspection;
+        if (req.body.accessibilityCheck !== undefined) updateData.accessibilityCheck = req.body.accessibilityCheck;
+        if (req.body.signageCheck !== undefined) updateData.signageCheck = req.body.signageCheck;
+        if (req.body.operationalTest !== undefined) updateData.operationalTest = req.body.operationalTest;
+        if (req.body.pressureTest !== undefined) updateData.pressureTest = req.body.pressureTest;
+
         // RCD testing fields
         if (req.body.pushButtonTest !== undefined) updateData.pushButtonTest = req.body.pushButtonTest;
         if (req.body.injectionTimedTest !== undefined) updateData.injectionTimedTest = req.body.injectionTimedTest;
