@@ -120,8 +120,14 @@ export default function FireTestDetails() {
       return;
     }
 
+    // Get current form state values (including defaults that user didn't change)
+    const currentEquipmentType = form.getValues('equipmentType');
+    const currentExtinguisherType = form.getValues('extinguisherType');
+
     try {
       console.log('Submitting fire test result:', {
+        equipmentType: currentEquipmentType,
+        extinguisherType: currentExtinguisherType,
         assetNumber: 'Auto-generated',
         itemName: itemName,
         itemType: itemType,
@@ -147,13 +153,13 @@ export default function FireTestDetails() {
       // Compile additional test details into notes for now
       const additionalTestDetails = [
         data.notes,
-        `Equipment Type: ${data.equipmentType}`,
-        data.extinguisherType ? `Extinguisher Type: ${data.extinguisherType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}` : '',
+        `Equipment Type: ${currentEquipmentType}`,
+        currentExtinguisherType ? `Extinguisher Type: ${currentExtinguisherType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}` : '',
         data.size ? `Net Size: ${data.size}` : '',
         data.weight ? `Gross Weight: ${data.weight}` : '',
         `Visual Inspection: ${data.visionInspection ? 'Pass' : 'Fail'}`,
         `Operational Test: ${data.operationalTest ? 'Pass' : 'Fail'}`,
-        (data.equipmentType === 'fire_extinguisher' || data.equipmentType === 'fire_hose_reel') ? `Pressure Test: ${data.pressureTest ? 'Pass' : 'Fail'}` : '',
+        (currentEquipmentType === 'fire_extinguisher' || currentEquipmentType === 'fire_hose_reel') ? `Pressure Test: ${data.pressureTest ? 'Pass' : 'Fail'}` : '',
         `Accessibility Check: ${data.accessibilityCheck ? 'Pass' : 'Fail'}`,
         `Signage Check: ${data.signageCheck ? 'Pass' : 'Fail'}`,
       ].filter(Boolean).join(' | ');
@@ -162,7 +168,7 @@ export default function FireTestDetails() {
         itemName: itemName,
         itemType: itemType,
         location: data.location,
-        classification: data.equipmentType, // Using equipmentType as classification
+        classification: currentEquipmentType, // Using equipmentType as classification
         result: data.result,
         frequency: data.frequency,
         failureReason: data.failureReason || null,
@@ -171,7 +177,14 @@ export default function FireTestDetails() {
         photoData: data.result === 'fail' ? photoData : null,
         visionInspection: data.visionInspection,
         electricalTest: data.operationalTest, // Map operational test to electrical test field
-        extinguisherType: data.extinguisherType || null,
+        // Fire Testing specific fields
+        pressureTest: data.pressureTest,
+        accessibilityCheck: data.accessibilityCheck,
+        signageCheck: data.signageCheck,
+        operationalTest: data.operationalTest,
+        extinguisherType: currentExtinguisherType || null,
+        size: data.size || null,
+        weight: data.weight || null,
       });
 
       // Save selected frequency for next item

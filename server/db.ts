@@ -2,7 +2,9 @@ import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from "ws";
 import * as schema from "@shared/schema";
-
+import 'dotenv/config'
+import dotenv from "dotenv"
+dotenv.config({path:'./.env.development'})
 neonConfig.webSocketConstructor = ws;
 
 // Use development database in development mode, production database otherwise
@@ -16,6 +18,7 @@ if (!databaseUrl) {
   );
 }
 
+console.log(`Database URL: ${databaseUrl}`);
 console.log(`Using ${isDevelopment ? 'development' : 'production'} database`);
 
 // Configure pool with lower limits for Neon database
