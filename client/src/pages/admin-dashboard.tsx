@@ -240,6 +240,15 @@ export default function AdminDashboard() {
     enabled: typedUser?.role === 'super_admin' || typedUser?.role === 'support_center',
   });
 
+  // Fetch own draft sessions (technician only)
+  const { data: technicianDraftSessions, isLoading: technicianDraftsLoading } = useQuery({
+    queryKey: ["/api/sessions/drafts"],
+    retry: false,
+    staleTime: 0,
+    refetchOnMount: true,
+    enabled: typedUser?.role === 'technician',
+  });
+
   // Fetch custom form types
   const { data: customFormTypes } = useQuery<any[]>({
     queryKey: ['/api/custom-forms'],
@@ -1677,6 +1686,16 @@ export default function AdminDashboard() {
                 )}
               </TabsTrigger>
             )}
+            {typedUser?.role === "technician" && (
+              <TabsTrigger value="drafts">
+                Draft Reports
+                {Array.isArray(technicianDraftSessions) && technicianDraftSessions.length > 0 && (
+                  <Badge variant="secondary" className="ml-2 bg-yellow-100 text-yellow-800">
+                    {technicianDraftSessions.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="users" className="space-y-4">
@@ -2178,6 +2197,150 @@ export default function AdminDashboard() {
                               </TableCell>
                             </TableRow>
                           ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+
+          {/* Draft Reports Tab - Technician (own drafts only) */}
+          {typedUser?.role === "technician" && (
+            <TabsContent value="drafts" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5 text-yellow-600" />
+                    <div>
+                      <CardTitle>Draft Reports</CardTitle>
+                      <CardDescription>
+                        Your unfinished reports. Continue where you left off or discard them.
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {technicianDraftsLoading ? (
+                    <div className="flex justify-center py-8">
+                      <LoadingSpinner />
+                    </div>
+                  ) : !Array.isArray(technicianDraftSessions) || technicianDraftSessions.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>No draft reports found</p>
+                      <p className="text-sm">You have no unfinished reports.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="min-w-[120px]">Client Name</TableHead>
+                            <TableHead className="min-w-[140px]">Service Type</TableHead>
+                            <TableHead className="min-w-[80px]">Items</TableHead>
+                            <TableHead className="min-w-[120px]">Last Activity</TableHead>
+                            <TableHead className="min-w-[100px]">Created</TableHead>
+                            <TableHead className="min-w-[120px]">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {technicianDraftSessions
+                            .sort((a: any, b: any) =>
+                              new Date(b.lastActivityAt || b.createdAt).getTime() -
+                              new Date(a.lastActivityAt || a.createdAt).getTime()
+                            )
+                            .map((draft: any) => (
+                              <TableRow key={draft.id} className="bg-yellow-50/30">
+                                <TableCell className="font-medium">
+                                  {draft.clientName || <span className="text-gray-400 italic">No client name</span>}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant="outline"
+                                    className={
+                                      draft.serviceType === "emergency_exit_light"
+                                        ? "bg-red-50 text-red-700"
+                                        : draft.serviceType === "fire_testing"
+                                        ? "bg-orange-50 text-orange-700"
+                                        : draft.serviceType === "rcd_reporting"
+                                        ? "bg-purple-50 text-purple-700"
+                                        : draft.serviceType === "microwave_leakage"
+                                        ? "bg-teal-50 text-teal-700"
+                                        : "bg-blue-50 text-blue-700"
+                                    }
+                                  >
+                                    {draft.serviceType === "emergency_exit_light"
+                                      ? "Emergency Exit Light"
+                                      : draft.serviceType === "fire_testing"
+                                      ? "Fire Testing"
+                                      : draft.serviceType === "rcd_reporting"
+                                      ? "RCD Reporting"
+                                      : draft.serviceType === "microwave_leakage"
+                                      ? "Microwave Leakage"
+                                      : "Electrical Test & Tag"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1">
+                                      <div className="w-6 h-6 bg-green-100 text-green-700 rounded-full flex items-center justify-center text-xs font-medium">
+                                        {(draft.totalItems || 0) - (draft.failedItems || 0)}
+                                      </div>
+                                      <span className="text-xs text-green-600">Pass</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <div className="w-6 h-6 bg-red-100 text-red-700 rounded-full flex items-center justify-center text-xs font-medium">
+                                        {draft.failedItems || 0}
+                                      </div>
+                                      <span className="text-xs text-red-600">Fail</span>
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-1 text-sm text-gray-600">
+                                    <Clock className="w-3 h-3" />
+                                    {draft.lastActivityAt
+                                      ? new Date(draft.lastActivityAt).toLocaleString("en-AU", {
+                                          day: "2-digit",
+                                          month: "2-digit",
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })
+                                      : "N/A"}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  {new Date(draft.createdAt).toLocaleDateString("en-AU")}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleContinueReport(draft)}
+                                      className="p-2 h-8 w-8 text-green-600 hover:bg-green-50 hover:border-green-300"
+                                      title="Continue Report"
+                                    >
+                                      <PlayCircle className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setPendingDeleteDraftId(draft.id);
+                                        setDeleteDraftConfirmOpen(true);
+                                      }}
+                                      className="p-2 h-8 w-8 text-red-600 hover:bg-red-50 hover:border-red-300"
+                                      title="Delete Draft"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
                         </TableBody>
                       </Table>
                     </div>
