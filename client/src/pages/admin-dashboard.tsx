@@ -2242,7 +2242,7 @@ export default function AdminDashboard() {
                             <TableHead className="min-w-[80px]">Items</TableHead>
                             <TableHead className="min-w-[120px]">Last Activity</TableHead>
                             <TableHead className="min-w-[100px]">Created</TableHead>
-                            <TableHead className="min-w-[120px]">Actions</TableHead>
+                            <TableHead className="min-w-[160px]">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -2316,6 +2316,24 @@ export default function AdminDashboard() {
                                 </TableCell>
                                 <TableCell>
                                   <div className="flex items-center gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleViewReport(draft)}
+                                      className="p-2 h-8 w-8"
+                                      title="View Report"
+                                    >
+                                      <FileText className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleEditSession(draft)}
+                                      className="p-2 h-8 w-8"
+                                      title="Edit Session"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </Button>
                                     <Button
                                       size="sm"
                                       variant="outline"
