@@ -944,7 +944,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         yPosition += 6;
       }
       if (result.globeType) {
-        const globeTypeDisplay = result.globeType === 'led' ? 'LED' : 'Halogen';
+        const globeTypeDisplay = result.globeType === 'led' ? 'LED' : result.globeType === 'fluorescent' ? 'Fluorescent' : result.globeType;
         doc.text(`• Globe Type: ${globeTypeDisplay}`, margin + 5, yPosition);
         yPosition += 6;
       }
