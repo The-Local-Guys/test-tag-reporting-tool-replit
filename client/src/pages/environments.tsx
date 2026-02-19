@@ -20,7 +20,16 @@ type Item = {
   name: string;
   icon: string;
   description: string;
+  classification?: string;
 };
+
+const CLASSIFICATION_OPTIONS = [
+  { value: 'class1', label: 'Class 1' },
+  { value: 'class2', label: 'Class 2' },
+  { value: 'epod', label: 'EPOD' },
+  { value: 'rcd', label: 'RCD' },
+  { value: '3phase', label: '3 Phase' },
+];
 
 // Predefined icon library organized by category - focused on electrical testing
 const ICON_LIBRARY = {
@@ -246,11 +255,14 @@ export default function Environments() {
     name: "",
   });
   const [editItems, setEditItems] = useState<Item[]>([]);
+  const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
+  const [editingItemValues, setEditingItemValues] = useState<Item>({ type: "", name: "", description: "", icon: "📦", classification: "class1" });
   const [newItem, setNewItem] = useState({
     type: "",
     name: "",
     description: "",
     icon: "📦",
+    classification: "class1",
   });
   
   // Fetch environments
@@ -370,7 +382,8 @@ export default function Environments() {
   const handleCancelEdit = () => {
     setEditingEnvironmentId(null);
     setEditItems([]);
-    setNewItem({ type: "", name: "", description: "", icon: "📦" });
+    setEditingItemIndex(null);
+    setNewItem({ type: "", name: "", description: "", icon: "📦", classification: "class1" });
   };
 
   const handleAddItem = async () => {
@@ -390,8 +403,8 @@ export default function Environments() {
     
     // Update local state
     setEditItems(updatedItems);
-    setNewItem({ type: "", name: "", description: "", icon: "📦" });
-    
+    setNewItem({ type: "", name: "", description: "", icon: "📦", classification: "class1" });
+
     // Auto-save to backend
     try {
       await autoSaveMutation.mutateAsync({
@@ -445,6 +458,34 @@ export default function Environments() {
     } catch (error) {
       // Rollback on error
       setEditItems(previousItems);
+    }
+  };
+
+  const handleStartItemEdit = (index: number) => {
+    setEditingItemIndex(index);
+    setEditingItemValues({ ...editItems[index] });
+  };
+
+  const handleCancelItemEdit = () => {
+    setEditingItemIndex(null);
+  };
+
+  const handleSaveItemEdit = async () => {
+    if (editingItemIndex === null || editingEnvironmentId === null) return;
+    if (!editingItemValues.name.trim() || !editingItemValues.type.trim()) {
+      toast({ title: "Error", description: "Item name and type are required", variant: "destructive" });
+      return;
+    }
+    const previousItems = [...editItems];
+    const updatedItems = [...editItems];
+    updatedItems[editingItemIndex] = { ...editingItemValues };
+    setEditItems(updatedItems);
+    setEditingItemIndex(null);
+    try {
+      await autoSaveMutation.mutateAsync({ id: editingEnvironmentId, data: { items: updatedItems } });
+    } catch {
+      setEditItems(previousItems);
+      setEditingItemIndex(editingItemIndex);
     }
   };
 
@@ -642,6 +683,26 @@ export default function Environments() {
                             className="text-sm"
                           />
                         </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm block">Classification</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {CLASSIFICATION_OPTIONS.map((opt) => (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => setNewItem({ ...newItem, classification: opt.value })}
+                                data-testid={`classification-${opt.value}`}
+                                className={`px-3 py-1.5 rounded-md border-2 text-sm font-medium transition-all ${
+                                  newItem.classification === opt.value
+                                    ? 'border-primary bg-primary text-white'
+                                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                       <Button
                         onClick={handleAddItem}
@@ -673,6 +734,97 @@ export default function Environments() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                           {editItems.map((item, index) => {
                             const isBase64Image = item.icon?.startsWith('data:image/');
+
+                            // ── Inline edit form ──────────────────────────────
+                            if (editingItemIndex === index) {
+                              return (
+                                <div
+                                  key={index}
+                                  data-testid={`item-edit-form-${index}`}
+                                  className="md:col-span-2 border-2 border-primary rounded-lg p-4 bg-blue-50 space-y-3"
+                                >
+                                  <h5 className="font-semibold text-sm text-primary">Edit Item</h5>
+                                  <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr_1fr] gap-3">
+                                    <div className="space-y-1">
+                                      <Label className="text-xs">Icon</Label>
+                                      <IconPicker
+                                        selectedIcon={editingItemValues.icon}
+                                        onSelectIcon={(icon) => setEditingItemValues({ ...editingItemValues, icon })}
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <Label className="text-xs">Item Name</Label>
+                                      <Input
+                                        value={editingItemValues.name}
+                                        onChange={(e) => setEditingItemValues({ ...editingItemValues, name: e.target.value })}
+                                        placeholder="e.g., Drill"
+                                        className="text-sm"
+                                        data-testid={`input-edit-name-${index}`}
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <Label className="text-xs">Item Type</Label>
+                                      <Input
+                                        value={editingItemValues.type}
+                                        onChange={(e) => setEditingItemValues({ ...editingItemValues, type: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
+                                        placeholder="e.g., drill"
+                                        className="text-sm"
+                                        data-testid={`input-edit-type-${index}`}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <Label className="text-xs">Description</Label>
+                                    <Input
+                                      value={editingItemValues.description}
+                                      onChange={(e) => setEditingItemValues({ ...editingItemValues, description: e.target.value })}
+                                      placeholder="e.g., Power Tool"
+                                      className="text-sm"
+                                      data-testid={`input-edit-description-${index}`}
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <Label className="text-xs">Classification</Label>
+                                    <div className="flex flex-wrap gap-2">
+                                      {CLASSIFICATION_OPTIONS.map((opt) => (
+                                        <button
+                                          key={opt.value}
+                                          type="button"
+                                          onClick={() => setEditingItemValues({ ...editingItemValues, classification: opt.value })}
+                                          className={`px-3 py-1.5 rounded-md border-2 text-sm font-medium transition-all ${
+                                            editingItemValues.classification === opt.value
+                                              ? 'border-primary bg-primary text-white'
+                                              : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                                          }`}
+                                        >
+                                          {opt.label}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-2 pt-1">
+                                    <Button
+                                      size="sm"
+                                      onClick={handleSaveItemEdit}
+                                      disabled={autoSaveMutation.isPending}
+                                      data-testid={`button-save-item-${index}`}
+                                    >
+                                      {autoSaveMutation.isPending ? "Saving..." : "Save"}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={handleCancelItemEdit}
+                                      data-testid={`button-cancel-item-edit-${index}`}
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            // ── Normal display ────────────────────────────────
                             return (
                             <div
                               key={index}
@@ -680,143 +832,58 @@ export default function Environments() {
                               className="flex items-center justify-between border rounded-lg p-3 bg-white"
                             >
                               <div className="flex items-center gap-3">
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <button
-                                      className="hover:bg-gray-100 rounded p-1 transition-colors overflow-hidden"
-                                      data-testid={`button-edit-icon-${index}`}
-                                    >
-                                      {isBase64Image ? (
-                                        <img 
-                                          src={item.icon} 
-                                          alt="Custom icon" 
-                                          className="w-8 h-8 object-cover rounded"
-                                        />
-                                      ) : (
-                                        <span className="text-2xl">{item.icon || "📦"}</span>
-                                      )}
-                                    </button>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-[320px] sm:w-[400px] max-h-[400px] overflow-y-auto p-4" align="start">
-                                    <div className="space-y-4">
-                                      <div className="flex items-center justify-between mb-2">
-                                        <h4 className="font-semibold text-sm">Change Icon</h4>
-                                      </div>
-                                      
-                                      {/* Custom Image Upload */}
-                                      <div className="border-b pb-3">
-                                        <Label className="text-xs font-medium text-gray-600 mb-2 block">
-                                          Upload Custom Image
-                                        </Label>
-                                        <div className="space-y-2">
-                                          <Input
-                                            type="file"
-                                            accept="image/jpeg,image/jpg,image/png"
-                                            onChange={(e) => {
-                                              const file = e.target.files?.[0];
-                                              if (!file) return;
-                                              const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-                                              if (!allowedTypes.includes(file.type.toLowerCase())) {
-                                                toast({
-                                                  title: "Invalid File Type",
-                                                  description: "Please upload JPG or PNG only",
-                                                  variant: "destructive",
-                                                });
-                                                return;
-                                              }
-                                              if (file.size > 200 * 1024) {
-                                                toast({
-                                                  title: "File Too Large",
-                                                  description: "Max 200KB",
-                                                  variant: "destructive",
-                                                });
-                                                return;
-                                              }
-                                              const reader = new FileReader();
-                                              reader.onload = (event) => {
-                                                handleEditItemIcon(index, event.target?.result as string);
-                                              };
-                                              reader.readAsDataURL(file);
-                                              e.target.value = '';
-                                            }}
-                                            className="text-sm"
-                                          />
-                                          <p className="text-xs text-gray-500">Max 200KB • JPG/PNG only</p>
-                                        </div>
-                                      </div>
-
-                                      {/* Custom Emoji Input */}
-                                      <div className="border-b pb-3">
-                                        <Label className="text-xs font-medium text-gray-600 mb-2 block">
-                                          Custom Emoji
-                                        </Label>
-                                        <div className="flex gap-2">
-                                          <Input
-                                            placeholder="Paste emoji..."
-                                            onKeyDown={(e) => {
-                                              if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-                                                handleEditItemIcon(index, e.currentTarget.value.trim());
-                                                e.currentTarget.value = '';
-                                              }
-                                            }}
-                                            className="text-xl text-center"
-                                          />
-                                        </div>
-                                      </div>
-                                      
-                                      {Object.entries(ICON_LIBRARY).map(([category, icons]) => (
-                                        <div key={category}>
-                                          <h5 className="text-xs font-medium text-gray-600 mb-2">{category}</h5>
-                                          <div className="grid grid-cols-8 sm:grid-cols-10 gap-1">
-                                            {icons.map((icon) => (
-                                              <button
-                                                key={icon}
-                                                onClick={() => handleEditItemIcon(index, icon)}
-                                                className={`
-                                                  h-10 w-10 rounded-md text-xl hover:bg-gray-100 transition-colors
-                                                  flex items-center justify-center
-                                                  ${item.icon === icon ? 'bg-blue-100 ring-2 ring-blue-500' : ''}
-                                                `}
-                                                data-testid={`edit-icon-option-${icon}`}
-                                              >
-                                                {icon}
-                                              </button>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </PopoverContent>
-                                </Popover>
+                                <div className="shrink-0 overflow-hidden">
+                                  {isBase64Image ? (
+                                    <img src={item.icon} alt="Custom icon" className="w-8 h-8 object-cover rounded" />
+                                  ) : (
+                                    <span className="text-2xl">{item.icon || "📦"}</span>
+                                  )}
+                                </div>
                                 <div>
                                   <div className="font-medium">{item.name}</div>
                                   <div className="text-sm text-gray-500">{item.description}</div>
+                                  {item.classification && (
+                                    <span className="inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                                      {CLASSIFICATION_OPTIONS.find(o => o.value === item.classification)?.label ?? item.classification}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    data-testid={`button-remove-item-${index}`}
-                                    disabled={autoSaveMutation.isPending}
-                                  >
-                                    <Trash2 className="w-4 h-4 text-red-500" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Remove Item?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Remove {item.name} from this environment?
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleRemoveItem(index)} className="bg-red-600 hover:bg-red-700">Remove</AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleStartItemEdit(index)}
+                                  disabled={autoSaveMutation.isPending}
+                                  data-testid={`button-edit-item-${index}`}
+                                >
+                                  <Edit className="w-4 h-4 text-blue-500" />
+                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      data-testid={`button-remove-item-${index}`}
+                                      disabled={autoSaveMutation.isPending}
+                                    >
+                                      <Trash2 className="w-4 h-4 text-red-500" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Remove Item?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Remove {item.name} from this environment?
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => handleRemoveItem(index)} className="bg-red-600 hover:bg-red-700">Remove</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
                             </div>
                           );
                           })}
@@ -849,6 +916,11 @@ export default function Environments() {
                             <div className="text-sm">
                               <div className="font-medium">{item.name}</div>
                               <div className="text-gray-500 text-xs">{item.description}</div>
+                              {item.classification && (
+                                <span className="inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                                  {CLASSIFICATION_OPTIONS.find(o => o.value === item.classification)?.label ?? item.classification}
+                                </span>
+                              )}
                             </div>
                           </div>
                         );

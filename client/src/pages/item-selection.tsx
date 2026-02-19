@@ -215,14 +215,15 @@ export default function ItemSelection() {
            item.itemName.toLowerCase().includes(query);
   }) || [];
 
-  const handleItemSelect = (itemType: string, itemName: string) => {
+  const handleItemSelect = (itemType: string, itemName: string, classification?: string) => {
     // Route to different test pages based on service type
-    const testRoute = selectedService === 'emergency_exit_light' ? '/emergency-test' : 
+    const testRoute = selectedService === 'emergency_exit_light' ? '/emergency-test' :
                      selectedService === 'fire_testing' ? '/fire-test' :
                      selectedService === 'rcd_reporting' ? '/rcd-test' :
                      selectedService === 'microwave_leakage' ? '/microwave-test' : '/test';
-    
-    setLocation(`${testRoute}?item=${encodeURIComponent(itemName)}&type=${itemType}`);
+
+    const classParam = classification ? `&classification=${encodeURIComponent(classification)}` : '';
+    setLocation(`${testRoute}?item=${encodeURIComponent(itemName)}&type=${itemType}${classParam}`);
   };
 
   const handleCustomItemAdd = () => {
@@ -521,7 +522,7 @@ export default function ItemSelection() {
             {predefinedItems.map((item, index) => (
               <button
                 key={`${item.type}-${index}`}
-                onClick={() => handleItemSelect(item.type, item.name)}
+                onClick={() => handleItemSelect(item.type, item.name, (item as any).classification)}
                 className="bg-white border-2 border-gray-200 rounded-xl p-4 text-center hover:border-primary hover:bg-blue-50 transition-all touch-button"
                 data-testid={`button-item-${item.type}`}
               >

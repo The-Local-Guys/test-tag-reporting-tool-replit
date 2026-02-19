@@ -71,11 +71,15 @@ export default function TestDetails() {
     const params = new URLSearchParams(search);
     const item = params.get('item');
     const type = params.get('type');
+    const classification = params.get('classification');
     if (item && type) {
-      setCurrentItem({ 
-        name: decodeURIComponent(item), 
+      setCurrentItem({
+        name: decodeURIComponent(item),
         type
       });
+    }
+    if (classification) {
+      setSelectedClass(decodeURIComponent(classification));
     }
   }, [search]);
 
