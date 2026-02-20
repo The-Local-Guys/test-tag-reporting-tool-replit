@@ -427,6 +427,11 @@ export default function ReportPreview() {
         circuitBreakerNumber: (result as any).circuitBreakerNumber || null,
         // Microwave leakage testing specific fields
         leakageReading: (result as any).leakageReading || null,
+        // Fire testing specific fields
+        pressureTest: (result as any).pressureTest ?? false,
+        accessibilityCheck: (result as any).accessibilityCheck ?? false,
+        signageCheck: (result as any).signageCheck ?? false,
+        operationalTest: (result as any).operationalTest ?? false,
       } as any));
 
       if (!sessionData?.session) {
@@ -517,6 +522,11 @@ export default function ReportPreview() {
         globeType: result.globeType || null,
         // Microwave leakage testing specific fields
         leakageReading: (result as any).leakageReading || null,
+        // Fire testing specific fields
+        pressureTest: (result as any).pressureTest ?? false,
+        accessibilityCheck: (result as any).accessibilityCheck ?? false,
+        signageCheck: (result as any).signageCheck ?? false,
+        operationalTest: (result as any).operationalTest ?? false,
       } as any));
 
       if (!sessionData?.session) {
@@ -832,6 +842,34 @@ export default function ReportPreview() {
         
         // manuallyEnteredAssetNumbers is tracked in React state via setManuallyEnteredAssetNumbers above
         console.log(`Manually entered asset number tracked: ${editResultData.assetNumber}`);
+      }
+
+      // Rebuild notes string for fire testing sessions so PDF criteria reflect checkbox state
+      if (sessionData?.session?.serviceType === 'fire_testing') {
+        const existingNotes = editResultData.notes || '';
+        const parts = existingNotes.split(' | ');
+        const userNote = parts.length > 0 &&
+          !parts[0].startsWith('Equipment Type:') &&
+          !parts[0].startsWith('Visual Inspection:') ? parts[0] : '';
+
+        const equipmentType = editResultData.classification || '';
+        const extType = (editResultData as any).extinguisherType;
+
+        const rebuiltNotes = [
+          userNote,
+          `Equipment Type: ${equipmentType}`,
+          extType ? `Extinguisher Type: ${extType.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}` : '',
+          (editResultData as any).size ? `Net Size: ${(editResultData as any).size}` : '',
+          (editResultData as any).weight ? `Gross Weight: ${(editResultData as any).weight}` : '',
+          `Visual Inspection: ${editResultData.visionInspection ? 'Pass' : 'Fail'}`,
+          `Operational Test: ${(editResultData as any).operationalTest ? 'Pass' : 'Fail'}`,
+          (equipmentType === 'fire_extinguisher' || equipmentType === 'fire_hose_reel')
+            ? `Pressure Test: ${(editResultData as any).pressureTest ? 'Pass' : 'Fail'}` : '',
+          `Accessibility Check: ${(editResultData as any).accessibilityCheck ? 'Pass' : 'Fail'}`,
+          `Signage Check: ${(editResultData as any).signageCheck ? 'Pass' : 'Fail'}`,
+        ].filter(Boolean).join(' | ');
+
+        editResultData.notes = rebuiltNotes;
       }
 
       // Use the original batched ID for updating local storage

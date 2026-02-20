@@ -53,6 +53,14 @@ export interface BatchedTestResult {
   circuitBreakerNumber?: string;
   // Microwave leakage testing fields
   leakageReading?: string;
+  // Fire testing specific fields
+  pressureTest?: boolean;
+  accessibilityCheck?: boolean;
+  signageCheck?: boolean;
+  operationalTest?: boolean;
+  extinguisherType?: string;
+  size?: string;
+  weight?: string;
 }
 
 export interface SaveStatus {
@@ -958,6 +966,14 @@ export function useSession() {
       distributionBoardNumber: (cleanData as any).distributionBoardNumber || undefined,
       circuitBreakerNumber: (cleanData as any).circuitBreakerNumber || undefined,
       leakageReading: cleanData.leakageReading || undefined,
+      // Fire testing specific fields
+      pressureTest: (cleanData as any).pressureTest ?? undefined,
+      accessibilityCheck: (cleanData as any).accessibilityCheck ?? undefined,
+      signageCheck: (cleanData as any).signageCheck ?? undefined,
+      operationalTest: (cleanData as any).operationalTest ?? undefined,
+      extinguisherType: (cleanData as any).extinguisherType || undefined,
+      size: (cleanData as any).size || undefined,
+      weight: (cleanData as any).weight || undefined,
     };
 
     console.log('💾 ********** CREATED NEW RESULT **********');
