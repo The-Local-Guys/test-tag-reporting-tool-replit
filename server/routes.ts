@@ -787,7 +787,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Map RCD test fields from batch data
             pushButtonTest: batchedResult.pushButtonTest ?? null,
             injectionTimedTest: batchedResult.injectionTimedTest ?? null,
-            tripTimes: batchedResult.tripTimes ?? null,
+            tripTimes: Array.isArray(batchedResult.tripTimes) && batchedResult.tripTimes.length > 0 ? batchedResult.tripTimes : null,
             distributionBoardNumber: batchedResult.distributionBoardNumber || null,
             circuitBreakerNumber: batchedResult.circuitBreakerNumber || null,
             // Map microwave test fields from batch data
@@ -940,7 +940,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // RCD test specific fields
         pushButtonTest: req.body.pushButtonTest ?? null,
         injectionTimedTest: req.body.injectionTimedTest ?? null,
-        tripTimes: req.body.tripTimes ?? null,
+        tripTimes: Array.isArray(req.body.tripTimes) && req.body.tripTimes.length > 0 ? req.body.tripTimes : null,
         distributionBoardNumber: req.body.distributionBoardNumber || null,
         circuitBreakerNumber: req.body.circuitBreakerNumber || null,
         // Microwave test specific fields (AS/NZS 60335.2.25)
@@ -1087,7 +1087,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // RCD testing fields
         if (req.body.pushButtonTest !== undefined) updateData.pushButtonTest = req.body.pushButtonTest;
         if (req.body.injectionTimedTest !== undefined) updateData.injectionTimedTest = req.body.injectionTimedTest;
-        if (req.body.tripTimes !== undefined) updateData.tripTimes = req.body.tripTimes;
+        if (req.body.tripTimes !== undefined) updateData.tripTimes = Array.isArray(req.body.tripTimes) && req.body.tripTimes.length > 0 ? req.body.tripTimes : null;
         if (req.body.distributionBoardNumber !== undefined) updateData.distributionBoardNumber = req.body.distributionBoardNumber || null;
         if (req.body.circuitBreakerNumber !== undefined) updateData.circuitBreakerNumber = req.body.circuitBreakerNumber || null;
 
