@@ -122,6 +122,8 @@ export default function ServiceSelection() {
   };
 
   const selectService = (serviceType: 'electrical' | 'emergency_exit_light' | 'fire_testing' | 'rcd_reporting' | 'microwave_leakage') => {
+    // Clear any stale session ID so the setup page always starts fresh
+    sessionStorage.removeItem('currentSessionId');
     // Store the selected service type
     sessionStorage.setItem('selectedService', serviceType);
     // Navigate to setup page

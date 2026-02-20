@@ -83,6 +83,7 @@ export function useAuth() {
       // Clear login mode and selected service from session storage
       sessionStorage.removeItem('loginMode');
       sessionStorage.removeItem('selectedService');
+      sessionStorage.removeItem('currentSessionId');
       // Redirect to root page after successful logout (will show login since user is not authenticated)
       navigateWithReplace('/');
     },
