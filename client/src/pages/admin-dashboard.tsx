@@ -1212,7 +1212,35 @@ export default function AdminDashboard() {
     }
 
     // Prepare update data with manually entered asset number
-    const updateData = {
+    let notes = editResultData.notes;
+
+    // Rebuild notes string for fire testing to reflect checkbox changes
+    if (viewingSession?.session?.serviceType === 'fire_testing') {
+      const existingNotes = editResultData.notes || '';
+      const parts = existingNotes.split(' | ');
+      const userNote = parts.length > 0 &&
+        !parts[0].startsWith('Equipment Type:') &&
+        !parts[0].startsWith('Visual Inspection:') ? parts[0] : '';
+
+      const equipmentType = editResultData.classification || '';
+      const extType = editResultData.extinguisherType;
+
+      notes = [
+        userNote,
+        `Equipment Type: ${equipmentType}`,
+        extType ? `Extinguisher Type: ${extType.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}` : '',
+        editResultData.size ? `Net Size: ${editResultData.size}` : '',
+        editResultData.weight ? `Gross Weight: ${editResultData.weight}` : '',
+        `Visual Inspection: ${editResultData.visionInspection ? 'Pass' : 'Fail'}`,
+        `Operational Test: ${editResultData.operationalTest ? 'Pass' : 'Fail'}`,
+        (equipmentType === 'fire_extinguisher' || equipmentType === 'fire_hose_reel')
+          ? `Pressure Test: ${editResultData.pressureTest ? 'Pass' : 'Fail'}` : '',
+        `Accessibility Check: ${editResultData.accessibilityCheck ? 'Pass' : 'Fail'}`,
+        `Signage Check: ${editResultData.signageCheck ? 'Pass' : 'Fail'}`,
+      ].filter(Boolean).join(' | ');
+    }
+
+    const updateData: Record<string, any> = {
       itemName: editResultData.itemName,
       location: editResultData.location,
       assetNumber: editResultData.assetNumber,
@@ -1221,7 +1249,27 @@ export default function AdminDashboard() {
       frequency: editResultData.frequency,
       failureReason: editResultData.failureReason,
       actionTaken: editResultData.actionTaken,
-      notes: editResultData.notes,
+      notes: notes,
+      // Fire testing specific fields
+      visionInspection: editResultData.visionInspection,
+      pressureTest: editResultData.pressureTest,
+      accessibilityCheck: editResultData.accessibilityCheck,
+      signageCheck: editResultData.signageCheck,
+      operationalTest: editResultData.operationalTest,
+      extinguisherType: editResultData.extinguisherType,
+      size: editResultData.size,
+      weight: editResultData.weight,
+      // Emergency exit light fields
+      electricalTest: editResultData.electricalTest,
+      dischargeTest: editResultData.dischargeTest,
+      switchingTest: editResultData.switchingTest,
+      chargingTest: editResultData.chargingTest,
+      luxTest: editResultData.luxTest,
+      luxReading: editResultData.luxReading,
+      luxCompliant: editResultData.luxCompliant,
+      globeType: editResultData.globeType,
+      // Microwave leakage fields
+      leakageReading: editResultData.leakageReading,
     };
 
     console.log(`Admin: Manually updating asset number to: ${editResultData.assetNumber}`);

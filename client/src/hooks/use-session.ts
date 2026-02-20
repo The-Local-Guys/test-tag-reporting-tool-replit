@@ -531,7 +531,8 @@ export function useSession() {
       console.log(`Clearing pending custom numbers for ${serviceType} session`);
       setPendingCustomStartingNumbers(null);
     }
-  }, [session?.id, sessionId, session?.serviceType, pendingCustomStartingNumbers]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.id, sessionId, session?.serviceType, pendingCustomStartingNumbers, JSON.stringify((session as any)?.customStartingNumbers)]);
 
   // Calculate local asset progress from actual used numbers (accounts for gaps)
   const getLocalAssetProgress = () => {
