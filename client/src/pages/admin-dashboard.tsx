@@ -1268,6 +1268,15 @@ export default function AdminDashboard() {
       luxReading: editResultData.luxReading,
       luxCompliant: editResultData.luxCompliant,
       globeType: editResultData.globeType,
+      manufacturerInfo: editResultData.manufacturerInfo,
+      installationDate: editResultData.installationDate,
+      maintenanceType: editResultData.maintenanceType,
+      // RCD fields
+      pushButtonTest: editResultData.pushButtonTest,
+      injectionTimedTest: editResultData.injectionTimedTest,
+      tripTimes: editResultData.tripTimes,
+      distributionBoardNumber: editResultData.distributionBoardNumber,
+      circuitBreakerNumber: editResultData.circuitBreakerNumber,
       // Microwave leakage fields
       leakageReading: editResultData.leakageReading,
     };
