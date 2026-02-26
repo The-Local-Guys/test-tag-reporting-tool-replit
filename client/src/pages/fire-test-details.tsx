@@ -132,6 +132,8 @@ export default function FireTestDetails() {
         itemName: itemName,
         itemType: itemType,
         location: data.location,
+        equipmentType: data.equipmentType,
+        extinguisherType: data.extinguisherType || null,
         result: data.result,
         frequency: data.frequency,
         failureReason: data.failureReason || null,
@@ -139,6 +141,7 @@ export default function FireTestDetails() {
         notes: data.notes || null,
         photoData: data.result === 'fail' ? photoData : null,
         visionInspection: data.visionInspection,
+        // Fire specific fields
         size: data.size || null,
         weight: data.weight || null,
         operationalTest: data.operationalTest,
