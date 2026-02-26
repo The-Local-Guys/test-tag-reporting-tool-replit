@@ -436,69 +436,57 @@ export function useSession() {
     }
   }, [existingResults, batchedResults.length, sessionId]);
 
-  // Initialize counters based on service type when a new session is created
+  // Initialize counters and load custom starting numbers in a SINGLE effect
+  // to eliminate the race condition where defaults were set before custom numbers loaded.
+  // Previously these were two separate effects (A: set defaults, B: load custom numbers)
+  // which caused a brief window where counters showed defaults before being corrected.
   useEffect(() => {
     if (!session || !sessionId) return;
 
+    const serviceType = session.serviceType || 'electrical';
+
     // Skip if counters already initialized for this exact session
-    if (countersInitializedRef.current === sessionId) {
+    // (unless we have pending custom numbers to apply)
+    if (countersInitializedRef.current === sessionId && !pendingCustomStartingNumbers) {
       return;
     }
 
     // Only initialize if we don't have existing results loaded yet
     // (existingResults effect handles counter setup when resuming)
     if (existingResults && existingResults.length > 0) {
+      // Still need to load custom starting numbers state even when results exist
+      const sessionCustomNumbers = (session as any)?.customStartingNumbers;
+      if (sessionCustomNumbers && serviceType === 'electrical' && Object.keys(sessionCustomNumbers).length > 0) {
+        setCustomStartingNumbers(sessionCustomNumbers);
+      }
       countersInitializedRef.current = sessionId;
       return;
     }
 
-    // Get service-type-aware defaults
+    // Get service-type-aware defaults as fallback
     const serviceTypeDefaults = getDefaultStartingNumbers(session.serviceType);
 
-    // Initialize all counters based on service type
-    updateCounter(setTwelvemonthlyCounter, twelvemonthlyCounterRef, serviceTypeDefaults.twelvemonthly - 1);
-    updateCounter(setSixmonthlyCounter, sixmonthlyCounterRef, serviceTypeDefaults.sixmonthly - 1);
-    updateCounter(setFiveyearlyCounter, fiveyearlyCounterRef, serviceTypeDefaults.fiveyearly - 1);
-    updateCounter(setTwentyfourmonthlyCounter, twentyfourmonthlyCounterRef, serviceTypeDefaults.twentyfourmonthly - 1);
-    updateCounter(setThreemonthlyCounter, threemonthlyCounterRef, serviceTypeDefaults.threemonthly - 1);
-    updateCounter(setMonthlyCounter, monthlyCounterRef, serviceTypeDefaults.monthly - 1);
-
-    // For RCD sessions, initialize rcdAssetCounter from session's startingAssetNumber
-    if (session.serviceType === 'rcd_reporting' && session.startingAssetNumber) {
-      updateCounter(setRcdAssetCounter, rcdAssetCounterRef, session.startingAssetNumber - 1);
-    }
-
-    countersInitializedRef.current = sessionId;
-
-    console.log(`Initialized counters for ${session.serviceType} service (session ${sessionId})`);
-  }, [session?.id, sessionId, session?.serviceType, existingResults]);
-
-  // Load custom starting numbers from DB session when session changes
-  useEffect(() => {
-    if (!session || !sessionId) return;
-
-    const serviceType = session.serviceType || 'electrical';
-
-    // DATABASE-FIRST: Load custom starting numbers from session if available
+    // Check for custom starting numbers from DB session FIRST (highest priority)
     const sessionCustomNumbers = (session as any)?.customStartingNumbers;
     if (sessionCustomNumbers && serviceType === 'electrical' && Object.keys(sessionCustomNumbers).length > 0) {
       console.log('Loading custom starting numbers from database session:', sessionCustomNumbers);
       setCustomStartingNumbers(sessionCustomNumbers);
 
-      // Update counters based on database values
+      // Initialize counters with custom numbers directly — no default-then-override race
       updateCounter(setTwelvemonthlyCounter, twelvemonthlyCounterRef, (sessionCustomNumbers.twelvemonthly ?? DEFAULT_STARTING_NUMBERS.twelvemonthly) - 1);
       updateCounter(setSixmonthlyCounter, sixmonthlyCounterRef, (sessionCustomNumbers.sixmonthly ?? DEFAULT_STARTING_NUMBERS.sixmonthly) - 1);
       updateCounter(setFiveyearlyCounter, fiveyearlyCounterRef, (sessionCustomNumbers.fiveyearly ?? DEFAULT_STARTING_NUMBERS.fiveyearly) - 1);
       updateCounter(setTwentyfourmonthlyCounter, twentyfourmonthlyCounterRef, (sessionCustomNumbers.twentyfourmonthly ?? DEFAULT_STARTING_NUMBERS.twentyfourmonthly) - 1);
       updateCounter(setThreemonthlyCounter, threemonthlyCounterRef, (sessionCustomNumbers.threemonthly ?? DEFAULT_STARTING_NUMBERS.threemonthly) - 1);
       updateCounter(setMonthlyCounter, monthlyCounterRef, (sessionCustomNumbers.monthly ?? DEFAULT_STARTING_NUMBERS.monthly) - 1);
+
+      countersInitializedRef.current = sessionId;
+      console.log(`Initialized counters with CUSTOM numbers for ${serviceType} service (session ${sessionId})`);
     }
-    // Apply pending custom starting numbers for NEW sessions (stored in React state)
-    // Note: This is a fallback. Normally, pending numbers are applied in createSession onSuccess
-    // to avoid race conditions. This handles edge cases where onSuccess didn't apply them.
+    // Check for pending custom starting numbers for NEW sessions (stored in React state)
     else if (pendingCustomStartingNumbers && serviceType === 'electrical') {
       const numbers = pendingCustomStartingNumbers;
-      console.log('Applying pending custom starting numbers to electrical session (fallback):', numbers);
+      console.log('Applying pending custom starting numbers to electrical session:', numbers);
 
       const isValidNumbers =
         typeof numbers === 'object' &&
@@ -526,13 +514,33 @@ export function useSession() {
 
       // Clear pending after applying
       setPendingCustomStartingNumbers(null);
-    } else if (pendingCustomStartingNumbers && serviceType !== 'electrical') {
-      // Clear pending custom numbers for non-electrical sessions
-      console.log(`Clearing pending custom numbers for ${serviceType} session`);
-      setPendingCustomStartingNumbers(null);
+      countersInitializedRef.current = sessionId;
+      console.log(`Initialized counters with PENDING custom numbers for ${serviceType} service (session ${sessionId})`);
+    }
+    // No custom numbers — use service-type defaults
+    else {
+      if (pendingCustomStartingNumbers && serviceType !== 'electrical') {
+        console.log(`Clearing pending custom numbers for ${serviceType} session`);
+        setPendingCustomStartingNumbers(null);
+      }
+
+      updateCounter(setTwelvemonthlyCounter, twelvemonthlyCounterRef, serviceTypeDefaults.twelvemonthly - 1);
+      updateCounter(setSixmonthlyCounter, sixmonthlyCounterRef, serviceTypeDefaults.sixmonthly - 1);
+      updateCounter(setFiveyearlyCounter, fiveyearlyCounterRef, serviceTypeDefaults.fiveyearly - 1);
+      updateCounter(setTwentyfourmonthlyCounter, twentyfourmonthlyCounterRef, serviceTypeDefaults.twentyfourmonthly - 1);
+      updateCounter(setThreemonthlyCounter, threemonthlyCounterRef, serviceTypeDefaults.threemonthly - 1);
+      updateCounter(setMonthlyCounter, monthlyCounterRef, serviceTypeDefaults.monthly - 1);
+
+      // For RCD sessions, initialize rcdAssetCounter from session's startingAssetNumber
+      if (session.serviceType === 'rcd_reporting' && session.startingAssetNumber) {
+        updateCounter(setRcdAssetCounter, rcdAssetCounterRef, session.startingAssetNumber - 1);
+      }
+
+      countersInitializedRef.current = sessionId;
+      console.log(`Initialized counters with DEFAULTS for ${serviceType} service (session ${sessionId})`);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.id, sessionId, session?.serviceType, pendingCustomStartingNumbers, JSON.stringify((session as any)?.customStartingNumbers)]);
+  }, [session?.id, sessionId, session?.serviceType, existingResults, pendingCustomStartingNumbers, JSON.stringify((session as any)?.customStartingNumbers)]);
 
   // Calculate local asset progress from actual used numbers (accounts for gaps)
   const getLocalAssetProgress = () => {
