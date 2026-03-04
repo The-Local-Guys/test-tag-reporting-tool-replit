@@ -287,7 +287,7 @@ export default function Setup() {
             <Label>Country</Label>
             <RadioGroup
               defaultValue="australia"
-              onValueChange={(value) => form.setValue('country', value as 'australia' | 'newzealand' | 'national_client')}
+              onValueChange={(value) => form.setValue('country', value as 'australia' | 'newzealand' | 'national_client' | 'reflections')}
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="australia" id="australia" />
@@ -306,14 +306,29 @@ export default function Setup() {
                 </Label>
               </div>
               
-              {/* Show ARA Compliance and Custom Form Types only for Electrical Testing */}
+              {/* Show ARA Compliance only for Electrical Testing */}
               {sessionStorage.getItem('selectedService') === 'electrical' && (
                 <>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="national_client" id="national_client" />
                     <Label htmlFor="national_client">ARA Compliance</Label>
                   </div>
-                  
+                </>
+              )}
+
+              {/* Show Reflections only for Electrical Testing and RCD*/}
+              {(sessionStorage.getItem('selectedService') === 'electrical' || sessionStorage.getItem('selectedService') === 'rcd_reporting') && (
+                <>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="reflections" id="reflections" />
+                    <Label htmlFor="reflections">Reflections</Label>
+                  </div>
+                </>
+              )}
+
+              {/* Show Custom Form Types only for Electrical Testing */}
+              {sessionStorage.getItem('selectedService') === 'electrical' && (
+                <>
                   {/* Custom Form Types */}
                   {customFormTypes && customFormTypes.map((formType) => (
                     <div key={formType.id} className="flex items-center space-x-2">

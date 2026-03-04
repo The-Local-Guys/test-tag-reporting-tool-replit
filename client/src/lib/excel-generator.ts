@@ -90,6 +90,193 @@ function formatAssetNumberWithFrequency(
   return `${assetNumber} - ${frequencyCode}`;
 }
 
+function generateReflectionsExcelReport(data: ReportData): Blob {
+  const { session } = data;
+
+  const results = [...data.results].sort((a, b) => {
+    return (parseInt(a.assetNumber) || 0) - (parseInt(b.assetNumber) || 0);
+  });
+
+  const workbook = XLSX.utils.book_new();
+  const testDateFormatted = new Date(session.testDate).toLocaleDateString('en-AU');
+
+  // Header section (rows 1-7) matching the Reflections template exactly
+  const wsData: any[][] = [
+    ['Site Name', session.clientName],                     // Row 1
+    ['Technician Name', session.technicianName],           // Row 2
+    ['Business Name', ''],                                 // Row 3 (A3:B3 merged label)
+    ['ABN', ''],                                           // Row 4
+    ['Mobile Number', ''],                                 // Row 5
+    ['Email', ''],                                         // Row 6 (A6:B6 merged label)
+    [],                                                    // Row 7 empty separator
+    // Row 8: column headers
+    ['Item Count', 'Tag Number', 'Item (Description)', 'Location', 'Frequency',
+     'Visual Test', 'Electrical Test', 'Result', 'Test Date', 'Next Test Due',
+     'If Failed, Reported to Site?'],
+  ];
+
+  // Data rows starting at row 9
+  results.forEach((result, index) => {
+    let actionDisplay = '';
+    if (result.result === 'fail' && result.actionTaken) {
+      if (result.actionTaken === 'given') actionDisplay = 'Given to Site Contact';
+      else if (result.actionTaken === 'removed') actionDisplay = 'Removed from Site';
+      else actionDisplay = result.actionTaken.charAt(0).toUpperCase() + result.actionTaken.slice(1);
+    }
+
+    wsData.push([
+      index + 1,
+      result.assetNumber,
+      result.itemName,
+      result.location,
+      getFrequencyLabel(result.frequency),
+      result.visionInspection ? 'PASS' : 'FAIL',
+      result.electricalTest ? 'PASS' : 'FAIL',
+      result.result.toUpperCase(),
+      testDateFormatted,
+      calculateNextDueDate(session.testDate, result.frequency, result.result),
+      actionDisplay,
+    ]);
+  });
+
+  const worksheet = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Replicate template merges: A3:B3 (Business Name label) and A6:B6 (Email label)
+  worksheet['!merges'] = [
+    { s: { c: 0, r: 2 }, e: { c: 1, r: 2 } },
+    { s: { c: 0, r: 5 }, e: { c: 1, r: 5 } },
+  ];
+
+  worksheet['!cols'] = [
+    { wch: 12 }, // A: Item Count
+    { wch: 14 }, // B: Tag Number
+    { wch: 28 }, // C: Item (Description)
+    { wch: 20 }, // D: Location
+    { wch: 12 }, // E: Frequency
+    { wch: 12 }, // F: Visual Test
+    { wch: 14 }, // G: Electrical Test
+    { wch: 10 }, // H: Result
+    { wch: 12 }, // I: Test Date
+    { wch: 14 }, // J: Next Test Due
+    { wch: 28 }, // K: If Failed, Reported to Site?
+  ];
+
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Test & Tag Template');
+
+  const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+  return new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+
+function generateReflectionsRCDExcelReport(data: ReportData): Blob {
+  const { session } = data;
+
+  const results = [...data.results].sort((a, b) => {
+    return (parseInt(a.assetNumber) || 0) - (parseInt(b.assetNumber) || 0);
+  });
+
+  const workbook = XLSX.utils.book_new();
+  const testDateFormatted = new Date(session.testDate).toLocaleDateString('en-AU');
+
+  const toTestCell = (value: boolean | null | undefined) =>
+    value == null ? 'N/A' : value ? 'PASS' : 'FAIL';
+
+  // Header section (rows 1-7) matching the RCD Template exactly
+  const wsData: any[][] = [
+    ['Site Name', session.clientName],
+    ['Technician Name', session.technicianName],
+    ['Business Name', ''],
+    ['ABN', ''],
+    ['Mobile Number', ''],
+    ['Email', ''],
+    [],
+    // Row 8: column headers
+    ['Circuit No./RCD No.', 'Item Count', 'Tag Number', 'Location',
+     'Push Test', 'Timed Test', 'Trip Test Time', 'Test Date',
+     'Next Test Due', 'Result', 'Comments', 'If Failed, Reported to Site?'],
+  ];
+
+  results.forEach((result, index) => {
+    // Circuit No./RCD No. from CB/DB fields — circuit breaker first, then distribution board
+    const dbNum = (result as any).distributionBoardNumber || '';
+    const cbNum = (result as any).circuitBreakerNumber || '';
+    let circuitDisplay = '';
+    if (cbNum && dbNum) circuitDisplay = `${cbNum} / ${dbNum}`;
+    else if (cbNum) circuitDisplay = cbNum;
+    else if (dbNum) circuitDisplay = `- / ${dbNum}`;
+
+    // Trip times with fallback to notes field
+    let validTripTimes: number[] = [];
+    const tripTimesArray = (result as any).tripTimes;
+    if (Array.isArray(tripTimesArray) && tripTimesArray.length > 0) {
+      validTripTimes = tripTimesArray.map((t: any) => Number(t)).filter((t: number) => isFinite(t) && t > 0);
+    }
+    if (validTripTimes.length === 0) {
+      const match = (result.notes || '').match(/\[TRIP_TIMES:\[([^\]]*)\]\]/);
+      if (match?.[1]) {
+        validTripTimes = match[1].split(',').map((t: string) => Number(t.trim())).filter((t: number) => isFinite(t) && t > 0);
+      }
+    }
+    const tripTimeDisplay = validTripTimes.length > 0 ? validTripTimes.join(', ') : '-';
+
+    // Comments: strip internal [TRIP_TIMES:...] marker
+    const comments = (result.notes || '').replace(/\[TRIP_TIMES:\[[^\]]*\]\]/g, '').trim();
+
+    // Action taken for "If Failed" column
+    let actionDisplay = '';
+    if (result.actionTaken) {
+      actionDisplay = result.actionTaken.split(', ').map((action: string) => {
+        if (action === 'notified') return 'Site Contact Notified';
+        if (action === 'off_position') return 'RCD left in off position';
+        if (action === 'given') return 'Given to Site Contact';
+        if (action === 'removed') return 'Removed from Site';
+        return action.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+      }).join(', ');
+    }
+
+    wsData.push([
+      circuitDisplay,
+      index + 1,
+      result.assetNumber,
+      result.location,
+      toTestCell((result as any).pushButtonTest),
+      toTestCell((result as any).injectionTimedTest),
+      tripTimeDisplay,
+      testDateFormatted,
+      calculateNextDueDate(session.testDate, result.frequency || 'twelvemonthly', result.result),
+      result.result.toUpperCase(),
+      comments,
+      actionDisplay,
+    ]);
+  });
+
+  const worksheet = XLSX.utils.aoa_to_sheet(wsData);
+
+  worksheet['!merges'] = [
+    { s: { c: 0, r: 2 }, e: { c: 1, r: 2 } },
+    { s: { c: 0, r: 5 }, e: { c: 1, r: 5 } },
+  ];
+
+  worksheet['!cols'] = [
+    { wch: 20 }, // A: Circuit No./RCD No.
+    { wch: 12 }, // B: Item Count
+    { wch: 14 }, // C: Tag Number
+    { wch: 20 }, // D: Location
+    { wch: 12 }, // E: Push Test
+    { wch: 12 }, // F: Timed Test
+    { wch: 16 }, // G: Trip Test Time
+    { wch: 12 }, // H: Test Date
+    { wch: 14 }, // I: Next Test Due
+    { wch: 10 }, // J: Result
+    { wch: 25 }, // K: Comments
+    { wch: 28 }, // L: If Failed, Reported to Site?
+  ];
+
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'RCD Template');
+
+  const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+  return new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+
 /**
  * Generates an Excel spreadsheet report with test results and compliance data
  * Creates downloadable .xlsx files with formatted data, calculations, and summaries
@@ -97,8 +284,17 @@ function formatAssetNumberWithFrequency(
  * @returns Blob object containing the Excel file for download
  */
 export function generateExcelReport(data: ReportData): Blob {
+  // Reflections electrical sessions use a dedicated template format
+  if (data.session.country === 'reflections' && data.session.serviceType === 'electrical') {
+    return generateReflectionsExcelReport(data);
+  }
+  // Reflections RCD sessions use the RCD Template format
+  if (data.session.country === 'reflections' && data.session.serviceType === 'rcd_reporting') {
+    return generateReflectionsRCDExcelReport(data);
+  }
+
   const { session, summary } = data;
-  
+
   // Sort results by asset number: monthly frequencies first (1, 2, 3...) then 5-yearly (10001, 10002, 10003...)
   const results = [...data.results].sort((a, b) => {
     const aAssetNum = parseInt(a.assetNumber) || 0;

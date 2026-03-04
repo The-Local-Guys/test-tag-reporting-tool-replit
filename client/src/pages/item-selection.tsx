@@ -167,7 +167,7 @@ export default function ItemSelection() {
   const selectedService = sessionData?.session?.serviceType || sessionStorage.getItem('selectedService') || 'electrical';
   const country = sessionData?.session?.country;
   const isNationalClient = country === 'national_client';
-  
+
   // Check if country is a custom form type (format: "custom_123")
   const isCustomFormType = country?.startsWith('custom_');
   const customFormTypeId = isCustomFormType && country ? parseInt(country.replace('custom_', '')) : null;
@@ -211,9 +211,10 @@ export default function ItemSelection() {
   // Filter custom form items based on search query
   const filteredCustomFormItems = customFormItems?.filter(item => {
     const query = searchQuery.toLowerCase();
-    return item.code.toLowerCase().includes(query) || 
+    return item.code.toLowerCase().includes(query) ||
            item.itemName.toLowerCase().includes(query);
   }) || [];
+
 
   const handleItemSelect = (itemType: string, itemName: string, classification?: string) => {
     // Route to different test pages based on service type

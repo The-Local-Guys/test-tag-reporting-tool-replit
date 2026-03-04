@@ -218,6 +218,7 @@ export default function ReportPreview() {
   }
 
   const { session, summary } = sessionData;
+  const isReflections = session?.country === 'reflections';
 
   /**
    * Helper function to find the next available asset number within a range
@@ -962,14 +963,16 @@ export default function ReportPreview() {
             <div className="text-green-100 text-sm">Ready for Export</div>
           </div>
           <div className="flex gap-2">
-            <button 
-              onClick={handleExportPDF}
-              className="text-white hover:text-green-200 p-2 rounded-lg hover:bg-green-700 transition-colors"
-              title="Download PDF"
-            >
-              <Download className="h-5 w-5" />
-            </button>
-            <button 
+            {!isReflections && (
+              <button
+                onClick={handleExportPDF}
+                className="text-white hover:text-green-200 p-2 rounded-lg hover:bg-green-700 transition-colors"
+                title="Download PDF"
+              >
+                <Download className="h-5 w-5" />
+              </button>
+            )}
+            <button
               onClick={handleExportExcel}
               className="text-white hover:text-green-200 p-2 rounded-lg hover:bg-green-700 transition-colors"
               title="Download Excel"
@@ -1094,23 +1097,33 @@ export default function ReportPreview() {
 
       {/* Fixed Bottom Actions */}
       <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 p-4 space-y-3">
-        <div className="grid grid-cols-2 gap-2">
-          <Button 
-            onClick={handleExportPDF}
-            className="bg-primary text-white py-3 font-medium touch-button"
-          >
-            <Download className="mr-1 h-4 w-4" />
-            PDF
-          </Button>
-          <Button 
+        {isReflections ? (
+          <Button
             onClick={handleExportExcel}
-            variant="outline"
-            className="py-3 font-medium touch-button"
+            className="w-full bg-primary text-white py-3 font-medium touch-button"
           >
             <FileText className="mr-1 h-4 w-4" />
-            Excel
+            Download Excel
           </Button>
-        </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              onClick={handleExportPDF}
+              className="bg-primary text-white py-3 font-medium touch-button"
+            >
+              <Download className="mr-1 h-4 w-4" />
+              PDF
+            </Button>
+            <Button
+              onClick={handleExportExcel}
+              variant="outline"
+              className="py-3 font-medium touch-button"
+            >
+              <FileText className="mr-1 h-4 w-4" />
+              Excel
+            </Button>
+          </div>
+        )}
         <Button 
           onClick={handleNewJob}
           disabled={isSubmittingBatch || isFinishingReport}
