@@ -323,6 +323,14 @@ export function useSession() {
       pushButtonTest: result.pushButtonTest ?? result.push_button_test ?? undefined,
       injectionTimedTest: result.injectionTimedTest ?? result.injection_timed_test ?? undefined,
       tripTimes: (() => {
+        // Priority 1: tripTimes array column — authoritative, always reflects latest edits
+        if (result.tripTimes && Array.isArray(result.tripTimes) && result.tripTimes.length > 0) {
+          const validTimes = result.tripTimes.map((t: any) => Number(t)).filter((t: number) => t > 0);
+          if (validTimes.length > 0) {
+            return validTimes;
+          }
+        }
+        // Priority 2: legacy notes embedding — fallback for records predating the tripTimes column
         const notesValue = result.notes || '';
         const tripTimesMatch = notesValue.match(/\[TRIP_TIMES:\[([^\]]*)\]\]/);
         if (tripTimesMatch && tripTimesMatch[1]) {
@@ -331,12 +339,7 @@ export function useSession() {
             return parsedTimes;
           }
         }
-        if (result.tripTimes && Array.isArray(result.tripTimes) && result.tripTimes.length > 0) {
-          const validTimes = result.tripTimes.map((t: any) => Number(t)).filter((t: number) => t > 0);
-          if (validTimes.length > 0) {
-            return validTimes;
-          }
-        }
+        // Priority 3: legacy single trip_time column
         const singleTripTime = result.trip_time || result.tripTime;
         if (singleTripTime != null && Number(singleTripTime) > 0) {
           return [Number(singleTripTime)];
@@ -1046,7 +1049,7 @@ export function useSession() {
 
       console.log(`Submitting batch of ${batchedResults.length} results to server`);
 
-      // Normalize tripTimes values
+      // Convert tripTimes to numbers (DB returns numeric type as strings; migrate legacy single tripTime field)
       const normalizedResults = batchedResults.map(result => {
         const tripTimes = (result as any).tripTimes;
         const legacyTripTime = (result as any).tripTime;
@@ -1054,17 +1057,12 @@ export function useSession() {
         if (legacyTripTime != null && tripTimes == null) {
           const tripTimeNum = Number(legacyTripTime);
           if (isFinite(tripTimeNum) && tripTimeNum > 0) {
-            const normalized = tripTimeNum < 1 ? tripTimeNum * 1000 : tripTimeNum;
-            return { ...result, tripTimes: [normalized], tripTime: undefined };
+            return { ...result, tripTimes: [tripTimeNum], tripTime: undefined };
           }
-        }
-        else if (tripTimes != null && Array.isArray(tripTimes)) {
-          const normalized = tripTimes.map(tripTime => {
-            const tripTimeNum = Number(tripTime);
-            if (isFinite(tripTimeNum) && tripTimeNum > 0) {
-              return tripTimeNum < 1 ? tripTimeNum * 1000 : tripTimeNum;
-            }
-            return null;
+        } else if (tripTimes != null && Array.isArray(tripTimes)) {
+          const normalized = tripTimes.map((tripTime: any) => {
+            const num = Number(tripTime);
+            return isFinite(num) && num > 0 ? num : null;
           }).filter((v): v is number => v !== null);
 
           if (normalized.length > 0) {
@@ -1128,15 +1126,12 @@ export function useSession() {
     mutationFn: async (result: BatchedTestResult) => {
       if (!sessionId) throw new Error('No active session');
 
-      // Normalize tripTimes if present
+      // Convert tripTimes values to numbers (DB returns numeric type as strings)
       let tripTimes = result.tripTimes;
       if (tripTimes && Array.isArray(tripTimes)) {
         tripTimes = tripTimes.map(t => {
           const num = Number(t);
-          if (isFinite(num) && num > 0) {
-            return num < 1 ? num * 1000 : num;
-          }
-          return null;
+          return isFinite(num) && num > 0 ? num : null;
         }).filter((v): v is number => v !== null);
       }
 
@@ -1280,14 +1275,12 @@ export function useSession() {
     mutationFn: async ({ serverId, data }: { serverId: number; data: BatchedTestResult }) => {
       if (!sessionId) throw new Error('No active session');
 
+      // Convert tripTimes values to numbers (DB returns numeric type as strings)
       let tripTimes = data.tripTimes;
       if (tripTimes && Array.isArray(tripTimes)) {
         tripTimes = tripTimes.map(t => {
           const num = Number(t);
-          if (isFinite(num) && num > 0) {
-            return num < 1 ? num * 1000 : num;
-          }
-          return null;
+          return isFinite(num) && num > 0 ? num : null;
         }).filter((v): v is number => v !== null);
       }
 

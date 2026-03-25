@@ -735,9 +735,36 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateTestResult(id: number, data: Partial<InsertTestResult>): Promise<TestResult> {
+    const updateData = { ...data };
+
+    // Keep the [TRIP_TIMES:[...]] notes embedding in sync with the tripTimes column.
+    // On creation this is handled by createTestResult, but PATCH updates only touch the
+    // tripTimes column and leave the notes embedding stale — causing session resume to
+    // load old values from the notes regex instead of the updated column.
+    if ('tripTimes' in updateData || 'notes' in updateData) {
+      // Fetch current notes if we are not already replacing them
+      let baseNotes: string | null = updateData.notes !== undefined
+        ? (updateData.notes ?? null)
+        : ((await db.select({ notes: testResults.notes }).from(testResults).where(eq(testResults.id, id)))[0]?.notes ?? null);
+
+      // Strip any existing [TRIP_TIMES:[...]] pattern from notes
+      const strippedNotes = baseNotes ? baseNotes.replace(/\s*\[TRIP_TIMES:\[[^\]]*\]\]/g, '').trim() : null;
+
+      const newTripTimes = updateData.tripTimes;
+      if (Array.isArray(newTripTimes) && newTripTimes.length > 0) {
+        // Re-embed updated trip times
+        updateData.notes = strippedNotes
+          ? `${strippedNotes} [TRIP_TIMES:${JSON.stringify(newTripTimes)}]`
+          : `[TRIP_TIMES:${JSON.stringify(newTripTimes)}]`;
+      } else if ('tripTimes' in updateData) {
+        // Trip times were cleared — remove embedding, keep remaining notes
+        updateData.notes = strippedNotes || null;
+      }
+    }
+
     const [result] = await db
       .update(testResults)
-      .set(data)
+      .set(updateData)
       .where(eq(testResults.id, id))
       .returning();
     return result;

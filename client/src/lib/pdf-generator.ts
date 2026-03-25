@@ -16,6 +16,39 @@ interface ReportData {
   };
 }
 
+/**
+ * Resolve the full array of trip times for an RCD test result.
+ *
+ * createTestResult (raw SQL) only writes the first trip time to the trip_time DB column but
+ * embeds the full array in the notes field as [TRIP_TIMES:[30,28,31]].  updateTestResult
+ * (Drizzle ORM) writes the full array to the column AND updates the notes embedding.
+ *
+ * This means the notes embedding is always at least as complete as the column value, so we
+ * check it first to avoid showing only the first trip time for newly-created results.
+ */
+function resolveRcdTripTimes(result: any): number[] {
+  // Priority 1: notes embedding (always has the full array)
+  const notesValue = result.notes || '';
+  const notesMatch = notesValue.match(/\[TRIP_TIMES:\[([^\]]*)\]\]/);
+  if (notesMatch && notesMatch[1]) {
+    const parsed = notesMatch[1].split(',').map((t: string) => Number(t.trim())).filter((t: number) => t > 0);
+    if (parsed.length > 0) return parsed;
+  }
+
+  // Priority 2: tripTimes array column (correct after any Drizzle-based update)
+  const tripTimesArray = result.tripTimes;
+  if (Array.isArray(tripTimesArray) && tripTimesArray.length > 0) {
+    const valid = tripTimesArray.filter((t: any) => t != null && Number(t) > 0).map((t: any) => Number(t));
+    if (valid.length > 0) return valid;
+  }
+
+  // Priority 3: legacy single numeric column fallback
+  const tripTimeValue = result.trip_time ?? result.tripTime;
+  if (tripTimeValue != null && Number(tripTimeValue) > 0) return [Number(tripTimeValue)];
+
+  return [];
+}
+
 function calculateNextDueDate(testDate: string, frequency: string, result: string): string {
   const date = new Date(testDate);
   
@@ -509,18 +542,14 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       microwaveCommentsLines = doc.splitTextToSize(commentsText, microwaveCommentsWidth);
     }
     
-    // Calculate trip time lines for RCD reporting (Fixed RCD can have multiple trip times)
-    let tripTimeLinesCount = 1; // Default to 1 line
+    // Calculate trip time lines for RCD reporting (one line per trip time value)
+    // Use a shared helper so the row-height calculation matches the actual rendering logic below.
+    let tripTimeLinesCount = 1;
     if (session.serviceType === 'rcd_reporting') {
-      const tripTimesArray = (result as any).tripTimes;
-      if (Array.isArray(tripTimesArray) && tripTimesArray.length > 0) {
-        const validTripTimes = tripTimesArray.filter((t: any) => t != null && t > 0);
-        const isFixedRCD = result.itemName && result.itemName.includes('Fixed RCD');
-        // Fixed RCD shows each trip time on a separate line
-        if (isFixedRCD && validTripTimes.length > 0) {
-          tripTimeLinesCount = validTripTimes.length;
-        }
-      }
+      // Notes embedding is authoritative: createTestResult only stores the first value in the
+      // DB column but embeds the full array in notes as [TRIP_TIMES:[...]].
+      const resolvedTripTimes = resolveRcdTripTimes(result);
+      if (resolvedTripTimes.length > 0) tripTimeLinesCount = resolvedTripTimes.length;
     }
     
     // Calculate row height based on maximum lines needed
@@ -708,37 +737,12 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       doc.setTextColor(0, 0, 0); // Reset to black
 
       // Trip Times (margin + 88) - display all trip times for Fixed RCD, simple for Portable RCD
-      let validTripTimes: number[] = [];
-
-      if (Array.isArray(tripTimesArray) && tripTimesArray.length > 0) {
-        validTripTimes = tripTimesArray.filter((t: any) => t != null && t > 0);
-      } else {
-        const tripTimeValue = (result as any).trip_time || (result as any).tripTime;
-        if (tripTimeValue != null && Number(tripTimeValue) > 0) {
-          validTripTimes = [Number(tripTimeValue)];
-        }
-
-        const notesValue = result.notes || '';
-        const tripTimesMatch = notesValue.match(/\[TRIP_TIMES:\[([^\]]*)\]\]/);
-        if (tripTimesMatch && tripTimesMatch[1]) {
-          const parsedTimes = tripTimesMatch[1].split(',').map((t: string) => Number(t.trim())).filter((t: number) => t > 0);
-          if (parsedTimes.length > 0) {
-            validTripTimes = parsedTimes;
-          }
-        }
-      }
+      const validTripTimes: number[] = resolveRcdTripTimes(result);
 
       if (validTripTimes.length > 0) {
-        const isFixedRCD = result.classification === 'fixed-rcd' || (!result.classification && result.itemName?.includes('Fixed'));
-
-        if (isFixedRCD) {
-          validTripTimes.forEach((tripTime: number, index: number) => {
-            const tripTimeText = `${index + 1} - ${tripTime}ms`;
-            doc.text(tripTimeText, margin + 88, rowStartY + (index * lineHeight));
-          });
-        } else {
-          doc.text(`${validTripTimes[0]}ms`, margin + 88, rowStartY);
-        }
+        validTripTimes.forEach((tripTime: number, index: number) => {
+          doc.text(`${tripTime}ms`, margin + 88, rowStartY + (index * lineHeight));
+        });
       } else {
         doc.text('-', margin + 88, rowStartY);
       }

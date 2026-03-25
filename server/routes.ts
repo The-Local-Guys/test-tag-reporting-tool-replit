@@ -1222,15 +1222,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         passRate,
       });
 
+      const summary: {
+        totalItems: number;
+        passedItems: number;
+        failedItems: number;
+        passRate: number;
+        numberOfPushButtons?: number;
+        numberOfTimeTests?: number;
+      } = {
+        totalItems,
+        passedItems,
+        failedItems,
+        passRate,
+      };
+
+      // Add RCD-specific summary counts
+      if (session.serviceType === 'rcd_reporting') {
+        summary.numberOfPushButtons = results.filter((r) => r.pushButtonTest === true).length;
+        summary.numberOfTimeTests = results.filter((r) => r.injectionTimedTest === true).length;
+      }
+
       res.json({
         session,
         results,
-        summary: {
-          totalItems,
-          passedItems,
-          failedItems,
-          passRate,
-        },
+        summary,
       });
     } catch (error) {
       console.error("Error generating report:", error);
