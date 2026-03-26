@@ -409,18 +409,10 @@ export default function ReportPreview() {
         // RCD testing specific fields
         pushButtonTest: result.pushButtonTest || false,
         injectionTimedTest: result.injectionTimedTest || false,
-        // Handle both old tripTime (single value) and new tripTimes (array)
         tripTimes: (() => {
           const tripTimes = (result as any).tripTimes;
-          const legacyTripTime = (result as any).tripTime;
-          
-          // If tripTimes array exists, use it
           if (Array.isArray(tripTimes) && tripTimes.length > 0) {
-            return tripTimes;
-          }
-          // If legacy tripTime exists, convert to array
-          if (legacyTripTime != null) {
-            return [legacyTripTime];
+            return tripTimes.map((t: any) => Number(t)).filter((t: number) => t > 0);
           }
           return null;
         })(),
@@ -494,18 +486,10 @@ export default function ReportPreview() {
         // RCD testing specific fields
         pushButtonTest: result.pushButtonTest || false,
         injectionTimedTest: result.injectionTimedTest || false,
-        // Handle both old tripTime (single value) and new tripTimes (array)
         tripTimes: (() => {
           const tripTimes = (result as any).tripTimes;
-          const legacyTripTime = (result as any).tripTime;
-
-          // If tripTimes array exists, use it
           if (Array.isArray(tripTimes) && tripTimes.length > 0) {
-            return tripTimes;
-          }
-          // If legacy tripTime exists, convert to array
-          if (legacyTripTime != null) {
-            return [legacyTripTime];
+            return tripTimes.map((t: any) => Number(t)).filter((t: number) => t > 0);
           }
           return null;
         })(),

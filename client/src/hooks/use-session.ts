@@ -1049,29 +1049,16 @@ export function useSession() {
 
       console.log(`Submitting batch of ${batchedResults.length} results to server`);
 
-      // Convert tripTimes to numbers (DB returns numeric type as strings; migrate legacy single tripTime field)
+      // Normalize tripTimes to numbers (DB returns numeric type as strings)
       const normalizedResults = batchedResults.map(result => {
         const tripTimes = (result as any).tripTimes;
-        const legacyTripTime = (result as any).tripTime;
-
-        if (legacyTripTime != null && tripTimes == null) {
-          const tripTimeNum = Number(legacyTripTime);
-          if (isFinite(tripTimeNum) && tripTimeNum > 0) {
-            return { ...result, tripTimes: [tripTimeNum], tripTime: undefined };
-          }
-        } else if (tripTimes != null && Array.isArray(tripTimes)) {
-          const normalized = tripTimes.map((tripTime: any) => {
-            const num = Number(tripTime);
+        if (tripTimes != null && Array.isArray(tripTimes)) {
+          const normalized = tripTimes.map((t: any) => {
+            const num = Number(t);
             return isFinite(num) && num > 0 ? num : null;
           }).filter((v): v is number => v !== null);
-
-          if (normalized.length > 0) {
-            return { ...result, tripTimes: normalized };
-          } else {
-            return { ...result, tripTimes: undefined };
-          }
+          return { ...result, tripTimes: normalized.length > 0 ? normalized : undefined };
         }
-
         return result;
       });
 

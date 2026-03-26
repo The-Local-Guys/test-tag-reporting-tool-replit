@@ -18,28 +18,23 @@ interface ReportData {
 
 /**
  * Resolve the full array of trip times for an RCD test result.
- *
- * createTestResult (raw SQL) only writes the first trip time to the trip_time DB column but
- * embeds the full array in the notes field as [TRIP_TIMES:[30,28,31]].  updateTestResult
- * (Drizzle ORM) writes the full array to the column AND updates the notes embedding.
- *
- * This means the notes embedding is always at least as complete as the column value, so we
- * check it first to avoid showing only the first trip time for newly-created results.
+ * trip_times is now a proper NUMERIC[] column — use it directly.
+ * Notes-embedding and single-value fallbacks are kept for legacy records only.
  */
 function resolveRcdTripTimes(result: any): number[] {
-  // Priority 1: notes embedding (always has the full array)
+  // Priority 1: trip_times array column — authoritative
+  const tripTimesArray = result.tripTimes;
+  if (Array.isArray(tripTimesArray) && tripTimesArray.length > 0) {
+    const valid = tripTimesArray.filter((t: any) => t != null && Number(t) > 0).map((t: any) => Number(t));
+    if (valid.length > 0) return valid;
+  }
+
+  // Priority 2: legacy notes embedding — for records predating the trip_times column
   const notesValue = result.notes || '';
   const notesMatch = notesValue.match(/\[TRIP_TIMES:\[([^\]]*)\]\]/);
   if (notesMatch && notesMatch[1]) {
     const parsed = notesMatch[1].split(',').map((t: string) => Number(t.trim())).filter((t: number) => t > 0);
     if (parsed.length > 0) return parsed;
-  }
-
-  // Priority 2: tripTimes array column (correct after any Drizzle-based update)
-  const tripTimesArray = result.tripTimes;
-  if (Array.isArray(tripTimesArray) && tripTimesArray.length > 0) {
-    const valid = tripTimesArray.filter((t: any) => t != null && Number(t) > 0).map((t: any) => Number(t));
-    if (valid.length > 0) return valid;
   }
 
   // Priority 3: legacy single numeric column fallback
@@ -546,8 +541,6 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     // Use a shared helper so the row-height calculation matches the actual rendering logic below.
     let tripTimeLinesCount = 1;
     if (session.serviceType === 'rcd_reporting') {
-      // Notes embedding is authoritative: createTestResult only stores the first value in the
-      // DB column but embeds the full array in notes as [TRIP_TIMES:[...]].
       const resolvedTripTimes = resolveRcdTripTimes(result);
       if (resolvedTripTimes.length > 0) tripTimeLinesCount = resolvedTripTimes.length;
     }

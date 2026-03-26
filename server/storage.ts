@@ -540,11 +540,11 @@ export class DatabaseStorage implements IStorage {
         (session_id, asset_number, item_name, item_type, location, classification, result, frequency, failure_reason, action_taken, notes, photo_data, vision_inspection, electrical_test,
         maintenance_type, globe_type, discharge_test, switching_test, charging_test, lux_test, lux_reading, lux_compliant, manufacturer_info, installation_date,
         equipment_type, extinguisher_type, size, weight, test_type, fire_visual_inspection, pressure_test, accessibility_check, signage_check, operational_test,
-        push_button_test, injection_timed_test, trip_time, distribution_board_number, circuit_breaker_number, leakage_reading)
+        push_button_test, injection_timed_test, trip_times, distribution_board_number, circuit_breaker_number, leakage_reading)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40)
         RETURNING *
       `;
-      
+
       const { pool } = await import('./db');
       const result = await pool.query(query, [
         insertResult.sessionId,
@@ -557,10 +557,7 @@ export class DatabaseStorage implements IStorage {
         insertResult.frequency,
         insertResult.failureReason,
         insertResult.actionTaken,
-        // For RCD tests, append trip times JSON to notes for full data preservation
-        insertResult.tripTimes && Array.isArray(insertResult.tripTimes) && insertResult.tripTimes.length > 0
-          ? (insertResult.notes ? `${insertResult.notes} [TRIP_TIMES:${JSON.stringify(insertResult.tripTimes)}]` : `[TRIP_TIMES:${JSON.stringify(insertResult.tripTimes)}]`)
-          : insertResult.notes,
+        insertResult.notes ?? null,
         insertResult.photoData,
         insertResult.visionInspection !== undefined ? insertResult.visionInspection : true,
         insertResult.electricalTest !== undefined ? insertResult.electricalTest : true,
@@ -589,10 +586,9 @@ export class DatabaseStorage implements IStorage {
         // RCD specific fields
         insertResult.pushButtonTest ?? null,
         insertResult.injectionTimedTest ?? null,
-        // Store first trip time value in numeric column (database column is single numeric, not array)
-        // Full trip times array is preserved in notes field above
+        // Store full trip times array directly in the trip_times NUMERIC[] column
         insertResult.tripTimes && Array.isArray(insertResult.tripTimes) && insertResult.tripTimes.length > 0
-          ? Number(insertResult.tripTimes[0])
+          ? insertResult.tripTimes.map(Number).filter((n: number) => isFinite(n) && n > 0)
           : null,
         insertResult.distributionBoardNumber ?? null,
         insertResult.circuitBreakerNumber ?? null,
@@ -737,29 +733,10 @@ export class DatabaseStorage implements IStorage {
   async updateTestResult(id: number, data: Partial<InsertTestResult>): Promise<TestResult> {
     const updateData = { ...data };
 
-    // Keep the [TRIP_TIMES:[...]] notes embedding in sync with the tripTimes column.
-    // On creation this is handled by createTestResult, but PATCH updates only touch the
-    // tripTimes column and leave the notes embedding stale — causing session resume to
-    // load old values from the notes regex instead of the updated column.
-    if ('tripTimes' in updateData || 'notes' in updateData) {
-      // Fetch current notes if we are not already replacing them
-      let baseNotes: string | null = updateData.notes !== undefined
-        ? (updateData.notes ?? null)
-        : ((await db.select({ notes: testResults.notes }).from(testResults).where(eq(testResults.id, id)))[0]?.notes ?? null);
-
-      // Strip any existing [TRIP_TIMES:[...]] pattern from notes
-      const strippedNotes = baseNotes ? baseNotes.replace(/\s*\[TRIP_TIMES:\[[^\]]*\]\]/g, '').trim() : null;
-
-      const newTripTimes = updateData.tripTimes;
-      if (Array.isArray(newTripTimes) && newTripTimes.length > 0) {
-        // Re-embed updated trip times
-        updateData.notes = strippedNotes
-          ? `${strippedNotes} [TRIP_TIMES:${JSON.stringify(newTripTimes)}]`
-          : `[TRIP_TIMES:${JSON.stringify(newTripTimes)}]`;
-      } else if ('tripTimes' in updateData) {
-        // Trip times were cleared — remove embedding, keep remaining notes
-        updateData.notes = strippedNotes || null;
-      }
+    // Strip any legacy [TRIP_TIMES:[...]] embedding from notes if present
+    // (produced by old code before the trip_times array column was added)
+    if (updateData.notes) {
+      updateData.notes = updateData.notes.replace(/\s*\[TRIP_TIMES:\[[^\]]*\]\]/g, '').trim() || null;
     }
 
     const [result] = await db

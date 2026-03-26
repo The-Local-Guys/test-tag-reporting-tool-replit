@@ -93,7 +93,7 @@ export const testResults = pgTable("test_results", {
   // RCD testing specific fields
   pushButtonTest: boolean("push_button_test"), // Push button test completed
   injectionTimedTest: boolean("injection_timed_test"), // Injection/Timed test completed
-  tripTimes: numeric("trip_time").array(), // Array of trip times in milliseconds for timed test (for Fixed RCD, up to 3 values)
+  tripTimes: numeric("trip_times").array(), // Array of trip times in milliseconds for timed test (for Fixed RCD, up to 3 values)
   distributionBoardNumber: text("distribution_board_number"), // Distribution board number for Fixed RCD
   circuitBreakerNumber: text("circuit_breaker_number"), // Circuit breaker number for Fixed RCD
   // Microwave leakage testing specific fields

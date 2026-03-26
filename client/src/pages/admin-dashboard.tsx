@@ -1125,14 +1125,7 @@ export default function AdminDashboard() {
       // RCD-specific fields
       pushButtonTest: result.pushButtonTest ?? result.push_button_test ?? false,
       injectionTimedTest: result.injectionTimedTest ?? result.injection_timed_test ?? false,
-      // Notes embedding is authoritative for trip times (DB column only stores first value for new results)
       tripTimes: (() => {
-        const notesVal = result.notes || '';
-        const m = notesVal.match(/\[TRIP_TIMES:\[([^\]]*)\]\]/);
-        if (m && m[1]) {
-          const parsed = m[1].split(',').map((t: string) => Number(t.trim())).filter((t: number) => t > 0);
-          if (parsed.length > 0) return parsed;
-        }
         const stored = result.tripTimes ?? result.trip_times ?? [];
         if (Array.isArray(stored) && stored.length > 0) return stored.map((t: any) => Number(t)).filter((t: number) => t > 0);
         return [];

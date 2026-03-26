@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +33,13 @@ export function TestResultEditModal({
   onFrequencyChange,
   isSaving = false,
 }: TestResultEditModalProps) {
+
+  // Local raw string for the trip times input so typing commas/partial numbers works naturally.
+  // Parsed to numbers only on blur.
+  const [tripTimesInput, setTripTimesInput] = useState('');
+  useEffect(() => {
+    setTripTimesInput((editResultData.tripTimes || []).join(', '));
+  }, [isOpen]); // sync when modal opens
 
   const getFailureReasons = () => {
     switch (serviceType) {
@@ -279,9 +287,10 @@ export function TestResultEditModal({
               <div>
                 <Label>Trip Times (ms, comma-separated)</Label>
                 <Input
-                  value={(editResultData.tripTimes || []).join(', ')}
-                  onChange={(e) => {
-                    const times = e.target.value.split(',').map(t => Number(t.trim())).filter(t => t > 0);
+                  value={tripTimesInput}
+                  onChange={(e) => setTripTimesInput(e.target.value)}
+                  onBlur={(e) => {
+                    const times = e.target.value.split(',').map(t => Number(t.trim())).filter(t => isFinite(t) && t > 0);
                     setEditResultData((prev: any) => ({ ...prev, tripTimes: times }));
                   }}
                   placeholder="e.g., 30, 28, 31"

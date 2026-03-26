@@ -442,15 +442,15 @@ export function generateExcelReport(data: ReportData): Blob {
       // RCD reporting specific format
       const equipmentTypeDisplay = (result.classification === 'fixed-rcd' || (!result.classification && result.itemName?.includes('Fixed'))) ? 'Fixed RCD' : 'Portable RCD';
       const toTestCell = (value: boolean | null | undefined) => value == null ? 'N/A' : (value ? 'Yes' : 'No');
-      // Extract trip times with notes fallback (notes contain full array as [TRIP_TIMES:[25,30]])
-      let tripTimesArray = (result as any).tripTimes;
+      // Extract trip times from the trip_times NUMERIC[] array column
       let validTripTimes: number[] = [];
+      const tripTimesArray = (result as any).tripTimes;
 
       if (Array.isArray(tripTimesArray) && tripTimesArray.length > 0) {
         validTripTimes = tripTimesArray.map((t: any) => Number(t)).filter((t: number) => isFinite(t) && t > 0);
       }
 
-      // Fallback: parse from notes field
+      // Fallback: legacy notes embedding for records predating the trip_times column
       if (validTripTimes.length === 0) {
         const notesValue = result.notes || '';
         const tripTimesMatch = notesValue.match(/\[TRIP_TIMES:\[([^\]]*)\]\]/);
@@ -459,7 +459,7 @@ export function generateExcelReport(data: ReportData): Blob {
         }
       }
 
-      // Fallback: legacy single trip time field
+      // Fallback: legacy single trip_time scalar column
       if (validTripTimes.length === 0) {
         const singleTripTime = (result as any).trip_time || (result as any).tripTime;
         if (singleTripTime != null && Number(singleTripTime) > 0) {
