@@ -213,7 +213,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
   doc.text('Date of Certification:', margin, yPosition);
   doc.setFont('helvetica', 'normal');
   doc.text(formatDateForCertificate(certificate.certificationDate), rightX, yPosition, { align: 'right' });
-  yPosition += 10;
+  yPosition += 7;
 
   // All service validity dates - always show all 5 testing types
   const allServiceTypes = [
@@ -223,19 +223,19 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
     { type: 'rcd_reporting', label: 'RCD Reporting Valid Until:' },
     { type: 'microwave_leakage', label: 'Microwave Leakage Testing Valid Until:' }
   ];
-  
+
   allServiceTypes.forEach(({ type, label }) => {
     // "Valid Until" labels in normal (thinner) font
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
     doc.text(label, margin, yPosition);
-    
+
     // Only show date if this service was selected
     if (services.includes(type) && validityDates[type]) {
       doc.text(formatDateForCertificate(validityDates[type]), rightX, yPosition, { align: 'right' });
     }
-    
-    yPosition += 10;
+
+    yPosition += 7;
   });
 
   // Add footer image at bottom - full width, maintaining aspect ratio

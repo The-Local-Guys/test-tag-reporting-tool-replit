@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Certificate } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
 interface CertificateModalProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ interface CertificateModalProps {
 
 export function CertificateModal({ isOpen, onClose, onSubmit, certificate }: CertificateModalProps) {
   const { user } = useAuth();
+  const { toast } = useToast();
   const isEditMode = !!certificate;
 
   const [formData, setFormData] = useState({
@@ -240,11 +242,28 @@ export function CertificateModal({ isOpen, onClose, onSubmit, certificate }: Cer
           <Textarea
             id="address"
             value={formData.address}
-            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+            onChange={(e) => {
+              const lines = e.target.value.split('\n');
+              const hasLongLine = lines.some(line => line.length > 80);
+              if (hasLongLine) {
+                toast({
+                  title: "Line too long",
+                  description: "Each line must be 80 characters or less.",
+                  variant: "destructive",
+                });
+                return;
+              }
+              if (lines.length <= 7) {
+                setFormData({ ...formData, address: e.target.value });
+              }
+            }}
             placeholder="Enter address (e.g., Street, Area, City)"
             rows={3}
             className="resize-none"
           />
+          <p className="text-xs text-muted-foreground mt-1">
+            Maximum 7 lines, 80 characters per line. {formData.address.split('\n').length}/7 lines used.
+          </p>
         </div>
 
         {/* Services Selection with Validity Periods */}
