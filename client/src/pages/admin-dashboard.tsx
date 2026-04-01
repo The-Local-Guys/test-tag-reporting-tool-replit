@@ -52,6 +52,8 @@ import {
   PlayCircle,
   Clock,
   AlertCircle,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { generatePDFReport, downloadPDF } from "@/lib/pdf-generator";
 import { generateExcelReport, downloadExcel } from "@/lib/excel-generator";
@@ -118,9 +120,12 @@ export default function AdminDashboard() {
   const [newUserData, setNewUserData] = useState({
     username: "",
     password: "",
+    confirmPassword: "",
     fullName: "",
     role: "technician" as "technician" | "support_center" | "super_admin",
   });
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showNewConfirmPassword, setShowNewConfirmPassword] = useState(false);
   const [selectedTechnicianFilter, setSelectedTechnicianFilter] =
     useState<string>("all");
   const [selectedDraftTechnicianFilter, setSelectedDraftTechnicianFilter] =
@@ -799,6 +804,7 @@ export default function AdminDashboard() {
       setNewUserData({
         username: "",
         password: "",
+        confirmPassword: "",
         fullName: "",
         role: "technician",
       });
@@ -1560,6 +1566,14 @@ export default function AdminDashboard() {
       toast({
         title: "Missing information",
         description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (newUserData.password !== newUserData.confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Passwords do not match.",
         variant: "destructive",
       });
       return;
@@ -2474,19 +2488,58 @@ export default function AdminDashboard() {
 
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={newUserData.password}
-              onChange={(e) =>
-                setNewUserData((prev) => ({
-                  ...prev,
-                  password: e.target.value,
-                }))
-              }
-              placeholder="Enter password"
-              required
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showNewPassword ? "text" : "password"}
+                value={newUserData.password}
+                onChange={(e) =>
+                  setNewUserData((prev) => ({
+                    ...prev,
+                    password: e.target.value,
+                  }))
+                }
+                placeholder="Enter password"
+                required
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                tabIndex={-1}
+              >
+                {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <div className="relative">
+              <Input
+                id="confirmPassword"
+                type={showNewConfirmPassword ? "text" : "password"}
+                value={newUserData.confirmPassword}
+                onChange={(e) =>
+                  setNewUserData((prev) => ({
+                    ...prev,
+                    confirmPassword: e.target.value,
+                  }))
+                }
+                placeholder="Confirm password"
+                required
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewConfirmPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                tabIndex={-1}
+              >
+                {showNewConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
 
           <div className="space-y-2">
