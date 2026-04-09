@@ -27,6 +27,7 @@ import Environments from "@/pages/environments";
 
 import Login from "@/pages/login";
 import FormTypes from "@/pages/form-types";
+import PrivacyPolicy from "@/pages/privacy-policy";
 import { ConditionalNavProvider } from "./contexts/ConditionalNavContext";
 import { initPostHog, identifyUser, trackPageView, trackLogout } from "./lib/posthog";
 
@@ -87,6 +88,11 @@ function Router() {
       }
     }
   }, [location, loginMode, isAuthenticated]);
+
+  // Public routes — accessible without authentication
+  if (location === '/privacy-policy') {
+    return <PrivacyPolicy />;
+  }
 
   // Now handle conditional rendering after all hooks
   if (!isAuthenticated) {
