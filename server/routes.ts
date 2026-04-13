@@ -1239,7 +1239,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add RCD-specific summary counts
       if (session.serviceType === 'rcd_reporting') {
         summary.numberOfPushButtons = results.filter((r) => r.pushButtonTest === true).length;
-        summary.numberOfTimeTests = results.filter((r) => r.injectionTimedTest === true).length;
+        summary.numberOfTimeTests = results
+          .filter((r) => r.injectionTimedTest === true)
+          .reduce((sum, r) => {
+            const times = Array.isArray(r.tripTimes) && r.tripTimes.length > 0 ? r.tripTimes.length : 1;
+            return sum + times;
+          }, 0);
       }
 
       res.json({

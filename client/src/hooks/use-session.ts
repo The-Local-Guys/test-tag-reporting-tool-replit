@@ -655,7 +655,9 @@ export function useSession() {
             numberOfPushButtons++;
           }
           if ((result as any).injectionTimedTest === true) {
-            numberOfTimeTests++;
+            const tripTimes = (result as any).tripTimes;
+            const count = Array.isArray(tripTimes) && tripTimes.length > 0 ? tripTimes.length : 1;
+            numberOfTimeTests += count;
           }
         });
 
