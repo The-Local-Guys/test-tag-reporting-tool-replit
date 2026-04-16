@@ -433,6 +433,15 @@ export function useSession() {
         }
       }
 
+      // Restore last used distribution board number from most recent Fixed RCD result
+      const lastFixedRcdResult = [...loadedResults]
+        .reverse()
+        .find(r => r.itemName?.toLowerCase().includes('fixed rcd'));
+      if (lastFixedRcdResult?.distributionBoardNumber) {
+        setCurrentDistributionBoardNumber(lastFixedRcdResult.distributionBoardNumber);
+        console.log('📍 Restored distribution board number from last Fixed RCD result:', lastFixedRcdResult.distributionBoardNumber);
+      }
+
       console.log('⚙️ ********** COUNTERS UPDATED FROM DB **********');
       console.log(`Updated asset counters: 12M=${maxTwelvemonthly}, 6M=${maxSixmonthly}, 5Y=${maxFiveyearly}, 24M=${maxTwentyfourmonthly}, 3M=${maxThreemonthly}, M=${maxMonthly}`);
       console.log('⚙️ ********** END COUNTER UPDATE **********');
