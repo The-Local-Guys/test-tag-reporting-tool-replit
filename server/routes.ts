@@ -552,6 +552,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Copy a session (duplicate with new date, keeping all equipment and results)
+  app.post("/api/sessions/:id/copy", requireAuth, async (req, res) => {
+    try {
+      const sourceId = parseInt(req.params.id);
+      const userId = req.session.userId!;
+      const { testDate } = req.body;
+
+      if (!testDate) {
+        return res.status(400).json({ message: "testDate is required" });
+      }
+
+      // Load source session
+      const source = await storage.getTestSession(sourceId);
+      if (!source) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+
+      // Allow session owner or admin roles
+      const sessionUser = req.session.user;
+      const isAdmin = sessionUser && (sessionUser.role === "super_admin" || sessionUser.role === "support_center");
+      if (!isAdmin && source.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Create new session with same metadata but new date and draft status
+      const newSession = await storage.createTestSession({
+        serviceType: source.serviceType,
+        testDate,
+        technicianName: source.technicianName,
+        clientName: source.clientName,
+        siteContact: source.siteContact,
+        address: source.address,
+        country: source.country,
+        complianceStandard: source.complianceStandard ?? undefined,
+        technicianLicensed: source.technicianLicensed ?? undefined,
+        startingAssetNumber: source.startingAssetNumber ?? undefined,
+        customStartingNumbers: source.customStartingNumbers ?? undefined,
+        userId,
+        status: "draft",
+      });
+
+      // Copy all non-deleted results to the new session
+      const sourceResults = await storage.getTestResultsBySession(sourceId);
+      for (const r of sourceResults) {
+        await storage.createTestResult({
+          sessionId: newSession.id,
+          assetNumber: r.assetNumber,
+          itemName: r.itemName,
+          itemType: r.itemType,
+          location: r.location,
+          classification: r.classification,
+          result: r.result,
+          failureReason: r.failureReason ?? undefined,
+          actionTaken: r.actionTaken ?? undefined,
+          frequency: r.frequency,
+          notes: r.notes ?? undefined,
+          visionInspection: r.visionInspection ?? undefined,
+          electricalTest: r.electricalTest ?? undefined,
+          // Emergency exit light fields
+          maintenanceType: r.maintenanceType ?? undefined,
+          globeType: r.globeType ?? undefined,
+          dischargeTest: r.dischargeTest ?? undefined,
+          switchingTest: r.switchingTest ?? undefined,
+          chargingTest: r.chargingTest ?? undefined,
+          manufacturerInfo: r.manufacturerInfo ?? undefined,
+          installationDate: r.installationDate ?? undefined,
+          luxTest: r.luxTest ?? undefined,
+          luxReading: r.luxReading ?? undefined,
+          luxCompliant: r.luxCompliant ?? undefined,
+          // Fire testing fields
+          equipmentType: r.equipmentType ?? undefined,
+          extinguisherType: r.extinguisherType ?? undefined,
+          size: r.size ?? undefined,
+          weight: r.weight ?? undefined,
+          testType: r.testType ?? undefined,
+          fireVisualInspection: r.fireVisualInspection ?? undefined,
+          accessibilityCheck: r.accessibilityCheck ?? undefined,
+          signageCheck: r.signageCheck ?? undefined,
+          operationalTest: r.operationalTest ?? undefined,
+          pressureTest: r.pressureTest ?? undefined,
+          // RCD fields
+          pushButtonTest: r.pushButtonTest ?? undefined,
+          injectionTimedTest: r.injectionTimedTest ?? undefined,
+          tripTimes: r.tripTimes ?? undefined,
+          distributionBoardNumber: r.distributionBoardNumber ?? undefined,
+          circuitBreakerNumber: r.circuitBreakerNumber ?? undefined,
+          // Microwave fields
+          leakageReading: r.leakageReading ?? undefined,
+          // photoData intentionally omitted
+        });
+      }
+
+      res.json({ session: newSession });
+    } catch (error) {
+      console.error("Error copying session:", error);
+      res.status(500).json({ message: "Failed to copy session" });
+    }
+  });
+
   // Update custom starting numbers for a session
   app.patch("/api/sessions/:id/custom-numbers", requireAuth, async (req, res) => {
     try {

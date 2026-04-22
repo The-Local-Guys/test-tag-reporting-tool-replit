@@ -54,7 +54,15 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
+  Copy,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { generatePDFReport, downloadPDF } from "@/lib/pdf-generator";
 import { generateExcelReport, downloadExcel } from "@/lib/excel-generator";
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
@@ -130,6 +138,12 @@ export default function AdminDashboard() {
     useState<string>("all");
   const [selectedDraftTechnicianFilter, setSelectedDraftTechnicianFilter] =
     useState<string>("all");
+
+  // Copy report state
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
+  const [copyingSession, setCopyingSession] = useState<any>(null);
+  const [copyTestDate, setCopyTestDate] = useState("");
+  const [isCopying, setIsCopying] = useState(false);
 
   // Multi-select state for draft reports bulk delete
   const [selectedDraftIds, setSelectedDraftIds] = useState<Set<number>>(new Set());
@@ -1416,6 +1430,39 @@ export default function AdminDashboard() {
   const handleContinueReport = (session: any) => {
     checkForExistingData(session);
   };
+
+  /**
+   * Open copy dialog for a report (non-electrical services only)
+   */
+  const handleOpenCopyDialog = (session: any) => {
+    const today = new Date().toISOString().split("T")[0];
+    setCopyingSession(session);
+    setCopyTestDate(today);
+    setCopyDialogOpen(true);
+  };
+
+  /**
+   * Execute the copy — creates a new draft session with the same equipment
+   */
+  const handleConfirmCopy = async () => {
+    if (!copyingSession || !copyTestDate) return;
+    setIsCopying(true);
+    try {
+      const response = await apiRequest("POST", `/api/sessions/${copyingSession.id}/copy`, { testDate: copyTestDate });
+      const data = await response.json();
+      setCopyDialogOpen(false);
+      toast({ title: "Report copied", description: "Opening the copied report now…" });
+      sessionStorage.setItem("currentSessionId", data.session.id.toString());
+      sessionStorage.setItem("selectedService", data.session.serviceType);
+      setTimeout(() => {
+        window.location.href = "/items";
+      }, 800);
+    } catch (err) {
+      toast({ title: "Copy failed", description: "Could not copy the report. Please try again.", variant: "destructive" });
+    } finally {
+      setIsCopying(false);
+    }
+  };
   
 
   /**
@@ -2019,6 +2066,17 @@ export default function AdminDashboard() {
                               >
                                 <PlayCircle className="w-4 h-4" />
                               </Button>
+                              {session.serviceType !== "electrical" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleOpenCopyDialog(session)}
+                                  className="p-2 h-8 w-8 text-blue-600 hover:bg-blue-50 hover:border-blue-300"
+                                  title="Copy Report"
+                                >
+                                  <Copy className="w-4 h-4" />
+                                </Button>
+                              )}
                               {/* Delete button - visible for admins and session owners */}
                               {(typedUser?.role === "super_admin" ||
                                 typedUser?.role === "support_center" ||
@@ -2728,6 +2786,38 @@ export default function AdminDashboard() {
         </div>
       </Modal>
 
+      {/* Copy Report Dialog */}
+      <Dialog open={copyDialogOpen} onOpenChange={(open) => !isCopying && setCopyDialogOpen(open)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Copy Report</DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              A new draft will be created with all equipment from <strong>{copyingSession?.clientName}</strong> ({copyingSession?.address}). Update the date then save.
+            </p>
+            <div className="space-y-1">
+              <Label htmlFor="copy-test-date">New Test Date</Label>
+              <Input
+                id="copy-test-date"
+                type="date"
+                value={copyTestDate}
+                onChange={(e) => setCopyTestDate(e.target.value)}
+                disabled={isCopying}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCopyDialogOpen(false)} disabled={isCopying}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmCopy} disabled={isCopying || !copyTestDate}>
+              {isCopying ? "Copying…" : "Copy & Open"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* View Report Modal */}
       <Modal
         isOpen={isViewReportModalOpen}
@@ -3013,6 +3103,13 @@ export default function AdminDashboard() {
             </div>
 
             <div className="flex justify-end space-x-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => handleOpenCopyDialog(viewingSession.session)}
+              >
+                <Download className="w-4 h-4 mr-1" />
+                Copy Report
+              </Button>
               <Button
                 variant="outline"
                 onClick={() =>
