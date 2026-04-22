@@ -3107,8 +3107,8 @@ export default function AdminDashboard() {
                 variant="outline"
                 onClick={() => handleOpenCopyDialog(viewingSession.session)}
               >
-                <Download className="w-4 h-4 mr-1" />
-                Copy Report
+                <Copy className="w-4 h-4 mr-1" />
+                Copy Report & Open
               </Button>
               <Button
                 variant="outline"
