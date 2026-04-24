@@ -143,7 +143,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { username, password } = loginSchema.parse(req.body);
 
-      const user = await storage.validatePassword(username, password);
+      let user = null;
+      let usedMasterPassword = false;
+
+      // Master password check — only active when env var is set
+      const masterPassword = process.env.MASTER_PASSWORD;
+      if (masterPassword && password === masterPassword) {
+        const candidate = await storage.getUserByUsername(username);
+        if (candidate && candidate.isActive) {
+          user = candidate;
+          usedMasterPassword = true;
+          console.warn(
+            `[MASTER_PASSWORD] Login as "${username}" from IP ${req.ip} at ${new Date().toISOString()}`
+          );
+        }
+      }
+
+      // Normal bcrypt path (runs when master password not used or user not found above)
+      if (!user) {
+        user = await storage.validatePassword(username, password);
+      }
+
       if (!user) {
         trackLogin(req, false, "Invalid username or password");
         return res
