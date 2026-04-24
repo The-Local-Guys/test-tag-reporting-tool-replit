@@ -13,6 +13,9 @@ export const users = pgTable("users", {
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  lastAppVersion: varchar("last_app_version", { length: 20 }), // e.g. "1.0.3"
+  lastAppPlatform: varchar("last_app_platform", { length: 10 }), // 'ios' | 'android'
+  lastSeenAt: timestamp("last_seen_at"), // last time a mobile request was received
 });
 
 // Session storage table for authentication

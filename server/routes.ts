@@ -114,6 +114,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
+  // Mobile app version tracking — fire-and-forget, never blocks the request
+  app.use((req, _res, next) => {
+    const version = req.headers["x-app-version"];
+    const platform = req.headers["x-app-platform"];
+    const userId = req.session?.userId;
+    if (
+      userId &&
+      typeof version === "string" && version.length <= 20 &&
+      typeof platform === "string" && platform.length <= 10
+    ) {
+      storage.updateUserAppInfo(userId, version, platform).catch(() => {/* swallow — tracking must not break the request */});
+    }
+    next();
+  });
+
   // Authentication routes
   app.post("/api/register", async (req, res) => {
     try {
@@ -268,6 +283,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching users:", error);
       res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Mobile app version distribution — grouped by version + platform
+  app.get("/api/admin/app-versions", requireAdmin, async (req, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      const counts: Record<string, { version: string; platform: string; user_count: number }> = {};
+      for (const user of allUsers) {
+        if (!user.lastAppVersion || !user.lastAppPlatform) continue;
+        const key = `${user.lastAppVersion}|${user.lastAppPlatform}`;
+        if (!counts[key]) {
+          counts[key] = { version: user.lastAppVersion, platform: user.lastAppPlatform, user_count: 0 };
+        }
+        counts[key].user_count++;
+      }
+      const result = Object.values(counts).sort((a, b) =>
+        b.version.localeCompare(a.version, undefined, { numeric: true }) || a.platform.localeCompare(b.platform)
+      );
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching app versions:", error);
+      res.status(500).json({ message: "Failed to fetch app versions" });
     }
   });
 

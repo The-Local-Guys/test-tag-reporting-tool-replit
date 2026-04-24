@@ -28,6 +28,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   validatePassword(username: string, password: string): Promise<User | null>;
   updateUserPassword(userId: number, newPassword: string): Promise<void>;
+  updateUserAppInfo(userId: number, version: string, platform: string): Promise<void>;
 
   // Admin operations
   getAllUsers(): Promise<User[]>;
@@ -162,8 +163,15 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
   }
 
+  async updateUserAppInfo(userId: number, version: string, platform: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ lastAppVersion: version, lastAppPlatform: platform, lastSeenAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
   // Admin operations
-  
+
   /**
    * Retrieves all users from the database for admin management
    * Used in admin dashboard to display user list with roles and status
