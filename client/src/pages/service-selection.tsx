@@ -29,14 +29,15 @@ export default function ServiceSelection() {
   const [isDiscarding, setIsDiscarding] = useState(false);
 
   // Fetch draft sessions from server (database-first approach)
-  const { data: draftSessions, isLoading: isCheckingDrafts } = useQuery<DraftSession[]>({
+  const { data: draftSessionsData, isLoading: isCheckingDrafts } = useQuery<{ sessions: DraftSession[]; total: number; page: number; totalPages: number }>({
     queryKey: ['/api/sessions/drafts'],
     staleTime: 0, // Always refetch
   });
+  const draftSessions = draftSessionsData?.sessions || [];
 
   // Show drafts dialog if there are any draft sessions with items
   useEffect(() => {
-    if (draftSessions && draftSessions.length > 0) {
+    if (draftSessions.length > 0) {
       // Only show dialog for drafts that have items (real work done)
       const draftsWithItems = draftSessions.filter(d => d.totalItems > 0);
       if (draftsWithItems.length > 0) {

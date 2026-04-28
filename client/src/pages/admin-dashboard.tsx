@@ -74,6 +74,70 @@ import { failureReasons, emergencyFailureReasons, fireFailureReasons, rcdFailure
  * Provides user management, session editing, data export, and system monitoring
  * Restricted to super_admin and support_center roles
  */
+function ReportsPagination({ page, totalPages, total, limit = 50, onPageChange }: {
+  page: number;
+  totalPages: number;
+  total: number;
+  limit?: number;
+  onPageChange: (p: number) => void;
+}) {
+  const getPageNumbers = () => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const pages: (number | "...")[] = [];
+    pages.push(1);
+    if (page > 3) pages.push("...");
+    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) {
+      pages.push(i);
+    }
+    if (page < totalPages - 2) pages.push("...");
+    pages.push(totalPages);
+    return pages;
+  };
+
+  return (
+    <div className="flex items-center justify-between">
+      <p className="text-sm text-gray-600">
+        Showing {((page - 1) * limit) + 1}–{Math.min(page * limit, total)} of {total} reports
+      </p>
+      <div className="flex items-center gap-1">
+        <Button
+          variant="outline"
+          size="sm"
+          className="p-2 h-8 w-8"
+          onClick={() => onPageChange(Math.max(1, page - 1))}
+          disabled={page === 1}
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </Button>
+        {getPageNumbers().map((p, i) =>
+          p === "..." ? (
+            <span key={`ellipsis-${i}`} className="px-1 text-sm text-gray-400">…</span>
+          ) : (
+            <Button
+              key={p}
+              variant={p === page ? "default" : "outline"}
+              size="sm"
+              className="h-8 w-8 p-0 text-sm"
+              onClick={() => onPageChange(p as number)}
+            >
+              {p}
+            </Button>
+          )
+        )}
+        <Button
+          variant="outline"
+          size="sm"
+          className="p-2 h-8 w-8"
+          onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+          disabled={page === totalPages}
+        >
+          <ChevronRight className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const { user } = useAuth();
   
@@ -151,6 +215,8 @@ export default function AdminDashboard() {
   // Pagination states
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+  const [reportsPage, setReportsPage] = useState(1);
+  const [draftsPage, setDraftsPage] = useState(1);
   
   // Asset number calculation states
   const [monthlyAssetCount, setMonthlyAssetCount] = useState(0);
@@ -239,29 +305,53 @@ export default function AdminDashboard() {
     refetchOnMount: true, // Always refetch on mount
   });
 
-  // Fetch all test sessions
+  // Fetch all test sessions (paginated)
   const { data: sessions, isLoading: sessionsLoading } = useQuery({
-    queryKey: ["/api/admin/sessions"],
-    retry: false,
-    staleTime: 0, // Always consider data stale
-    refetchOnMount: true, // Always refetch on mount
-    refetchInterval: 5000,
-    refetchIntervalInBackground:true
-  });
-
-  // Fetch all draft sessions (admin only - for recovery purposes)
-  const { data: adminDraftSessions, isLoading: adminDraftsLoading } = useQuery({
-    queryKey: ["/api/admin/sessions/drafts"],
+    queryKey: ["/api/admin/sessions", reportsPage, selectedTechnicianFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams({ page: reportsPage.toString(), limit: "50" });
+      if (selectedTechnicianFilter !== "all") {
+        params.set("technicianFilter", selectedTechnicianFilter);
+      }
+      const res = await fetch(`/api/admin/sessions?${params}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch sessions");
+      return res.json();
+    },
     retry: false,
     staleTime: 0,
     refetchOnMount: true,
-    refetchInterval: 10000, // Refresh every 10 seconds
+    refetchInterval: 5000,
+    refetchIntervalInBackground: true,
+  });
+
+  // Fetch all draft sessions (admin only - for recovery purposes, paginated)
+  const { data: adminDraftSessions, isLoading: adminDraftsLoading } = useQuery({
+    queryKey: ["/api/admin/sessions/drafts", draftsPage, selectedDraftTechnicianFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams({ page: draftsPage.toString(), limit: "50" });
+      if (selectedDraftTechnicianFilter !== "all") {
+        params.set("technicianFilter", selectedDraftTechnicianFilter);
+      }
+      const res = await fetch(`/api/admin/sessions/drafts?${params}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch draft sessions");
+      return res.json();
+    },
+    retry: false,
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchInterval: 10000,
     enabled: typedUser?.role === 'super_admin' || typedUser?.role === 'support_center',
   });
 
-  // Fetch own draft sessions (technician only)
+  // Fetch own draft sessions (technician only, paginated)
   const { data: technicianDraftSessions, isLoading: technicianDraftsLoading } = useQuery({
-    queryKey: ["/api/sessions/drafts"],
+    queryKey: ["/api/sessions/drafts", draftsPage],
+    queryFn: async () => {
+      const params = new URLSearchParams({ page: draftsPage.toString(), limit: "50" });
+      const res = await fetch(`/api/sessions/drafts?${params}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch draft sessions");
+      return res.json();
+    },
     retry: false,
     staleTime: 0,
     refetchOnMount: true,
@@ -282,62 +372,20 @@ export default function AdminDashboard() {
     queryClient.invalidateQueries({ queryKey: ["/api/admin/sessions/drafts"] });
   }, [queryClient]);
 
-  // Filter sessions based on selected technician and sort by newest first
-  const filteredSessions = Array.isArray(sessions)
-    ? sessions
-        .filter((session: any) => {
-          if (selectedTechnicianFilter === "all") return true;
-          return (
-            (session.technicianFullName || session.technicianName) ===
-            selectedTechnicianFilter
-          );
-        })
-        .sort((a: any, b: any) => {
-          // Sort by creation timestamp descending (newest first), fall back to test date
-          const dateA = new Date(a.createdAt || a.testDate);
-          const dateB = new Date(b.createdAt || b.testDate);
-          return dateB.getTime() - dateA.getTime();
-        })
+  // Sessions are already filtered and sorted server-side
+  const filteredSessions: any[] = sessions?.sessions || [];
+
+  // Get unique technician names for filter dropdown from users list
+  const uniqueTechnicians = Array.isArray(users)
+    ? (users as any[]).map((u: any) => u.fullName).filter(Boolean).sort()
     : [];
 
-  // Get unique technician names for filter dropdown
-  const uniqueTechnicians = Array.isArray(sessions)
-    ? [
-        ...Array.from(new Set(
-          sessions.map(
-            (session: any) =>
-              session.technicianFullName || session.technicianName,
-          ),
-        )),
-      ]
-        .filter(Boolean)
-        .sort()
-    : [];
+  // Draft sessions are already filtered and sorted server-side
+  const filteredDraftSessions: any[] = adminDraftSessions?.sessions || [];
 
-  // Filter draft sessions based on selected technician and sort by last activity
-  const filteredDraftSessions = Array.isArray(adminDraftSessions)
-    ? adminDraftSessions
-        .filter((session: any) => {
-          if (selectedDraftTechnicianFilter === "all") return true;
-          return session.technicianName === selectedDraftTechnicianFilter;
-        })
-        .sort((a: any, b: any) => {
-          // Sort by last activity descending (most recent first)
-          const dateA = new Date(a.lastActivityAt || a.createdAt);
-          const dateB = new Date(b.lastActivityAt || b.createdAt);
-          return dateB.getTime() - dateA.getTime();
-        })
-    : [];
-
-  // Get unique technician names for draft filter dropdown
-  const uniqueDraftTechnicians = Array.isArray(adminDraftSessions)
-    ? [
-        ...Array.from(new Set(
-          adminDraftSessions.map((session: any) => session.technicianName),
-        )),
-      ]
-        .filter(Boolean)
-        .sort()
+  // Get unique technician names for draft filter dropdown from users list
+  const uniqueDraftTechnicians = Array.isArray(users)
+    ? (users as any[]).map((u: any) => u.fullName).filter(Boolean).sort()
     : [];
 
   // Update user status mutation
@@ -1661,15 +1709,13 @@ export default function AdminDashboard() {
   const stats = {
     totalUsers: Array.isArray(users) ? users.length : 0,
     activeUsers: Array.isArray(users) ? users.filter((u: any) => u.isActive).length : 0,
-    totalReports: Array.isArray(sessions) ? sessions.length : 0,
-    recentReports: Array.isArray(sessions)
-      ? sessions.filter((s: any) => {
-          const sessionDate = new Date(s.createdAt);
-          const weekAgo = new Date();
-          weekAgo.setDate(weekAgo.getDate() - 7);
-          return sessionDate > weekAgo;
-        }).length
-      : 0,
+    totalReports: sessions?.total || 0,
+    recentReports: (sessions?.sessions || []).filter((s: any) => {
+      const sessionDate = new Date(s.createdAt);
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      return sessionDate > weekAgo;
+    }).length,
   };
 
   console.log(process.env.NODE_ENV);
@@ -1944,7 +1990,10 @@ export default function AdminDashboard() {
                     </Label>
                     <Select
                       value={selectedTechnicianFilter}
-                      onValueChange={setSelectedTechnicianFilter}
+                      onValueChange={(value) => {
+                        setSelectedTechnicianFilter(value);
+                        setReportsPage(1);
+                      }}
                     >
                       <SelectTrigger className="w-64">
                         <SelectValue placeholder="All Technicians" />
@@ -1966,6 +2015,18 @@ export default function AdminDashboard() {
                     <LoadingSpinner />
                   </div>
                 ) : (
+                  <>
+                    {/* Top pagination controls */}
+                    {sessions && sessions.totalPages > 1 && (
+                      <div className="mb-4">
+                        <ReportsPagination
+                          page={reportsPage}
+                          totalPages={sessions.totalPages}
+                          total={sessions.total}
+                          onPageChange={setReportsPage}
+                        />
+                      </div>
+                    )}
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
@@ -2101,6 +2162,19 @@ export default function AdminDashboard() {
                     </TableBody>
                     </Table>
                   </div>
+
+                  {/* Bottom pagination controls */}
+                  {sessions && sessions.totalPages > 1 && (
+                    <div className="mt-4">
+                      <ReportsPagination
+                        page={reportsPage}
+                        totalPages={sessions.totalPages}
+                        total={sessions.total}
+                        onPageChange={setReportsPage}
+                      />
+                    </div>
+                  )}
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -2136,7 +2210,8 @@ export default function AdminDashboard() {
                         value={selectedDraftTechnicianFilter}
                         onValueChange={(value) => {
                           setSelectedDraftTechnicianFilter(value);
-                          setSelectedDraftIds(new Set()); // Clear selection when filter changes
+                          setSelectedDraftIds(new Set());
+                          setDraftsPage(1);
                         }}
                       >
                         <SelectTrigger className="w-64">
@@ -2183,6 +2258,17 @@ export default function AdminDashboard() {
                       <p className="text-sm">All reports have been completed or there are no unfinished sessions.</p>
                     </div>
                   ) : (
+                    <>
+                      {adminDraftSessions && adminDraftSessions.totalPages > 1 && (
+                        <div className="mb-4">
+                          <ReportsPagination
+                            page={draftsPage}
+                            totalPages={adminDraftSessions.totalPages}
+                            total={adminDraftSessions.total}
+                            onPageChange={setDraftsPage}
+                          />
+                        </div>
+                      )}
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
@@ -2191,14 +2277,16 @@ export default function AdminDashboard() {
                               <Checkbox
                                 checked={
                                   filteredDraftSessions.length > 0 &&
-                                  selectedDraftIds.size === filteredDraftSessions.length
+                                  filteredDraftSessions.every((d: any) => selectedDraftIds.has(d.id))
                                 }
                                 onCheckedChange={(checked) => {
+                                  const newSelected = new Set(selectedDraftIds);
                                   if (checked) {
-                                    setSelectedDraftIds(new Set(filteredDraftSessions.map((d: any) => d.id)));
+                                    filteredDraftSessions.forEach((d: any) => newSelected.add(d.id));
                                   } else {
-                                    setSelectedDraftIds(new Set());
+                                    filteredDraftSessions.forEach((d: any) => newSelected.delete(d.id));
                                   }
+                                  setSelectedDraftIds(newSelected);
                                 }}
                                 aria-label="Select all"
                               />
@@ -2333,6 +2421,17 @@ export default function AdminDashboard() {
                         </TableBody>
                       </Table>
                     </div>
+                      {adminDraftSessions && adminDraftSessions.totalPages > 1 && (
+                        <div className="mt-4">
+                          <ReportsPagination
+                            page={draftsPage}
+                            totalPages={adminDraftSessions.totalPages}
+                            total={adminDraftSessions.total}
+                            onPageChange={setDraftsPage}
+                          />
+                        </div>
+                      )}
+                    </>
                   )}
                 </CardContent>
               </Card>
@@ -2359,13 +2458,24 @@ export default function AdminDashboard() {
                     <div className="flex justify-center py-8">
                       <LoadingSpinner />
                     </div>
-                  ) : !Array.isArray(technicianDraftSessions) || technicianDraftSessions.length === 0 ? (
+                  ) : !technicianDraftSessions?.sessions?.length ? (
                     <div className="text-center py-8 text-gray-500">
                       <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
                       <p>No draft reports found</p>
                       <p className="text-sm">You have no unfinished reports.</p>
                     </div>
                   ) : (
+                    <>
+                      {technicianDraftSessions && technicianDraftSessions.totalPages > 1 && (
+                        <div className="mb-4">
+                          <ReportsPagination
+                            page={draftsPage}
+                            totalPages={technicianDraftSessions.totalPages}
+                            total={technicianDraftSessions.total}
+                            onPageChange={setDraftsPage}
+                          />
+                        </div>
+                      )}
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
@@ -2379,11 +2489,7 @@ export default function AdminDashboard() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {technicianDraftSessions
-                            .sort((a: any, b: any) =>
-                              new Date(b.lastActivityAt || b.createdAt).getTime() -
-                              new Date(a.lastActivityAt || a.createdAt).getTime()
-                            )
+                          {(technicianDraftSessions?.sessions || [])
                             .map((draft: any) => (
                               <TableRow key={draft.id} className="bg-yellow-50/30">
                                 <TableCell className="font-medium">
@@ -2495,6 +2601,17 @@ export default function AdminDashboard() {
                         </TableBody>
                       </Table>
                     </div>
+                      {technicianDraftSessions && technicianDraftSessions.totalPages > 1 && (
+                        <div className="mt-4">
+                          <ReportsPagination
+                            page={draftsPage}
+                            totalPages={technicianDraftSessions.totalPages}
+                            total={technicianDraftSessions.total}
+                            onPageChange={setDraftsPage}
+                          />
+                        </div>
+                      )}
+                    </>
                   )}
                 </CardContent>
               </Card>

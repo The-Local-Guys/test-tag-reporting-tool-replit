@@ -35,7 +35,9 @@ export interface IStorage {
   updateUserStatus(userId: number, isActive: boolean): Promise<User>;
   updateUser(userId: number, data: Partial<InsertUser>): Promise<User>;
   getAllTestSessions(): Promise<(TestSession & { technicianFullName?: string | null })[]>;
+  getAllTestSessionsPaginated(page: number, limit: number, technicianFilter?: string): Promise<{ sessions: (TestSession & { technicianFullName?: string | null; totalItems?: number; failedItems?: number })[]; total: number }>;
   getSessionsByUser(userId: number): Promise<TestSession[]>;
+  getSessionsByUserPaginated(userId: number, page: number, limit: number): Promise<{ sessions: (TestSession & { totalItems?: number; failedItems?: number })[]; total: number }>;
   updateTestSession(sessionId: number, data: Partial<InsertTestSession>): Promise<TestSession>;
   deleteTestSession(sessionId: number, deletedByUserId: number): Promise<void>;
 
@@ -45,7 +47,9 @@ export interface IStorage {
 
   // Draft session management (database-first architecture)
   getDraftSessionsByUser(userId: number): Promise<(TestSession & { totalItems: number; failedItems: number })[]>;
+  getDraftSessionsByUserPaginated(userId: number, page: number, limit: number): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }>;
   getAllDraftSessions(): Promise<(TestSession & { totalItems: number; failedItems: number })[]>;
+  getAllDraftSessionsPaginated(page: number, limit: number, technicianFilter?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }>;
   finalizeSession(sessionId: number): Promise<TestSession>;
   updateCustomStartingNumbers(sessionId: number, numbers: object): Promise<TestSession>;
   updateSessionActivity(sessionId: number): Promise<void>;
@@ -302,6 +306,98 @@ export class DatabaseStorage implements IStorage {
     return sessionsWithCounts;
   }
 
+  async getAllTestSessionsPaginated(page: number, limit: number, technicianFilter?: string): Promise<{ sessions: (TestSession & { technicianFullName?: string | null; totalItems?: number; failedItems?: number })[]; total: number }> {
+    const offset = (page - 1) * limit;
+    const whereClause = technicianFilter && technicianFilter !== "all"
+      ? and(isNull(testSessions.deletedAt), eq(users.fullName, technicianFilter))
+      : isNull(testSessions.deletedAt);
+
+    const totalResult = await db
+      .select({ count: sql<number>`count(distinct ${testSessions.id})`.mapWith(Number) })
+      .from(testSessions)
+      .leftJoin(users, eq(testSessions.userId, users.id))
+      .where(whereClause);
+    const total = totalResult[0]?.count || 0;
+
+    const sessions = await db
+      .select({
+        id: testSessions.id,
+        serviceType: testSessions.serviceType,
+        testDate: testSessions.testDate,
+        technicianName: testSessions.technicianName,
+        clientName: testSessions.clientName,
+        siteContact: testSessions.siteContact,
+        address: testSessions.address,
+        country: testSessions.country,
+        userId: testSessions.userId,
+        startingAssetNumber: testSessions.startingAssetNumber,
+        technicianLicensed: testSessions.technicianLicensed,
+        complianceStandard: testSessions.complianceStandard,
+        status: testSessions.status,
+        customStartingNumbers: testSessions.customStartingNumbers,
+        lastActivityAt: testSessions.lastActivityAt,
+        createdAt: testSessions.createdAt,
+        deletedAt: testSessions.deletedAt,
+        deletedBy: testSessions.deletedBy,
+        technicianFullName: users.fullName,
+        totalItems: sql<number>`count(${testResults.id})`.mapWith(Number),
+        failedItems: sql<number>`count(case when ${testResults.result} = 'fail' then 1 end)`.mapWith(Number),
+      })
+      .from(testSessions)
+      .leftJoin(users, eq(testSessions.userId, users.id))
+      .leftJoin(testResults, and(eq(testSessions.id, testResults.sessionId), isNull(testResults.deletedAt)))
+      .where(whereClause)
+      .groupBy(testSessions.id, users.fullName)
+      .orderBy(desc(testSessions.testDate))
+      .limit(limit)
+      .offset(offset);
+
+    return { sessions, total };
+  }
+
+  async getSessionsByUserPaginated(userId: number, page: number, limit: number): Promise<{ sessions: (TestSession & { totalItems?: number; failedItems?: number })[]; total: number }> {
+    const offset = (page - 1) * limit;
+
+    const totalResult = await db
+      .select({ count: sql<number>`count(distinct ${testSessions.id})`.mapWith(Number) })
+      .from(testSessions)
+      .where(and(eq(testSessions.userId, userId), isNull(testSessions.deletedAt)));
+    const total = totalResult[0]?.count || 0;
+
+    const sessions = await db
+      .select({
+        id: testSessions.id,
+        serviceType: testSessions.serviceType,
+        testDate: testSessions.testDate,
+        technicianName: testSessions.technicianName,
+        clientName: testSessions.clientName,
+        siteContact: testSessions.siteContact,
+        address: testSessions.address,
+        country: testSessions.country,
+        userId: testSessions.userId,
+        startingAssetNumber: testSessions.startingAssetNumber,
+        technicianLicensed: testSessions.technicianLicensed,
+        complianceStandard: testSessions.complianceStandard,
+        status: testSessions.status,
+        customStartingNumbers: testSessions.customStartingNumbers,
+        lastActivityAt: testSessions.lastActivityAt,
+        createdAt: testSessions.createdAt,
+        deletedAt: testSessions.deletedAt,
+        deletedBy: testSessions.deletedBy,
+        totalItems: sql<number>`count(${testResults.id})`.mapWith(Number),
+        failedItems: sql<number>`count(case when ${testResults.result} = 'fail' then 1 end)`.mapWith(Number),
+      })
+      .from(testSessions)
+      .leftJoin(testResults, and(eq(testSessions.id, testResults.sessionId), isNull(testResults.deletedAt)))
+      .where(and(eq(testSessions.userId, userId), isNull(testSessions.deletedAt)))
+      .groupBy(testSessions.id)
+      .orderBy(desc(testSessions.testDate))
+      .limit(limit)
+      .offset(offset);
+
+    return { sessions, total };
+  }
+
   /**
    * Updates test session information (client details, dates, etc.)
    * Used by admins to correct session information after creation
@@ -481,6 +577,95 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(testSessions.lastActivityAt));
 
     return draftSessions;
+  }
+
+  async getDraftSessionsByUserPaginated(userId: number, page: number, limit: number): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }> {
+    const offset = (page - 1) * limit;
+
+    const totalResult = await db
+      .select({ count: sql<number>`count(distinct ${testSessions.id})`.mapWith(Number) })
+      .from(testSessions)
+      .where(and(eq(testSessions.userId, userId), eq(testSessions.status, 'draft'), isNull(testSessions.deletedAt)));
+    const total = totalResult[0]?.count || 0;
+
+    const sessions = await db
+      .select({
+        id: testSessions.id,
+        serviceType: testSessions.serviceType,
+        testDate: testSessions.testDate,
+        technicianName: testSessions.technicianName,
+        clientName: testSessions.clientName,
+        siteContact: testSessions.siteContact,
+        address: testSessions.address,
+        country: testSessions.country,
+        userId: testSessions.userId,
+        startingAssetNumber: testSessions.startingAssetNumber,
+        technicianLicensed: testSessions.technicianLicensed,
+        complianceStandard: testSessions.complianceStandard,
+        status: testSessions.status,
+        customStartingNumbers: testSessions.customStartingNumbers,
+        lastActivityAt: testSessions.lastActivityAt,
+        createdAt: testSessions.createdAt,
+        deletedAt: testSessions.deletedAt,
+        deletedBy: testSessions.deletedBy,
+        totalItems: sql<number>`count(${testResults.id})`.mapWith(Number),
+        failedItems: sql<number>`count(case when ${testResults.result} = 'fail' then 1 end)`.mapWith(Number),
+      })
+      .from(testSessions)
+      .leftJoin(testResults, and(eq(testSessions.id, testResults.sessionId), isNull(testResults.deletedAt)))
+      .where(and(eq(testSessions.userId, userId), eq(testSessions.status, 'draft'), isNull(testSessions.deletedAt)))
+      .groupBy(testSessions.id)
+      .orderBy(desc(testSessions.lastActivityAt))
+      .limit(limit)
+      .offset(offset);
+
+    return { sessions, total };
+  }
+
+  async getAllDraftSessionsPaginated(page: number, limit: number, technicianFilter?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }> {
+    const offset = (page - 1) * limit;
+    const whereClause = technicianFilter && technicianFilter !== 'all'
+      ? and(eq(testSessions.status, 'draft'), isNull(testSessions.deletedAt), eq(testSessions.technicianName, technicianFilter))
+      : and(eq(testSessions.status, 'draft'), isNull(testSessions.deletedAt));
+
+    const totalResult = await db
+      .select({ count: sql<number>`count(distinct ${testSessions.id})`.mapWith(Number) })
+      .from(testSessions)
+      .where(whereClause);
+    const total = totalResult[0]?.count || 0;
+
+    const sessions = await db
+      .select({
+        id: testSessions.id,
+        serviceType: testSessions.serviceType,
+        testDate: testSessions.testDate,
+        technicianName: testSessions.technicianName,
+        clientName: testSessions.clientName,
+        siteContact: testSessions.siteContact,
+        address: testSessions.address,
+        country: testSessions.country,
+        userId: testSessions.userId,
+        startingAssetNumber: testSessions.startingAssetNumber,
+        technicianLicensed: testSessions.technicianLicensed,
+        complianceStandard: testSessions.complianceStandard,
+        status: testSessions.status,
+        customStartingNumbers: testSessions.customStartingNumbers,
+        lastActivityAt: testSessions.lastActivityAt,
+        createdAt: testSessions.createdAt,
+        deletedAt: testSessions.deletedAt,
+        deletedBy: testSessions.deletedBy,
+        totalItems: sql<number>`count(${testResults.id})`.mapWith(Number),
+        failedItems: sql<number>`count(case when ${testResults.result} = 'fail' then 1 end)`.mapWith(Number),
+      })
+      .from(testSessions)
+      .leftJoin(testResults, and(eq(testSessions.id, testResults.sessionId), isNull(testResults.deletedAt)))
+      .where(whereClause)
+      .groupBy(testSessions.id)
+      .orderBy(desc(testSessions.lastActivityAt))
+      .limit(limit)
+      .offset(offset);
+
+    return { sessions, total };
   }
 
   /**

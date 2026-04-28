@@ -420,17 +420,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/sessions", requireAuth, async (req, res) => {
     try {
       const user = req.session.user!;
-      let sessions;
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
+      const technicianFilter = req.query.technicianFilter as string | undefined;
 
-      // Super admin and support center can see all sessions
+      let result;
       if (user.role === "super_admin" || user.role === "support_center") {
-        sessions = await storage.getAllTestSessions();
+        result = await storage.getAllTestSessionsPaginated(page, limit, technicianFilter);
       } else {
-        // Technicians can only see their own sessions
-        sessions = await storage.getSessionsByUser(user.id);
+        result = await storage.getSessionsByUserPaginated(user.id, page, limit);
       }
 
-      res.json(sessions);
+      res.json({
+        sessions: result.sessions,
+        total: result.total,
+        page,
+        totalPages: Math.ceil(result.total / limit),
+        limit,
+      });
     } catch (error) {
       console.error("Error fetching sessions:", error);
       res.status(500).json({ message: "Failed to fetch sessions" });
@@ -560,8 +567,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/sessions/drafts", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
-      const draftSessions = await storage.getDraftSessionsByUser(userId);
-      res.json(draftSessions);
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
+      const result = await storage.getDraftSessionsByUserPaginated(userId, page, limit);
+      res.json({ sessions: result.sessions, total: result.total, page, totalPages: Math.ceil(result.total / limit), limit });
     } catch (error) {
       console.error("Error fetching draft sessions:", error);
       res.status(500).json({ message: "Failed to fetch draft sessions" });
@@ -572,8 +581,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Used by admins to view and recover unfinished reports from any technician
   app.get("/api/admin/sessions/drafts", requireAdmin, async (req, res) => {
     try {
-      const draftSessions = await storage.getAllDraftSessions();
-      res.json(draftSessions);
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
+      const technicianFilter = req.query.technicianFilter as string | undefined;
+      const result = await storage.getAllDraftSessionsPaginated(page, limit, technicianFilter);
+      res.json({ sessions: result.sessions, total: result.total, page, totalPages: Math.ceil(result.total / limit), limit });
     } catch (error) {
       console.error("Error fetching all draft sessions:", error);
       res.status(500).json({ message: "Failed to fetch draft sessions" });
