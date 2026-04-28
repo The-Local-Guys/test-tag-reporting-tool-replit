@@ -1847,9 +1847,9 @@ export default function AdminDashboard() {
               typedUser?.role === "support_center") && (
               <TabsTrigger value="drafts">
                 Draft Reports
-                {filteredDraftSessions.length > 0 && (
+                {adminDraftSessions?.total > 0 && (
                   <Badge variant="secondary" className="ml-2 bg-yellow-100 text-yellow-800">
-                    {filteredDraftSessions.length}
+                    {adminDraftSessions.total}
                   </Badge>
                 )}
               </TabsTrigger>
@@ -1857,9 +1857,9 @@ export default function AdminDashboard() {
             {typedUser?.role === "technician" && (
               <TabsTrigger value="drafts">
                 Draft Reports
-                {Array.isArray(technicianDraftSessions) && technicianDraftSessions.length > 0 && (
+                {technicianDraftSessions?.total > 0 && (
                   <Badge variant="secondary" className="ml-2 bg-yellow-100 text-yellow-800">
-                    {technicianDraftSessions.length}
+                    {technicianDraftSessions.total}
                   </Badge>
                 )}
               </TabsTrigger>
