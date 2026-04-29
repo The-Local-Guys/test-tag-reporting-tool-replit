@@ -130,9 +130,10 @@ export function CertificateModal({ isOpen, onClose, onSubmit, certificate }: Cer
   });
 
   // Extract unique clients from sessions (filter out empty names)
+  const sessionList: any[] = (sessions as any)?.sessions || (Array.isArray(sessions) ? sessions : []);
   const uniqueClients = Array.from(
     new Map(
-      (sessions as any[] || [])
+      sessionList
         .filter((s: any) => s.clientName && s.clientName.trim())
         .map((s: any) => [
           s.clientName,
