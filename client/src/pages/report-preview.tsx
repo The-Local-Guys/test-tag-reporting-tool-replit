@@ -425,6 +425,9 @@ export default function ReportPreview() {
         accessibilityCheck: (result as any).accessibilityCheck ?? false,
         signageCheck: (result as any).signageCheck ?? false,
         operationalTest: (result as any).operationalTest ?? false,
+        extinguisherType: (result as any).extinguisherType || null,
+        size: (result as any).size || null,
+        weight: (result as any).weight || null,
       } as any));
 
       if (!sessionData?.session) {
@@ -512,6 +515,9 @@ export default function ReportPreview() {
         accessibilityCheck: (result as any).accessibilityCheck ?? false,
         signageCheck: (result as any).signageCheck ?? false,
         operationalTest: (result as any).operationalTest ?? false,
+        extinguisherType: (result as any).extinguisherType || null,
+        size: (result as any).size || null,
+        weight: (result as any).weight || null,
       } as any));
 
       if (!sessionData?.session) {
