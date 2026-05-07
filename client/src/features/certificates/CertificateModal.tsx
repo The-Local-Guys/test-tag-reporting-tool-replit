@@ -87,7 +87,7 @@ export function CertificateModal({ isOpen, onClose, onSubmit, certificate }: Cer
             // Calculate months between certification date and validity date
             const certDate = new Date(certificate.certificationDate);
             const validDate = new Date(validityDate);
-            const months = Math.round((validDate.getTime() - certDate.getTime()) / (1000 * 60 * 60 * 24 * 30));
+            const months = Math.round((validDate.getTime() - certDate.getTime()) / (1000 * 60 * 60 * 24 * 30.4375));
             periods[service] = months;
           }
         });
@@ -299,6 +299,7 @@ export function CertificateModal({ isOpen, onClose, onSubmit, certificate }: Cer
                       <SelectItem value="6" data-testid="electrical-validity-6">6 months</SelectItem>
                       <SelectItem value="12" data-testid="electrical-validity-12">12 months</SelectItem>
                       <SelectItem value="24" data-testid="electrical-validity-24">24 months</SelectItem>
+                      <SelectItem value="60" data-testid="electrical-validity-60">60 months</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
