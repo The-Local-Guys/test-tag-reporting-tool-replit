@@ -437,28 +437,22 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     let manufacturerLines: string[] = [];
     let typeLines: string[] = [];
     if (session.serviceType === 'fire_testing') {
-      const notes = result.notes || '';
-      const sizeMatch = notes.match(/Net Size: ([^|]+)/);
-      const weightMatch = notes.match(/Gross Weight: ([^|]+)/);
-      const sizeWeight = [sizeMatch?.[1]?.trim(), weightMatch?.[1]?.trim()].filter(Boolean).join(' / ') || 'N/A';
+      const sizeWeight = [result.size, result.weight].filter(Boolean).join(' / ') || 'N/A';
       const sizeWeightWidth = 20; // Width for size/weight column
       sizeWeightLines = doc.splitTextToSize(sizeWeight, sizeWeightWidth);
-      
+
       // Add word wrapping for manufacturer info
       const manufacturerWidth = 20; // Width for manufacturer column
       manufacturerLines = doc.splitTextToSize(result.manufacturerInfo || 'N/A', manufacturerWidth);
-      
+
       // Add word wrapping for type/classification
       // For fire extinguishers, show the extinguisher type (Dry Powder, CO2, etc.) instead of classification
       const typeWidth = 13; // Width for type column
       let displayType = result.classification.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-      
-      // Check if this is a fire extinguisher and extract the specific type from notes
-      if (result.classification === 'fire_extinguisher') {
-        const extinguisherTypeMatch = notes.match(/Extinguisher Type: ([^|]+)/);
-        if (extinguisherTypeMatch) {
-          displayType = extinguisherTypeMatch[1].trim().replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        }
+
+      // For fire extinguishers, show the specific extinguisher type from dedicated column
+      if (result.classification === 'fire_extinguisher' && result.extinguisherType) {
+        displayType = result.extinguisherType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
       }
       
       typeLines = doc.splitTextToSize(displayType, typeWidth);
@@ -1005,48 +999,39 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       doc.text(`Asset #${formatAssetNumberWithFrequency(result.assetNumber.toString(), result.frequency, data.session.serviceType, results)} - ${result.itemName} (${result.location})`, margin, yPosition);
       yPosition += 8;
       
-      // Parse test details from notes
-      const notes = result.notes || '';
-      const equipmentTypeMatch = notes.match(/Equipment Type: ([^|]+)/);
-      const visualInspectionMatch = notes.match(/Visual Inspection: ([^|]+)/);
-      const operationalTestMatch = notes.match(/Operational Test: ([^|]+)/);
-      const pressureTestMatch = notes.match(/Pressure Test: ([^|]+)/);
-      const accessibilityMatch = notes.match(/Accessibility Check: ([^|]+)/);
-      const signageMatch = notes.match(/Signage Check: ([^|]+)/);
-      
+      // Read test details from dedicated columns
+      const equipmentType = result.classification || '';
+      const passOrFail = (val: boolean | null | undefined) => val === false ? 'Fail' : 'Pass';
+
       doc.setFont('helvetica', 'normal');
-      doc.text(`• Visual Inspection (Physical condition, damage, corrosion): ${visualInspectionMatch?.[1]?.trim() || 'N/A'}`, margin + 5, yPosition);
+      doc.text(`• Visual Inspection (Physical condition, damage, corrosion): ${passOrFail(result.visionInspection)}`, margin + 5, yPosition);
       yPosition += 6;
-      doc.text(`• Accessibility Check (Clear access, not obstructed): ${accessibilityMatch?.[1]?.trim() || 'N/A'}`, margin + 5, yPosition);
+      doc.text(`• Accessibility Check (Clear access, not obstructed): ${passOrFail(result.accessibilityCheck)}`, margin + 5, yPosition);
       yPosition += 6;
-      doc.text(`• Signage Check (Proper signage and instructions visible): ${signageMatch?.[1]?.trim() || 'N/A'}`, margin + 5, yPosition);
+      doc.text(`• Signage Check (Proper signage and instructions visible): ${passOrFail(result.signageCheck)}`, margin + 5, yPosition);
       yPosition += 6;
-      
-      // Equipment-specific tests - trim to handle whitespace from regex
-      const equipmentType = (equipmentTypeMatch?.[1]?.trim() || result.classification || '').trim();
+
+      // Equipment-specific tests
       if (equipmentType === 'fire_extinguisher') {
-        doc.text(`• Pressure Gauge Check (Pressure within operating range): ${pressureTestMatch?.[1]?.trim() || 'N/A'}`, margin + 5, yPosition);
+        doc.text(`• Pressure Gauge Check (Pressure within operating range): ${passOrFail(result.pressureTest)}`, margin + 5, yPosition);
         yPosition += 6;
-        doc.text(`• Operational Test (Trigger mechanism, hose, nozzle): ${operationalTestMatch?.[1]?.trim() || 'N/A'}`, margin + 5, yPosition);
+        doc.text(`• Operational Test (Trigger mechanism, hose, nozzle): ${passOrFail(result.operationalTest)}`, margin + 5, yPosition);
         yPosition += 6;
       } else if (equipmentType === 'fire_hose_reel') {
-        doc.text(`• Operational Test (Hose reel operation, water flow): ${operationalTestMatch?.[1]?.trim() || 'N/A'}`, margin + 5, yPosition);
+        doc.text(`• Operational Test (Hose reel operation, water flow): ${passOrFail(result.operationalTest)}`, margin + 5, yPosition);
         yPosition += 6;
-        doc.text(`• Pressure Gauge Check (Pressure within operating range): ${pressureTestMatch?.[1]?.trim() || 'N/A'}`, margin + 5, yPosition);
+        doc.text(`• Pressure Gauge Check (Pressure within operating range): ${passOrFail(result.pressureTest)}`, margin + 5, yPosition);
         yPosition += 6;
       } else if (equipmentType === 'fire_blanket') {
-        doc.text(`• Operational Test (Easy removal, blanket condition): ${operationalTestMatch?.[1]?.trim() || 'N/A'}`, margin + 5, yPosition);
+        doc.text(`• Operational Test (Easy removal, blanket condition): ${passOrFail(result.operationalTest)}`, margin + 5, yPosition);
         yPosition += 6;
       }
-      
-      // Show Equipment Type on separate line - for Fire Extinguisher, show the extinguisher type
-      const extinguisherTypeMatch = notes.match(/Extinguisher Type: ([^|]+)/);
-      if (equipmentType === 'fire_extinguisher' && extinguisherTypeMatch?.[1]?.trim()) {
-        // Show the actual extinguisher type (Dry Powder, CO2, etc.) for fire extinguishers
-        doc.text(`• Equipment Type: ${extinguisherTypeMatch[1].trim()}`, margin + 5, yPosition);
+
+      // Show Equipment Type — for fire extinguisher show the specific extinguisher type
+      if (equipmentType === 'fire_extinguisher' && result.extinguisherType) {
+        doc.text(`• Equipment Type: ${result.extinguisherType.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}`, margin + 5, yPosition);
         yPosition += 6;
       } else {
-        // Show formatted equipment type for other equipment
         const formattedEquipmentType = equipmentType
           .replace(/_/g, ' ')
           .replace(/\b\w/g, (l: string) => l.toUpperCase());
@@ -1054,40 +1039,25 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         yPosition += 6;
       }
       
-      // Show equipment details if available
-      const sizeMatch = notes.match(/Net Size: ([^|]+)/);
-      const weightMatch = notes.match(/Gross Weight: ([^|]+)/);
-      if (sizeMatch?.[1]) {
-        doc.text(`• Net Size: ${sizeMatch[1].trim()}`, margin + 5, yPosition);
+      // Show equipment size/weight from dedicated columns
+      if (result.size) {
+        doc.text(`• Net Size: ${result.size}`, margin + 5, yPosition);
         yPosition += 6;
       }
-      if (weightMatch?.[1]) {
-        doc.text(`• Gross Weight: ${weightMatch[1].trim()}`, margin + 5, yPosition);
+      if (result.weight) {
+        doc.text(`• Gross Weight: ${result.weight}`, margin + 5, yPosition);
         yPosition += 6;
       }
-      
-      // Show notes if any (only actual user notes, not the parsed equipment details)
-      // Get the first part before any pipe separator, but only if it's not an equipment detail field
-      const firstPart = notes.split('|')[0]?.trim();
-      const isActualUserNote = firstPart && 
-        !firstPart.startsWith('Equipment Type:') && 
-        !firstPart.startsWith('Extinguisher Type:') &&
-        !firstPart.startsWith('Visual Inspection:') &&
-        !firstPart.startsWith('Operational Test:') &&
-        !firstPart.startsWith('Pressure Test:') &&
-        !firstPart.startsWith('Accessibility Check:') &&
-        !firstPart.startsWith('Signage Check:') &&
-        !firstPart.startsWith('Net Size:') &&
-        !firstPart.startsWith('Gross Weight:');
-      
-      if (isActualUserNote) {
+
+      // Show user notes if any
+      if (result.notes) {
         const notesLabel = '• Additional Notes: ';
         doc.text(notesLabel, margin + 5, yPosition);
-        
-        const maxNotesWidth = pageWidth - (2 * margin) - 25; // Add more space to the right
-        const notesLines = doc.splitTextToSize(firstPart, maxNotesWidth);
+
+        const maxNotesWidth = pageWidth - (2 * margin) - 25;
+        const notesLines = doc.splitTextToSize(result.notes, maxNotesWidth);
         const labelWidth = doc.getTextWidth(notesLabel);
-        
+
         notesLines.forEach((line: string, i: number) => {
           if (yPosition > doc.internal.pageSize.height - 30) {
             doc.addPage();
@@ -1242,32 +1212,18 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         yPosition += 3;
       }
       
-      // Parse and display detailed information from notes if available
-      if (result.notes && session.serviceType === 'fire_testing') {
-        // Parse fire testing specific fields from notes
-        const notes = result.notes;
-        
-        // Extract comments (text before the first "|" separator)
-        const commentsPart = notes.split('|')[0].trim();
-        const hasComments = commentsPart && commentsPart.length > 0;
-        
-        const equipmentTypeMatch = notes.match(/Equipment Type: ([^|]+)/);
-        const extinguisherTypeMatch = notes.match(/Extinguisher Type: ([^|]+)/);
-        const netSizeMatch = notes.match(/Net Size: ([^|]+)/);
-        const grossWeightMatch = notes.match(/Gross Weight: ([^|]+)/);
-        const visualInspectionMatch = notes.match(/Visual Inspection: ([^|]+)/);
-        const operationalTestMatch = notes.match(/Operational Test: ([^|]+)/);
-        const pressureTestMatch = notes.match(/Pressure Test: ([^|]+)/);
-        const accessibilityCheckMatch = notes.match(/Accessibility Check: ([^|]+)/);
-        const signageCheckMatch = notes.match(/Signage Check: ([^|]+)/);
-        
-        // Display comments first if they exist
-        if (hasComments) {
+      // Display fire testing fields from dedicated columns
+      if (session.serviceType === 'fire_testing') {
+        const firePassOrFail = (val: boolean | null | undefined) => val === false ? 'Fail' : 'Pass';
+        const fireEquipmentType = result.classification || '';
+
+        // Display user comments if present
+        if (result.notes) {
           doc.text('Comments:', margin, yPosition);
           yPosition += 6;
-          
+
           const maxCommentWidth = pageWidth - (2 * margin);
-          const commentLines = doc.splitTextToSize(commentsPart, maxCommentWidth);
+          const commentLines = doc.splitTextToSize(result.notes, maxCommentWidth);
           commentLines.forEach((line: string) => {
             if (yPosition > doc.internal.pageSize.height - 30) {
               doc.addPage();
@@ -1278,54 +1234,44 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
           });
           yPosition += 3;
         }
-        
-        // Display parsed fields without heading
-        if (equipmentTypeMatch) {
-          const equipmentType = equipmentTypeMatch[1].trim().replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
-          doc.text(`Equipment Type: ${equipmentType}`, margin, yPosition);
+
+        // Display structured fire testing fields
+        if (fireEquipmentType) {
+          const formattedType = fireEquipmentType.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+          doc.text(`Equipment Type: ${formattedType}`, margin, yPosition);
           yPosition += 5;
         }
-        
-        if (extinguisherTypeMatch) {
-          const extinguisherType = extinguisherTypeMatch[1].trim().replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
-          doc.text(`Extinguisher Type: ${extinguisherType}`, margin, yPosition);
+
+        if (result.extinguisherType) {
+          const formattedExtType = result.extinguisherType.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+          doc.text(`Extinguisher Type: ${formattedExtType}`, margin, yPosition);
           yPosition += 5;
         }
-        
-        if (netSizeMatch) {
-          doc.text(`Net Size: ${netSizeMatch[1].trim()}`, margin, yPosition);
+
+        if (result.size) {
+          doc.text(`Net Size: ${result.size}`, margin, yPosition);
           yPosition += 5;
         }
-        
-        if (grossWeightMatch) {
-          doc.text(`Gross Weight: ${grossWeightMatch[1].trim()}`, margin, yPosition);
+
+        if (result.weight) {
+          doc.text(`Gross Weight: ${result.weight}`, margin, yPosition);
           yPosition += 5;
         }
-        
-        if (visualInspectionMatch) {
-          doc.text(`Visual Inspection: ${visualInspectionMatch[1].trim()}`, margin, yPosition);
+
+        doc.text(`Visual Inspection: ${firePassOrFail(result.visionInspection)}`, margin, yPosition);
+        yPosition += 5;
+        doc.text(`Operational Test: ${firePassOrFail(result.operationalTest)}`, margin, yPosition);
+        yPosition += 5;
+
+        if (fireEquipmentType === 'fire_extinguisher' || fireEquipmentType === 'fire_hose_reel') {
+          doc.text(`Pressure Test: ${firePassOrFail(result.pressureTest)}`, margin, yPosition);
           yPosition += 5;
         }
-        
-        if (operationalTestMatch) {
-          doc.text(`Operational Test: ${operationalTestMatch[1].trim()}`, margin, yPosition);
-          yPosition += 5;
-        }
-        
-        if (pressureTestMatch) {
-          doc.text(`Pressure Test: ${pressureTestMatch[1].trim()}`, margin, yPosition);
-          yPosition += 5;
-        }
-        
-        if (accessibilityCheckMatch) {
-          doc.text(`Accessibility Check: ${accessibilityCheckMatch[1].trim()}`, margin, yPosition);
-          yPosition += 5;
-        }
-        
-        if (signageCheckMatch) {
-          doc.text(`Signage Check: ${signageCheckMatch[1].trim()}`, margin, yPosition);
-          yPosition += 5;
-        }
+
+        doc.text(`Accessibility Check: ${firePassOrFail(result.accessibilityCheck)}`, margin, yPosition);
+        yPosition += 5;
+        doc.text(`Signage Check: ${firePassOrFail(result.signageCheck)}`, margin, yPosition);
+        yPosition += 5;
       } else if (result.notes) {
         // For non-fire testing, display as comments
         doc.text('Comments:', margin, yPosition);

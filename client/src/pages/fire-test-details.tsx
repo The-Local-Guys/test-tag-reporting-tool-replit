@@ -150,20 +150,6 @@ export default function FireTestDetails() {
         signageCheck: data.signageCheck,
       });
 
-      // Compile additional test details into notes for now
-      const additionalTestDetails = [
-        data.notes,
-        `Equipment Type: ${currentEquipmentType}`,
-        currentExtinguisherType ? `Extinguisher Type: ${currentExtinguisherType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}` : '',
-        data.size ? `Net Size: ${data.size}` : '',
-        data.weight ? `Gross Weight: ${data.weight}` : '',
-        `Visual Inspection: ${data.visionInspection ? 'Pass' : 'Fail'}`,
-        `Operational Test: ${data.operationalTest ? 'Pass' : 'Fail'}`,
-        (currentEquipmentType === 'fire_extinguisher' || currentEquipmentType === 'fire_hose_reel') ? `Pressure Test: ${data.pressureTest ? 'Pass' : 'Fail'}` : '',
-        `Accessibility Check: ${data.accessibilityCheck ? 'Pass' : 'Fail'}`,
-        `Signage Check: ${data.signageCheck ? 'Pass' : 'Fail'}`,
-      ].filter(Boolean).join(' | ');
-
       addToBatch({
         itemName: itemName,
         itemType: itemType,
@@ -173,7 +159,7 @@ export default function FireTestDetails() {
         frequency: data.frequency,
         failureReason: data.failureReason || null,
         actionTaken: data.result === 'fail' ? (data.actionTaken || 'removed') : null,
-        notes: additionalTestDetails || null,
+        notes: data.notes || null,
         photoData: data.result === 'fail' ? photoData : null,
         visionInspection: data.visionInspection,
         electricalTest: data.operationalTest, // Map operational test to electrical test field

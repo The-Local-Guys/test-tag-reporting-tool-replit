@@ -803,17 +803,21 @@ export function TestResultEditModal({
               </div>
             )}
 
-            <div>
-              <Label htmlFor="edit-notes">Notes</Label>
-              <Textarea
-                id="edit-notes"
-                value={editResultData.notes || ''}
-                onChange={(e) => setEditResultData((prev: any) => ({ ...prev, notes: e.target.value || null }))}
-                placeholder="Additional notes..."
-                className="text-base"
-              />
-            </div>
           </>
+        )}
+
+        {/* Notes — always visible for fire testing; visible on fail for other services */}
+        {(serviceType === 'fire_testing' || editResultData.result === 'fail') && (
+          <div>
+            <Label htmlFor="edit-notes">Notes</Label>
+            <Textarea
+              id="edit-notes"
+              value={editResultData.notes || ''}
+              onChange={(e) => setEditResultData((prev: any) => ({ ...prev, notes: e.target.value || null }))}
+              placeholder="Additional notes..."
+              className="text-base"
+            />
+          </div>
         )}
 
         <div className="flex gap-3 pt-4">
