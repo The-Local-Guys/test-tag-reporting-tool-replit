@@ -8,3 +8,4 @@ vite.config.ts.*
 test
 .env
 .env.development
+/.playwright-mcp

@@ -1294,8 +1294,20 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       if (result.photoData) {
         yPosition += 3; // Extra space before photo
         try {
-          const imgWidth = 80;
-          const imgHeight = 60;
+          // Detect natural image dimensions to preserve aspect ratio
+          const naturalDims = await new Promise<{ w: number; h: number }>((resolve) => {
+            const img = new Image();
+            img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+            img.onerror = () => resolve({ w: 80, h: 60 }); // fallback
+            img.src = result.photoData as string;
+          });
+
+          const maxWidth = 80;
+          const maxHeight = 60;
+          const ratio = Math.min(maxWidth / naturalDims.w, maxHeight / naturalDims.h);
+          const imgWidth = naturalDims.w * ratio;
+          const imgHeight = naturalDims.h * ratio;
+
           doc.addImage(result.photoData, 'JPEG', margin, yPosition, imgWidth, imgHeight);
           yPosition += imgHeight + 10;
         } catch (error) {
