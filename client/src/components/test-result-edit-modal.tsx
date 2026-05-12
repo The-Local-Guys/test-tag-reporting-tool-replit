@@ -806,8 +806,8 @@ export function TestResultEditModal({
           </>
         )}
 
-        {/* Notes — always visible for fire testing; visible on fail for other services */}
-        {(serviceType === 'fire_testing' || editResultData.result === 'fail') && (
+        {/* Notes — always visible for fire testing, emergency exit light and rcd; visible on fail for other services */}
+        {(serviceType === 'fire_testing' || serviceType === 'emergency_exit_light' || serviceType === 'rcd_reporting' || serviceType === 'microwave_leakage' || editResultData.result === 'fail') && (
           <div>
             <Label htmlFor="edit-notes">Notes</Label>
             <Textarea
