@@ -35,9 +35,9 @@ export interface IStorage {
   updateUserStatus(userId: number, isActive: boolean): Promise<User>;
   updateUser(userId: number, data: Partial<InsertUser>): Promise<User>;
   getAllTestSessions(): Promise<(TestSession & { technicianFullName?: string | null })[]>;
-  getAllTestSessionsPaginated(page: number, limit: number, technicianFilter?: string): Promise<{ sessions: (TestSession & { technicianFullName?: string | null; totalItems?: number; failedItems?: number })[]; total: number }>;
+  getAllTestSessionsPaginated(page: number, limit: number, technicianFilter?: string, serviceTypeFilter?: string): Promise<{ sessions: (TestSession & { technicianFullName?: string | null; totalItems?: number; failedItems?: number })[]; total: number }>;
   getSessionsByUser(userId: number): Promise<TestSession[]>;
-  getSessionsByUserPaginated(userId: number, page: number, limit: number): Promise<{ sessions: (TestSession & { totalItems?: number; failedItems?: number })[]; total: number }>;
+  getSessionsByUserPaginated(userId: number, page: number, limit: number, serviceTypeFilter?: string): Promise<{ sessions: (TestSession & { totalItems?: number; failedItems?: number })[]; total: number }>;
   updateTestSession(sessionId: number, data: Partial<InsertTestSession>): Promise<TestSession>;
   deleteTestSession(sessionId: number, deletedByUserId: number): Promise<void>;
 
@@ -47,9 +47,9 @@ export interface IStorage {
 
   // Draft session management (database-first architecture)
   getDraftSessionsByUser(userId: number): Promise<(TestSession & { totalItems: number; failedItems: number })[]>;
-  getDraftSessionsByUserPaginated(userId: number, page: number, limit: number): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }>;
+  getDraftSessionsByUserPaginated(userId: number, page: number, limit: number, serviceTypeFilter?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }>;
   getAllDraftSessions(): Promise<(TestSession & { totalItems: number; failedItems: number })[]>;
-  getAllDraftSessionsPaginated(page: number, limit: number, technicianFilter?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }>;
+  getAllDraftSessionsPaginated(page: number, limit: number, technicianFilter?: string, serviceTypeFilter?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }>;
   finalizeSession(sessionId: number): Promise<TestSession>;
   updateCustomStartingNumbers(sessionId: number, numbers: object): Promise<TestSession>;
   updateSessionActivity(sessionId: number): Promise<void>;
@@ -306,11 +306,12 @@ export class DatabaseStorage implements IStorage {
     return sessionsWithCounts;
   }
 
-  async getAllTestSessionsPaginated(page: number, limit: number, technicianFilter?: string): Promise<{ sessions: (TestSession & { technicianFullName?: string | null; totalItems?: number; failedItems?: number })[]; total: number }> {
+  async getAllTestSessionsPaginated(page: number, limit: number, technicianFilter?: string, serviceTypeFilter?: string): Promise<{ sessions: (TestSession & { technicianFullName?: string | null; totalItems?: number; failedItems?: number })[]; total: number }> {
     const offset = (page - 1) * limit;
-    const whereClause = technicianFilter && technicianFilter !== "all"
-      ? and(isNull(testSessions.deletedAt), eq(users.fullName, technicianFilter))
-      : isNull(testSessions.deletedAt);
+    const conditions = [isNull(testSessions.deletedAt)];
+    if (technicianFilter && technicianFilter !== "all") conditions.push(eq(users.fullName, technicianFilter));
+    if (serviceTypeFilter && serviceTypeFilter !== "all") conditions.push(eq(testSessions.serviceType, serviceTypeFilter));
+    const whereClause = and(...conditions);
 
     const totalResult = await db
       .select({ count: sql<number>`count(distinct ${testSessions.id})`.mapWith(Number) })
@@ -355,13 +356,16 @@ export class DatabaseStorage implements IStorage {
     return { sessions, total };
   }
 
-  async getSessionsByUserPaginated(userId: number, page: number, limit: number): Promise<{ sessions: (TestSession & { totalItems?: number; failedItems?: number })[]; total: number }> {
+  async getSessionsByUserPaginated(userId: number, page: number, limit: number, serviceTypeFilter?: string): Promise<{ sessions: (TestSession & { totalItems?: number; failedItems?: number })[]; total: number }> {
     const offset = (page - 1) * limit;
+    const conditions = [eq(testSessions.userId, userId), isNull(testSessions.deletedAt)];
+    if (serviceTypeFilter && serviceTypeFilter !== 'all') conditions.push(eq(testSessions.serviceType, serviceTypeFilter));
+    const whereClause = and(...conditions);
 
     const totalResult = await db
       .select({ count: sql<number>`count(distinct ${testSessions.id})`.mapWith(Number) })
       .from(testSessions)
-      .where(and(eq(testSessions.userId, userId), isNull(testSessions.deletedAt)));
+      .where(whereClause);
     const total = totalResult[0]?.count || 0;
 
     const sessions = await db
@@ -389,7 +393,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(testSessions)
       .leftJoin(testResults, and(eq(testSessions.id, testResults.sessionId), isNull(testResults.deletedAt)))
-      .where(and(eq(testSessions.userId, userId), isNull(testSessions.deletedAt)))
+      .where(whereClause)
       .groupBy(testSessions.id)
       .orderBy(desc(testSessions.testDate))
       .limit(limit)
@@ -579,13 +583,16 @@ export class DatabaseStorage implements IStorage {
     return draftSessions;
   }
 
-  async getDraftSessionsByUserPaginated(userId: number, page: number, limit: number): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }> {
+  async getDraftSessionsByUserPaginated(userId: number, page: number, limit: number, serviceTypeFilter?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }> {
     const offset = (page - 1) * limit;
+    const conditions = [eq(testSessions.userId, userId), eq(testSessions.status, 'draft'), isNull(testSessions.deletedAt)];
+    if (serviceTypeFilter && serviceTypeFilter !== 'all') conditions.push(eq(testSessions.serviceType, serviceTypeFilter));
+    const whereClause = and(...conditions);
 
     const totalResult = await db
       .select({ count: sql<number>`count(distinct ${testSessions.id})`.mapWith(Number) })
       .from(testSessions)
-      .where(and(eq(testSessions.userId, userId), eq(testSessions.status, 'draft'), isNull(testSessions.deletedAt)));
+      .where(whereClause);
     const total = totalResult[0]?.count || 0;
 
     const sessions = await db
@@ -613,7 +620,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(testSessions)
       .leftJoin(testResults, and(eq(testSessions.id, testResults.sessionId), isNull(testResults.deletedAt)))
-      .where(and(eq(testSessions.userId, userId), eq(testSessions.status, 'draft'), isNull(testSessions.deletedAt)))
+      .where(whereClause)
       .groupBy(testSessions.id)
       .orderBy(desc(testSessions.lastActivityAt))
       .limit(limit)
@@ -622,11 +629,12 @@ export class DatabaseStorage implements IStorage {
     return { sessions, total };
   }
 
-  async getAllDraftSessionsPaginated(page: number, limit: number, technicianFilter?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }> {
+  async getAllDraftSessionsPaginated(page: number, limit: number, technicianFilter?: string, serviceTypeFilter?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }> {
     const offset = (page - 1) * limit;
-    const whereClause = technicianFilter && technicianFilter !== 'all'
-      ? and(eq(testSessions.status, 'draft'), isNull(testSessions.deletedAt), eq(testSessions.technicianName, technicianFilter))
-      : and(eq(testSessions.status, 'draft'), isNull(testSessions.deletedAt));
+    const conditions = [eq(testSessions.status, 'draft'), isNull(testSessions.deletedAt)];
+    if (technicianFilter && technicianFilter !== 'all') conditions.push(eq(testSessions.technicianName, technicianFilter));
+    if (serviceTypeFilter && serviceTypeFilter !== 'all') conditions.push(eq(testSessions.serviceType, serviceTypeFilter));
+    const whereClause = and(...conditions);
 
     const totalResult = await db
       .select({ count: sql<number>`count(distinct ${testSessions.id})`.mapWith(Number) })

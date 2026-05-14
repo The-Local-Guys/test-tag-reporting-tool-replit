@@ -210,6 +210,9 @@ export default function AdminDashboard() {
   const [userSearch, setUserSearch] = useState("");
   const [technicianComboOpen, setTechnicianComboOpen] = useState(false);
   const [draftTechnicianComboOpen, setDraftTechnicianComboOpen] = useState(false);
+  const [selectedServiceTypeFilter, setSelectedServiceTypeFilter] = useState<string>("all");
+  const [selectedDraftServiceTypeFilter, setSelectedDraftServiceTypeFilter] = useState<string>("all");
+  const [selectedTechDraftServiceTypeFilter, setSelectedTechDraftServiceTypeFilter] = useState<string>("all");
 
   // Copy report state
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
@@ -315,11 +318,14 @@ export default function AdminDashboard() {
 
   // Fetch all test sessions (paginated)
   const { data: sessions, isLoading: sessionsLoading } = useQuery({
-    queryKey: ["/api/admin/sessions", reportsPage, selectedTechnicianFilter],
+    queryKey: ["/api/admin/sessions", reportsPage, selectedTechnicianFilter, selectedServiceTypeFilter],
     queryFn: async () => {
       const params = new URLSearchParams({ page: reportsPage.toString(), limit: "50" });
       if (selectedTechnicianFilter !== "all") {
         params.set("technicianFilter", selectedTechnicianFilter);
+      }
+      if (selectedServiceTypeFilter !== "all") {
+        params.set("serviceTypeFilter", selectedServiceTypeFilter);
       }
       const res = await fetch(`/api/admin/sessions?${params}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch sessions");
@@ -334,11 +340,14 @@ export default function AdminDashboard() {
 
   // Fetch all draft sessions (admin only - for recovery purposes, paginated)
   const { data: adminDraftSessions, isLoading: adminDraftsLoading } = useQuery({
-    queryKey: ["/api/admin/sessions/drafts", draftsPage, selectedDraftTechnicianFilter],
+    queryKey: ["/api/admin/sessions/drafts", draftsPage, selectedDraftTechnicianFilter, selectedDraftServiceTypeFilter],
     queryFn: async () => {
       const params = new URLSearchParams({ page: draftsPage.toString(), limit: "50" });
       if (selectedDraftTechnicianFilter !== "all") {
         params.set("technicianFilter", selectedDraftTechnicianFilter);
+      }
+      if (selectedDraftServiceTypeFilter !== "all") {
+        params.set("serviceTypeFilter", selectedDraftServiceTypeFilter);
       }
       const res = await fetch(`/api/admin/sessions/drafts?${params}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch draft sessions");
@@ -353,9 +362,12 @@ export default function AdminDashboard() {
 
   // Fetch own draft sessions (technician only, paginated)
   const { data: technicianDraftSessions, isLoading: technicianDraftsLoading } = useQuery({
-    queryKey: ["/api/sessions/drafts", draftsPage],
+    queryKey: ["/api/sessions/drafts", draftsPage, selectedTechDraftServiceTypeFilter],
     queryFn: async () => {
       const params = new URLSearchParams({ page: draftsPage.toString(), limit: "50" });
+      if (selectedTechDraftServiceTypeFilter !== "all") {
+        params.set("serviceTypeFilter", selectedTechDraftServiceTypeFilter);
+      }
       const res = await fetch(`/api/sessions/drafts?${params}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch draft sessions");
       return res.json();
@@ -1976,64 +1988,91 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 {/* Technician Filter - Only show for super admin and support center */}
-                {(typedUser?.role === "super_admin" ||
-                  typedUser?.role === "support_center") && (
-                  <div className="mb-4">
-                    <Label className="text-sm font-medium block mb-1">
-                      Filter by Technician
-                    </Label>
-                    <Popover open={technicianComboOpen} onOpenChange={setTechnicianComboOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={technicianComboOpen}
-                          className="w-64 justify-between font-normal"
-                        >
-                          {selectedTechnicianFilter === "all"
-                            ? "All Technicians"
-                            : selectedTechnicianFilter}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-64 p-0">
-                        <Command>
-                          <CommandInput placeholder="Search technician..." />
-                          <CommandList>
-                            <CommandEmpty>No technician found.</CommandEmpty>
-                            <CommandGroup>
-                              <CommandItem
-                                value="all"
-                                onSelect={() => {
-                                  setSelectedTechnicianFilter("all");
-                                  setReportsPage(1);
-                                  setTechnicianComboOpen(false);
-                                }}
-                              >
-                                <Check className={`mr-2 h-4 w-4 ${selectedTechnicianFilter === "all" ? "opacity-100" : "opacity-0"}`} />
-                                All Technicians
-                              </CommandItem>
-                              {uniqueTechnicians.map((technician) => (
+                <div className="mb-4 flex flex-wrap items-end gap-4">
+                  {/* Technician Filter - Only show for super admin and support center */}
+                  {(typedUser?.role === "super_admin" ||
+                    typedUser?.role === "support_center") && (
+                    <div>
+                      <Label className="text-sm font-medium block mb-1">
+                        Filter by Technician
+                      </Label>
+                      <Popover open={technicianComboOpen} onOpenChange={setTechnicianComboOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={technicianComboOpen}
+                            className="w-64 justify-between font-normal"
+                          >
+                            {selectedTechnicianFilter === "all"
+                              ? "All Technicians"
+                              : selectedTechnicianFilter}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-0">
+                          <Command>
+                            <CommandInput placeholder="Search technician..." />
+                            <CommandList>
+                              <CommandEmpty>No technician found.</CommandEmpty>
+                              <CommandGroup>
                                 <CommandItem
-                                  key={technician}
-                                  value={technician}
-                                  onSelect={(val) => {
-                                    setSelectedTechnicianFilter(val);
+                                  value="all"
+                                  onSelect={() => {
+                                    setSelectedTechnicianFilter("all");
                                     setReportsPage(1);
                                     setTechnicianComboOpen(false);
                                   }}
                                 >
-                                  <Check className={`mr-2 h-4 w-4 ${selectedTechnicianFilter === technician ? "opacity-100" : "opacity-0"}`} />
-                                  {technician}
+                                  <Check className={`mr-2 h-4 w-4 ${selectedTechnicianFilter === "all" ? "opacity-100" : "opacity-0"}`} />
+                                  All Technicians
                                 </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                                {uniqueTechnicians.map((technician) => (
+                                  <CommandItem
+                                    key={technician}
+                                    value={technician}
+                                    onSelect={(val) => {
+                                      setSelectedTechnicianFilter(val);
+                                      setReportsPage(1);
+                                      setTechnicianComboOpen(false);
+                                    }}
+                                  >
+                                    <Check className={`mr-2 h-4 w-4 ${selectedTechnicianFilter === technician ? "opacity-100" : "opacity-0"}`} />
+                                    {technician}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  )}
+                  <div>
+                    <Label className="text-sm font-medium block mb-1">
+                      Filter by Service Type
+                    </Label>
+                    <Select
+                      value={selectedServiceTypeFilter}
+                      onValueChange={(value) => {
+                        setSelectedServiceTypeFilter(value);
+                        setReportsPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="w-64">
+                        <SelectValue placeholder="All Service Types" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Service Types</SelectItem>
+                        <SelectItem value="electrical">Electrical Test &amp; Tag</SelectItem>
+                        <SelectItem value="emergency_exit_light">Emergency Exit Light Testing</SelectItem>
+                        <SelectItem value="fire_testing">Fire Equipment Testing</SelectItem>
+                        <SelectItem value="rcd_reporting">RCD Testing</SelectItem>
+                        <SelectItem value="microwave_leakage">Microwave Leakage Testing</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                )}
+                </div>
 
                 {sessionsLoading ? (
                   <div className="flex justify-center py-8">
@@ -2282,6 +2321,32 @@ export default function AdminDashboard() {
                       </Popover>
                     </div>
 
+                    <div>
+                      <Label className="text-sm font-medium block mb-1">
+                        Filter by Service Type
+                      </Label>
+                      <Select
+                        value={selectedDraftServiceTypeFilter}
+                        onValueChange={(value) => {
+                          setSelectedDraftServiceTypeFilter(value);
+                          setSelectedDraftIds(new Set());
+                          setDraftsPage(1);
+                        }}
+                      >
+                        <SelectTrigger className="w-64">
+                          <SelectValue placeholder="All Service Types" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Service Types</SelectItem>
+                          <SelectItem value="electrical">Electrical Test &amp; Tag</SelectItem>
+                          <SelectItem value="emergency_exit_light">Emergency Exit Light Testing</SelectItem>
+                          <SelectItem value="fire_testing">Fire Equipment Testing</SelectItem>
+                          <SelectItem value="rcd_reporting">RCD Testing</SelectItem>
+                          <SelectItem value="microwave_leakage">Microwave Leakage Testing</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
                     {/* Bulk Delete Button */}
                     {selectedDraftIds.size > 0 && (
                       <div className="flex items-center gap-2">
@@ -2508,6 +2573,30 @@ export default function AdminDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent>
+                  <div className="mb-4">
+                    <Label className="text-sm font-medium block mb-1">
+                      Filter by Service Type
+                    </Label>
+                    <Select
+                      value={selectedTechDraftServiceTypeFilter}
+                      onValueChange={(value) => {
+                        setSelectedTechDraftServiceTypeFilter(value);
+                        setDraftsPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="w-64">
+                        <SelectValue placeholder="All Service Types" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Service Types</SelectItem>
+                        <SelectItem value="electrical">Electrical Test &amp; Tag</SelectItem>
+                        <SelectItem value="emergency_exit_light">Emergency Exit Light Testing</SelectItem>
+                        <SelectItem value="fire_testing">Fire Equipment Testing</SelectItem>
+                        <SelectItem value="rcd_reporting">RCD Testing</SelectItem>
+                        <SelectItem value="microwave_leakage">Microwave Leakage Testing</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   {technicianDraftsLoading ? (
                     <div className="flex justify-center py-8">
                       <LoadingSpinner />

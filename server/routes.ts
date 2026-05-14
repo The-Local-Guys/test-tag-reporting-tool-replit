@@ -423,12 +423,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
       const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
       const technicianFilter = req.query.technicianFilter as string | undefined;
+      const serviceTypeFilter = req.query.serviceTypeFilter as string | undefined;
 
       let result;
       if (user.role === "super_admin" || user.role === "support_center") {
-        result = await storage.getAllTestSessionsPaginated(page, limit, technicianFilter);
+        result = await storage.getAllTestSessionsPaginated(page, limit, technicianFilter, serviceTypeFilter);
       } else {
-        result = await storage.getSessionsByUserPaginated(user.id, page, limit);
+        result = await storage.getSessionsByUserPaginated(user.id, page, limit, serviceTypeFilter);
       }
 
       res.json({
@@ -569,7 +570,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.session.userId!;
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
       const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
-      const result = await storage.getDraftSessionsByUserPaginated(userId, page, limit);
+      const serviceTypeFilter = req.query.serviceTypeFilter as string | undefined;
+      const result = await storage.getDraftSessionsByUserPaginated(userId, page, limit, serviceTypeFilter);
       res.json({ sessions: result.sessions, total: result.total, page, totalPages: Math.ceil(result.total / limit), limit });
     } catch (error) {
       console.error("Error fetching draft sessions:", error);
@@ -584,7 +586,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
       const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
       const technicianFilter = req.query.technicianFilter as string | undefined;
-      const result = await storage.getAllDraftSessionsPaginated(page, limit, technicianFilter);
+      const serviceTypeFilter = req.query.serviceTypeFilter as string | undefined;
+      const result = await storage.getAllDraftSessionsPaginated(page, limit, technicianFilter, serviceTypeFilter);
       res.json({ sessions: result.sessions, total: result.total, page, totalPages: Math.ceil(result.total / limit), limit });
     } catch (error) {
       console.error("Error fetching all draft sessions:", error);
