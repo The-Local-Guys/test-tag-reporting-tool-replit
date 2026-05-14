@@ -29,6 +29,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Modal } from "@/components/ui/modal";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { TestResultEditModal } from "@/components/test-result-edit-modal";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -55,6 +57,9 @@ import {
   Eye,
   EyeOff,
   Copy,
+  Search,
+  ChevronsUpDown,
+  Check,
 } from "lucide-react";
 import {
   Dialog,
@@ -202,6 +207,9 @@ export default function AdminDashboard() {
     useState<string>("all");
   const [selectedDraftTechnicianFilter, setSelectedDraftTechnicianFilter] =
     useState<string>("all");
+  const [userSearch, setUserSearch] = useState("");
+  const [technicianComboOpen, setTechnicianComboOpen] = useState(false);
+  const [draftTechnicianComboOpen, setDraftTechnicianComboOpen] = useState(false);
 
   // Copy report state
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
@@ -1855,6 +1863,16 @@ export default function AdminDashboard() {
                     Add User
                   </Button>
                 </div>
+                <div className="relative mt-3 max-w-sm">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search by name, username or role..."
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
               </CardHeader>
               <CardContent>
                 {usersLoading ? (
@@ -1874,7 +1892,15 @@ export default function AdminDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {Array.isArray(users) && users.map((user: any) => (
+                      {Array.isArray(users) && users.filter((user: any) => {
+                        if (!userSearch.trim()) return true;
+                        const q = userSearch.toLowerCase();
+                        return (
+                          (user.fullName || "").toLowerCase().includes(q) ||
+                          (user.username || "").toLowerCase().includes(q) ||
+                          (user.role || "").toLowerCase().includes(q)
+                        );
+                      }).map((user: any) => (
                         <TableRow key={user.id}>
                           <TableCell className="font-medium">
                             {user.fullName}
@@ -1953,31 +1979,59 @@ export default function AdminDashboard() {
                 {(typedUser?.role === "super_admin" ||
                   typedUser?.role === "support_center") && (
                   <div className="mb-4">
-                    <Label
-                      htmlFor="technicianFilter"
-                      className="text-sm font-medium"
-                    >
+                    <Label className="text-sm font-medium block mb-1">
                       Filter by Technician
                     </Label>
-                    <Select
-                      value={selectedTechnicianFilter}
-                      onValueChange={(value) => {
-                        setSelectedTechnicianFilter(value);
-                        setReportsPage(1);
-                      }}
-                    >
-                      <SelectTrigger className="w-64">
-                        <SelectValue placeholder="All Technicians" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Technicians</SelectItem>
-                        {uniqueTechnicians.map((technician) => (
-                          <SelectItem key={technician} value={technician}>
-                            {technician}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={technicianComboOpen} onOpenChange={setTechnicianComboOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={technicianComboOpen}
+                          className="w-64 justify-between font-normal"
+                        >
+                          {selectedTechnicianFilter === "all"
+                            ? "All Technicians"
+                            : selectedTechnicianFilter}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-0">
+                        <Command>
+                          <CommandInput placeholder="Search technician..." />
+                          <CommandList>
+                            <CommandEmpty>No technician found.</CommandEmpty>
+                            <CommandGroup>
+                              <CommandItem
+                                value="all"
+                                onSelect={() => {
+                                  setSelectedTechnicianFilter("all");
+                                  setReportsPage(1);
+                                  setTechnicianComboOpen(false);
+                                }}
+                              >
+                                <Check className={`mr-2 h-4 w-4 ${selectedTechnicianFilter === "all" ? "opacity-100" : "opacity-0"}`} />
+                                All Technicians
+                              </CommandItem>
+                              {uniqueTechnicians.map((technician) => (
+                                <CommandItem
+                                  key={technician}
+                                  value={technician}
+                                  onSelect={(val) => {
+                                    setSelectedTechnicianFilter(val);
+                                    setReportsPage(1);
+                                    setTechnicianComboOpen(false);
+                                  }}
+                                >
+                                  <Check className={`mr-2 h-4 w-4 ${selectedTechnicianFilter === technician ? "opacity-100" : "opacity-0"}`} />
+                                  {technician}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 )}
 
@@ -2171,32 +2225,61 @@ export default function AdminDashboard() {
                   {/* Technician Filter and Bulk Actions for Drafts */}
                   <div className="mb-4 flex flex-wrap items-end gap-4">
                     <div>
-                      <Label
-                        htmlFor="draftTechnicianFilter"
-                        className="text-sm font-medium"
-                      >
+                      <Label className="text-sm font-medium block mb-1">
                         Filter by Technician
                       </Label>
-                      <Select
-                        value={selectedDraftTechnicianFilter}
-                        onValueChange={(value) => {
-                          setSelectedDraftTechnicianFilter(value);
-                          setSelectedDraftIds(new Set());
-                          setDraftsPage(1);
-                        }}
-                      >
-                        <SelectTrigger className="w-64">
-                          <SelectValue placeholder="All Technicians" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Technicians</SelectItem>
-                          {uniqueDraftTechnicians.map((technician) => (
-                            <SelectItem key={technician} value={technician}>
-                              {technician}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Popover open={draftTechnicianComboOpen} onOpenChange={setDraftTechnicianComboOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={draftTechnicianComboOpen}
+                            className="w-64 justify-between font-normal"
+                          >
+                            {selectedDraftTechnicianFilter === "all"
+                              ? "All Technicians"
+                              : selectedDraftTechnicianFilter}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-0">
+                          <Command>
+                            <CommandInput placeholder="Search technician..." />
+                            <CommandList>
+                              <CommandEmpty>No technician found.</CommandEmpty>
+                              <CommandGroup>
+                                <CommandItem
+                                  value="all"
+                                  onSelect={() => {
+                                    setSelectedDraftTechnicianFilter("all");
+                                    setSelectedDraftIds(new Set());
+                                    setDraftsPage(1);
+                                    setDraftTechnicianComboOpen(false);
+                                  }}
+                                >
+                                  <Check className={`mr-2 h-4 w-4 ${selectedDraftTechnicianFilter === "all" ? "opacity-100" : "opacity-0"}`} />
+                                  All Technicians
+                                </CommandItem>
+                                {uniqueDraftTechnicians.map((technician) => (
+                                  <CommandItem
+                                    key={technician}
+                                    value={technician}
+                                    onSelect={(val) => {
+                                      setSelectedDraftTechnicianFilter(val);
+                                      setSelectedDraftIds(new Set());
+                                      setDraftsPage(1);
+                                      setDraftTechnicianComboOpen(false);
+                                    }}
+                                  >
+                                    <Check className={`mr-2 h-4 w-4 ${selectedDraftTechnicianFilter === technician ? "opacity-100" : "opacity-0"}`} />
+                                    {technician}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
 
                     {/* Bulk Delete Button */}

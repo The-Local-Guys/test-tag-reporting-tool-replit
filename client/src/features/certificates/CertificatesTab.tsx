@@ -14,7 +14,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, FileText, Trash2, Edit, Download } from "lucide-react";
+import { Plus, FileText, Trash2, Edit, Download, Search, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCertificates } from "./useCertificates";
 import { CertificateModal } from "./CertificateModal";
 import { CertificatePreview } from "./CertificatePreview";
@@ -29,6 +30,8 @@ export function CertificatesTab() {
   const [previewCertificate, setPreviewCertificate] = useState<Certificate | null>(null);
   const [certificateToDelete, setCertificateToDelete] = useState<number | null>(null);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const [clientSearch, setClientSearch] = useState("");
+  const [selectedClient, setSelectedClient] = useState<string>("all");
 
   const handleSubmitCertificate = (data: any) => {
     if (editingCertificate) {
@@ -111,6 +114,20 @@ export function CertificatesTab() {
     }
   };
 
+  const allCerts: any[] = certificates as any[] || [];
+
+  const uniqueClients = Array.from(
+    new Set(allCerts.map((c) => c.clientName).filter(Boolean))
+  ).sort();
+
+  const filteredCerts = allCerts.filter((cert) => {
+    const matchesDropdown = selectedClient === "all" || cert.clientName === selectedClient;
+    const matchesSearch =
+      !clientSearch.trim() ||
+      (cert.clientName || "").toLowerCase().includes(clientSearch.toLowerCase());
+    return matchesDropdown && matchesSearch;
+  });
+
   return (
     <Card>
       <CardHeader>
@@ -132,6 +149,58 @@ export function CertificatesTab() {
         </div>
       </CardHeader>
       <CardContent>
+        {/* Client filter row */}
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <div className="relative flex-1 min-w-[200px] max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search by client name..."
+              value={clientSearch}
+              onChange={(e) => {
+                setClientSearch(e.target.value);
+                setSelectedClient("all");
+              }}
+              className="w-full pl-9 pr-8 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            {clientSearch && (
+              <button
+                onClick={() => setClientSearch("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+          <Select
+            value={selectedClient}
+            onValueChange={(val) => {
+              setSelectedClient(val);
+              setClientSearch("");
+            }}
+          >
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder="Filter by client" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Clients</SelectItem>
+              {uniqueClients.map((name) => (
+                <SelectItem key={name} value={name}>
+                  {name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {(selectedClient !== "all" || clientSearch) && (
+            <button
+              onClick={() => { setSelectedClient("all"); setClientSearch(""); }}
+              className="text-sm text-muted-foreground hover:text-foreground underline"
+            >
+              Clear filter
+            </button>
+          )}
+        </div>
+
         {certificatesLoading ? (
           <div className="flex justify-center py-8">
             <LoadingSpinner />
@@ -149,7 +218,7 @@ export function CertificatesTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(certificates as any[] || []).map((cert: any) => {
+                {filteredCerts.map((cert: any) => {
                   const services = cert.services as string[];
                   return (
                     <TableRow key={cert.id}>
@@ -221,10 +290,12 @@ export function CertificatesTab() {
                     </TableRow>
                   );
                 })}
-                {(certificates as any[] || []).length === 0 && (
+                {filteredCerts.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-8 text-gray-500">
-                      No certificates created yet. Click "Create Certificate" to get started.
+                      {allCerts.length === 0
+                        ? 'No certificates created yet. Click "Create Certificate" to get started.'
+                        : "No certificates match the current filter."}
                     </TableCell>
                   </TableRow>
                 )}
