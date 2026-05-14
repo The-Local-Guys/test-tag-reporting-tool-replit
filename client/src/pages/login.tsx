@@ -29,6 +29,12 @@ export default function Login() {
       });
     } catch (error) {
       // Error is handled by the hook
+      toast({
+        title: "Invalid credentials",
+        description:
+          "The username or password you entered is incorrect. If your credentials are correct, your account may be deactivated. Please contact your administrator.",
+        variant: "destructive",
+      });
     }
   };
 
