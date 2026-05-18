@@ -213,6 +213,9 @@ export default function AdminDashboard() {
   const [selectedServiceTypeFilter, setSelectedServiceTypeFilter] = useState<string>("all");
   const [selectedDraftServiceTypeFilter, setSelectedDraftServiceTypeFilter] = useState<string>("all");
   const [selectedTechDraftServiceTypeFilter, setSelectedTechDraftServiceTypeFilter] = useState<string>("all");
+  const [reportsSearch, setReportsSearch] = useState("");
+  const [draftsSearch, setDraftsSearch] = useState("");
+  const [techDraftsSearch, setTechDraftsSearch] = useState("");
 
   // Copy report state
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
@@ -318,7 +321,7 @@ export default function AdminDashboard() {
 
   // Fetch all test sessions (paginated)
   const { data: sessions, isLoading: sessionsLoading } = useQuery({
-    queryKey: ["/api/admin/sessions", reportsPage, selectedTechnicianFilter, selectedServiceTypeFilter],
+    queryKey: ["/api/admin/sessions", reportsPage, selectedTechnicianFilter, selectedServiceTypeFilter, reportsSearch],
     queryFn: async () => {
       const params = new URLSearchParams({ page: reportsPage.toString(), limit: "50" });
       if (selectedTechnicianFilter !== "all") {
@@ -326,6 +329,9 @@ export default function AdminDashboard() {
       }
       if (selectedServiceTypeFilter !== "all") {
         params.set("serviceTypeFilter", selectedServiceTypeFilter);
+      }
+      if (reportsSearch.trim()) {
+        params.set("search", reportsSearch.trim());
       }
       const res = await fetch(`/api/admin/sessions?${params}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch sessions");
@@ -340,7 +346,7 @@ export default function AdminDashboard() {
 
   // Fetch all draft sessions (admin only - for recovery purposes, paginated)
   const { data: adminDraftSessions, isLoading: adminDraftsLoading } = useQuery({
-    queryKey: ["/api/admin/sessions/drafts", draftsPage, selectedDraftTechnicianFilter, selectedDraftServiceTypeFilter],
+    queryKey: ["/api/admin/sessions/drafts", draftsPage, selectedDraftTechnicianFilter, selectedDraftServiceTypeFilter, draftsSearch],
     queryFn: async () => {
       const params = new URLSearchParams({ page: draftsPage.toString(), limit: "50" });
       if (selectedDraftTechnicianFilter !== "all") {
@@ -348,6 +354,9 @@ export default function AdminDashboard() {
       }
       if (selectedDraftServiceTypeFilter !== "all") {
         params.set("serviceTypeFilter", selectedDraftServiceTypeFilter);
+      }
+      if (draftsSearch.trim()) {
+        params.set("search", draftsSearch.trim());
       }
       const res = await fetch(`/api/admin/sessions/drafts?${params}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch draft sessions");
@@ -362,11 +371,14 @@ export default function AdminDashboard() {
 
   // Fetch own draft sessions (technician only, paginated)
   const { data: technicianDraftSessions, isLoading: technicianDraftsLoading } = useQuery({
-    queryKey: ["/api/sessions/drafts", draftsPage, selectedTechDraftServiceTypeFilter],
+    queryKey: ["/api/sessions/drafts", draftsPage, selectedTechDraftServiceTypeFilter, techDraftsSearch],
     queryFn: async () => {
       const params = new URLSearchParams({ page: draftsPage.toString(), limit: "50" });
       if (selectedTechDraftServiceTypeFilter !== "all") {
         params.set("serviceTypeFilter", selectedTechDraftServiceTypeFilter);
+      }
+      if (techDraftsSearch.trim()) {
+        params.set("search", techDraftsSearch.trim());
       }
       const res = await fetch(`/api/sessions/drafts?${params}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch draft sessions");
@@ -392,7 +404,7 @@ export default function AdminDashboard() {
     queryClient.invalidateQueries({ queryKey: ["/api/admin/sessions/drafts"] });
   }, [queryClient]);
 
-  // Sessions are already filtered and sorted server-side
+  // Sessions are filtered and sorted server-side (including search)
   const filteredSessions: any[] = sessions?.sessions || [];
 
   // Get unique technician names for filter dropdown from users list
@@ -400,7 +412,7 @@ export default function AdminDashboard() {
     ? (users as any[]).map((u: any) => u.fullName).filter(Boolean).sort()
     : [];
 
-  // Draft sessions are already filtered and sorted server-side
+  // Draft sessions are filtered and sorted server-side (including search)
   const filteredDraftSessions: any[] = adminDraftSessions?.sessions || [];
 
   // Get unique technician names for draft filter dropdown from users list
@@ -1987,8 +1999,24 @@ export default function AdminDashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {/* Technician Filter - Only show for super admin and support center */}
+                {/* Filters */}
                 <div className="mb-4 flex flex-wrap items-end gap-4">
+                  {/* Search */}
+                  <div>
+                    <Label className="text-sm font-medium block mb-1">Search</Label>
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
+                      <Input
+                        className="pl-8 w-64"
+                        placeholder="Search by client, technician..."
+                        value={reportsSearch}
+                        onChange={(e) => {
+                          setReportsSearch(e.target.value);
+                          setReportsPage(1);
+                        }}
+                      />
+                    </div>
+                  </div>
                   {/* Technician Filter - Only show for super admin and support center */}
                   {(typedUser?.role === "super_admin" ||
                     typedUser?.role === "support_center") && (
@@ -2263,6 +2291,22 @@ export default function AdminDashboard() {
                 <CardContent>
                   {/* Technician Filter and Bulk Actions for Drafts */}
                   <div className="mb-4 flex flex-wrap items-end gap-4">
+                    {/* Search */}
+                    <div>
+                      <Label className="text-sm font-medium block mb-1">Search</Label>
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
+                        <Input
+                          className="pl-8 w-64"
+                          placeholder="Search by client, technician..."
+                          value={draftsSearch}
+                          onChange={(e) => {
+                            setDraftsSearch(e.target.value);
+                            setDraftsPage(1);
+                          }}
+                        />
+                      </div>
+                    </div>
                     <div>
                       <Label className="text-sm font-medium block mb-1">
                         Filter by Technician
@@ -2573,7 +2617,24 @@ export default function AdminDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="mb-4">
+                  <div className="mb-4 flex flex-wrap items-end gap-4">
+                    {/* Search */}
+                    <div>
+                      <Label className="text-sm font-medium block mb-1">Search</Label>
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
+                        <Input
+                          className="pl-8 w-64"
+                          placeholder="Search by client name..."
+                          value={techDraftsSearch}
+                          onChange={(e) => {
+                            setTechDraftsSearch(e.target.value);
+                            setDraftsPage(1);
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div>
                     <Label className="text-sm font-medium block mb-1">
                       Filter by Service Type
                     </Label>
@@ -2596,6 +2657,7 @@ export default function AdminDashboard() {
                         <SelectItem value="microwave_leakage">Microwave Leakage Testing</SelectItem>
                       </SelectContent>
                     </Select>
+                    </div>
                   </div>
                   {technicianDraftsLoading ? (
                     <div className="flex justify-center py-8">

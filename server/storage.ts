@@ -19,7 +19,7 @@ import {
   type InsertCertificate
 } from "@shared/schema";
 import { db, pool } from "./db";
-import { eq, desc, and, gte, sql, isNull } from "drizzle-orm";
+import { eq, desc, and, gte, sql, isNull, ilike, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 export interface IStorage {
@@ -35,9 +35,9 @@ export interface IStorage {
   updateUserStatus(userId: number, isActive: boolean): Promise<User>;
   updateUser(userId: number, data: Partial<InsertUser>): Promise<User>;
   getAllTestSessions(): Promise<(TestSession & { technicianFullName?: string | null })[]>;
-  getAllTestSessionsPaginated(page: number, limit: number, technicianFilter?: string, serviceTypeFilter?: string): Promise<{ sessions: (TestSession & { technicianFullName?: string | null; totalItems?: number; failedItems?: number })[]; total: number }>;
+  getAllTestSessionsPaginated(page: number, limit: number, technicianFilter?: string, serviceTypeFilter?: string, search?: string): Promise<{ sessions: (TestSession & { technicianFullName?: string | null; totalItems?: number; failedItems?: number })[]; total: number }>;
   getSessionsByUser(userId: number): Promise<TestSession[]>;
-  getSessionsByUserPaginated(userId: number, page: number, limit: number, serviceTypeFilter?: string): Promise<{ sessions: (TestSession & { totalItems?: number; failedItems?: number })[]; total: number }>;
+  getSessionsByUserPaginated(userId: number, page: number, limit: number, serviceTypeFilter?: string, search?: string): Promise<{ sessions: (TestSession & { totalItems?: number; failedItems?: number })[]; total: number }>;
   updateTestSession(sessionId: number, data: Partial<InsertTestSession>): Promise<TestSession>;
   deleteTestSession(sessionId: number, deletedByUserId: number): Promise<void>;
 
@@ -47,9 +47,9 @@ export interface IStorage {
 
   // Draft session management (database-first architecture)
   getDraftSessionsByUser(userId: number): Promise<(TestSession & { totalItems: number; failedItems: number })[]>;
-  getDraftSessionsByUserPaginated(userId: number, page: number, limit: number, serviceTypeFilter?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }>;
+  getDraftSessionsByUserPaginated(userId: number, page: number, limit: number, serviceTypeFilter?: string, search?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }>;
   getAllDraftSessions(): Promise<(TestSession & { totalItems: number; failedItems: number })[]>;
-  getAllDraftSessionsPaginated(page: number, limit: number, technicianFilter?: string, serviceTypeFilter?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }>;
+  getAllDraftSessionsPaginated(page: number, limit: number, technicianFilter?: string, serviceTypeFilter?: string, search?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }>;
   finalizeSession(sessionId: number): Promise<TestSession>;
   updateCustomStartingNumbers(sessionId: number, numbers: object): Promise<TestSession>;
   updateSessionActivity(sessionId: number): Promise<void>;
@@ -306,11 +306,15 @@ export class DatabaseStorage implements IStorage {
     return sessionsWithCounts;
   }
 
-  async getAllTestSessionsPaginated(page: number, limit: number, technicianFilter?: string, serviceTypeFilter?: string): Promise<{ sessions: (TestSession & { technicianFullName?: string | null; totalItems?: number; failedItems?: number })[]; total: number }> {
+  async getAllTestSessionsPaginated(page: number, limit: number, technicianFilter?: string, serviceTypeFilter?: string, search?: string): Promise<{ sessions: (TestSession & { technicianFullName?: string | null; totalItems?: number; failedItems?: number })[]; total: number }> {
     const offset = (page - 1) * limit;
     const conditions = [isNull(testSessions.deletedAt)];
     if (technicianFilter && technicianFilter !== "all") conditions.push(eq(users.fullName, technicianFilter));
     if (serviceTypeFilter && serviceTypeFilter !== "all") conditions.push(eq(testSessions.serviceType, serviceTypeFilter));
+    if (search && search.trim()) {
+      const term = `%${search.trim()}%`;
+      conditions.push(or(ilike(testSessions.clientName, term), ilike(testSessions.address, term), ilike(users.fullName, term))!);
+    }
     const whereClause = and(...conditions);
 
     const totalResult = await db
@@ -356,10 +360,14 @@ export class DatabaseStorage implements IStorage {
     return { sessions, total };
   }
 
-  async getSessionsByUserPaginated(userId: number, page: number, limit: number, serviceTypeFilter?: string): Promise<{ sessions: (TestSession & { totalItems?: number; failedItems?: number })[]; total: number }> {
+  async getSessionsByUserPaginated(userId: number, page: number, limit: number, serviceTypeFilter?: string, search?: string): Promise<{ sessions: (TestSession & { totalItems?: number; failedItems?: number })[]; total: number }> {
     const offset = (page - 1) * limit;
     const conditions = [eq(testSessions.userId, userId), isNull(testSessions.deletedAt)];
     if (serviceTypeFilter && serviceTypeFilter !== 'all') conditions.push(eq(testSessions.serviceType, serviceTypeFilter));
+    if (search && search.trim()) {
+      const term = `%${search.trim()}%`;
+      conditions.push(or(ilike(testSessions.clientName, term), ilike(testSessions.address, term))!);
+    }
     const whereClause = and(...conditions);
 
     const totalResult = await db
@@ -583,10 +591,14 @@ export class DatabaseStorage implements IStorage {
     return draftSessions;
   }
 
-  async getDraftSessionsByUserPaginated(userId: number, page: number, limit: number, serviceTypeFilter?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }> {
+  async getDraftSessionsByUserPaginated(userId: number, page: number, limit: number, serviceTypeFilter?: string, search?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }> {
     const offset = (page - 1) * limit;
     const conditions = [eq(testSessions.userId, userId), eq(testSessions.status, 'draft'), isNull(testSessions.deletedAt)];
     if (serviceTypeFilter && serviceTypeFilter !== 'all') conditions.push(eq(testSessions.serviceType, serviceTypeFilter));
+    if (search && search.trim()) {
+      const term = `%${search.trim()}%`;
+      conditions.push(or(ilike(testSessions.clientName, term), ilike(testSessions.address, term))!);
+    }
     const whereClause = and(...conditions);
 
     const totalResult = await db
@@ -629,11 +641,15 @@ export class DatabaseStorage implements IStorage {
     return { sessions, total };
   }
 
-  async getAllDraftSessionsPaginated(page: number, limit: number, technicianFilter?: string, serviceTypeFilter?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }> {
+  async getAllDraftSessionsPaginated(page: number, limit: number, technicianFilter?: string, serviceTypeFilter?: string, search?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }> {
     const offset = (page - 1) * limit;
     const conditions = [eq(testSessions.status, 'draft'), isNull(testSessions.deletedAt)];
     if (technicianFilter && technicianFilter !== 'all') conditions.push(eq(testSessions.technicianName, technicianFilter));
     if (serviceTypeFilter && serviceTypeFilter !== 'all') conditions.push(eq(testSessions.serviceType, serviceTypeFilter));
+    if (search && search.trim()) {
+      const term = `%${search.trim()}%`;
+      conditions.push(or(ilike(testSessions.clientName, term), ilike(testSessions.address, term), ilike(testSessions.technicianName, term))!);
+    }
     const whereClause = and(...conditions);
 
     const totalResult = await db
