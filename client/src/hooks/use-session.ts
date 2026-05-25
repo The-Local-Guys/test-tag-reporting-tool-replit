@@ -254,10 +254,11 @@ export function useSession() {
   });
 
   // When continuing an existing session, load existing results from server
-  const { data: existingResults } = useQuery<TestResult[]>({
+  const { data: existingResultsData } = useQuery<{ results: TestResult[]; total: number }>({
     queryKey: [`/api/sessions/${sessionId}/results`],
     enabled: !!sessionId && session?.id === sessionId,
   });
+  const existingResults = existingResultsData?.results;
 
   // Effect to handle loading existing results when they become available
   // Uses fingerprint-based dedup so it re-processes when server data changes
@@ -1249,9 +1250,13 @@ export function useSession() {
       }));
 
       // Update the query cache so other pages get fresh data immediately on navigation
-      queryClient.setQueryData<TestResult[]>(
+      queryClient.setQueryData<{ results: TestResult[]; total: number }>(
         [`/api/sessions/${sessionId}/results`],
-        (old) => old ? [...old, serverResult] : [serverResult]
+        (old) => {
+          const prev = old?.results ?? [];
+          const next = [...prev, serverResult];
+          return { results: next, total: next.length };
+        }
       );
       queryClient.invalidateQueries({ queryKey: ['/api/admin/sessions'] });
     },
@@ -1396,9 +1401,13 @@ export function useSession() {
         return updated;
       });
 
-      queryClient.setQueryData<TestResult[]>(
+      queryClient.setQueryData<{ results: TestResult[]; total: number }>(
         [`/api/sessions/${sessionId}/results`],
-        (old) => old?.map(r => r.id === serverResult.id ? serverResult : r) ?? []
+        (old) => {
+          const prev = old?.results ?? [];
+          const next = prev.map(r => r.id === serverResult.id ? serverResult : r);
+          return { results: next, total: next.length };
+        }
       );
       queryClient.invalidateQueries({ queryKey: ['/api/admin/sessions'] });
     },

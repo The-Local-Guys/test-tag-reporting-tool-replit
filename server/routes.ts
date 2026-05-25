@@ -1354,7 +1354,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Fetching results for session ${sessionId}`);
       const results = await storage.getTestResultsBySession(sessionId);
       console.log(`Found ${results.length} results for session ${sessionId}`);
-      res.json(results);
+      res.json({ results, total: results.length });
     } catch (error) {
       console.error(`Error fetching results for session ${req.params.id}:`, error);
       res.status(500).json({ error: "Failed to retrieve results" });
