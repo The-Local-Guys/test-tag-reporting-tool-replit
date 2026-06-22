@@ -704,6 +704,7 @@ export function useSession() {
       console.log('Session created successfully:', session.id);
 
       setSessionId(session.id);
+      queryClient.setQueryData([`/api/sessions/${session.id}`], session);
 
       // Clear any existing batched results for this session
       updateBatchedResultsState([]);
@@ -711,16 +712,16 @@ export function useSession() {
       // Get default starting numbers based on service type
       const defaults = getDefaultStartingNumbers(session.serviceType);
 
-      // Check if we have pending custom starting numbers for electrical service
-      const shouldApplyCustomNumbers =
+      const sessionCustomNumbers = (session as any).customStartingNumbers;
+      const customNumbers =
         session.serviceType === 'electrical' &&
-        pendingCustomStartingNumbers &&
-        Object.keys(pendingCustomStartingNumbers).length > 0;
+        sessionCustomNumbers &&
+        Object.keys(sessionCustomNumbers).length > 0
+          ? sessionCustomNumbers as Partial<CustomStartingNumbers>
+          : null;
 
-      if (shouldApplyCustomNumbers) {
-        // Apply pending custom starting numbers immediately to avoid race condition
-        const customNumbers = pendingCustomStartingNumbers!;
-        console.log('Applying pending custom starting numbers to new session:', customNumbers);
+      if (customNumbers) {
+        console.log('Applying custom starting numbers from created session:', customNumbers);
 
         setCustomStartingNumbers(customNumbers);
         updateCounter(setTwelvemonthlyCounter, twelvemonthlyCounterRef, (customNumbers.twelvemonthly ?? defaults.twelvemonthly) - 1);
@@ -730,18 +731,13 @@ export function useSession() {
         updateCounter(setThreemonthlyCounter, threemonthlyCounterRef, (customNumbers.threemonthly ?? defaults.threemonthly) - 1);
         updateCounter(setMonthlyCounter, monthlyCounterRef, (customNumbers.monthly ?? defaults.monthly) - 1);
 
-        // Save to database immediately
-        apiRequest('PATCH', `/api/sessions/${session.id}/custom-numbers`, {
-          customStartingNumbers: customNumbers
-        }).then(() => {
-          console.log('Custom starting numbers saved to database for new session');
-        }).catch((err) => {
-          console.warn('Failed to save custom numbers to database:', err);
-        });
-
         // Clear pending after applying
         setPendingCustomStartingNumbers(null);
       } else {
+        if (pendingCustomStartingNumbers) {
+          setPendingCustomStartingNumbers(null);
+        }
+
         // Reset all frequency-specific asset counters for new session using defaults
         updateCounter(setTwelvemonthlyCounter, twelvemonthlyCounterRef, defaults.twelvemonthly - 1);
         updateCounter(setSixmonthlyCounter, sixmonthlyCounterRef, defaults.sixmonthly - 1);
@@ -1571,9 +1567,14 @@ export function useSession() {
     if (sessionId) {
       // Save to database (primary source of truth)
       try {
-        await apiRequest('PATCH', `/api/sessions/${sessionId}/custom-numbers`, {
+        const response = await apiRequest('PATCH', `/api/sessions/${sessionId}/custom-numbers`, {
           customStartingNumbers: numbers
         });
+        const updatedSession = await response.json();
+        queryClient.setQueryData([`/api/sessions/${sessionId}`], updatedSession);
+        queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/report`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/asset-progress`] });
+        queryClient.invalidateQueries({ queryKey: ['/api/sessions/drafts'] });
         console.log('Custom starting numbers saved to database for session', sessionId);
       } catch (error) {
         console.error('Failed to save custom starting numbers to database:', error);
@@ -1585,9 +1586,7 @@ export function useSession() {
   };
 
   // Reset custom starting numbers to defaults
-  const resetCustomStartingNumbers = () => {
-    if (!sessionId) return;
-
+  const resetCustomStartingNumbers = async () => {
     const serviceType = session?.serviceType || 'electrical';
 
     if (serviceType !== 'electrical') {
@@ -1604,6 +1603,25 @@ export function useSession() {
     updateCounter(setTwentyfourmonthlyCounter, twentyfourmonthlyCounterRef, DEFAULT_STARTING_NUMBERS.twentyfourmonthly - 1);
     updateCounter(setThreemonthlyCounter, threemonthlyCounterRef, DEFAULT_STARTING_NUMBERS.threemonthly - 1);
     updateCounter(setMonthlyCounter, monthlyCounterRef, DEFAULT_STARTING_NUMBERS.monthly - 1);
+
+    if (!sessionId) {
+      setPendingCustomStartingNumbers(null);
+      return;
+    }
+
+    try {
+      const response = await apiRequest('PATCH', `/api/sessions/${sessionId}/custom-numbers`, {
+        customStartingNumbers: {}
+      });
+      const updatedSession = await response.json();
+      queryClient.setQueryData([`/api/sessions/${sessionId}`], updatedSession);
+      queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/report`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/asset-progress`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sessions/drafts'] });
+      console.log('Custom starting numbers reset in database for session', sessionId);
+    } catch (error) {
+      console.error('Failed to reset custom starting numbers in database:', error);
+    }
   };
 
   // Clear session

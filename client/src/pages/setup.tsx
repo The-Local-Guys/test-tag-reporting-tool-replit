@@ -100,6 +100,9 @@ export default function Setup() {
       ...data,
       serviceType: selectedService as 'electrical' | 'emergency_exit_light' | 'fire_testing' | 'rcd_reporting' | 'microwave_leakage',
       country: data.country,
+      ...(selectedService === 'electrical' && Object.keys(modalCustomNumbers).length > 0 && {
+        customStartingNumbers: modalCustomNumbers,
+      }),
       // Fire testing specific fields
       ...(selectedService === 'fire_testing' && {
         technicianLicensed: data.technicianLicensed,
