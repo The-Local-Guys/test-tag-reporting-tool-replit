@@ -300,17 +300,24 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   
-  // For RCD reporting, use different labels without "items" wording
+  // For RCD reporting, separate device count from total completed test actions.
   const isRCD = session.serviceType === 'rcd_reporting';
-  
-  doc.text(`${isRCD ? 'Total Tested' : 'Total Items Tested'}: ${summary.totalItems}`, margin, yPosition);
-  yPosition += 7;
-  
-  // For RCD reporting, show push button and time test counts
-  if (isRCD && summary.numberOfPushButtons !== undefined && summary.numberOfTimeTests !== undefined) {
-    doc.text(`Number of push buttons: ${summary.numberOfPushButtons}`, margin, yPosition);
+
+  if (isRCD) {
+    const numberOfPushButtons = summary.numberOfPushButtons ?? 0;
+    const numberOfTimeTests = summary.numberOfTimeTests ?? 0;
+    const totalTested = numberOfPushButtons + numberOfTimeTests;
+
+    doc.text(`Total RCD Items: ${summary.totalItems}`, margin, yPosition);
     yPosition += 7;
-    doc.text(`Number of time tests: ${summary.numberOfTimeTests}`, margin, yPosition);
+    doc.text(`Total Tested: ${totalTested}`, margin, yPosition);
+    yPosition += 7;
+    doc.text(`Number of push buttons: ${numberOfPushButtons}`, margin, yPosition);
+    yPosition += 7;
+    doc.text(`Number of time tests: ${numberOfTimeTests}`, margin, yPosition);
+    yPosition += 7;
+  } else {
+    doc.text(`Total Items Tested: ${summary.totalItems}`, margin, yPosition);
     yPosition += 7;
   }
   
