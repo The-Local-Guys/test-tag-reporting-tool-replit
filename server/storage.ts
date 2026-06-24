@@ -21,6 +21,7 @@ import {
 import { db, pool } from "./db";
 import { eq, desc, and, gte, sql, isNull, ilike, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+import type { TransactionClient } from "./idempotency";
 
 export interface IStorage {
   // User operations
@@ -42,7 +43,7 @@ export interface IStorage {
   deleteTestSession(sessionId: number, deletedByUserId: number): Promise<void>;
 
   // Test Sessions
-  createTestSession(session: InsertTestSession): Promise<TestSession>;
+  createTestSession(session: InsertTestSession, client?: TransactionClient): Promise<TestSession>;
   getTestSession(id: number): Promise<TestSession | undefined>;
 
   // Draft session management (database-first architecture)
@@ -52,10 +53,10 @@ export interface IStorage {
   getAllDraftSessionsPaginated(page: number, limit: number, technicianFilter?: string, serviceTypeFilter?: string, search?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }>;
   finalizeSession(sessionId: number): Promise<TestSession>;
   updateCustomStartingNumbers(sessionId: number, numbers: object): Promise<TestSession>;
-  updateSessionActivity(sessionId: number): Promise<void>;
+  updateSessionActivity(sessionId: number, client?: TransactionClient): Promise<void>;
   
   // Test Results
-  createTestResult(result: InsertTestResult): Promise<TestResult>;
+  createTestResult(result: InsertTestResult, client?: TransactionClient): Promise<TestResult>;
   updateTestResult(id: number, data: Partial<InsertTestResult>): Promise<TestResult>;
   deleteTestResult(id: number, deletedByUserId: number): Promise<void>;
   getTestResult(resultId: number): Promise<TestResult | undefined>;
@@ -80,7 +81,7 @@ export interface IStorage {
   } | undefined>;
   
   // Environments
-  createEnvironment(environment: InsertEnvironment): Promise<Environment>;
+  createEnvironment(environment: InsertEnvironment, client?: TransactionClient): Promise<Environment>;
   getEnvironmentsByUser(userId: number): Promise<Environment[]>;
   getEnvironment(id: number): Promise<Environment | undefined>;
   updateEnvironment(id: number, data: Partial<InsertEnvironment>): Promise<Environment>;
@@ -94,7 +95,7 @@ export interface IStorage {
   deleteCustomFormType(id: number): Promise<void>;
   
   // Certificates
-  createCertificate(certificate: InsertCertificate): Promise<Certificate>;
+  createCertificate(certificate: InsertCertificate, client?: TransactionClient): Promise<Certificate>;
   getCertificatesByUser(userId: number): Promise<Certificate[]>;
   getAllCertificates(): Promise<Certificate[]>;
   getCertificateById(id: number): Promise<Certificate | undefined>;
@@ -466,7 +467,65 @@ export class DatabaseStorage implements IStorage {
    * @param insertSession - Session data (client, address, technician info)
    * @returns Newly created test session object
    */
-  async createTestSession(insertSession: InsertTestSession): Promise<TestSession> {
+  async createTestSession(insertSession: InsertTestSession, client?: TransactionClient): Promise<TestSession> {
+    if (client) {
+      const result = await client.query(
+        `
+          insert into test_sessions (
+            service_type,
+            test_date,
+            technician_name,
+            client_name,
+            site_contact,
+            address,
+            country,
+            user_id,
+            starting_asset_number,
+            technician_licensed,
+            compliance_standard,
+            status,
+            custom_starting_numbers
+          )
+          values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+          returning
+            id,
+            service_type as "serviceType",
+            test_date as "testDate",
+            technician_name as "technicianName",
+            client_name as "clientName",
+            site_contact as "siteContact",
+            address,
+            country,
+            user_id as "userId",
+            starting_asset_number as "startingAssetNumber",
+            technician_licensed as "technicianLicensed",
+            compliance_standard as "complianceStandard",
+            status,
+            custom_starting_numbers as "customStartingNumbers",
+            last_activity_at as "lastActivityAt",
+            created_at as "createdAt",
+            deleted_at as "deletedAt",
+            deleted_by as "deletedBy"
+        `,
+        [
+          insertSession.serviceType ?? "electrical",
+          insertSession.testDate,
+          insertSession.technicianName,
+          insertSession.clientName,
+          insertSession.siteContact,
+          insertSession.address,
+          insertSession.country,
+          insertSession.userId ?? null,
+          insertSession.startingAssetNumber ?? null,
+          insertSession.technicianLicensed ?? null,
+          insertSession.complianceStandard ?? null,
+          insertSession.status ?? "draft",
+          insertSession.customStartingNumbers ?? null,
+        ],
+      );
+      return result.rows[0] as TestSession;
+    }
+
     const [session] = await db
       .insert(testSessions)
       .values(insertSession)
@@ -728,7 +787,15 @@ export class DatabaseStorage implements IStorage {
    * Called when test results are added/modified to track session activity
    * @param sessionId - ID of the session to update
    */
-  async updateSessionActivity(sessionId: number): Promise<void> {
+  async updateSessionActivity(sessionId: number, client?: TransactionClient): Promise<void> {
+    if (client) {
+      await client.query(
+        "update test_sessions set last_activity_at = now() where id = $1",
+        [sessionId],
+      );
+      return;
+    }
+
     await db
       .update(testSessions)
       .set({ lastActivityAt: new Date() })
@@ -741,7 +808,7 @@ export class DatabaseStorage implements IStorage {
    * @param insertResult - Test result data including item details, test outcomes, and asset number
    * @returns Newly created test result
    */
-  async createTestResult(insertResult: any): Promise<TestResult> {
+  async createTestResult(insertResult: any, client?: TransactionClient): Promise<TestResult> {
     try {
       console.log('Attempting to insert test result:', {
         ...insertResult,
@@ -762,8 +829,8 @@ export class DatabaseStorage implements IStorage {
         RETURNING *
       `;
 
-      const { pool } = await import('./db');
-      const result = await pool.query(query, [
+      const queryClient = client ?? pool;
+      const result = await queryClient.query(query, [
         insertResult.sessionId,
         assetNumber,
         insertResult.itemName,
@@ -817,7 +884,7 @@ export class DatabaseStorage implements IStorage {
 
       // Update session's lastActivityAt timestamp for multi-day job tracking
       if (insertResult.sessionId) {
-        await this.updateSessionActivity(insertResult.sessionId);
+        await this.updateSessionActivity(insertResult.sessionId, client);
       }
 
       return result.rows[0] as TestResult;
@@ -1097,7 +1164,35 @@ export class DatabaseStorage implements IStorage {
    * @param environment - Environment data with userId, name, serviceType, and items
    * @returns Newly created environment object
    */
-  async createEnvironment(environment: InsertEnvironment): Promise<Environment> {
+  async createEnvironment(environment: InsertEnvironment, client?: TransactionClient): Promise<Environment> {
+    if (client) {
+      const result = await client.query(
+        `
+          insert into environments (
+            user_id,
+            name,
+            service_type,
+            items
+          )
+          values ($1, $2, $3, $4)
+          returning
+            id,
+            user_id as "userId",
+            name,
+            service_type as "serviceType",
+            items,
+            created_at as "createdAt"
+        `,
+        [
+          environment.userId,
+          environment.name,
+          environment.serviceType,
+          environment.items ?? [],
+        ],
+      );
+      return result.rows[0] as Environment;
+    }
+
     const [env] = await db
       .insert(environments)
       .values(environment)
@@ -1248,7 +1343,47 @@ export class DatabaseStorage implements IStorage {
    * @param certificate - Certificate data to create
    * @returns Newly created certificate object
    */
-  async createCertificate(certificate: InsertCertificate): Promise<Certificate> {
+  async createCertificate(certificate: InsertCertificate, client?: TransactionClient): Promise<Certificate> {
+    if (client) {
+      const result = await client.query(
+        `
+          insert into certificates (
+            client_name,
+            address,
+            services,
+            validity_dates,
+            certification_date,
+            technician_name,
+            technician_license,
+            user_id
+          )
+          values ($1, $2, $3, $4, $5, $6, $7, $8)
+          returning
+            id,
+            client_name as "clientName",
+            address,
+            services,
+            validity_dates as "validityDates",
+            certification_date as "certificationDate",
+            technician_name as "technicianName",
+            technician_license as "technicianLicense",
+            user_id as "userId",
+            created_at as "createdAt"
+        `,
+        [
+          certificate.clientName,
+          certificate.address,
+          certificate.services,
+          certificate.validityDates,
+          certificate.certificationDate,
+          certificate.technicianName,
+          certificate.technicianLicense ?? null,
+          certificate.userId,
+        ],
+      );
+      return result.rows[0] as Certificate;
+    }
+
     const [cert] = await db
       .insert(certificates)
       .values(certificate)

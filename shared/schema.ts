@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, varchar, jsonb, index, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, varchar, jsonb, index, numeric, uuid, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -27,6 +27,35 @@ export const sessions = pgTable(
     expire: timestamp("expire").notNull(),
   },
   (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
+export const idempotencyKeys = pgTable(
+  "idempotency_keys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: integer("user_id").notNull().references(() => users.id),
+    method: text("method").notNull(),
+    endpoint: text("endpoint").notNull(),
+    key: text("key").notNull(),
+    requestHash: text("request_hash").notNull(),
+    status: text("status").notNull(),
+    responseStatus: integer("response_status"),
+    responseBody: jsonb("response_body"),
+    resourceType: text("resource_type"),
+    resourceId: integer("resource_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("idempotency_keys_user_method_endpoint_key_idx").on(
+      table.userId,
+      table.method,
+      table.endpoint,
+      table.key,
+    ),
+    index("idempotency_keys_expires_at_idx").on(table.expiresAt),
+  ],
 );
 
 export const testSessions = pgTable("test_sessions", {

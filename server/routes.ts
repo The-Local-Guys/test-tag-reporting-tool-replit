@@ -28,6 +28,7 @@ import {
   trackUserManagementAction,
   trackAdminAction,
 } from "./posthog";
+import { runIdempotentCreate } from "./idempotency";
 
 // Extend Express session interface
 declare module "express-session" {
@@ -761,6 +762,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         serviceType: sessionData.serviceType || "electrical", // Default to electrical if not specified
         userId: req.session.userId, // Link session to the logged-in user
       };
+
+      const idempotentResult = await runIdempotentCreate(req, {
+        endpoint: "/api/sessions",
+        create: async (client) => {
+          const session = await storage.createTestSession(sessionWithUser, client);
+          return {
+            status: 200,
+            body: session,
+            resourceType: "test_session",
+            resourceId: session.id,
+          };
+        },
+      });
+
+      if (idempotentResult) {
+        if (idempotentResult.created) {
+          const session = idempotentResult.body as any;
+          trackSessionAction(req, 'created', {
+            sessionId: session.id,
+            clientName: session.clientName,
+            serviceType: session.serviceType,
+            address: session.address,
+          });
+        }
+        return res.status(idempotentResult.status).json(idempotentResult.body);
+      }
+
       const session = await storage.createTestSession(sessionWithUser);
       
       // Track session creation
@@ -1058,103 +1086,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      // If no asset number provided, get the next one
-      if (!req.body.assetNumber) {
-        req.body.assetNumber = (
-          await storage.getNextAssetNumber(sessionId)
-        ).toString();
-      }
+      const getAssetNumberForCreate = async (client?: any) => {
+        if (req.body.assetNumber) {
+          return req.body.assetNumber;
+        }
 
-      // Create result data object directly to avoid schema validation issues
-      const resultData = {
-        sessionId: sessionId,
-        assetNumber: req.body.assetNumber,
-        itemName: req.body.itemName,
-        itemType: req.body.itemType,
-        location: req.body.location,
-        classification: req.body.classification,
-        result: req.body.result,
-        frequency: req.body.frequency,
-        failureReason: req.body.failureReason || null,
-        actionTaken: req.body.actionTaken || null,
-        notes: req.body.notes || null,
-        photoData: req.body.photoData || null,
-        visionInspection:
-          req.body.visionInspection !== undefined
-            ? req.body.visionInspection
-            : true,
-        electricalTest:
-          req.body.electricalTest !== undefined
-            ? req.body.electricalTest
-            : true,
-        // Emergency exit light specific fields (AS 2293.2:2019)
-        maintenanceType: req.body.maintenanceType || null,
-        globeType: req.body.globeType || null,
-        dischargeTest:
-          req.body.dischargeTest !== undefined ? req.body.dischargeTest : false,
-        switchingTest:
-          req.body.switchingTest !== undefined ? req.body.switchingTest : false,
-        chargingTest:
-          req.body.chargingTest !== undefined ? req.body.chargingTest : false,
-        luxTest: req.body.luxTest ?? false,
-        luxReading: req.body.luxReading || null,
-        luxCompliant: req.body.luxCompliant ?? false,
-        manufacturerInfo: req.body.manufacturerInfo || null,
-        installationDate: req.body.installationDate || null,
-        // Fire testing specific fields (AS 1851 / NZS 4503:2005)
-        equipmentType: req.body.equipmentType || null,
-        extinguisherType: req.body.extinguisherType || null,
-        size: req.body.size || null,
-        weight: req.body.weight || null,
-        testType: req.body.testType || null,
-        fireVisualInspection: req.body.fireVisualInspection ?? false,
-        accessibilityCheck: req.body.accessibilityCheck ?? false,
-        signageCheck: req.body.signageCheck ?? false,
-        operationalTest: req.body.operationalTest ?? false,
-        pressureTest: req.body.pressureTest ?? false,
-        // RCD test specific fields
-        pushButtonTest: req.body.pushButtonTest ?? null,
-        injectionTimedTest: req.body.injectionTimedTest ?? null,
-        tripTimes: Array.isArray(req.body.tripTimes) && req.body.tripTimes.length > 0 ? req.body.tripTimes : null,
-        distributionBoardNumber: req.body.distributionBoardNumber || null,
-        circuitBreakerNumber: req.body.circuitBreakerNumber || null,
-        // Microwave test specific fields (AS/NZS 60335.2.25)
-        leakageReading: req.body.leakageReading || null,
+        if (!client) {
+          return (await storage.getNextAssetNumber(sessionId)).toString();
+        }
+
+        const existing = await client.query(
+          "select asset_number from test_results where session_id = $1 and deleted_at is null",
+          [sessionId],
+        );
+        const numbers = existing.rows
+          .map((row: any) => parseInt(row.asset_number))
+          .filter((number: number) => !isNaN(number))
+          .sort((a: number, b: number) => b - a);
+        return (numbers.length > 0 ? numbers[0] + 1 : 1).toString();
       };
 
-      console.log(`[${requestId}] Request body received:`, {
-        ...req.body,
-        photoData: req.body.photoData
-          ? `Photo included (${Math.round(req.body.photoData.length / 1024)}KB)`
-          : "No photo in request",
-      });
-      console.log(`[${requestId}] Creating result with data:`, {
-        ...resultData,
-        photoData: resultData.photoData
-          ? `Photo data included (${Math.round(resultData.photoData.length / 1024)}KB)`
-          : "No photo data",
-      });
+      const createResult = async (client?: any) => {
+        const assetNumber = await getAssetNumberForCreate(client);
 
-      const result = await storage.createTestResult(resultData);
+        // Create result data object directly to avoid schema validation issues
+        const resultData = {
+          sessionId: sessionId,
+          assetNumber,
+          itemName: req.body.itemName,
+          itemType: req.body.itemType,
+          location: req.body.location,
+          classification: req.body.classification,
+          result: req.body.result,
+          frequency: req.body.frequency,
+          failureReason: req.body.failureReason || null,
+          actionTaken: req.body.actionTaken || null,
+          notes: req.body.notes || null,
+          photoData: req.body.photoData || null,
+          visionInspection:
+            req.body.visionInspection !== undefined
+              ? req.body.visionInspection
+              : true,
+          electricalTest:
+            req.body.electricalTest !== undefined
+              ? req.body.electricalTest
+              : true,
+          // Emergency exit light specific fields (AS 2293.2:2019)
+          maintenanceType: req.body.maintenanceType || null,
+          globeType: req.body.globeType || null,
+          dischargeTest:
+            req.body.dischargeTest !== undefined ? req.body.dischargeTest : false,
+          switchingTest:
+            req.body.switchingTest !== undefined ? req.body.switchingTest : false,
+          chargingTest:
+            req.body.chargingTest !== undefined ? req.body.chargingTest : false,
+          luxTest: req.body.luxTest ?? false,
+          luxReading: req.body.luxReading || null,
+          luxCompliant: req.body.luxCompliant ?? false,
+          manufacturerInfo: req.body.manufacturerInfo || null,
+          installationDate: req.body.installationDate || null,
+          // Fire testing specific fields (AS 1851 / NZS 4503:2005)
+          equipmentType: req.body.equipmentType || null,
+          extinguisherType: req.body.extinguisherType || null,
+          size: req.body.size || null,
+          weight: req.body.weight || null,
+          testType: req.body.testType || null,
+          fireVisualInspection: req.body.fireVisualInspection ?? false,
+          accessibilityCheck: req.body.accessibilityCheck ?? false,
+          signageCheck: req.body.signageCheck ?? false,
+          operationalTest: req.body.operationalTest ?? false,
+          pressureTest: req.body.pressureTest ?? false,
+          // RCD test specific fields
+          pushButtonTest: req.body.pushButtonTest ?? null,
+          injectionTimedTest: req.body.injectionTimedTest ?? null,
+          tripTimes: Array.isArray(req.body.tripTimes) && req.body.tripTimes.length > 0 ? req.body.tripTimes : null,
+          distributionBoardNumber: req.body.distributionBoardNumber || null,
+          circuitBreakerNumber: req.body.circuitBreakerNumber || null,
+          // Microwave test specific fields (AS/NZS 60335.2.25)
+          leakageReading: req.body.leakageReading || null,
+        };
 
-      // Verify the result was created successfully
-      if (!result || !result.id) {
-        console.error(
-          `[${requestId}] Failed to create test result - no ID returned`,
+        console.log(`[${requestId}] Request body received:`, {
+          ...req.body,
+          photoData: req.body.photoData
+            ? `Photo included (${Math.round(req.body.photoData.length / 1024)}KB)`
+            : "No photo in request",
+        });
+        console.log(`[${requestId}] Creating result with data:`, {
+          ...resultData,
+          photoData: resultData.photoData
+            ? `Photo data included (${Math.round(resultData.photoData.length / 1024)}KB)`
+            : "No photo data",
+        });
+
+        const result = await storage.createTestResult(resultData, client);
+
+        // Verify the result was created successfully
+        if (!result || !result.id) {
+          console.error(
+            `[${requestId}] Failed to create test result - no ID returned`,
+          );
+          throw new Error("Failed to create test result - no ID returned");
+        }
+
+        const processingTime = Date.now() - startTime;
+        console.log(
+          `[${requestId}] Successfully created test result in ${processingTime}ms:`,
+          {
+            id: result.id,
+            assetNumber: (result as any).assetNumber ?? (result as any).asset_number,
+            itemName: (result as any).itemName ?? (result as any).item_name,
+          },
         );
-        throw new Error("Failed to create test result - no ID returned");
+
+        return result;
+      };
+
+      const idempotentResult = await runIdempotentCreate(req, {
+        endpoint: "/api/sessions/:sessionId/results",
+        pathParams: { sessionId },
+        create: async (client) => {
+          const result = await createResult(client);
+          return {
+            status: 200,
+            body: result,
+            resourceType: "test_result",
+            resourceId: result.id,
+          };
+        },
+      });
+
+      if (idempotentResult) {
+        return res.status(idempotentResult.status).json(idempotentResult.body);
       }
 
-      const processingTime = Date.now() - startTime;
-      console.log(
-        `[${requestId}] Successfully created test result in ${processingTime}ms:`,
-        {
-          id: result.id,
-          assetNumber: result.assetNumber,
-          itemName: result.itemName,
-        },
-      );
-
+      const result = await createResult();
       res.json(result);
     } catch (error) {
       const processingTime = Date.now() - startTime;
@@ -1443,6 +1509,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId, // Ensure environment is tied to the logged-in user
       });
 
+      const idempotentResult = await runIdempotentCreate(req, {
+        endpoint: "/api/environments",
+        create: async (client) => {
+          const environment = await storage.createEnvironment(environmentData, client);
+          return {
+            status: 200,
+            body: environment,
+            resourceType: "environment",
+            resourceId: environment.id,
+          };
+        },
+      });
+
+      if (idempotentResult) {
+        if (idempotentResult.created) {
+          const environment = idempotentResult.body as any;
+          trackEnvironmentAction(req, 'created', {
+            environmentId: environment.id,
+            environmentName: environment.name,
+            serviceType: environment.serviceType,
+          });
+        }
+        return res.status(idempotentResult.status).json(idempotentResult.body);
+      }
+
       const environment = await storage.createEnvironment(environmentData);
       
       // Track environment creation
@@ -1723,6 +1814,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         userId, // Ensure certificate is tied to the logged-in user
       });
+
+      const idempotentResult = await runIdempotentCreate(req, {
+        endpoint: "/api/certificates",
+        create: async (client) => {
+          const certificate = await storage.createCertificate(certificateData, client);
+          return {
+            status: 201,
+            body: certificate,
+            resourceType: "certificate",
+            resourceId: certificate.id,
+          };
+        },
+      });
+
+      if (idempotentResult) {
+        if (idempotentResult.created) {
+          const certificate = idempotentResult.body as any;
+          trackCertificateAction(req, 'created', {
+            certificateId: certificate.id,
+            clientName: certificate.clientName,
+            services: certificate.services,
+          });
+        }
+        return res.status(idempotentResult.status).json(idempotentResult.body);
+      }
 
       const certificate = await storage.createCertificate(certificateData);
       
