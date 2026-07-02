@@ -33,6 +33,11 @@ export type IdempotencyRunResult = {
 const IDEMPOTENCY_TTL_DAYS = 90;
 const MAX_STORED_RESPONSE_BYTES = 256 * 1024;
 
+function isMissingIdempotencyTableError(error: unknown) {
+  const candidate = error as { code?: string; message?: string };
+  return candidate.code === "42P01" && candidate.message?.includes("idempotency_keys");
+}
+
 function canonicalize(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map(canonicalize);
@@ -359,6 +364,17 @@ export async function runIdempotentCreate(
   } catch (error) {
     if (inTransaction) {
       await client.query("ROLLBACK");
+    }
+    if (isMissingIdempotencyTableError(error)) {
+      return {
+        handled: true,
+        replayed: false,
+        created: false,
+        status: 500,
+        body: {
+          error: "Idempotency storage is not configured. Apply migrations/add_idempotency_keys.sql.",
+        },
+      };
     }
     throw error;
   } finally {
