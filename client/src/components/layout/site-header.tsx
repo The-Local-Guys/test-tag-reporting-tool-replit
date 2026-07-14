@@ -181,7 +181,7 @@ export function SiteHeader() {
             <Button
               variant="ghost" 
               size="sm"
-              onClick={() => window.open('https://forms.monday.com/forms/761a950aa279edcb02d48257ced6ecc6?r=use1', '_blank')}
+              onClick={() => window.open('https://form.jotform.com/261941191080049', '_blank')}
               className="text-white hover:bg-white/20 flex items-center gap-2"
               data-testid="nav-feedback"
             >

@@ -193,7 +193,7 @@ export function MobileMenu() {
             <Button
               variant="outline"
               onClick={() => {
-                window.open('https://forms.monday.com/forms/761a950aa279edcb02d48257ced6ecc6?r=use1', '_blank');
+                window.open('https://form.jotform.com/261941191080049', '_blank');
                 closeMobileMenu();
               }}
               className="w-full flex items-center justify-center gap-2 text-blue-600 border-blue-200 hover:bg-blue-50"
