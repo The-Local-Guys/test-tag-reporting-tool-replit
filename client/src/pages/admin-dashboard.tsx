@@ -75,6 +75,89 @@ import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek
 import { CertificatesTab } from "@/features/certificates/CertificatesTab";
 import { failureReasons, emergencyFailureReasons, fireFailureReasons, rcdFailureReasons } from "@shared/schema";
 
+function formatReportDetail(value?: string | null): string {
+  if (!value) return "-";
+
+  const labels: Record<string, string> = {
+    class1: "Class 1",
+    class2: "Class 2",
+    epod: "EPOD",
+    rcd: "RCD",
+    "3phase": "3 Phase",
+    "fixed-rcd": "Fixed RCD",
+    "portable-rcd": "Portable RCD",
+    fire_extinguisher: "Fire Extinguisher",
+    fire_blanket: "Fire Blanket",
+    fire_hose_reel: "Fire Hose Reel",
+    non_maintained: "Non-Maintained",
+    led: "LED",
+    co2: "CO2",
+  };
+
+  return (
+    labels[value] ||
+    value
+      .replace(/[_-]+/g, " ")
+      .replace(/\b\w/g, (character) => character.toUpperCase())
+  );
+}
+
+function createEmptyTestResultData(serviceType: string = "electrical") {
+  const classificationByService: Record<string, string> = {
+    electrical: "class1",
+    emergency_exit_light: "emergency_equipment",
+    fire_testing: "fire_extinguisher",
+    rcd_reporting: "fixed-rcd",
+    microwave_leakage: "microwave",
+  };
+  const frequencyByService: Record<string, string> = {
+    emergency_exit_light: "annually",
+    rcd_reporting: "annually",
+    microwave_leakage: "single",
+  };
+
+  return {
+    itemName: "",
+    itemType: "",
+    location: "",
+    assetNumber: "",
+    classification: classificationByService[serviceType] || "class1",
+    result: "pass",
+    frequency: frequencyByService[serviceType] || "twelvemonthly",
+    failureReason: null as string | null,
+    actionTaken: null as string | null,
+    notes: null as string | null,
+    visionInspection: serviceType === "electrical",
+    electricalTest: serviceType === "electrical",
+    dischargeTest: false,
+    switchingTest: false,
+    chargingTest: false,
+    luxTest: false,
+    luxReading: null as number | null,
+    luxCompliant: false,
+    manufacturerInfo: null as string | null,
+    installationDate: null as string | null,
+    maintenanceType: null as string | null,
+    globeType: null as string | null,
+    pressureTest: false,
+    accessibilityCheck: false,
+    signageCheck: false,
+    operationalTest: false,
+    fireVisualInspection: false,
+    equipmentType: serviceType === "fire_testing" ? "fire_extinguisher" : null as string | null,
+    extinguisherType: null as string | null,
+    size: null as string | null,
+    weight: null as string | null,
+    testType: null as string | null,
+    leakageReading: null as string | null,
+    pushButtonTest: false,
+    injectionTimedTest: false,
+    tripTimes: [] as number[],
+    distributionBoardNumber: null as string | null,
+    circuitBreakerNumber: null as string | null,
+  };
+}
+
 /**
  * Administrative dashboard for managing users, sessions, and system oversight
  * Provides user management, session editing, data export, and system monitoring
@@ -230,6 +313,8 @@ export default function AdminDashboard() {
   // Pagination states
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+  const [reportItemSearch, setReportItemSearch] = useState("");
+  const [reportResultFilter, setReportResultFilter] = useState("all");
   const [reportsPage, setReportsPage] = useState(1);
   const [draftsPage, setDraftsPage] = useState(1);
   
@@ -284,18 +369,7 @@ export default function AdminDashboard() {
   });
 
   const [assetNumberError, setAssetNumberError] = useState<string>("");
-  const [newItemData, setNewItemData] = useState({
-    itemName: "",
-    location: "",
-    assetNumber: "",
-    classification: "class1" as any,
-    result: "pass" as any,
-    frequency: "twelvemonthly" as any,
-    failureReason: null as any,
-    actionTaken: null as any,
-    visualInspection: true,
-    electricalTest: true,
-  });
+  const [newItemData, setNewItemData] = useState(() => createEmptyTestResultData());
 
   const [newItemAssetNumberError, setNewItemAssetNumberError] = useState<string>("");
   
@@ -929,6 +1003,24 @@ export default function AdminDashboard() {
     });
   };
 
+  const getFilteredReportResults = () => {
+    if (!viewingSession?.results) return [];
+
+    const searchTerm = reportItemSearch.trim().toLowerCase();
+    const filteredResults = viewingSession.results.filter((result: any) => {
+      const matchesResult =
+        reportResultFilter === "all" || result.result === reportResultFilter;
+      const matchesSearch =
+        !searchTerm ||
+        [result.assetNumber, result.itemName, result.itemType, result.location]
+          .some((value) => String(value || "").toLowerCase().includes(searchTerm));
+
+      return matchesResult && matchesSearch;
+    });
+
+    return sortAssetNumbers(filteredResults);
+  };
+
   /**
    * Helper function to find the next available asset number within a range
    * @param usedNumbers - Set of asset numbers already in use
@@ -1087,6 +1179,8 @@ export default function AdminDashboard() {
       // Update state with fresh data
       setViewingSession(reportData);
       setCurrentPage(1); // Reset to first page when opening report
+      setReportItemSearch("");
+      setReportResultFilter("all");
 
       // Only open modal after successful data fetch and state update
       setIsViewReportModalOpen(true);
@@ -1216,7 +1310,12 @@ export default function AdminDashboard() {
       signageCheck: result.signageCheck ?? result.signage_check ?? false,
       operationalTest: result.operationalTest ?? result.operational_test ?? false,
       fireVisualInspection: result.fireVisualInspection ?? result.fire_visual_inspection ?? false,
-      equipmentType: result.equipmentType ?? result.equipment_type ?? null,
+      equipmentType:
+        result.equipmentType ??
+        result.equipment_type ??
+        (viewingSession?.session?.serviceType === "fire_testing"
+          ? result.classification
+          : null),
       extinguisherType: result.extinguisherType ?? result.extinguisher_type ?? null,
       size: result.size ?? null,
       weight: result.weight ?? null,
@@ -1318,6 +1417,7 @@ export default function AdminDashboard() {
 
     const updateData: Record<string, any> = {
       itemName: editResultData.itemName,
+      itemType: editResultData.itemType,
       location: editResultData.location,
       assetNumber: editResultData.assetNumber,
       classification: editResultData.classification,
@@ -1332,9 +1432,12 @@ export default function AdminDashboard() {
       accessibilityCheck: editResultData.accessibilityCheck,
       signageCheck: editResultData.signageCheck,
       operationalTest: editResultData.operationalTest,
+      fireVisualInspection: editResultData.visionInspection,
+      equipmentType: editResultData.equipmentType,
       extinguisherType: editResultData.extinguisherType,
       size: editResultData.size,
       weight: editResultData.weight,
+      testType: editResultData.testType,
       // Emergency exit light fields
       electricalTest: editResultData.electricalTest,
       dischargeTest: editResultData.dischargeTest,
@@ -1430,18 +1533,7 @@ export default function AdminDashboard() {
 
   const handleAddItem = (session: any) => {
     setAddingToSession(session);
-    setNewItemData({
-      itemName: "",
-      location: "",
-      assetNumber: "",
-      classification: "class1",
-      result: "pass",
-      frequency: "twelvemonthly",
-      failureReason: null,
-      actionTaken: null,
-      visualInspection: true,
-      electricalTest: true,
-    });
+    setNewItemData(createEmptyTestResultData(session.serviceType));
     setNewItemAssetNumberError("Asset number is required"); // Show validation error for empty field
     setIsAddItemModalOpen(true);
   };
@@ -1609,7 +1701,7 @@ export default function AdminDashboard() {
   };
 
   const handleSaveNewItem = async () => {
-    if (!newItemData.itemName || !newItemData.location || !addingToSession) {
+    if (!newItemData.itemName || !newItemData.itemType || !newItemData.location || !addingToSession) {
       toast({
         title: "Missing information",
         description: "Please fill in all required fields.",
@@ -1631,21 +1723,20 @@ export default function AdminDashboard() {
     }
 
     const itemData = {
-      itemName: newItemData.itemName,
-      itemType: newItemData.itemName,
-      location: newItemData.location,
-      assetNumber: newItemData.assetNumber,
-      classification: newItemData.classification,
-      result: newItemData.result,
-      frequency: newItemData.frequency,
+      ...newItemData,
       failureReason:
         newItemData.result === "fail" ? newItemData.failureReason : null,
       actionTaken:
         newItemData.result === "fail" ? newItemData.actionTaken : null,
-      visualInspection: newItemData.visualInspection,
-      electricalTest: newItemData.electricalTest,
-      notes: null,
       photoData: null,
+      equipmentType:
+        addingToSession.serviceType === "fire_testing"
+          ? newItemData.classification
+          : newItemData.equipmentType,
+      fireVisualInspection:
+        addingToSession.serviceType === "fire_testing"
+          ? newItemData.visionInspection
+          : newItemData.fireVisualInspection,
     };
 
     console.log(`Admin: Adding new item with asset number: ${newItemData.assetNumber}`);
@@ -3182,7 +3273,7 @@ export default function AdminDashboard() {
             <div>
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-semibold">
-                  Test Results ({viewingSession.results.length} items)
+                  Test Results ({getFilteredReportResults().length} of {viewingSession.results.length} items)
                 </h3>
                 <div className="flex items-center space-x-2">
                   {/* Items per page selector */}
@@ -3215,15 +3306,87 @@ export default function AdminDashboard() {
                   </Button>
                 </div>
               </div>
-              <div className="border rounded-lg overflow-hidden">
-                <Table>
+              <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                  <Input
+                    value={reportItemSearch}
+                    onChange={(event) => {
+                      setReportItemSearch(event.target.value);
+                      setCurrentPage(1);
+                    }}
+                    placeholder="Search asset, item, type, or location..."
+                    className="pl-9"
+                    data-testid="input-report-item-search"
+                  />
+                </div>
+                <Select
+                  value={reportResultFilter}
+                  onValueChange={(value) => {
+                    setReportResultFilter(value);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="w-full sm:w-40" data-testid="select-report-result-filter">
+                    <SelectValue placeholder="Filter result" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Results</SelectItem>
+                    <SelectItem value="pass">Passed</SelectItem>
+                    <SelectItem value="fail">Failed Only</SelectItem>
+                  </SelectContent>
+                </Select>
+                {(reportItemSearch || reportResultFilter !== "all") && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setReportItemSearch("");
+                      setReportResultFilter("all");
+                      setCurrentPage(1);
+                    }}
+                    data-testid="button-clear-report-item-filters"
+                  >
+                    Clear filters
+                  </Button>
+                )}
+              </div>
+              <div className="border rounded-lg overflow-x-auto">
+                <Table className="min-w-[1100px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Asset #</TableHead>
                       <TableHead>Item Name</TableHead>
                       <TableHead>Location</TableHead>
-                      <TableHead>Classification</TableHead>
-                      <TableHead>Frequency</TableHead>
+                      {viewingSession.session.serviceType === "electrical" && (
+                        <>
+                          <TableHead>Classification</TableHead>
+                          <TableHead>Frequency</TableHead>
+                        </>
+                      )}
+                      {viewingSession.session.serviceType === "emergency_exit_light" && (
+                        <>
+                          <TableHead>Equipment Details</TableHead>
+                          <TableHead>Frequency</TableHead>
+                        </>
+                      )}
+                      {viewingSession.session.serviceType === "fire_testing" && (
+                        <>
+                          <TableHead>Equipment Details</TableHead>
+                          <TableHead>Frequency</TableHead>
+                        </>
+                      )}
+                      {viewingSession.session.serviceType === "rcd_reporting" && (
+                        <>
+                          <TableHead>Equipment Type</TableHead>
+                          <TableHead>DB / CB</TableHead>
+                          <TableHead>Trip Times</TableHead>
+                        </>
+                      )}
+                      {viewingSession.session.serviceType === "microwave_leakage" && (
+                        <TableHead>Leakage Reading</TableHead>
+                      )}
                       <TableHead>Result</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -3231,7 +3394,7 @@ export default function AdminDashboard() {
                   <TableBody>
                     {(() => {
                       // Sort results using the dedicated sorting function
-                      const sortedResults = sortAssetNumbers(viewingSession.results);
+                      const sortedResults = getFilteredReportResults();
 
                       const totalItems = sortedResults.length;
                       const startIndex = (currentPage - 1) * itemsPerPage;
@@ -3241,8 +3404,24 @@ export default function AdminDashboard() {
                         endIndex,
                       );
 
-                      return paginatedResults.map((result: any) => (
-                        <TableRow key={result.id}>
+                      if (paginatedResults.length === 0) {
+                        return (
+                          <TableRow>
+                            <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
+                              No report items match the current search and filter.
+                            </TableCell>
+                          </TableRow>
+                        );
+                      }
+
+                      return paginatedResults.map((result: any) => {
+                        const serviceType = viewingSession.session.serviceType;
+                        const tripTimes = Array.isArray(result.tripTimes)
+                          ? result.tripTimes.filter((time: unknown) => time !== null && time !== undefined)
+                          : [];
+
+                        return (
+                          <TableRow key={result.id}>
                           <TableCell className="font-mono">
                             {result.assetNumber}
                           </TableCell>
@@ -3259,22 +3438,89 @@ export default function AdminDashboard() {
                               )}
                           </TableCell>
                           <TableCell>{result.location || "-"}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">
-                              {result.classification?.replace(
-                                "class",
-                                "Class ",
-                              ) || "-"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">
-                              {formatFrequencyLabel(
-                                result.frequency,
-                                viewingSession.session.serviceType,
-                              )}
-                            </Badge>
-                          </TableCell>
+                          {serviceType === "electrical" && (
+                            <>
+                              <TableCell>
+                                <Badge variant="outline">
+                                  {formatReportDetail(result.classification)}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline">
+                                  {formatFrequencyLabel(result.frequency, serviceType)}
+                                </Badge>
+                              </TableCell>
+                            </>
+                          )}
+                          {serviceType === "emergency_exit_light" && (
+                            <>
+                              <TableCell>
+                                <div className="font-medium">
+                                  {formatReportDetail(result.maintenanceType)}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {result.manufacturerInfo || "Manufacturer not recorded"}
+                                </div>
+                                {result.globeType && (
+                                  <div className="text-xs text-muted-foreground">
+                                    Globe: {formatReportDetail(result.globeType)}
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline">
+                                  {formatFrequencyLabel(result.frequency, serviceType)}
+                                </Badge>
+                              </TableCell>
+                            </>
+                          )}
+                          {serviceType === "fire_testing" && (
+                            <>
+                              <TableCell>
+                                <div className="font-medium">
+                                  {formatReportDetail(result.classification || result.equipmentType)}
+                                </div>
+                                {result.extinguisherType && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {formatReportDetail(result.extinguisherType)}
+                                  </div>
+                                )}
+                                {(result.size || result.weight) && (
+                                  <div className="text-xs text-muted-foreground">
+                                    Size: {result.size || "-"} / Weight: {result.weight || "-"}
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline">
+                                  {formatFrequencyLabel(result.frequency, serviceType)}
+                                </Badge>
+                              </TableCell>
+                            </>
+                          )}
+                          {serviceType === "rcd_reporting" && (
+                            <>
+                              <TableCell>
+                                <Badge variant="outline">
+                                  {formatReportDetail(result.classification)}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div>DB: {result.distributionBoardNumber || "-"}</div>
+                                <div>CB: {result.circuitBreakerNumber || "-"}</div>
+                              </TableCell>
+                              <TableCell>
+                                {tripTimes.length > 0 ? `${tripTimes.join(", ")} ms` : "-"}
+                              </TableCell>
+                            </>
+                          )}
+                          {serviceType === "microwave_leakage" && (
+                            <TableCell>
+                              {result.leakageReading
+                                ? `${result.leakageReading} mW/cm²`
+                                : "-"}
+                            </TableCell>
+                          )}
                           <TableCell>
                             <Badge
                               variant={
@@ -3307,8 +3553,9 @@ export default function AdminDashboard() {
                               </Button>
                             </div>
                           </TableCell>
-                        </TableRow>
-                      ));
+                          </TableRow>
+                        );
+                      });
                     })()}
                   </TableBody>
                 </Table>
@@ -3316,7 +3563,7 @@ export default function AdminDashboard() {
 
               {/* Pagination Controls */}
               {(() => {
-                const sortedResults = sortAssetNumbers(viewingSession.results);
+                const sortedResults = getFilteredReportResults();
                 const totalItems = sortedResults.length;
                 const totalPages = Math.ceil(totalItems / itemsPerPage);
                 const startIndex = (currentPage - 1) * itemsPerPage;
@@ -3495,258 +3742,25 @@ export default function AdminDashboard() {
 
 
       {/* Add Item Modal */}
-      <Modal
+      <TestResultEditModal
         isOpen={isAddItemModalOpen}
         onClose={() => {
           setIsAddItemModalOpen(false);
           setAddingToSession(null);
         }}
+        editResultData={newItemData}
+        setEditResultData={setNewItemData}
+        onSave={handleSaveNewItem}
+        serviceType={addingToSession?.serviceType}
+        assetNumberError={newItemAssetNumberError}
+        onAssetNumberChange={handleNewItemAssetNumberChange}
+        onFrequencyChange={handleNewItemFrequencyChange}
+        isSaving={addItemMutation.isPending}
         title="Add New Item"
-        className="max-w-2xl"
-      >
-        {addingToSession && (
-          <div className="space-y-4">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="font-semibold mb-2">Adding item to:</h3>
-              <div className="text-sm">
-                <span className="font-medium">Client:</span>{" "}
-                {addingToSession.clientName} |
-                <span className="font-medium"> Date:</span>{" "}
-                {new Date(addingToSession.testDate).toLocaleDateString("en-AU")}
-              </div>
-            </div>
+        saveLabel="Add Item"
+        savingLabel="Adding..."
+      />
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="newItemName">Item Type *</Label>
-                <Input
-                  id="newItemName"
-                  type="text"
-                  value={newItemData.itemName}
-                  onChange={(e) =>
-                    setNewItemData((prev) => ({
-                      ...prev,
-                      itemName: e.target.value,
-                    }))
-                  }
-                  placeholder="Enter item type"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="newLocation">Location *</Label>
-                <Input
-                  id="newLocation"
-                  type="text"
-                  value={newItemData.location}
-                  onChange={(e) =>
-                    setNewItemData((prev) => ({
-                      ...prev,
-                      location: e.target.value,
-                    }))
-                  }
-                  placeholder="Enter location"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="newAssetNumber">Asset Number *</Label>
-                <Input
-                  id="newAssetNumber"
-                  type="text"
-                  value={newItemData.assetNumber}
-                  onChange={(e) => handleNewItemAssetNumberChange(e.target.value)}
-                  placeholder={newItemData.frequency === 'fiveyearly' ? "Enter number starting from 10000" : "Enter asset number (1-9999)"}
-                  className={newItemAssetNumberError ? "border-red-500 focus:border-red-500" : ""}
-                />
-                {newItemAssetNumberError && (
-                  <p className="text-sm text-red-500 mt-1">{newItemAssetNumberError}</p>
-                )}
-                <p className="text-sm text-gray-500">
-                  {newItemData.frequency === 'fiveyearly' 
-                    ? "5-yearly items: Use numbers 10000 and above" 
-                    : "Monthly frequencies: Use numbers 1-9999"}
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="newClassification">Classification</Label>
-                <Select
-                  value={newItemData.classification}
-                  onValueChange={(value) =>
-                    setNewItemData((prev) => ({
-                      ...prev,
-                      classification: value,
-                    }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="class1">Class 1</SelectItem>
-                    <SelectItem value="class2">Class 2</SelectItem>
-                    <SelectItem value="epod">EPOD</SelectItem>
-                    <SelectItem value="rcd">RCD</SelectItem>
-                    <SelectItem value="3phase">3 Phase</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="newResult">Test Result</Label>
-                <Select
-                  value={newItemData.result}
-                  onValueChange={(value) =>
-                    setNewItemData((prev) => ({ ...prev, result: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pass">Pass</SelectItem>
-                    <SelectItem value="fail">Fail</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="newFrequency">Test Frequency</Label>
-                <Select
-                  value={newItemData.frequency}
-                  onValueChange={handleNewItemFrequencyChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select frequency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="threemonthly">3 Monthly</SelectItem>
-                    <SelectItem value="sixmonthly">6 Monthly</SelectItem>
-                    <SelectItem value="twelvemonthly">12 Monthly</SelectItem>
-                    <SelectItem value="twentyfourmonthly">
-                      24 Monthly
-                    </SelectItem>
-                    <SelectItem value="fiveyearly">5 Yearly</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Visual Inspection and Electrical Test Checkboxes */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="newVisualInspection"
-                  checked={newItemData.visualInspection}
-                  onChange={(e) =>
-                    setNewItemData((prev) => ({
-                      ...prev,
-                      visualInspection: e.target.checked,
-                    }))
-                  }
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                />
-                <Label htmlFor="newVisualInspection" className="text-sm">
-                  Visual Inspection
-                </Label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="newElectricalTest"
-                  checked={newItemData.electricalTest}
-                  onChange={(e) =>
-                    setNewItemData((prev) => ({
-                      ...prev,
-                      electricalTest: e.target.checked,
-                    }))
-                  }
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                />
-                <Label htmlFor="newElectricalTest" className="text-sm">
-                  Electrical Test
-                </Label>
-              </div>
-            </div>
-
-            {/* Failure Details (only show if result is fail) */}
-            {newItemData.result === "fail" && (
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                <div className="space-y-2">
-                  <Label htmlFor="newFailureReason">Failure Reason</Label>
-                  <Select
-                    value={newItemData.failureReason || ""}
-                    onValueChange={(value) =>
-                      setNewItemData((prev) => ({
-                        ...prev,
-                        failureReason: value,
-                      }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select failure reason" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="vision">Visual</SelectItem>
-                      <SelectItem value="earth">Earth</SelectItem>
-                      <SelectItem value="insulation">Insulation</SelectItem>
-                      <SelectItem value="polarity">Polarity</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="newActionTaken">Action Taken</Label>
-                  <Select
-                    value={newItemData.actionTaken || ""}
-                    onValueChange={(value) =>
-                      setNewItemData((prev) => ({
-                        ...prev,
-                        actionTaken: value,
-                      }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select action taken" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="given">Given to User</SelectItem>
-                      <SelectItem value="removed">
-                        Removed from Service
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsAddItemModalOpen(false);
-                  setAddingToSession(null);
-                }}
-                disabled={addItemMutation.isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSaveNewItem}
-                disabled={addItemMutation.isPending || !!newItemAssetNumberError}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                {addItemMutation.isPending ? "Adding..." : "Add Item"}
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
 
       {/* Change Password Modal */}
       <Modal

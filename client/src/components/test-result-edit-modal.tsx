@@ -19,6 +19,9 @@ interface TestResultEditModalProps {
   onAssetNumberChange?: (value: string) => void;
   onFrequencyChange?: (value: string) => void;
   isSaving?: boolean;
+  title?: string;
+  saveLabel?: string;
+  savingLabel?: string;
 }
 
 export function TestResultEditModal({
@@ -32,6 +35,9 @@ export function TestResultEditModal({
   onAssetNumberChange,
   onFrequencyChange,
   isSaving = false,
+  title = "Edit Test Result",
+  saveLabel = "Update Result",
+  savingLabel = "Updating...",
 }: TestResultEditModalProps) {
 
   // Local raw string for the trip times input so typing commas/partial numbers works naturally.
@@ -101,7 +107,7 @@ export function TestResultEditModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Edit Test Result"
+      title={title}
     >
       <div className="space-y-4">
         <div>
@@ -177,7 +183,11 @@ export function TestResultEditModal({
             <Label htmlFor="edit-classification">Equipment Type</Label>
             <Select
               value={editResultData.classification}
-              onValueChange={(value) => setEditResultData((prev: any) => ({ ...prev, classification: value as any }))}
+              onValueChange={(value) => setEditResultData((prev: any) => ({
+                ...prev,
+                classification: value as any,
+                equipmentType: value,
+              }))}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -836,7 +846,7 @@ export function TestResultEditModal({
             onClick={onSave}
             disabled={isSaving || !!assetNumberError || !editResultData.assetNumber?.trim()}
           >
-            {isSaving ? "Updating..." : "Update Result"}
+            {isSaving ? savingLabel : saveLabel}
           </Button>
         </div>
       </div>
