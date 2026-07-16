@@ -382,15 +382,27 @@ export function useSession() {
       const threemonthlyAssets = loadedResults.filter(r => r.frequency === 'threemonthly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n) && n > 0);
       const monthlyAssets = loadedResults.filter(r => r.frequency === 'monthly').map(r => parseInt(r.assetNumber || '0')).filter(n => !isNaN(n) && n > 0);
 
-      // Get service-type-aware defaults for fallback values
+      // Resolve the configured start for every frequency. When an electrical
+      // session has custom starts, those values must remain authoritative when
+      // a draft is resumed; service defaults are only a fallback.
       const serviceTypeDefaults = session ? getDefaultStartingNumbers(session.serviceType) : DEFAULT_STARTING_NUMBERS_ELECTRICAL;
+      const sessionCustomNumbers = session?.serviceType === 'electrical'
+        ? ((session.customStartingNumbers as Partial<CustomStartingNumbers> | null) ?? {})
+        : {};
+      const getConfiguredStart = (frequency: keyof CustomStartingNumbers) =>
+        sessionCustomNumbers[frequency] ?? serviceTypeDefaults[frequency];
+      const getRestoredCounter = (assets: number[], frequency: keyof CustomStartingNumbers) =>
+        Math.max(
+          assets.length > 0 ? Math.max(...assets) : 0,
+          getConfiguredStart(frequency) - 1,
+        );
 
-      const maxTwelvemonthly = twelvemonthlyAssets.length > 0 ? Math.max(...twelvemonthlyAssets) : (serviceTypeDefaults.twelvemonthly - 1);
-      const maxSixmonthly = sixmonthlyAssets.length > 0 ? Math.max(...sixmonthlyAssets) : (serviceTypeDefaults.sixmonthly - 1);
-      const maxFiveyearly = fiveyearlyAssets.length > 0 ? Math.max(...fiveyearlyAssets) : (serviceTypeDefaults.fiveyearly - 1);
-      const maxTwentyfourmonthly = twentyfourmonthlyAssets.length > 0 ? Math.max(...twentyfourmonthlyAssets) : (serviceTypeDefaults.twentyfourmonthly - 1);
-      const maxThreemonthly = threemonthlyAssets.length > 0 ? Math.max(...threemonthlyAssets) : (serviceTypeDefaults.threemonthly - 1);
-      const maxMonthly = monthlyAssets.length > 0 ? Math.max(...monthlyAssets) : (serviceTypeDefaults.monthly - 1);
+      const maxTwelvemonthly = getRestoredCounter(twelvemonthlyAssets, 'twelvemonthly');
+      const maxSixmonthly = getRestoredCounter(sixmonthlyAssets, 'sixmonthly');
+      const maxFiveyearly = getRestoredCounter(fiveyearlyAssets, 'fiveyearly');
+      const maxTwentyfourmonthly = getRestoredCounter(twentyfourmonthlyAssets, 'twentyfourmonthly');
+      const maxThreemonthly = getRestoredCounter(threemonthlyAssets, 'threemonthly');
+      const maxMonthly = getRestoredCounter(monthlyAssets, 'monthly');
 
       updateCounter(setTwelvemonthlyCounter, twelvemonthlyCounterRef, maxTwelvemonthly);
       updateCounter(setSixmonthlyCounter, sixmonthlyCounterRef, maxSixmonthly);
