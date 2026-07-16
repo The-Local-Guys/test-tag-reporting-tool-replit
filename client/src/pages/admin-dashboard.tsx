@@ -70,6 +70,7 @@ import {
 } from "@/components/ui/dialog";
 import { generatePDFReport, downloadPDF } from "@/lib/pdf-generator";
 import { generateExcelReport, downloadExcel } from "@/lib/excel-generator";
+import { formatFrequencyLabel } from "@/lib/report-formatters";
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
 import { CertificatesTab } from "@/features/certificates/CertificatesTab";
 import { failureReasons, emergencyFailureReasons, fireFailureReasons, rcdFailureReasons } from "@shared/schema";
@@ -3219,7 +3220,7 @@ export default function AdminDashboard() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Asset #</TableHead>
-                      <TableHead>Item Type</TableHead>
+                      <TableHead>Item Name</TableHead>
                       <TableHead>Location</TableHead>
                       <TableHead>Classification</TableHead>
                       <TableHead>Frequency</TableHead>
@@ -3245,7 +3246,18 @@ export default function AdminDashboard() {
                           <TableCell className="font-mono">
                             {result.assetNumber}
                           </TableCell>
-                          <TableCell>{result.itemType}</TableCell>
+                          <TableCell>
+                            <div className="font-medium">
+                              {result.itemName || result.itemType || "-"}
+                            </div>
+                            {result.itemType &&
+                              result.itemType.trim().toLowerCase() !==
+                                result.itemName?.trim().toLowerCase() && (
+                                <div className="text-xs text-muted-foreground">
+                                  Type: {result.itemType}
+                                </div>
+                              )}
+                          </TableCell>
                           <TableCell>{result.location || "-"}</TableCell>
                           <TableCell>
                             <Badge variant="outline">
@@ -3257,9 +3269,10 @@ export default function AdminDashboard() {
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">
-                              {result.frequency
-                                ?.replace("monthly", "M")
-                                .replace("yearly", "Y") || "-"}
+                              {formatFrequencyLabel(
+                                result.frequency,
+                                viewingSession.session.serviceType,
+                              )}
                             </Badge>
                           </TableCell>
                           <TableCell>
