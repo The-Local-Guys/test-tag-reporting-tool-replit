@@ -1863,17 +1863,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/certificates", requireAuth, async (req, res) => {
     try {
       const user = req.session.user!;
-      let certificates;
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 10));
+      const search = req.query.search as string | undefined;
+      const clientName = req.query.clientName as string | undefined;
+      const canViewAll = user.role === "super_admin" || user.role === "support_center";
+      const result = await storage.getCertificatesPaginated(
+        page,
+        limit,
+        canViewAll ? undefined : user.id,
+        search,
+        clientName,
+      );
 
-      // Super admin and support center can see all certificates
-      if (user.role === "super_admin" || user.role === "support_center") {
-        certificates = await storage.getAllCertificates();
-      } else {
-        // Technicians can only see their own certificates
-        certificates = await storage.getCertificatesByUser(user.id);
-      }
-
-      res.json(certificates);
+      res.json({
+        certificates: result.certificates,
+        total: result.total,
+        page,
+        totalPages: Math.ceil(result.total / limit),
+        limit,
+        clientNames: result.clientNames,
+      });
     } catch (error) {
       console.error("Error fetching certificates:", error);
       res.status(500).json({ error: "Failed to fetch certificates" });

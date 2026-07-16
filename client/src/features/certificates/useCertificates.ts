@@ -1,19 +1,58 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import { insertCertificateSchema, type Certificate } from "@shared/schema";
+
+export type CertificatesQueryParams = {
+  page: number;
+  limit: number;
+  search?: string;
+  clientName?: string;
+};
+
+export type PaginatedCertificatesResponse = {
+  certificates: Certificate[];
+  total: number;
+  page: number;
+  totalPages: number;
+  limit: number;
+  clientNames: string[];
+};
 
 /**
  * Custom hook for certificate operations
  * Encapsulates all certificate-related queries and mutations
  */
-export function useCertificates() {
+export function useCertificates(params: CertificatesQueryParams) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Fetch all certificates (user's own or all if admin)
-  const { data: certificates, isLoading: certificatesLoading } = useQuery({
-    queryKey: ["/api/certificates"],
+  const normalizedParams = {
+    page: params.page,
+    limit: params.limit,
+    search: params.search?.trim() || undefined,
+    clientName: params.clientName?.trim() || undefined,
+  };
+
+  const { data, isLoading: certificatesLoading, isFetching: certificatesFetching } = useQuery<PaginatedCertificatesResponse>({
+    queryKey: ["/api/certificates", normalizedParams],
+    queryFn: async () => {
+      const query = new URLSearchParams({
+        page: String(normalizedParams.page),
+        limit: String(normalizedParams.limit),
+      });
+      if (normalizedParams.search) query.set("search", normalizedParams.search);
+      if (normalizedParams.clientName) query.set("clientName", normalizedParams.clientName);
+
+      const response = await fetch(`/api/certificates?${query.toString()}`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => null);
+        throw new Error(error?.error || "Failed to fetch certificates");
+      }
+      return response.json();
+    },
+    placeholderData: keepPreviousData,
     retry: false,
     staleTime: 0,
     refetchOnMount: true,
@@ -126,8 +165,13 @@ export function useCertificates() {
   });
 
   return {
-    certificates,
+    certificates: data?.certificates ?? [],
+    total: data?.total ?? 0,
+    totalPages: data?.totalPages ?? 0,
+    limit: data?.limit ?? params.limit,
+    clientNames: data?.clientNames ?? [],
     certificatesLoading,
+    certificatesFetching,
     createCertificateMutation,
     updateCertificateMutation,
     deleteCertificateMutation,
