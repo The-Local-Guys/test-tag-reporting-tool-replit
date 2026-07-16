@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, FileText, Trash2, Edit, Download, Search, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, FileText, Trash2, Edit, Download, Search, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCertificates } from "./useCertificates";
 import { CertificateModal } from "./CertificateModal";
@@ -22,50 +22,16 @@ import { CertificatePreview } from "./CertificatePreview";
 import { generateCertificatePDF, downloadCertificatePDF } from "@/lib/certificate-generator";
 import type { Certificate } from "@shared/schema";
 
-const CERTIFICATES_PAGE_SIZE = 10;
-
 export function CertificatesTab() {
+  const { certificates, certificatesLoading, createCertificateMutation, updateCertificateMutation, deleteCertificateMutation } =
+    useCertificates();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCertificate, setEditingCertificate] = useState<Certificate | null>(null);
   const [previewCertificate, setPreviewCertificate] = useState<Certificate | null>(null);
   const [certificateToDelete, setCertificateToDelete] = useState<number | null>(null);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
   const [clientSearch, setClientSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedClient, setSelectedClient] = useState<string>("all");
-  const [page, setPage] = useState(1);
-
-  useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      setDebouncedSearch(clientSearch.trim());
-    }, 300);
-
-    return () => window.clearTimeout(timeout);
-  }, [clientSearch]);
-
-  const {
-    certificates,
-    total,
-    totalPages,
-    limit,
-    clientNames,
-    certificatesLoading,
-    certificatesFetching,
-    createCertificateMutation,
-    updateCertificateMutation,
-    deleteCertificateMutation,
-  } = useCertificates({
-    page,
-    limit: CERTIFICATES_PAGE_SIZE,
-    search: debouncedSearch || undefined,
-    clientName: selectedClient === "all" ? undefined : selectedClient,
-  });
-
-  useEffect(() => {
-    if (!certificatesLoading && page > Math.max(1, totalPages)) {
-      setPage(Math.max(1, totalPages));
-    }
-  }, [certificatesLoading, page, totalPages]);
 
   const handleSubmitCertificate = (data: any) => {
     if (editingCertificate) {
@@ -148,24 +114,19 @@ export function CertificatesTab() {
     }
   };
 
-  const getPageNumbers = (): (number | "ellipsis")[] => {
-    if (totalPages <= 7) {
-      return Array.from({ length: totalPages }, (_, index) => index + 1);
-    }
+  const allCerts: any[] = certificates as any[] || [];
 
-    const pages: (number | "ellipsis")[] = [1];
-    if (page > 3) pages.push("ellipsis");
-    for (let pageNumber = Math.max(2, page - 1); pageNumber <= Math.min(totalPages - 1, page + 1); pageNumber++) {
-      pages.push(pageNumber);
-    }
-    if (page < totalPages - 2) pages.push("ellipsis");
-    pages.push(totalPages);
-    return pages;
-  };
+  const uniqueClients = Array.from(
+    new Set(allCerts.map((c) => c.clientName).filter(Boolean))
+  ).sort();
 
-  const hasActiveFilters = selectedClient !== "all" || debouncedSearch.length > 0;
-  const rangeStart = total === 0 ? 0 : (page - 1) * limit + 1;
-  const rangeEnd = Math.min(page * limit, total);
+  const filteredCerts = allCerts.filter((cert) => {
+    const matchesDropdown = selectedClient === "all" || cert.clientName === selectedClient;
+    const matchesSearch =
+      !clientSearch.trim() ||
+      (cert.clientName || "").toLowerCase().includes(clientSearch.toLowerCase());
+    return matchesDropdown && matchesSearch;
+  });
 
   return (
     <Card>
@@ -199,18 +160,13 @@ export function CertificatesTab() {
               onChange={(e) => {
                 setClientSearch(e.target.value);
                 setSelectedClient("all");
-                setPage(1);
               }}
               className="w-full pl-9 pr-8 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
             />
             {clientSearch && (
               <button
-                onClick={() => {
-                  setClientSearch("");
-                  setPage(1);
-                }}
+                onClick={() => setClientSearch("")}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                aria-label="Clear client search"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -221,7 +177,6 @@ export function CertificatesTab() {
             onValueChange={(val) => {
               setSelectedClient(val);
               setClientSearch("");
-              setPage(1);
             }}
           >
             <SelectTrigger className="w-56">
@@ -229,7 +184,7 @@ export function CertificatesTab() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Clients</SelectItem>
-              {clientNames.map((name) => (
+              {uniqueClients.map((name) => (
                 <SelectItem key={name} value={name}>
                   {name}
                 </SelectItem>
@@ -238,11 +193,7 @@ export function CertificatesTab() {
           </Select>
           {(selectedClient !== "all" || clientSearch) && (
             <button
-              onClick={() => {
-                setSelectedClient("all");
-                setClientSearch("");
-                setPage(1);
-              }}
+              onClick={() => { setSelectedClient("all"); setClientSearch(""); }}
               className="text-sm text-muted-foreground hover:text-foreground underline"
             >
               Clear filter
@@ -255,9 +206,8 @@ export function CertificatesTab() {
             <LoadingSpinner />
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="overflow-x-auto">
-              <Table>
+          <div className="overflow-x-auto">
+            <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Client Name</TableHead>
@@ -268,7 +218,7 @@ export function CertificatesTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {certificates.map((cert) => {
+                {filteredCerts.map((cert: any) => {
                   const services = cert.services as string[];
                   return (
                     <TableRow key={cert.id}>
@@ -340,86 +290,17 @@ export function CertificatesTab() {
                     </TableRow>
                   );
                 })}
-                {certificates.length === 0 && (
+                {filteredCerts.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-8 text-gray-500">
-                      {hasActiveFilters
-                        ? "No certificates match the current filter."
-                        : 'No certificates created yet. Click "Create Certificate" to get started.'}
+                      {allCerts.length === 0
+                        ? 'No certificates created yet. Click "Create Certificate" to get started.'
+                        : "No certificates match the current filter."}
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
-              </Table>
-            </div>
-
-            {total > 0 && (
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p
-                  className="text-sm text-muted-foreground"
-                  data-testid="text-certificates-pagination-summary"
-                >
-                  Showing {rangeStart}–{rangeEnd} of {total} certificates
-                </p>
-
-                {totalPages > 1 && (
-                  <div className="flex items-center gap-1" aria-label="Certificate pages">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="p-2 h-8 w-8"
-                      onClick={() => setPage((current) => Math.max(1, current - 1))}
-                      disabled={page === 1 || certificatesFetching}
-                      aria-label="Go to previous certificate page"
-                      data-testid="button-certificates-page-previous"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </Button>
-
-                    {getPageNumbers().map((pageNumber, index) =>
-                      pageNumber === "ellipsis" ? (
-                        <span
-                          key={`ellipsis-${index}`}
-                          className="px-1 text-sm text-muted-foreground"
-                          aria-hidden="true"
-                        >
-                          …
-                        </span>
-                      ) : (
-                        <Button
-                          key={pageNumber}
-                          type="button"
-                          variant={pageNumber === page ? "default" : "outline"}
-                          size="sm"
-                          className="h-8 w-8 p-0 text-sm"
-                          onClick={() => setPage(pageNumber)}
-                          disabled={certificatesFetching}
-                          aria-label={`Go to certificate page ${pageNumber}`}
-                          aria-current={pageNumber === page ? "page" : undefined}
-                          data-testid={`button-certificates-page-${pageNumber}`}
-                        >
-                          {pageNumber}
-                        </Button>
-                      ),
-                    )}
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="p-2 h-8 w-8"
-                      onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-                      disabled={page === totalPages || certificatesFetching}
-                      aria-label="Go to next certificate page"
-                      data-testid="button-certificates-page-next"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
+            </Table>
           </div>
         )}
       </CardContent>

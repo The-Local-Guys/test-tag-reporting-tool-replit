@@ -19,7 +19,7 @@ import {
   type InsertCertificate
 } from "@shared/schema";
 import { db, pool } from "./db";
-import { eq, desc, and, gte, sql, isNull, ilike, or, type SQL } from "drizzle-orm";
+import { eq, desc, and, gte, sql, isNull, ilike, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import type { TransactionClient } from "./idempotency";
 
@@ -96,13 +96,8 @@ export interface IStorage {
   
   // Certificates
   createCertificate(certificate: InsertCertificate, client?: TransactionClient): Promise<Certificate>;
-  getCertificatesPaginated(
-    page: number,
-    limit: number,
-    userId?: number,
-    search?: string,
-    clientName?: string,
-  ): Promise<{ certificates: Certificate[]; total: number; clientNames: string[] }>;
+  getCertificatesByUser(userId: number): Promise<Certificate[]>;
+  getAllCertificates(): Promise<Certificate[]>;
   getCertificateById(id: number): Promise<Certificate | undefined>;
   updateCertificate(id: number, data: Partial<InsertCertificate>): Promise<Certificate>;
   deleteCertificate(id: number): Promise<void>;
@@ -1396,57 +1391,28 @@ export class DatabaseStorage implements IStorage {
     return cert;
   }
 
-  async getCertificatesPaginated(
-    page: number,
-    limit: number,
-    userId?: number,
-    search?: string,
-    clientName?: string,
-  ): Promise<{ certificates: Certificate[]; total: number; clientNames: string[] }> {
-    const offset = (page - 1) * limit;
-    const conditions: SQL[] = [];
+  /**
+   * Retrieves all certificates created by a specific user
+   * @param userId - User ID to filter certificates
+   * @returns Array of certificate objects
+   */
+  async getCertificatesByUser(userId: number): Promise<Certificate[]> {
+    return await db
+      .select()
+      .from(certificates)
+      .where(eq(certificates.userId, userId))
+      .orderBy(desc(certificates.createdAt));
+  }
 
-    if (userId !== undefined) {
-      conditions.push(eq(certificates.userId, userId));
-    }
-    if (search?.trim()) {
-      conditions.push(ilike(certificates.clientName, `%${search.trim()}%`));
-    }
-    if (clientName?.trim()) {
-      conditions.push(eq(certificates.clientName, clientName.trim()));
-    }
-
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-    const clientScope = userId !== undefined ? eq(certificates.userId, userId) : undefined;
-
-    const [totalResult, certificateRows, clientNameRows] = await Promise.all([
-      db
-        .select({ count: sql<number>`count(*)`.mapWith(Number) })
-        .from(certificates)
-        .where(whereClause),
-      db
-        .select()
-        .from(certificates)
-        .where(whereClause)
-        .orderBy(desc(certificates.createdAt), desc(certificates.id))
-        .limit(limit)
-        .offset(offset),
-      db
-        .selectDistinct({ clientName: certificates.clientName })
-        .from(certificates)
-        .where(
-          clientScope
-            ? and(clientScope, sql`trim(${certificates.clientName}) <> ''`)
-            : sql`trim(${certificates.clientName}) <> ''`,
-        )
-        .orderBy(certificates.clientName),
-    ]);
-
-    return {
-      certificates: certificateRows,
-      total: totalResult[0]?.count || 0,
-      clientNames: clientNameRows.map((row) => row.clientName),
-    };
+  /**
+   * Retrieves all certificates in the system
+   * @returns Array of all certificate objects
+   */
+  async getAllCertificates(): Promise<Certificate[]> {
+    return await db
+      .select()
+      .from(certificates)
+      .orderBy(desc(certificates.createdAt));
   }
 
   /**
