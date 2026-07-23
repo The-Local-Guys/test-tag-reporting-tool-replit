@@ -13,6 +13,7 @@ import {
   type InsertUser,
   type Environment,
   type InsertEnvironment,
+  type UpdateEnvironmentDetails,
   type CustomFormType,
   type InsertCustomFormType,
   type Certificate,
@@ -85,6 +86,7 @@ export interface IStorage {
   getEnvironmentsByUser(userId: number): Promise<Environment[]>;
   getEnvironment(id: number): Promise<Environment | undefined>;
   updateEnvironment(id: number, data: Partial<InsertEnvironment>): Promise<Environment>;
+  updateEnvironmentDetails(id: number, data: UpdateEnvironmentDetails): Promise<Environment>;
   deleteEnvironment(id: number): Promise<void>;
   
   // Custom Form Types
@@ -1171,14 +1173,16 @@ export class DatabaseStorage implements IStorage {
           insert into environments (
             user_id,
             name,
+            description,
             service_type,
             items
           )
-          values ($1, $2, $3, $4)
+          values ($1, $2, $3, $4, $5)
           returning
             id,
             user_id as "userId",
             name,
+            description,
             service_type as "serviceType",
             items,
             created_at as "createdAt"
@@ -1186,6 +1190,7 @@ export class DatabaseStorage implements IStorage {
         [
           environment.userId,
           environment.name,
+          environment.description ?? null,
           environment.serviceType,
           environment.items ?? [],
         ],
@@ -1234,6 +1239,19 @@ export class DatabaseStorage implements IStorage {
    * @returns Updated environment object
    */
   async updateEnvironment(id: number, data: Partial<InsertEnvironment>): Promise<Environment> {
+    const [environment] = await db
+      .update(environments)
+      .set(data)
+      .where(eq(environments.id, id))
+      .returning();
+    return environment;
+  }
+
+  /**
+   * Updates only user-editable environment metadata.
+   * Kept separate from the legacy environment update used by mobile clients.
+   */
+  async updateEnvironmentDetails(id: number, data: UpdateEnvironmentDetails): Promise<Environment> {
     const [environment] = await db
       .update(environments)
       .set(data)

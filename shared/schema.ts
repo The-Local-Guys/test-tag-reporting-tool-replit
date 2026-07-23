@@ -140,6 +140,7 @@ export const environments = pgTable("environments", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
   name: text("name").notNull(),
+  description: text("description"),
   serviceType: text("service_type").notNull(), // 'electrical', 'emergency_exit_light', 'fire_testing', or 'microwave_leakage'
   items: jsonb("items").notNull().default('[]'), // Array of item objects
   createdAt: timestamp("created_at").defaultNow(),
@@ -187,6 +188,11 @@ export const insertEnvironmentSchema = createInsertSchema(environments).omit({
   createdAt: true,
 });
 
+export const updateEnvironmentDetailsSchema = z.object({
+  name: z.string().trim().min(1, "Environment name is required").max(120),
+  description: z.string().trim().max(500).nullable().optional(),
+}).strict();
+
 export const insertCustomFormTypeSchema = createInsertSchema(customFormTypes).omit({
   id: true,
   createdAt: true,
@@ -219,6 +225,7 @@ export type InsertTestResult = z.infer<typeof insertTestResultSchema>;
 export type TestResult = typeof testResults.$inferSelect;
 export type InsertEnvironment = z.infer<typeof insertEnvironmentSchema>;
 export type Environment = typeof environments.$inferSelect;
+export type UpdateEnvironmentDetails = z.infer<typeof updateEnvironmentDetailsSchema>;
 export type InsertCustomFormType = z.infer<typeof insertCustomFormTypeSchema>;
 export type CustomFormType = typeof customFormTypes.$inferSelect;
 export type InsertCertificate = z.infer<typeof insertCertificateSchema>;

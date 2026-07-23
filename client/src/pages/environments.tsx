@@ -5,6 +5,7 @@ import type { Environment } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -248,11 +249,18 @@ export default function Environments() {
   // Environments are only for electrical testing
   const selectedTab = "electrical";
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDetailsDialogOpen, setIsEditDetailsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [environmentToDelete, setEnvironmentToDelete] = useState<{ id: number; name: string } | null>(null);
+  const [environmentDetailsToEdit, setEnvironmentDetailsToEdit] = useState<{
+    id: number;
+    name: string;
+    description: string;
+  } | null>(null);
   const [editingEnvironmentId, setEditingEnvironmentId] = useState<number | null>(null);
   const [newEnvironment, setNewEnvironment] = useState({
     name: "",
+    description: "",
   });
   const [editItems, setEditItems] = useState<Item[]>([]);
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
@@ -272,13 +280,13 @@ export default function Environments() {
 
   // Create environment mutation
   const createMutation = useMutation({
-    mutationFn: async (data: { name: string; serviceType: string }) => {
+    mutationFn: async (data: { name: string; description: string | null; serviceType: string }) => {
       return await apiRequest("POST", "/api/environments", { ...data, items: [] });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/environments"] });
       setIsCreateDialogOpen(false);
-      setNewEnvironment({ name: "" });
+      setNewEnvironment({ name: "", description: "" });
       toast({
         title: "Success",
         description: "Environment created successfully",
@@ -288,6 +296,32 @@ export default function Environments() {
       toast({
         title: "Error",
         description: "Failed to create environment",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Environment metadata uses its own additive endpoint so legacy mobile updates stay unchanged.
+  const updateDetailsMutation = useMutation({
+    mutationFn: async (data: { id: number; name: string; description: string | null }) => {
+      return await apiRequest("PATCH", `/api/environments/${data.id}/details`, {
+        name: data.name,
+        description: data.description,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/environments"] });
+      setIsEditDetailsDialogOpen(false);
+      setEnvironmentDetailsToEdit(null);
+      toast({
+        title: "Success",
+        description: "Environment details updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update environment details",
         variant: "destructive",
       });
     },
@@ -364,7 +398,37 @@ export default function Environments() {
       });
       return;
     }
-    createMutation.mutate({ ...newEnvironment, serviceType: selectedTab });
+    createMutation.mutate({
+      name: newEnvironment.name.trim(),
+      description: newEnvironment.description.trim() || null,
+      serviceType: selectedTab,
+    });
+  };
+
+  const handleOpenEditDetails = (env: Environment) => {
+    setEnvironmentDetailsToEdit({
+      id: env.id,
+      name: env.name,
+      description: env.description ?? "",
+    });
+    setIsEditDetailsDialogOpen(true);
+  };
+
+  const handleSaveEnvironmentDetails = () => {
+    if (!environmentDetailsToEdit?.name.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter an environment name",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    updateDetailsMutation.mutate({
+      id: environmentDetailsToEdit.id,
+      name: environmentDetailsToEdit.name.trim(),
+      description: environmentDetailsToEdit.description.trim() || null,
+    });
   };
 
   const handleEditEnvironment = (env: Environment) => {
@@ -562,8 +626,22 @@ export default function Environments() {
                   data-testid="input-environment-name"
                   placeholder="e.g., Office Equipment, Workshop Tools"
                   value={newEnvironment.name}
+                  maxLength={120}
                   onChange={(e) =>
                     setNewEnvironment({ ...newEnvironment, name: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="env-description">Description</Label>
+                <Textarea
+                  id="env-description"
+                  data-testid="input-environment-description"
+                  placeholder="e.g., Equipment commonly tested in office areas"
+                  value={newEnvironment.description}
+                  maxLength={500}
+                  onChange={(e) =>
+                    setNewEnvironment({ ...newEnvironment, description: e.target.value })
                   }
                 />
               </div>
@@ -606,9 +684,21 @@ export default function Environments() {
                   <div>
                     <CardTitle className="text-lg sm:text-xl">{env.name}</CardTitle>
                     <CardDescription className="text-sm">{getServiceTypeLabel(env.serviceType)}</CardDescription>
+                    {env.description && (
+                      <p className="mt-2 text-sm text-gray-600 whitespace-pre-wrap">{env.description}</p>
+                    )}
                   </div>
                   {editingEnvironmentId !== env.id && (
-                    <div className="flex gap-2 shrink-0">
+                    <div className="flex flex-wrap gap-2 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenEditDetails(env)}
+                        data-testid={`button-edit-details-${env.id}`}
+                      >
+                        <Edit className="w-4 h-4 mr-1" />
+                        Edit Details
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -616,7 +706,7 @@ export default function Environments() {
                         data-testid={`button-edit-${env.id}`}
                       >
                         <Edit className="w-4 h-4 sm:mr-1" />
-                        <span className="hidden sm:inline">Edit Items</span>
+                        <span>Edit Items</span>
                       </Button>
                       <Button
                         variant="destructive"
@@ -934,6 +1024,74 @@ export default function Environments() {
           ))}
         </div>
       )}
+
+      <Dialog
+        open={isEditDetailsDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditDetailsDialogOpen(open);
+          if (!open) setEnvironmentDetailsToEdit(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Environment Details</DialogTitle>
+            <DialogDescription>
+              Update the environment name and description. Existing reports will not be changed.
+            </DialogDescription>
+          </DialogHeader>
+          {environmentDetailsToEdit && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-env-name">Environment Name</Label>
+                <Input
+                  id="edit-env-name"
+                  data-testid="input-edit-environment-name"
+                  value={environmentDetailsToEdit.name}
+                  maxLength={120}
+                  onChange={(e) =>
+                    setEnvironmentDetailsToEdit({
+                      ...environmentDetailsToEdit,
+                      name: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-env-description">Description</Label>
+                <Textarea
+                  id="edit-env-description"
+                  data-testid="input-edit-environment-description"
+                  placeholder="Add a short description"
+                  value={environmentDetailsToEdit.description}
+                  maxLength={500}
+                  onChange={(e) =>
+                    setEnvironmentDetailsToEdit({
+                      ...environmentDetailsToEdit,
+                      description: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditDetailsDialogOpen(false)}
+              disabled={updateDetailsMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveEnvironmentDetails}
+              disabled={updateDetailsMutation.isPending}
+              data-testid="button-save-environment-details"
+            >
+              {updateDetailsMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

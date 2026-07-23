@@ -9,6 +9,7 @@ import {
   insertTestResultSchema,
   insertUserSchema,
   insertEnvironmentSchema,
+  updateEnvironmentDetailsSchema,
   insertCustomFormTypeSchema,
   insertCertificateSchema,
   loginSchema,
@@ -1585,6 +1586,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update environment name and description without changing the legacy mobile update route.
+  app.patch("/api/environments/:id/details", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const userId = req.session.userId!;
+      const environment = await storage.getEnvironment(id);
+
+      if (!environment) {
+        return res.status(404).json({ error: "Environment not found" });
+      }
+
+      if (environment.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const details = updateEnvironmentDetailsSchema.parse(req.body);
+      const updatedEnvironment = await storage.updateEnvironmentDetails(id, details);
+
+      trackEnvironmentAction(req, 'updated', {
+        environmentId: id,
+        environmentName: updatedEnvironment.name,
+        serviceType: updatedEnvironment.serviceType,
+        updatedFields: ['name', 'description'],
+      });
+
+      res.json(updatedEnvironment);
+    } catch (error) {
+      console.error("Error updating environment details:", error);
+      res.status(400).json({ error: "Failed to update environment details" });
+    }
+  });
+
   // Update an environment
   app.patch("/api/environments/:id", requireAuth, async (req, res) => {
     try {
@@ -1601,8 +1634,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Access denied" });
       }
 
-      // Parse update data and remove userId to prevent ownership reassignment
-      const { userId: _, ...updateData } = insertEnvironmentSchema.partial().parse(req.body);
+      // Preserve the legacy mobile endpoint's original field set. Environment
+      // descriptions are edited only through /api/environments/:id/details.
+      const {
+        userId: _userId,
+        description: _description,
+        ...updateData
+      } = insertEnvironmentSchema.partial().parse(req.body);
       const updatedEnvironment = await storage.updateEnvironment(id, updateData);
       
       // Track environment update
