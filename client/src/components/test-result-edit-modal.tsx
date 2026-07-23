@@ -7,13 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { failureReasons, emergencyFailureReasons, fireFailureReasons, rcdFailureReasons } from '@shared/schema';
+import { parseRcdTripTimesInput, resolveRcdTripTimes } from "@/lib/rcd-trip-times";
 
 interface TestResultEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   editResultData: any;
   setEditResultData: (data: any | ((prev: any) => any)) => void;
-  onSave: () => void;
+  onSave: (data?: any) => void;
   serviceType?: string;
   assetNumberError?: string;
   onAssetNumberChange?: (value: string) => void;
@@ -44,8 +45,17 @@ export function TestResultEditModal({
   // Parsed to numbers only on blur.
   const [tripTimesInput, setTripTimesInput] = useState('');
   useEffect(() => {
-    setTripTimesInput((editResultData.tripTimes || []).join(', '));
-  }, [isOpen]); // sync when modal opens
+    if (isOpen) {
+      setTripTimesInput(resolveRcdTripTimes(editResultData).join(', '));
+    }
+  }, [isOpen, editResultData.tripTimes, editResultData.trip_times]);
+
+  const saveWithCurrentTripTimes = () => {
+    onSave({
+      ...editResultData,
+      tripTimes: parseRcdTripTimesInput(tripTimesInput),
+    });
+  };
 
   const getFailureReasons = () => {
     switch (serviceType) {
@@ -300,7 +310,7 @@ export function TestResultEditModal({
                   value={tripTimesInput}
                   onChange={(e) => setTripTimesInput(e.target.value)}
                   onBlur={(e) => {
-                    const times = e.target.value.split(',').map(t => Number(t.trim())).filter(t => isFinite(t) && t > 0);
+                    const times = parseRcdTripTimesInput(e.target.value);
                     setEditResultData((prev: any) => ({ ...prev, tripTimes: times }));
                   }}
                   placeholder="e.g., 30, 28, 31"
@@ -843,7 +853,7 @@ export function TestResultEditModal({
           <Button
             type="button"
             className="flex-1 bg-primary"
-            onClick={onSave}
+            onClick={saveWithCurrentTripTimes}
             disabled={isSaving || !!assetNumberError || !editResultData.assetNumber?.trim()}
           >
             {isSaving ? savingLabel : saveLabel}

@@ -15,6 +15,7 @@ import { useSession, type BatchedTestResult } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
 import { downloadPDF } from '@/lib/pdf-generator';
 import { downloadExcel } from '@/lib/excel-generator';
+import { resolveRcdTripTimes } from '@/lib/rcd-trip-times';
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -409,13 +410,7 @@ export default function ReportPreview() {
         // RCD testing specific fields
         pushButtonTest: result.pushButtonTest || false,
         injectionTimedTest: result.injectionTimedTest || false,
-        tripTimes: (() => {
-          const tripTimes = (result as any).tripTimes;
-          if (Array.isArray(tripTimes) && tripTimes.length > 0) {
-            return tripTimes.map((t: any) => Number(t)).filter((t: number) => t > 0);
-          }
-          return null;
-        })(),
+        tripTimes: resolveRcdTripTimes(result),
         distributionBoardNumber: (result as any).distributionBoardNumber || null,
         circuitBreakerNumber: (result as any).circuitBreakerNumber || null,
         // Microwave leakage testing specific fields
@@ -791,7 +786,7 @@ export default function ReportPreview() {
       // RCD-specific fields
       pushButtonTest: (result as any).pushButtonTest ?? false,
       injectionTimedTest: (result as any).injectionTimedTest ?? false,
-      tripTimes: (result as any).tripTimes || [],
+      tripTimes: resolveRcdTripTimes(result),
       distributionBoardNumber: (result as any).distributionBoardNumber || null,
       circuitBreakerNumber: (result as any).circuitBreakerNumber || null,
     });
@@ -806,11 +801,12 @@ export default function ReportPreview() {
    * Manual asset number update function - follows admin dashboard pattern
    * Validates for duplicates and provides real-time feedback
    */
-  const handleUpdateResult = () => {
+  const handleUpdateResult = (submittedData?: typeof editResultData) => {
     if (!editingResult) return;
+    const resultData = submittedData ?? editResultData;
 
     // Validate asset number before proceeding
-    const assetError = validateAssetNumber(editResultData.assetNumber, editResultData.frequency);
+    const assetError = validateAssetNumber(resultData.assetNumber, resultData.frequency);
     if (assetError) {
       setAssetNumberError(assetError);
       toast({
@@ -823,16 +819,16 @@ export default function ReportPreview() {
 
     try {
       console.log('=== Starting handleUpdateResult ===');
-      console.log('Form data to save:', editResultData);
+      console.log('Form data to save:', resultData);
       console.log('Editing result:', editingResult);
       console.log('Original batched ID:', (editingResult as any).originalBatchedId);
 
       // Track manually entered asset number to prevent auto-generation conflicts
-      if (editResultData.assetNumber) {
-        setManuallyEnteredAssetNumbers(prev => new Set(Array.from(prev).concat(editResultData.assetNumber)));
+      if (resultData.assetNumber) {
+        setManuallyEnteredAssetNumbers(prev => new Set(Array.from(prev).concat(resultData.assetNumber)));
         
         // manuallyEnteredAssetNumbers is tracked in React state via setManuallyEnteredAssetNumbers above
-        console.log(`Manually entered asset number tracked: ${editResultData.assetNumber}`);
+        console.log(`Manually entered asset number tracked: ${resultData.assetNumber}`);
       }
 
       // Use the original batched ID for updating local storage
@@ -840,7 +836,7 @@ export default function ReportPreview() {
       console.log('Using batched ID for update:', batchedId);
 
       console.log('Calling updateBatchedResult...');
-      updateBatchedResult(batchedId, editResultData);
+      updateBatchedResult(batchedId, resultData);
       console.log('updateBatchedResult completed');
 
       setIsEditModalOpen(false);

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { resolveRcdTripTimes } from '@/lib/rcd-trip-times';
 import type { TestSession, TestResult, InsertTestSession, InsertTestResult } from '@shared/schema';
 
 export interface SessionData {
@@ -323,30 +324,10 @@ export function useSession() {
       // RCD testing fields
       pushButtonTest: result.pushButtonTest ?? result.push_button_test ?? undefined,
       injectionTimedTest: result.injectionTimedTest ?? result.injection_timed_test ?? undefined,
-      tripTimes: (() => {
-        // Priority 1: tripTimes array column — authoritative, always reflects latest edits
-        if (result.tripTimes && Array.isArray(result.tripTimes) && result.tripTimes.length > 0) {
-          const validTimes = result.tripTimes.map((t: any) => Number(t)).filter((t: number) => t > 0);
-          if (validTimes.length > 0) {
-            return validTimes;
-          }
-        }
-        // Priority 2: legacy notes embedding — fallback for records predating the tripTimes column
-        const notesValue = result.notes || '';
-        const tripTimesMatch = notesValue.match(/\[TRIP_TIMES:\[([^\]]*)\]\]/);
-        if (tripTimesMatch && tripTimesMatch[1]) {
-          const parsedTimes = tripTimesMatch[1].split(',').map((t: string) => Number(t.trim())).filter((t: number) => t > 0);
-          if (parsedTimes.length > 0) {
-            return parsedTimes;
-          }
-        }
-        // Priority 3: legacy single trip_time column
-        const singleTripTime = result.trip_time || result.tripTime;
-        if (singleTripTime != null && Number(singleTripTime) > 0) {
-          return [Number(singleTripTime)];
-        }
-        return undefined;
-      })(),
+      // Auto-save caches raw SQL rows (trip_times), while a fresh Drizzle fetch
+      // returns camelCase (tripTimes). Normalize both so immediate navigation to
+      // View Report has the same data as continuing/reloading the report.
+      tripTimes: resolveRcdTripTimes(result),
       distributionBoardNumber: result.distributionBoardNumber ?? result.distribution_board_number ?? undefined,
       circuitBreakerNumber: result.circuitBreakerNumber ?? result.circuit_breaker_number ?? undefined,
       leakageReading: result.leakageReading || result.leakage_reading || undefined,

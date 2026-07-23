@@ -1,7 +1,8 @@
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import type { TestSession, TestResult } from '@shared/schema';
 import logoPath from '@assets/The Local Guys - with plug wide boarder - png seek.png';
 import letterheadPath from '@assets/Letterheads_1754455497882.png';
+import { resolveRcdTripTimes as resolveStoredRcdTripTimes } from './rcd-trip-times';
 
 interface ReportData {
   session: TestSession;
@@ -22,26 +23,7 @@ interface ReportData {
  * Notes-embedding and single-value fallbacks are kept for legacy records only.
  */
 function resolveRcdTripTimes(result: any): number[] {
-  // Priority 1: trip_times array column — authoritative
-  const tripTimesArray = result.tripTimes;
-  if (Array.isArray(tripTimesArray) && tripTimesArray.length > 0) {
-    const valid = tripTimesArray.filter((t: any) => t != null && Number(t) > 0).map((t: any) => Number(t));
-    if (valid.length > 0) return valid;
-  }
-
-  // Priority 2: legacy notes embedding — for records predating the trip_times column
-  const notesValue = result.notes || '';
-  const notesMatch = notesValue.match(/\[TRIP_TIMES:\[([^\]]*)\]\]/);
-  if (notesMatch && notesMatch[1]) {
-    const parsed = notesMatch[1].split(',').map((t: string) => Number(t.trim())).filter((t: number) => t > 0);
-    if (parsed.length > 0) return parsed;
-  }
-
-  // Priority 3: legacy single numeric column fallback
-  const tripTimeValue = result.trip_time ?? result.tripTime;
-  if (tripTimeValue != null && Number(tripTimeValue) > 0) return [Number(tripTimeValue)];
-
-  return [];
+  return resolveStoredRcdTripTimes(result);
 }
 
 function calculateNextDueDate(testDate: string, frequency: string, result: string): string {
