@@ -50,6 +50,37 @@ function HoseReelIcon({ className = "h-8 w-8" }: { className?: string }) {
   );
 }
 
+// Custom SVG component for fire hydrant icon
+function HydrantIcon({ className = "h-8 w-8" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-label="Fire hydrant"
+      role="img"
+      className={className}
+    >
+      {/* Domed top cap */}
+      <path d="M9 4.5 Q12 1.8 15 4.5 L15 5.5 L9 5.5 Z" fill="#DC2626" stroke="#B91C1C" strokeWidth="0.5"/>
+      {/* Top bolt */}
+      <circle cx="12" cy="3.4" r="0.8" fill="#374151"/>
+      {/* Neck */}
+      <rect x="10.5" y="5.5" width="3" height="1.8" fill="#DC2626" stroke="#B91C1C" strokeWidth="0.5"/>
+      {/* Main body */}
+      <rect x="8.5" y="7" width="7" height="9" rx="2" fill="#DC2626" stroke="#B91C1C" strokeWidth="0.5"/>
+      {/* Front cap */}
+      <circle cx="12" cy="11" r="1.6" fill="#EF4444" stroke="#B91C1C" strokeWidth="0.5"/>
+      <circle cx="12" cy="11" r="0.6" fill="#374151"/>
+      {/* Left side outlet */}
+      <rect x="6.5" y="9.5" width="2.5" height="2" rx="0.5" fill="#374151" stroke="#1F2937" strokeWidth="0.4"/>
+      {/* Right side outlet */}
+      <rect x="15" y="9.5" width="2.5" height="2" rx="0.5" fill="#374151" stroke="#1F2937" strokeWidth="0.4"/>
+      {/* Base flanges */}
+      <rect x="7.5" y="16" width="9" height="2" rx="0.5" fill="#6B7280" stroke="#374151" strokeWidth="0.5"/>
+      <rect x="6.5" y="18" width="11" height="2" rx="0.5" fill="#6B7280" stroke="#374151" strokeWidth="0.5"/>
+    </svg>
+  );
+}
+
 type Item = {
   type: string;
   name: string;
@@ -83,6 +114,7 @@ const fireItems: Item[] = [
   { type: 'fire-extinguisher', name: 'Fire Extinguisher', icon: '🧯', description: 'Fire Extinguisher' },
   { type: 'fire-blanket', name: 'Fire Blanket', icon: '🔥', description: 'Fire Blanket' },
   { type: 'fire-hose-reel', name: 'Fire Hose Reel', icon: <HoseReelIcon className="h-8 w-8 text-red-600 dark:text-red-400" />, description: 'Fire Hose Reel' },
+  { type: 'fire-hydrant', name: 'Fire Hydrant', icon: <HydrantIcon className="h-8 w-8 text-red-600 dark:text-red-400" />, description: 'Fire Hydrant' },
 ];
 
 const rcdItems: Item[] = [

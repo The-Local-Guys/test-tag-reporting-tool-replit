@@ -568,6 +568,18 @@ export function TestResultEditModal({
               </>
             )}
 
+            {/* Fire Hydrant specific fields */}
+            {editResultData.classification === 'fire_hydrant' && (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="edit-operationalTest-fire-hydrant"
+                  checked={editResultData.operationalTest}
+                  onCheckedChange={(checked) => setEditResultData((prev: any) => ({ ...prev, operationalTest: !!checked }))}
+                />
+                <Label htmlFor="edit-operationalTest-fire-hydrant">Operational Test</Label>
+              </div>
+            )}
+
             {/* Fire Blanket specific fields */}
             {editResultData.classification === 'fire_blanket' && (
               <div className="flex items-center space-x-2">

@@ -1011,6 +1011,9 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         yPosition += 6;
         doc.text(`• Flow Rate Check (Flow rate within operating range): ${passOrFail(result.pressureTest)}`, margin + 5, yPosition);
         yPosition += 6;
+      } else if (equipmentType === 'fire_hydrant') {
+        doc.text(`• Operational Test (Hydrant operation, water flow): ${passOrFail(result.operationalTest)}`, margin + 5, yPosition);
+        yPosition += 6;
       } else if (equipmentType === 'fire_blanket') {
         doc.text(`• Operational Test (Easy removal, blanket condition): ${passOrFail(result.operationalTest)}`, margin + 5, yPosition);
         yPosition += 6;

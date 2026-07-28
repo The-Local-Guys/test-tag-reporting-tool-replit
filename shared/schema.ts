@@ -111,7 +111,7 @@ export const testResults = pgTable("test_results", {
   luxReading: text("lux_reading"), // Legacy lux reading field
   luxCompliant: boolean("lux_compliant"), // Legacy lux compliance field
   // Fire testing specific fields (AS 1851 / NZS 4503:2005)
-  equipmentType: text("equipment_type"), // 'fire_extinguisher', 'fire_blanket', 'fire_hose_reel'
+  equipmentType: text("equipment_type"), // 'fire_extinguisher', 'fire_blanket', 'fire_hose_reel', 'fire_hydrant'
   extinguisherType: text("extinguisher_type"), // 'dry_powder', 'water', 'co2', 'wet_chemical', 'foam', 'vaporising_liquid'
   size: text("size"), // For extinguishers - e.g., "1.5kg", "4.5kg"
   weight: text("weight"), // Current weight for extinguishers
@@ -235,7 +235,7 @@ export type Certificate = typeof certificates.$inferSelect;
 export const serviceTypes = ['electrical', 'emergency_exit_light', 'fire_testing', 'rcd_reporting', 'microwave_leakage'] as const;
 export const equipmentClassifications = ['class1', 'class2', 'epod', 'rcd', '3phase'] as const;
 export const emergencyClassifications = ['emergency_exit_sign', 'emergency_light_downlight', 'combination_unit', 'emergency_spotlight', 'floor_path_light', 'emergency_bulkhead'] as const;
-export const fireEquipmentTypes = ['fire_extinguisher', 'fire_blanket', 'fire_hose_reel'] as const;
+export const fireEquipmentTypes = ['fire_extinguisher', 'fire_blanket', 'fire_hose_reel', 'fire_hydrant'] as const;
 export const fireTestTypes = ['test_1_6monthly', 'test_2_12monthly', 'test_4_replacement'] as const;
 export const complianceStandards = ['AS_1851_AU', 'NZS_4503_NZ'] as const;
 export const testResultValues = ['pass', 'fail'] as const;

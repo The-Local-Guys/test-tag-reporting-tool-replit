@@ -323,6 +323,7 @@ export default function ServiceSelection() {
                 <li>• Fire extinguisher testing</li>
                 <li>• Fire blanket inspection</li>
                 <li>• Fire hose reel testing</li>
+                <li>• Fire hydrant testing</li>
                 <li>• 6-monthly and 12-monthly tests</li>
                 <li>• Compliance documentation</li>
               </ul>

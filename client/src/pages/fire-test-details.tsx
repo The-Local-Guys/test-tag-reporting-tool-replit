@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 // Fire Equipment Test Schema following AS 1851 (AU) / NZS 4503:2005 (NZ)
 const fireTestSchema = z.object({
   location: z.string().min(1, 'Location is required'),
-  equipmentType: z.enum(['fire_extinguisher', 'fire_blanket', 'fire_hose_reel']),
+  equipmentType: z.enum(['fire_extinguisher', 'fire_blanket', 'fire_hose_reel', 'fire_hydrant']),
   extinguisherType: z.enum(['dry_powder', 'water', 'co2', 'wet_chemical', 'foam', 'vaporising_liquid']).optional(),
   result: z.enum(['pass', 'fail']),
   frequency: z.enum(['sixmonthly', 'annually']),
@@ -58,6 +58,7 @@ export default function FireTestDetails() {
   const getEquipmentType = (type: string) => {
     if (type.includes('extinguisher')) return 'fire_extinguisher';
     if (type.includes('blanket')) return 'fire_blanket';
+    if (type.includes('hydrant')) return 'fire_hydrant';
     if (type.includes('hose')) return 'fire_hose_reel';
     return 'fire_extinguisher';
   };
@@ -246,8 +247,10 @@ export default function FireTestDetails() {
     }
   };
 
-  // Get compliance standard based on session country
+  // Get compliance standard based on equipment type / session country
   const getComplianceStandard = () => {
+    // Fire hydrants follow NZS 4510:2022 regardless of session country
+    if (watchEquipmentType === 'fire_hydrant') return 'NZS 4510:2022';
     const country = sessionData?.session?.country;
     return country === 'newzealand' ? 'NZS 4503:2005' : 'AS 1851'; // Default to AS 1851 for Australia and ARA Compliance
   };
@@ -339,7 +342,7 @@ export default function FireTestDetails() {
               <Label htmlFor="equipmentType">Equipment Type</Label>
               <Select 
                 value={form.watch('equipmentType')} 
-                onValueChange={(value) => form.setValue('equipmentType', value as 'fire_extinguisher' | 'fire_blanket' | 'fire_hose_reel')}
+                onValueChange={(value) => form.setValue('equipmentType', value as 'fire_extinguisher' | 'fire_blanket' | 'fire_hose_reel' | 'fire_hydrant')}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select equipment type" />
@@ -348,6 +351,7 @@ export default function FireTestDetails() {
                   <SelectItem value="fire_extinguisher">Fire Extinguisher</SelectItem>
                   <SelectItem value="fire_blanket">Fire Blanket</SelectItem>
                   <SelectItem value="fire_hose_reel">Fire Hose Reel</SelectItem>
+                  <SelectItem value="fire_hydrant">Fire Hydrant</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -492,6 +496,19 @@ export default function FireTestDetails() {
                     </Label>
                   </div>
                 </>
+              )}
+
+              {watchEquipmentType === 'fire_hydrant' && (
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="operationalTest"
+                    checked={form.watch('operationalTest')}
+                    onCheckedChange={(checked) => form.setValue('operationalTest', !!checked)}
+                  />
+                  <Label htmlFor="operationalTest" className="text-sm">
+                    Operational Test (Hydrant operation, water flow)
+                  </Label>
+                </div>
               )}
 
               {watchEquipmentType === 'fire_blanket' && (

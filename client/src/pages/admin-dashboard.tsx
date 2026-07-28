@@ -89,6 +89,7 @@ function formatReportDetail(value?: string | null): string {
     fire_extinguisher: "Fire Extinguisher",
     fire_blanket: "Fire Blanket",
     fire_hose_reel: "Fire Hose Reel",
+    fire_hydrant: "Fire Hydrant",
     non_maintained: "Non-Maintained",
     led: "LED",
     co2: "CO2",
