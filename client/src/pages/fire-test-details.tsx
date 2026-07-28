@@ -249,9 +249,9 @@ export default function FireTestDetails() {
 
   // Get compliance standard based on equipment type / session country
   const getComplianceStandard = () => {
-    // Fire hydrants follow NZS 4510:2022 regardless of session country
-    if (watchEquipmentType === 'fire_hydrant') return 'NZS 4510:2022';
     const country = sessionData?.session?.country;
+    // Fire hydrants in New Zealand follow NZS 4510:2022; Australia is unchanged
+    if (watchEquipmentType === 'fire_hydrant' && country === 'newzealand') return 'NZS 4510:2022';
     return country === 'newzealand' ? 'NZS 4503:2005' : 'AS 1851'; // Default to AS 1851 for Australia and ARA Compliance
   };
 

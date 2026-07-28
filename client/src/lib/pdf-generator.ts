@@ -993,6 +993,13 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       const passOrFail = (val: boolean | null | undefined) => val === false ? 'Fail' : 'Pass';
 
       doc.setFont('helvetica', 'normal');
+      // Per-item standard: fire hydrants in New Zealand follow NZS 4510:2022;
+      // Australia and all other fire equipment use the report's country-based standard.
+      const itemStandard = (equipmentType === 'fire_hydrant' && session.country === 'newzealand')
+        ? 'NZS 4510:2022'
+        : complianceStandard;
+      doc.text(`• Standard: ${itemStandard}`, margin + 5, yPosition);
+      yPosition += 6;
       doc.text(`• Visual Inspection (Physical condition, damage, corrosion): ${passOrFail(result.visionInspection)}`, margin + 5, yPosition);
       yPosition += 6;
       doc.text(`• Accessibility Check (Clear access, not obstructed): ${passOrFail(result.accessibilityCheck)}`, margin + 5, yPosition);
@@ -1072,19 +1079,21 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   const footerY = doc.internal.pageSize.height - 20;
   doc.setFontSize(8);
   doc.setFont('helvetica', 'italic');
-  const footerText = session.serviceType === 'emergency_exit_light' 
+  const footerText = session.serviceType === 'emergency_exit_light'
     ? 'This report complies with AS 2293.2:2019 emergency lighting standards.'
     : session.serviceType === 'fire_testing'
-    ? `This report complies with ${session.country === 'newzealand' ? 'NZS 4503:2005' : 'AS 1851'} fire equipment standards.` // Default to AS 1851 for Australia and ARA Compliance
+    ? '' // Fire testing shows the compliance standard per item, not in the footer
     : session.serviceType === 'microwave_leakage'
     ? 'This report complies with AS/NZS 60335.2.25 microwave oven safety standards.'
     : 'This report complies with AS/NZS 3760 electrical safety standards.';
-  doc.text(
-    footerText,
-    pageWidth / 2,
-    footerY,
-    { align: 'center' }
-  );
+  if (footerText) {
+    doc.text(
+      footerText,
+      pageWidth / 2,
+      footerY,
+      { align: 'center' }
+    );
+  }
   
   // Add RCD-specific disclaimer for RCD Reporting
   if (session.serviceType === 'rcd_reporting') {
