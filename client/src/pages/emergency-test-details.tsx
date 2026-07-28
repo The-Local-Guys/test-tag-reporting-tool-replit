@@ -88,6 +88,17 @@ export default function EmergencyTestDetails() {
 
   const watchResult = form.watch('result');
 
+  // Emergency exit light only: an item may only Pass when every AS 2293.2:2019
+  // test check is ticked (incl. Lux Test + "Meets minimum lux"). Manual Fail is
+  // always allowed; this flag only gates the Pass direction.
+  const allChecksPassed =
+    form.watch('visualInspection') &&
+    form.watch('switchingTest') &&
+    form.watch('chargingTest') &&
+    form.watch('dischargeTest') &&
+    form.watch('luxTest') &&
+    form.watch('luxCompliant');
+
   // Update location field when currentLocation changes
   useEffect(() => {
     if (currentLocation) {
@@ -108,6 +119,17 @@ export default function EmergencyTestDetails() {
     }
 
     // No need to check for in-progress since using local storage
+
+    // Backstop: an emergency exit light item cannot be marked Pass unless every
+    // test check is completed. Blocks an invalid Pass even if the UI is bypassed.
+    if (data.result === 'pass' && !allChecksPassed) {
+      toast({
+        title: 'Complete all checks first',
+        description: 'All test checks must be passed before this item can be marked as Pass.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     // Validate required fields for failed items
     if (data.result === 'fail' && !data.failureReason) {
@@ -504,15 +526,26 @@ export default function EmergencyTestDetails() {
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="result">Overall Result *</Label>
-              <Select 
-                value={form.watch('result')} 
-                onValueChange={(value) => form.setValue('result', value as 'pass' | 'fail')}
+              <Select
+                value={form.watch('result')}
+                onValueChange={(value) => {
+                  // Block selecting Pass until every test check is completed.
+                  if (value === 'pass' && !allChecksPassed) {
+                    toast({
+                      title: 'Complete all checks first',
+                      description: 'All test checks must be passed before this item can be marked as Pass.',
+                      variant: 'destructive',
+                    });
+                    return;
+                  }
+                  form.setValue('result', value as 'pass' | 'fail');
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select result" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pass">
+                  <SelectItem value="pass" className={!allChecksPassed ? 'opacity-50' : ''}>
                     <div className="flex items-center">
                       <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
                       Pass
