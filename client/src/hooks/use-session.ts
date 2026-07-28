@@ -42,6 +42,7 @@ export interface BatchedTestResult {
   chargingTest?: boolean;
   manufacturerInfo?: string;
   installationDate?: string;
+  expiryDate?: string | null; // custom-frequency expiry date (ISO)
   // Lux testing fields
   luxTest?: boolean;
   luxReading?: number;
@@ -306,6 +307,7 @@ export function useSession() {
       chargingTest: result.charging_test ?? result.chargingTest ?? undefined,
       manufacturerInfo: result.manufacturer_info ?? result.manufacturerInfo ?? undefined,
       installationDate: result.installation_date ?? result.installationDate ?? undefined,
+      expiryDate: result.expiry_date ?? result.expiryDate ?? undefined,
       // Lux testing fields
       luxTest: result.lux_test ?? result.luxTest ?? undefined,
       luxReading: result.lux_reading ?? result.luxReading ?? undefined,
@@ -820,6 +822,7 @@ export function useSession() {
           }
         } else {
           switch (frequency) {
+            case 'customfrequency': // custom shares the 12-monthly asset bucket
             case 'twelvemonthly':
               if (assetNum > twelvemonthlyCounterRef.current) {
                 console.log('✅ Updating 12M counter:', twelvemonthlyCounterRef.current, '→', assetNum);
@@ -902,6 +905,7 @@ export function useSession() {
         let candidate: number;
 
         switch (frequency) {
+          case 'customfrequency': // custom shares the 12-monthly asset bucket
           case 'twelvemonthly':
             candidate = Math.max(startingNumbers.twelvemonthly, twelvemonthlyCounterRef.current + 1);
             while (usedNumbers.has(candidate)) candidate++;
@@ -973,6 +977,7 @@ export function useSession() {
       luxCompliant: cleanData.luxCompliant ?? undefined,
       manufacturerInfo: cleanData.manufacturerInfo || undefined,
       installationDate: cleanData.installationDate || undefined,
+      expiryDate: cleanData.expiryDate || undefined,
       pushButtonTest: (cleanData as any).pushButtonTest ?? undefined,
       injectionTimedTest: (cleanData as any).injectionTimedTest ?? undefined,
       tripTimes: (cleanData as any).tripTimes ?? undefined,
@@ -1148,6 +1153,7 @@ export function useSession() {
         luxCompliant: result.luxCompliant ?? false,
         manufacturerInfo: result.manufacturerInfo || null,
         installationDate: result.installationDate || null,
+        expiryDate: result.expiryDate || null,
         // Fire Testing specific fields
         pressureTest: result.pressureTest ?? false,
         accessibilityCheck: result.accessibilityCheck ?? false,
@@ -1206,6 +1212,7 @@ export function useSession() {
               chargingTest: serverResult.charging_test ?? r.chargingTest,
               manufacturerInfo: serverResult.manufacturer_info || r.manufacturerInfo,
               installationDate: serverResult.installation_date || r.installationDate,
+              expiryDate: serverResult.expiry_date || r.expiryDate,
               // Fire testing fields
               equipmentType: serverResult.equipment_type || r.equipmentType,
               extinguisherType: serverResult.extinguisher_type || r.extinguisherType,
@@ -1301,6 +1308,7 @@ export function useSession() {
         luxCompliant: data.luxCompliant ?? false,
         manufacturerInfo: data.manufacturerInfo || null,
         installationDate: data.installationDate || null,
+        expiryDate: data.expiryDate || null,
         // Fire testing fields
         equipmentType: data.equipmentType || null,
         extinguisherType: data.extinguisherType || null,
@@ -1350,6 +1358,7 @@ export function useSession() {
               chargingTest: serverResult.charging_test ?? r.chargingTest,
               manufacturerInfo: serverResult.manufacturer_info ?? r.manufacturerInfo,
               installationDate: serverResult.installation_date ?? r.installationDate,
+              expiryDate: serverResult.expiry_date ?? r.expiryDate,
               // Fire testing fields
               equipmentType: serverResult.equipment_type ?? r.equipmentType,
               extinguisherType: serverResult.extinguisher_type ?? r.extinguisherType,

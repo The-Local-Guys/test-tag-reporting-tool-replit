@@ -15,6 +15,7 @@ import { useSession, DEFAULT_STARTING_NUMBERS } from '@/hooks/use-session';
 import { useLocation, useSearch } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 import type { InsertTestResult } from '@shared/schema';
 
 const classificationOptions = [
@@ -32,6 +33,7 @@ const frequencyOptions = [
   { value: 'twelvemonthly', label: '12 Monthly' },
   { value: 'twentyfourmonthly', label: '24 Monthly' },
   { value: 'fiveyearly', label: '5 Yearly' },
+  { value: 'customfrequency', label: 'Custom Frequency' },
 ];
 
 const testDetailsSchema = z.object({
@@ -45,11 +47,14 @@ const testDetailsSchema = z.object({
  * Features automatic asset number generation and duplicate prevention
  */
 export default function TestDetails() {
+  const { toast } = useToast();
   const [selectedClass, setSelectedClass] = useState('class1');
   const [selectedFrequency, setSelectedFrequency] = useState(() => {
     // Get the last selected frequency from sessionStorage, default to 'twelvemonthly'
     return sessionStorage.getItem('lastSelectedFrequency') || 'twelvemonthly';
   });
+  // Explicit expiry date (ISO yyyy-mm-dd) used only when frequency is 'customfrequency'
+  const [customExpiryDate, setCustomExpiryDate] = useState('');
   const [currentItem, setCurrentItem] = useState<{name: string, type: string} | null>(null);
   const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]);
   const [showCamera, setShowCamera] = useState(false);
@@ -124,6 +129,10 @@ export default function TestDetails() {
           break;
         case 'monthly':
           nextAssetNumber = assetProgress.nextMonthly;
+          break;
+        case 'customfrequency':
+          // Custom frequency shares the 12-monthly asset bucket
+          nextAssetNumber = assetProgress.nextTwelvemonthly;
           break;
         default:
           nextAssetNumber = assetProgress.nextTwelvemonthly;
@@ -201,6 +210,16 @@ export default function TestDetails() {
     const formValues = form.getValues();
     console.log('🎯 Form values:', formValues);
 
+    // Custom frequency requires an explicit expiry date
+    if (selectedFrequency === 'customfrequency' && !customExpiryDate) {
+      toast({
+        title: 'Expiry date required',
+        description: 'Please enter an expiry date for the custom frequency.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const testData: Omit<InsertTestResult, 'sessionId'> = {
       assetNumber: formValues.assetNumber,
       itemName: currentItem.name,
@@ -209,6 +228,7 @@ export default function TestDetails() {
       classification: selectedClass,
       result,
       frequency: selectedFrequency,
+      expiryDate: selectedFrequency === 'customfrequency' ? customExpiryDate : null,
       failureReason: null,
       actionTaken: null,
       notes: null,
@@ -413,6 +433,24 @@ export default function TestDetails() {
           <div className="text-xs text-gray-500">
             Determines when the next test is due
           </div>
+
+          {selectedFrequency === 'customfrequency' && (
+            <div className="space-y-1">
+              <Label htmlFor="expiryDate" className="text-sm font-medium text-gray-700">
+                Expiry Date *
+              </Label>
+              <Input
+                id="expiryDate"
+                type="date"
+                value={customExpiryDate}
+                onChange={(e) => setCustomExpiryDate(e.target.value)}
+                className="text-base"
+              />
+              <div className="text-xs text-gray-500">
+                The exact date this item's test expires
+              </div>
+            </div>
+          )}
         </div>
 
 

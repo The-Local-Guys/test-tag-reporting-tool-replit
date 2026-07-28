@@ -12,14 +12,19 @@ interface ReportData {
   };
 }
 
-function calculateNextDueDate(testDate: string, frequency: string, result: string): string {
+function calculateNextDueDate(testDate: string, frequency: string, result: string, customExpiryDate?: string | null): string {
   const date = new Date(testDate);
-  
+
   // For failed items, next due date is the same as test date (immediate retest required)
   if (result === 'fail') {
     return date.toLocaleDateString('en-AU');
   }
-  
+
+  // Custom frequency uses the explicitly entered expiry date
+  if (frequency === 'customfrequency' && customExpiryDate) {
+    return new Date(customExpiryDate).toLocaleDateString('en-AU');
+  }
+
   switch (frequency) {
     case 'monthly':
       date.setMonth(date.getMonth() + 1);
@@ -54,6 +59,7 @@ function getFrequencyLabel(frequency: string): string {
     case 'twelvemonthly': return '12 Monthly';
     case 'twentyfourmonthly': return '24 Monthly';
     case 'fiveyearly': return '5 Yearly';
+    case 'customfrequency': return 'Custom';
     default: return '12 Monthly';
   }
 }
@@ -84,8 +90,9 @@ function formatAssetNumberWithFrequency(
     'twelvemonthly': '12M',
     'twentyfourmonthly': '24M',
     'fiveyearly': '5Y',
+    'customfrequency': '12M',
   };
-  
+
   const frequencyCode = frequencyMap[frequency] || frequency;
   return `${assetNumber} - ${frequencyCode}`;
 }
@@ -134,7 +141,7 @@ function generateReflectionsExcelReport(data: ReportData): Blob {
       result.electricalTest ? 'PASS' : 'FAIL',
       result.result.toUpperCase(),
       testDateFormatted,
-      calculateNextDueDate(session.testDate, result.frequency, result.result),
+      calculateNextDueDate(session.testDate, result.frequency, result.result, (result as any).expiryDate),
       actionDisplay,
     ]);
   });
@@ -242,7 +249,7 @@ function generateReflectionsRCDExcelReport(data: ReportData): Blob {
       toTestCell((result as any).injectionTimedTest),
       tripTimeDisplay,
       testDateFormatted,
-      calculateNextDueDate(session.testDate, result.frequency || 'twelvemonthly', result.result),
+      calculateNextDueDate(session.testDate, result.frequency || 'twelvemonthly', result.result, (result as any).expiryDate),
       result.result.toUpperCase(),
       comments,
       actionDisplay,
@@ -389,7 +396,7 @@ export function generateExcelReport(data: ReportData): Blob {
         result.manufacturerInfo || 'N/A',
         result.installationDate || 'N/A',
         getFrequencyLabel(result.frequency),
-        calculateNextDueDate(session.testDate, result.frequency, result.result),
+        calculateNextDueDate(session.testDate, result.frequency, result.result, (result as any).expiryDate),
         displayFailureReason,
         result.notes || '',
         result.visionInspection ? 'PASS' : 'FAIL',
@@ -431,7 +438,7 @@ export function generateExcelReport(data: ReportData): Blob {
         sizeWeight,
         result.manufacturerInfo || 'N/A',
         getFrequencyLabel(result.frequency),
-        calculateNextDueDate(session.testDate, result.frequency, result.result),
+        calculateNextDueDate(session.testDate, result.frequency, result.result, (result as any).expiryDate),
         displayFailureReason,
         result.notes || '',
         toTestCell((result as any).fireVisualInspection),
@@ -528,7 +535,7 @@ export function generateExcelReport(data: ReportData): Blob {
         result.visionInspection ? 'Yes' : 'No',
         result.electricalTest ? 'Yes' : 'No',
         getFrequencyLabel(result.frequency),
-        calculateNextDueDate(session.testDate, result.frequency, result.result),
+        calculateNextDueDate(session.testDate, result.frequency, result.result, (result as any).expiryDate),
         displayFailureReason,
         displayActionTaken,
         result.notes || ''

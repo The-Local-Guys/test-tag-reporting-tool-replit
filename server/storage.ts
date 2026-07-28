@@ -826,8 +826,8 @@ export class DatabaseStorage implements IStorage {
         (session_id, asset_number, item_name, item_type, location, classification, result, frequency, failure_reason, action_taken, notes, photo_data, vision_inspection, electrical_test,
         maintenance_type, globe_type, discharge_test, switching_test, charging_test, lux_test, lux_reading, lux_compliant, manufacturer_info, installation_date,
         equipment_type, extinguisher_type, size, weight, test_type, fire_visual_inspection, pressure_test, accessibility_check, signage_check, operational_test,
-        push_button_test, injection_timed_test, trip_times, distribution_board_number, circuit_breaker_number, leakage_reading)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40)
+        push_button_test, injection_timed_test, trip_times, distribution_board_number, circuit_breaker_number, leakage_reading, expiry_date)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41)
         RETURNING *
       `;
 
@@ -880,8 +880,10 @@ export class DatabaseStorage implements IStorage {
         insertResult.circuitBreakerNumber ?? null,
         // Microwave specific fields
         insertResult.leakageReading ?? null,
+        // Custom-frequency expiry date
+        insertResult.expiryDate ?? null,
       ]);
-      
+
       console.log('Successfully inserted test result:', result.rows[0]);
 
       // Update session's lastActivityAt timestamp for multi-day job tracking

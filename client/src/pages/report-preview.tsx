@@ -59,8 +59,9 @@ function formatAssetNumberWithFrequency(
     'twelvemonthly': '12M',
     'twentyfourmonthly': '24M',
     'fiveyearly': '5Y',
+    'customfrequency': '12M',
   };
-  
+
   const frequencyCode = frequencyMap[frequency] || frequency;
   return `${assetNumber} - ${frequencyCode}`;
 }
@@ -116,6 +117,7 @@ export default function ReportPreview() {
     luxCompliant: false as boolean,
     manufacturerInfo: null as string | null,
     installationDate: null as string | null,
+    expiryDate: null as string | null,
     maintenanceType: null as string | null,
     globeType: null as string | null,
     // Fire Testing specific fields
@@ -406,6 +408,7 @@ export default function ReportPreview() {
         luxCompliant: result.luxCompliant || false,
         manufacturerInfo: result.manufacturerInfo || null,
         installationDate: result.installationDate || null,
+        expiryDate: result.expiryDate || null,
         globeType: result.globeType || null,
         // RCD testing specific fields
         pushButtonTest: result.pushButtonTest || false,
@@ -502,6 +505,7 @@ export default function ReportPreview() {
         luxCompliant: result.luxCompliant || false,
         manufacturerInfo: result.manufacturerInfo || null,
         installationDate: result.installationDate || null,
+        expiryDate: result.expiryDate || null,
         globeType: result.globeType || null,
         // Microwave leakage testing specific fields
         leakageReading: (result as any).leakageReading || null,
@@ -639,6 +643,7 @@ export default function ReportPreview() {
       luxCompliant: result.luxCompliant || false,
       manufacturerInfo: result.manufacturerInfo || null,
       installationDate: result.installationDate || null,
+      expiryDate: result.expiryDate || null,
       globeType: result.globeType || null,
     };
 
@@ -739,6 +744,7 @@ export default function ReportPreview() {
       chargingTest: result.chargingTest ?? false,
       manufacturerInfo: result.manufacturerInfo || null,
       installationDate: result.installationDate || null,
+      expiryDate: result.expiryDate || null,
       globeType: result.globeType || null,
     };
 
@@ -771,6 +777,7 @@ export default function ReportPreview() {
       luxCompliant: (result as any).luxCompliant ?? false,
       manufacturerInfo: (result as any).manufacturerInfo || null,
       installationDate: (result as any).installationDate || null,
+      expiryDate: (result as any).expiryDate || null,
       maintenanceType: (result as any).maintenanceType || null,
       globeType: (result as any).globeType || null,
       // Fire Testing specific fields
@@ -864,6 +871,7 @@ export default function ReportPreview() {
         luxCompliant: false,
         manufacturerInfo: null,
         installationDate: null,
+        expiryDate: null,
         maintenanceType: null,
         globeType: null,
         pressureTest: false,

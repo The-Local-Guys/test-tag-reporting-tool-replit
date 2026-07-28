@@ -279,8 +279,25 @@ export function TestResultEditModal({
                 )}
                 <SelectItem value="twentyfourmonthly">24 Monthly</SelectItem>
                 <SelectItem value="fiveyearly">5 Yearly</SelectItem>
+                {/* Custom Frequency is electrical-only */}
+                {serviceType === 'electrical' && (
+                  <SelectItem value="customfrequency">Custom Frequency</SelectItem>
+                )}
               </SelectContent>
             </Select>
+
+            {editResultData.frequency === 'customfrequency' && (
+              <div className="mt-3">
+                <Label htmlFor="edit-expiryDate">Expiry Date *</Label>
+                <Input
+                  id="edit-expiryDate"
+                  type="date"
+                  value={editResultData.expiryDate || ''}
+                  onChange={(e) => setEditResultData((prev: any) => ({ ...prev, expiryDate: e.target.value || null }))}
+                  className="text-base"
+                />
+              </div>
+            )}
           </div>
         )}
 
@@ -868,7 +885,7 @@ export function TestResultEditModal({
             type="button"
             className="flex-1 bg-primary"
             onClick={saveWithCurrentTripTimes}
-            disabled={isSaving || !!assetNumberError || !editResultData.assetNumber?.trim()}
+            disabled={isSaving || !!assetNumberError || !editResultData.assetNumber?.trim() || (editResultData.frequency === 'customfrequency' && !editResultData.expiryDate)}
           >
             {isSaving ? savingLabel : saveLabel}
           </Button>

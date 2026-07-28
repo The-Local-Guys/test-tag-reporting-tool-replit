@@ -26,14 +26,19 @@ function resolveRcdTripTimes(result: any): number[] {
   return resolveStoredRcdTripTimes(result);
 }
 
-function calculateNextDueDate(testDate: string, frequency: string, result: string): string {
+function calculateNextDueDate(testDate: string, frequency: string, result: string, customExpiryDate?: string | null): string {
   const date = new Date(testDate);
-  
+
   // For failed items, next due date is the same as test date (immediate retest required)
   if (result === 'fail') {
     return date.toLocaleDateString('en-AU');
   }
-  
+
+  // Custom frequency uses the explicitly entered expiry date
+  if (frequency === 'customfrequency' && customExpiryDate) {
+    return new Date(customExpiryDate).toLocaleDateString('en-AU');
+  }
+
   switch (frequency) {
     case 'monthly':
       date.setMonth(date.getMonth() + 1);
@@ -68,6 +73,7 @@ function getFrequencyLabel(frequency: string): string {
     case 'twelvemonthly': return '12 Monthly';
     case 'twentyfourmonthly': return '24 Monthly';
     case 'fiveyearly': return '5 Yearly';
+    case 'customfrequency': return 'Custom';
     default: return '12 Monthly';
   }
 }
@@ -98,8 +104,9 @@ function formatAssetNumberWithFrequency(
     'twelvemonthly': '12M',
     'twentyfourmonthly': '24M',
     'fiveyearly': '5Y',
+    'customfrequency': '12M',
   };
-  
+
   const frequencyCode = frequencyMap[frequency] || frequency;
   return `${assetNumber} - ${frequencyCode}`;
 }
@@ -630,7 +637,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       });
       doc.text(result.installationDate || 'N/A', margin + 84, rowStartY);
       doc.text(getFrequencyLabel(result.frequency), margin + 106, rowStartY);
-      doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 124, rowStartY);
+      doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result, result.expiryDate), margin + 124, rowStartY);
     } else if (session.serviceType === 'fire_testing') {
       // For fire testing, show classification/type with word wrapping
       typeLines.forEach((line: string, i: number) => {
@@ -659,7 +666,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       
       doc.text(getFrequencyLabel(result.frequency), margin + 122, rowStartY);
       // Wrap Due Date to prevent overlap
-      const dueDateText = calculateNextDueDate(session.testDate, result.frequency, result.result);
+      const dueDateText = calculateNextDueDate(session.testDate, result.frequency, result.result, result.expiryDate);
       const dueDateLines = doc.splitTextToSize(dueDateText, 17);
       dueDateLines.forEach((line: string, i: number) => {
         doc.text(line, margin + 140, rowStartY + (i * lineHeight));
@@ -764,7 +771,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       
       // Add frequency and next due date
       doc.text(getFrequencyLabel(result.frequency), margin + 92, rowStartY);
-      doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result), margin + 115, rowStartY);
+      doc.text(calculateNextDueDate(session.testDate, result.frequency, result.result, result.expiryDate), margin + 115, rowStartY);
     }
     // Note: microwave_leakage rendering is already complete above, so no else needed here
 

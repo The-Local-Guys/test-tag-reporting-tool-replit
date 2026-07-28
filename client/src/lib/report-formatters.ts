@@ -6,6 +6,7 @@ const FREQUENCY_LABELS: Record<string, string> = {
   annually: "12 Monthly",
   twentyfourmonthly: "24 Monthly",
   fiveyearly: "5 Yearly",
+  customfrequency: "Custom",
 };
 
 const SERVICES_WITHOUT_FREQUENCY = new Set([

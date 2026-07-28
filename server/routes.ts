@@ -696,6 +696,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           chargingTest: r.chargingTest ?? undefined,
           manufacturerInfo: r.manufacturerInfo ?? undefined,
           installationDate: r.installationDate ?? undefined,
+          expiryDate: r.expiryDate ?? undefined,
           luxTest: r.luxTest ?? undefined,
           luxReading: r.luxReading ?? undefined,
           luxCompliant: r.luxCompliant ?? undefined,
@@ -977,6 +978,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             luxCompliant: batchedResult.luxCompliant ?? false,
             manufacturerInfo: batchedResult.manufacturerInfo || null,
             installationDate: batchedResult.installationDate || null,
+            expiryDate: batchedResult.expiryDate || null,
             // Map fire testing fields from batch data
             equipmentType: batchedResult.equipmentType || null,
             extinguisherType: batchedResult.extinguisherType || null,
@@ -1146,6 +1148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           luxCompliant: req.body.luxCompliant ?? false,
           manufacturerInfo: req.body.manufacturerInfo || null,
           installationDate: req.body.installationDate || null,
+          expiryDate: req.body.expiryDate || null,
           // Fire testing specific fields (AS 1851 / NZS 4503:2005)
           equipmentType: req.body.equipmentType || null,
           extinguisherType: req.body.extinguisherType || null,
@@ -1313,6 +1316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (req.body.luxCompliant !== undefined) updateData.luxCompliant = req.body.luxCompliant;
         if (req.body.manufacturerInfo !== undefined) updateData.manufacturerInfo = req.body.manufacturerInfo || null;
         if (req.body.installationDate !== undefined) updateData.installationDate = req.body.installationDate || null;
+        if (req.body.expiryDate !== undefined) updateData.expiryDate = req.body.expiryDate || null;
 
         // Fire testing fields
         if (req.body.equipmentType !== undefined) updateData.equipmentType = req.body.equipmentType || null;

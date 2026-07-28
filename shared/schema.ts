@@ -92,7 +92,8 @@ export const testResults = pgTable("test_results", {
   result: text("result").notNull(), // 'pass' or 'fail'
   failureReason: text("failure_reason"), // nullable for passed items
   actionTaken: text("action_taken"), // nullable for passed items
-  frequency: text("frequency").notNull(), // For electrical: 'threemonthly', 'sixmonthly', 'twelvemonthly', 'twentyfourmonthly', 'fiveyearly' | For emergency: 'sixmonthly', 'annually'
+  frequency: text("frequency").notNull(), // For electrical: 'threemonthly', 'sixmonthly', 'twelvemonthly', 'twentyfourmonthly', 'fiveyearly', 'customfrequency' | For emergency: 'sixmonthly', 'annually'
+  expiryDate: text("expiry_date"), // Explicit expiry/due date (ISO) when frequency is 'customfrequency'
   notes: text("notes"), // optional additional notes
   photoData: text("photo_data"), // Base64 encoded photo for failed items
   visionInspection: boolean("vision_inspection").default(true), // Vision inspection completed
