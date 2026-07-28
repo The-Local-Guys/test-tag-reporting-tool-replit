@@ -1009,7 +1009,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       } else if (equipmentType === 'fire_hose_reel') {
         doc.text(`• Operational Test (Hose reel operation, water flow): ${passOrFail(result.operationalTest)}`, margin + 5, yPosition);
         yPosition += 6;
-        doc.text(`• Pressure Gauge Check (Pressure within operating range): ${passOrFail(result.pressureTest)}`, margin + 5, yPosition);
+        doc.text(`• Flow Rate Check (Flow rate within operating range): ${passOrFail(result.pressureTest)}`, margin + 5, yPosition);
         yPosition += 6;
       } else if (equipmentType === 'fire_blanket') {
         doc.text(`• Operational Test (Easy removal, blanket condition): ${passOrFail(result.operationalTest)}`, margin + 5, yPosition);
@@ -1252,8 +1252,11 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         doc.text(`Operational Test: ${firePassOrFail(result.operationalTest)}`, margin, yPosition);
         yPosition += 5;
 
-        if (fireEquipmentType === 'fire_extinguisher' || fireEquipmentType === 'fire_hose_reel') {
+        if (fireEquipmentType === 'fire_extinguisher') {
           doc.text(`Pressure Test: ${firePassOrFail(result.pressureTest)}`, margin, yPosition);
+          yPosition += 5;
+        } else if (fireEquipmentType === 'fire_hose_reel') {
+          doc.text(`Flow Rate Test: ${firePassOrFail(result.pressureTest)}`, margin, yPosition);
           yPosition += 5;
         }
 

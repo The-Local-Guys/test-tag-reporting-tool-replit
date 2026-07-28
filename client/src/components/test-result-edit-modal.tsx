@@ -563,7 +563,7 @@ export function TestResultEditModal({
                     checked={editResultData.pressureTest}
                     onCheckedChange={(checked) => setEditResultData((prev: any) => ({ ...prev, pressureTest: !!checked }))}
                   />
-                  <Label htmlFor="edit-pressureTest-fire-hose">Pressure Gauge Check</Label>
+                  <Label htmlFor="edit-pressureTest-fire-hose">Flow Rate Check</Label>
                 </div>
               </>
             )}

@@ -330,7 +330,7 @@ export function generateExcelReport(data: ReportData): Blob {
   const resultsHeader = session.serviceType === 'emergency_exit_light' 
     ? ['Asset #', 'Item Name', 'Location', 'Result', 'Manufacturer', 'Install Date', 'Frequency', 'Next Due Date', 'Failure Reason', 'Notes', 'Visual Inspection', 'Discharge Test', 'Switching Test', 'Charging Test', 'Maintenance Type', 'Globe Type']
     : session.serviceType === 'fire_testing'
-    ? ['Asset #', 'Item Name', 'Location', 'Type', 'Result', 'Size/Weight', 'Manufacturer', 'Frequency', 'Next Due Date', 'Failure Reason', 'Notes', 'Visual Inspection', 'Accessibility', 'Signage', 'Operational Test', 'Pressure Test']
+    ? ['Asset #', 'Item Name', 'Location', 'Type', 'Result', 'Size/Weight', 'Manufacturer', 'Frequency', 'Next Due Date', 'Failure Reason', 'Notes', 'Visual Inspection', 'Accessibility', 'Signage', 'Operational Test', 'Pressure / Flow Rate Test']
     : session.serviceType === 'rcd_reporting'
     ? ['Asset #', 'Equipment Type', 'DB / CB', 'Push Button Test', 'Timed Test', 'Trip Time (ms)', 'Result', 'Location', 'Comments', 'Failure Reason', 'Action Taken']
     : ['Asset #', 'Item Name', 'Location', 'Classification', 'Result', 'Vision Inspection', 'Electrical Test', 'Frequency', 'Next Due Date', 'Failure Reason', 'Action Taken', 'Notes'];
@@ -406,10 +406,12 @@ export function generateExcelReport(data: ReportData): Blob {
       // Helper function to render fire test results with proper null handling
       const toTestCell = (value: boolean | null | undefined) => value == null ? 'N/A' : (value ? 'PASS' : 'FAIL');
       
-      // Pressure test is only applicable for fire extinguishers
-      const pressureTestResult = result.equipmentType !== 'fire_extinguisher' 
-        ? 'N/A' 
-        : toTestCell((result as any).pressureTest);
+      // Pressure/flow-rate test applies to fire extinguishers (pressure gauge) and
+      // fire hose reels (flow rate); other equipment (e.g. blankets) have neither.
+      const pressureTestResult =
+        result.equipmentType === 'fire_extinguisher' || result.equipmentType === 'fire_hose_reel'
+          ? toTestCell((result as any).pressureTest)
+          : 'N/A';
       
       // For fire extinguishers, show the specific extinguisher type (Dry Powder, CO2, etc.)
       // For other equipment, show the equipment type (Fire Hose Reel, Fire Blanket, etc.)
@@ -594,7 +596,7 @@ export function generateExcelReport(data: ReportData): Blob {
       { wch: 12 }, // Accessibility
       { wch: 10 }, // Signage
       { wch: 12 }, // Operational Test
-      { wch: 12 }  // Pressure Test
+      { wch: 12 }  // Pressure / Flow Rate Test
     ];
   } else if (session.serviceType === 'rcd_reporting') {
     // RCD reporting

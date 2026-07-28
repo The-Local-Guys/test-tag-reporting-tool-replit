@@ -488,7 +488,7 @@ export default function FireTestDetails() {
                       onCheckedChange={(checked) => form.setValue('pressureTest', !!checked)}
                     />
                     <Label htmlFor="pressureTest" className="text-sm">
-                      Pressure Gauge Check (Pressure within operating range)
+                      Flow Rate Check (Flow rate within operating range)
                     </Label>
                   </div>
                 </>
