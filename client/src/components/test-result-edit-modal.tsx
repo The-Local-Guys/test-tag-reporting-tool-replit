@@ -46,14 +46,16 @@ export function TestResultEditModal({
   const [tripTimesInput, setTripTimesInput] = useState('');
   useEffect(() => {
     if (isOpen) {
-      setTripTimesInput(resolveRcdTripTimes(editResultData).join(', '));
+      // Single timed test per item: seed with the first resolved value only
+      setTripTimesInput(resolveRcdTripTimes(editResultData)[0]?.toString() ?? '');
     }
   }, [isOpen, editResultData.tripTimes, editResultData.trip_times]);
 
   const saveWithCurrentTripTimes = () => {
     onSave({
       ...editResultData,
-      tripTimes: parseRcdTripTimesInput(tripTimesInput),
+      // Cap to a single trip time
+      tripTimes: parseRcdTripTimesInput(tripTimesInput).slice(0, 1),
     });
   };
 
@@ -305,15 +307,15 @@ export function TestResultEditModal({
 
             {editResultData.injectionTimedTest && (
               <div>
-                <Label>Trip Times (ms, comma-separated)</Label>
+                <Label>Trip Time (ms)</Label>
                 <Input
                   value={tripTimesInput}
                   onChange={(e) => setTripTimesInput(e.target.value)}
                   onBlur={(e) => {
-                    const times = parseRcdTripTimesInput(e.target.value);
+                    const times = parseRcdTripTimesInput(e.target.value).slice(0, 1);
                     setEditResultData((prev: any) => ({ ...prev, tripTimes: times }));
                   }}
-                  placeholder="e.g., 30, 28, 31"
+                  placeholder="e.g., 30"
                   className="text-base"
                 />
               </div>

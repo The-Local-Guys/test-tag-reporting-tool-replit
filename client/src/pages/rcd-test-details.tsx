@@ -9,9 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, CheckCircle, XCircle, Plus, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
 import { WorkflowProgressBar } from '@/components/workflow-progress-bar';
 import { SaveStatusIndicator } from '@/components/save-status-indicator';
 import { useSession } from '@/hooks/use-session';
@@ -99,7 +98,7 @@ export default function RCDTestDetails() {
   });
 
   // useFieldArray for managing multiple trip times (Fixed RCD only)
-  const { fields, append, remove, replace } = useFieldArray({
+  const { fields, append, replace } = useFieldArray({
     control: form.control,
     name: 'tripTimes',
   });
@@ -431,27 +430,11 @@ export default function RCDTestDetails() {
                 </Label>
               </div>
 
-              {/* Trip Times - For Fixed RCD: multiple inputs (1-3), For Portable RCD: single input */}
+              {/* Trip Time - a single timed test value per item */}
               {watchInjectionTimedTest && (
                 <div className="mt-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm">Trip Time (ms) *</Label>
-                    {/* Add button - only for Fixed RCD and max 3 fields */}
-                    {watchEquipmentType === 'fixed-rcd' && fields.length < 3 && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => append({ value: '' as any })}
-                        className="h-7 px-2"
-                        data-testid="button-add-trip-time"
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add
-                      </Button>
-                    )}
-                  </div>
-                  
+                  <Label className="text-sm">Trip Time (ms) *</Label>
+
                   {fields.map((field, index) => (
                     <div key={field.id} className="flex items-center gap-2">
                       <Input
@@ -464,40 +447,12 @@ export default function RCDTestDetails() {
                         className="text-base flex-1"
                         data-testid={`input-trip-time-${index}`}
                       />
-                      {/* Remove button - only show for Fixed RCD when more than 1 field */}
-                      {watchEquipmentType === 'fixed-rcd' && fields.length > 1 && (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="h-10 w-10 p-0"
-                              data-testid={`button-remove-trip-time-${index}`}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Remove Trip Time?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This trip time entry will be removed.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => remove(index)} className="bg-red-600 hover:bg-red-700">Remove</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      )}
                     </div>
                   ))}
-                  
+
                   {form.formState.errors.tripTimes && (
                     <p className="text-red-500 text-sm mt-1">
-                      {form.formState.errors.tripTimes.message || 'Please enter valid trip times'}
+                      {form.formState.errors.tripTimes.message || 'Please enter a valid trip time'}
                     </p>
                   )}
                 </div>
