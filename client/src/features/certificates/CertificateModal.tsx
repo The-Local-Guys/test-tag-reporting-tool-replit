@@ -35,6 +35,7 @@ export function CertificateModal({ isOpen, onClose, onSubmit, certificate }: Cer
     certificationDate: new Date().toISOString().split('T')[0],
     technicianName: (user as any)?.fullName || "",
     technicianLicense: "",
+    notes: "",
   });
 
   const [selectedServices, setSelectedServices] = useState<Record<string, boolean>>({
@@ -62,6 +63,7 @@ export function CertificateModal({ isOpen, onClose, onSubmit, certificate }: Cer
         certificationDate: certificate.certificationDate,
         technicianName: certificate.technicianName,
         technicianLicense: certificate.technicianLicense || "",
+        notes: (certificate as any).notes || "",
       });
 
       // Set selected services
@@ -106,6 +108,7 @@ export function CertificateModal({ isOpen, onClose, onSubmit, certificate }: Cer
         certificationDate: new Date().toISOString().split('T')[0],
         technicianName: (user as any)?.fullName || "",
         technicianLicense: "",
+        notes: "",
       });
       setSelectedServices({
         electrical: false,
@@ -188,6 +191,7 @@ export function CertificateModal({ isOpen, onClose, onSubmit, certificate }: Cer
 
     const certificateData = {
       ...formData,
+      notes: formData.notes.trim() || null,
       services,
       validityDates,
     };
@@ -474,6 +478,22 @@ export function CertificateModal({ isOpen, onClose, onSubmit, certificate }: Cer
             onChange={(e) => setFormData({ ...formData, technicianLicense: e.target.value })}
             placeholder="License number"
           />
+        </div>
+
+        <div>
+          <Label htmlFor="notes">Notes (Optional)</Label>
+          <Textarea
+            id="notes"
+            value={formData.notes}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            placeholder="Add a general note for this certificate (shown on the PDF)"
+            maxLength={250}
+            rows={3}
+            className="resize-none"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            {formData.notes.length}/250 characters
+          </p>
         </div>
 
         {/* Actions */}

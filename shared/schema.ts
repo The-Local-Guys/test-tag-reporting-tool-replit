@@ -164,6 +164,7 @@ export const certificates = pgTable("certificates", {
   certificationDate: text("certification_date").notNull(),
   technicianName: text("technician_name").notNull(),
   technicianLicense: text("technician_license"),
+  notes: text("notes"), // optional general note shown on the certificate PDF
   userId: integer("user_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -198,10 +199,14 @@ export const insertCustomFormTypeSchema = createInsertSchema(customFormTypes).om
   createdAt: true,
 });
 
-export const insertCertificateSchema = createInsertSchema(certificates).omit({
-  id: true,
-  createdAt: true,
-});
+export const insertCertificateSchema = createInsertSchema(certificates)
+  .omit({
+    id: true,
+    createdAt: true,
+  })
+  .extend({
+    notes: z.string().trim().max(250).nullable().optional(),
+  });
 
 // User authentication schemas
 export const insertUserSchema = createInsertSchema(users).omit({

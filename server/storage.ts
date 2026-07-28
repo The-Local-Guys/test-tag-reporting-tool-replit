@@ -1373,9 +1373,10 @@ export class DatabaseStorage implements IStorage {
             certification_date,
             technician_name,
             technician_license,
+            notes,
             user_id
           )
-          values ($1, $2, $3::jsonb, $4::jsonb, $5, $6, $7, $8)
+          values ($1, $2, $3::jsonb, $4::jsonb, $5, $6, $7, $8, $9)
           returning
             id,
             client_name as "clientName",
@@ -1385,6 +1386,7 @@ export class DatabaseStorage implements IStorage {
             certification_date as "certificationDate",
             technician_name as "technicianName",
             technician_license as "technicianLicense",
+            notes,
             user_id as "userId",
             created_at as "createdAt"
         `,
@@ -1396,6 +1398,7 @@ export class DatabaseStorage implements IStorage {
           certificate.certificationDate,
           certificate.technicianName,
           certificate.technicianLicense ?? null,
+          certificate.notes ?? null,
           certificate.userId,
         ],
       );

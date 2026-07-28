@@ -238,6 +238,23 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
     yPosition += 7;
   });
 
+  // Optional general note - only rendered when a note was entered
+  if (certificate.notes) {
+    yPosition += 5;
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Notes:', margin, yPosition);
+    yPosition += 6;
+
+    doc.setFont('helvetica', 'normal');
+    const noteLines = doc.splitTextToSize(certificate.notes, pageWidth - margin * 2);
+    noteLines.forEach((line: string) => {
+      doc.text(line, margin, yPosition);
+      yPosition += 5;
+    });
+  }
+
   // Add footer image at bottom - full width, maintaining aspect ratio
   let footerImageHeight = 0;
   try {

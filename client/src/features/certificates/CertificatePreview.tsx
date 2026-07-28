@@ -158,6 +158,18 @@ export function CertificatePreview({ isOpen, onClose, certificate, onEdit }: Cer
           </div>
         </div>
 
+        {/* Notes */}
+        {(certificate as any).notes && (
+          <div className="bg-gray-50 dark:bg-gray-900 p-5 rounded-lg border border-gray-200 dark:border-gray-800">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
+              Notes
+            </h3>
+            <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">
+              {(certificate as any).notes}
+            </p>
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="flex justify-end gap-3 pt-4 border-t">
           <Button
