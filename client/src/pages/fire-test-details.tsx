@@ -15,6 +15,7 @@ import { WorkflowProgressBar } from '@/components/workflow-progress-bar';
 import { SaveStatusIndicator } from '@/components/save-status-indicator';
 import { useSession } from '@/hooks/use-session';
 import { useToast } from '@/hooks/use-toast';
+import { MAX_TEST_RESULT_NOTES_LENGTH } from '@shared/schema';
 
 // Fire Equipment Test Schema following AS 1851 (AU) / NZS 4503:2005 (NZ)
 const fireTestSchema = z.object({
@@ -32,7 +33,10 @@ const fireTestSchema = z.object({
   signageCheck: z.boolean().default(true),
   failureReason: z.enum(['physical_damage', 'pressure_loss', 'corrosion', 'blocked_nozzle', 'damaged_seal', 'expired', 'mounting_issue', 'other']).optional(),
   actionTaken: z.enum(['given', 'removed']).optional(),
-  notes: z.string().optional(),
+  notes: z
+    .string()
+    .max(MAX_TEST_RESULT_NOTES_LENGTH, `Notes must be ${MAX_TEST_RESULT_NOTES_LENGTH} characters or less`)
+    .optional(),
 });
 
 type FireTestForm = z.infer<typeof fireTestSchema>;
@@ -100,6 +104,7 @@ export default function FireTestDetails() {
 
   const watchResult = form.watch('result');
   const watchEquipmentType = form.watch('equipmentType');
+  const notesLength = form.watch('notes')?.length ?? 0;
 
   const onSubmit = async (data: FireTestForm) => {
     if (!sessionData?.session?.id) {
@@ -685,7 +690,18 @@ export default function FireTestDetails() {
                 {...form.register('notes')}
                 placeholder="Any additional observations or comments"
                 className="text-base"
+                maxLength={MAX_TEST_RESULT_NOTES_LENGTH}
               />
+              <div className="flex items-center justify-between mt-1">
+                {form.formState.errors.notes ? (
+                  <p className="text-sm text-red-500">{form.formState.errors.notes.message}</p>
+                ) : (
+                  <span />
+                )}
+                <p className={`text-xs ${notesLength >= MAX_TEST_RESULT_NOTES_LENGTH ? 'text-amber-600 font-medium' : 'text-gray-500'}`}>
+                  {notesLength}/{MAX_TEST_RESULT_NOTES_LENGTH}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

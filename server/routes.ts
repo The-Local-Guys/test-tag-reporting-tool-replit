@@ -13,6 +13,7 @@ import {
   insertCustomFormTypeSchema,
   insertCertificateSchema,
   loginSchema,
+  clampTestResultNotes,
   type User,
 } from "@shared/schema";
 import { z } from "zod";
@@ -963,7 +964,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             frequency: batchedResult.frequency,
             failureReason: batchedResult.failureReason || null,
             actionTaken: batchedResult.actionTaken || null,
-            notes: batchedResult.notes || null,
+            notes: clampTestResultNotes(batchedResult.notes),
             photoData: batchedResult.photoData || null,
             visionInspection: batchedResult.visionInspection,
             electricalTest: batchedResult.electricalTest,
@@ -1124,7 +1125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           frequency: req.body.frequency,
           failureReason: req.body.failureReason || null,
           actionTaken: req.body.actionTaken || null,
-          notes: req.body.notes || null,
+          notes: clampTestResultNotes(req.body.notes),
           photoData: req.body.photoData || null,
           visionInspection:
             req.body.visionInspection !== undefined
@@ -1298,7 +1299,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Optional text fields
         if (req.body.failureReason !== undefined) updateData.failureReason = req.body.failureReason || null;
         if (req.body.actionTaken !== undefined) updateData.actionTaken = req.body.actionTaken || null;
-        if (req.body.notes !== undefined) updateData.notes = req.body.notes || null;
+        if (req.body.notes !== undefined) updateData.notes = clampTestResultNotes(req.body.notes);
         if (req.body.photoData !== undefined) updateData.photoData = req.body.photoData || null;
         
         // Boolean fields

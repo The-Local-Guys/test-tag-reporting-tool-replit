@@ -8,7 +8,7 @@ import { WorkflowProgressBar, type ServiceType } from '@/components/workflow-pro
 import { SaveStatusIndicator } from '@/components/save-status-indicator';
 import { useSession } from '@/hooks/use-session';
 import { useLocation } from 'wouter';
-import type { InsertTestResult } from '@shared/schema';
+import { MAX_TEST_RESULT_NOTES_LENGTH, type InsertTestResult } from '@shared/schema';
 
 const electricalFailureReasons = [
   { value: 'vision', label: 'Visual Inspection', icon: '👁️' },
@@ -294,10 +294,16 @@ export default function FailureDetails() {
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Add any additional details about the failure, observations, or specific issues found..."
             className="min-h-[100px] text-base"
+            maxLength={MAX_TEST_RESULT_NOTES_LENGTH}
           />
-          <p className="text-xs text-gray-500">
-            These comments will appear in the final report for this failed item.
-          </p>
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-xs text-gray-500">
+              These comments will appear in the final report for this failed item.
+            </p>
+            <p className={`text-xs whitespace-nowrap ${notes.length >= MAX_TEST_RESULT_NOTES_LENGTH ? 'text-amber-600 font-medium' : 'text-gray-500'}`}>
+              {notes.length}/{MAX_TEST_RESULT_NOTES_LENGTH}
+            </p>
+          </div>
         </div>
 
         {/* Photo Documentation */}

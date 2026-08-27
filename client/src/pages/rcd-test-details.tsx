@@ -15,7 +15,7 @@ import { WorkflowProgressBar } from '@/components/workflow-progress-bar';
 import { SaveStatusIndicator } from '@/components/save-status-indicator';
 import { useSession } from '@/hooks/use-session';
 import { useToast } from '@/hooks/use-toast';
-import type { InsertTestResult } from '@shared/schema';
+import { MAX_TEST_RESULT_NOTES_LENGTH, type InsertTestResult } from '@shared/schema';
 
 // RCD Test Schema
 const rcdTestSchema = z.object({
@@ -35,7 +35,10 @@ const rcdTestSchema = z.object({
     })
   ).optional(), // Array of trip time objects for Fixed RCD (max 3)
   result: z.enum(['pass', 'fail']),
-  notes: z.string().optional(),
+  notes: z
+    .string()
+    .max(MAX_TEST_RESULT_NOTES_LENGTH, `Notes must be ${MAX_TEST_RESULT_NOTES_LENGTH} characters or less`)
+    .optional(),
 }).refine((data) => {
   // Require at least one tripTime when injectionTimedTest is checked for Fixed RCD
   if (data.equipmentType === 'fixed-rcd' && data.injectionTimedTest) {
@@ -106,6 +109,7 @@ export default function RCDTestDetails() {
   const watchResult = form.watch('result');
   const watchEquipmentType = form.watch('equipmentType');
   const watchInjectionTimedTest = form.watch('injectionTimedTest');
+  const notesLength = form.watch('notes')?.length ?? 0;
 
   // Update asset number when rcdAssetCounter changes (e.g., after session load sets starting number)
   useEffect(() => {
@@ -474,8 +478,22 @@ export default function RCDTestDetails() {
                 {...form.register('notes')}
                 placeholder="Add any additional notes about the test..."
                 className="text-base min-h-[100px]"
+                maxLength={MAX_TEST_RESULT_NOTES_LENGTH}
                 data-testid="textarea-notes"
               />
+              <div className="flex items-center justify-between mt-1">
+                {form.formState.errors.notes ? (
+                  <p className="text-sm text-red-500">{form.formState.errors.notes.message}</p>
+                ) : (
+                  <span />
+                )}
+                <p
+                  className={`text-xs ${notesLength >= MAX_TEST_RESULT_NOTES_LENGTH ? 'text-amber-600 font-medium' : 'text-gray-500'}`}
+                  data-testid="text-notes-count"
+                >
+                  {notesLength}/{MAX_TEST_RESULT_NOTES_LENGTH}
+                </p>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

@@ -26,6 +26,27 @@ function resolveRcdTripTimes(result: any): number[] {
   return resolveStoredRcdTripTimes(result);
 }
 
+/**
+ * Maximum wrapped lines a single table cell may contribute to a row's height.
+ *
+ * A row is drawn as one unit: its height is the tallest cell, and the page-break
+ * check before it can only move it to a fresh page, never split it. A fresh page
+ * offers (267 - 80) / 4 ≈ 46 lines, so anything taller overflows the letterhead
+ * footer and drags every following row off the document. New records are capped at
+ * MAX_TEST_RESULT_NOTES_LENGTH on input, so this only ever trims legacy rows saved
+ * before that limit existed.
+ */
+const MAX_TABLE_CELL_LINES = 40;
+
+function clampCellLines(lines: string[], maxLines: number = MAX_TABLE_CELL_LINES): string[] {
+  if (lines.length <= maxLines) return lines;
+  const clamped = lines.slice(0, maxLines);
+  const last = clamped[maxLines - 1];
+  // Trim a character before appending the ellipsis so the line still fits the column
+  clamped[maxLines - 1] = `${last.slice(0, Math.max(0, last.length - 1))}...`;
+  return clamped;
+}
+
 function calculateNextDueDate(testDate: string, frequency: string, result: string, customExpiryDate?: string | null): string {
   const date = new Date(testDate);
 
@@ -424,9 +445,9 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     
     // Split text to fit column widths
     const assetNumberText = formatAssetNumberWithFrequency(result.assetNumber.toString(), result.frequency, data.session.serviceType, results);
-    const assetNumberLines = doc.splitTextToSize(assetNumberText, assetNumberWidth);
-    const itemNameLines = doc.splitTextToSize(displayItemName, itemNameWidth);
-    const locationLines = doc.splitTextToSize(result.location, locationWidth);
+    const assetNumberLines = clampCellLines(doc.splitTextToSize(assetNumberText, assetNumberWidth));
+    const itemNameLines = clampCellLines(doc.splitTextToSize(displayItemName, itemNameWidth));
+    const locationLines = clampCellLines(doc.splitTextToSize(result.location, locationWidth));
     
     // For fire testing, also calculate size/weight lines and type lines
     let sizeWeightLines: string[] = [];
@@ -435,11 +456,11 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     if (session.serviceType === 'fire_testing') {
       const sizeWeight = [result.size, result.weight].filter(Boolean).join(' / ') || 'N/A';
       const sizeWeightWidth = 20; // Width for size/weight column
-      sizeWeightLines = doc.splitTextToSize(sizeWeight, sizeWeightWidth);
+      sizeWeightLines = clampCellLines(doc.splitTextToSize(sizeWeight, sizeWeightWidth));
 
       // Add word wrapping for manufacturer info
       const manufacturerWidth = 20; // Width for manufacturer column
-      manufacturerLines = doc.splitTextToSize(result.manufacturerInfo || 'N/A', manufacturerWidth);
+      manufacturerLines = clampCellLines(doc.splitTextToSize(result.manufacturerInfo || 'N/A', manufacturerWidth));
 
       // Add word wrapping for type/classification
       // For fire extinguishers, show the extinguisher type (Dry Powder, CO2, etc.) instead of classification
@@ -451,18 +472,18 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         displayType = result.extinguisherType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
       }
       
-      typeLines = doc.splitTextToSize(displayType, typeWidth);
+      typeLines = clampCellLines(doc.splitTextToSize(displayType, typeWidth));
     } else if (session.serviceType === 'emergency_exit_light') {
       // Add word wrapping for manufacturer info in emergency exit light
       const manufacturerWidth = 20;
-      manufacturerLines = doc.splitTextToSize(result.manufacturerInfo || 'N/A', manufacturerWidth);
+      manufacturerLines = clampCellLines(doc.splitTextToSize(result.manufacturerInfo || 'N/A', manufacturerWidth));
     } else if (session.serviceType === 'rcd_reporting') {
       // For RCD reporting, calculate wrapped lines for comments, failure reason, and action taken
       // This is needed for row height calculation
     } else {
       // For electrical testing, add word wrapping for type/classification
       const typeWidth = 13; // Width for type column
-      typeLines = doc.splitTextToSize(result.classification.toUpperCase(), typeWidth);
+      typeLines = clampCellLines(doc.splitTextToSize(result.classification.toUpperCase(), typeWidth));
     }
     
     // For RCD reporting, pre-calculate wrapped text for row height
@@ -475,7 +496,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       let commentsText = result.notes || '-';
       // Remove [TRIP_TIMES:[...]] pattern from notes
       commentsText = commentsText.replace(/\s*\[TRIP_TIMES:\[[^\]]*\]\]/g, '').trim() || '-';
-      commentsLines = doc.splitTextToSize(commentsText, 17);
+      commentsLines = clampCellLines(doc.splitTextToSize(commentsText, 17));
       
       // Failure reason (only for failed items)
       if (result.result === 'fail') {
@@ -490,7 +511,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
           return reason.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         });
         const displayFailureReason = reasons.join(', ');
-        failureReasonLines = doc.splitTextToSize(displayFailureReason, 18);
+        failureReasonLines = clampCellLines(doc.splitTextToSize(displayFailureReason, 18));
         
         // Action taken
         const actionTaken = result.actionTaken || 'Not specified';
@@ -502,7 +523,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
           return action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         });
         const displayActionTaken = actions.join(', ');
-        actionTakenLines = doc.splitTextToSize(displayActionTaken, 18);
+        actionTakenLines = clampCellLines(doc.splitTextToSize(displayActionTaken, 18));
       } else {
         // For passed items, just a single line with "-"
         failureReasonLines = ['-'];
@@ -517,14 +538,17 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     
     if (session.serviceType === 'microwave_leakage') {
       const microwaveNameWidth = 38;
-      microwaveNameLines = doc.splitTextToSize(result.itemName, microwaveNameWidth);
-      
+      microwaveNameLines = clampCellLines(doc.splitTextToSize(result.itemName, microwaveNameWidth));
+
       const microwaveLocationWidth = 28;
-      microwaveLocationLines = doc.splitTextToSize(result.location, microwaveLocationWidth);
-      
+      microwaveLocationLines = clampCellLines(doc.splitTextToSize(result.location, microwaveLocationWidth));
+
       const commentsText = result.notes || '-';
-      const microwaveCommentsWidth = 45;
-      microwaveCommentsLines = doc.splitTextToSize(commentsText, microwaveCommentsWidth);
+      // Comments is the last column (x = margin + 135 = 155) on a 210mm page with a
+      // 20mm right margin, so it has 35mm of usable width — not the 45 it wrapped at,
+      // which pushed long comments into the right margin.
+      const microwaveCommentsWidth = 35;
+      microwaveCommentsLines = clampCellLines(doc.splitTextToSize(commentsText, microwaveCommentsWidth));
     }
     
     // Calculate trip time lines for RCD reporting (one line per trip time value)

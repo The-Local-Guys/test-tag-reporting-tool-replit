@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { failureReasons, emergencyFailureReasons, fireFailureReasons, rcdFailureReasons } from '@shared/schema';
+import { failureReasons, emergencyFailureReasons, fireFailureReasons, rcdFailureReasons, MAX_TEST_RESULT_NOTES_LENGTH } from '@shared/schema';
 import { parseRcdTripTimesInput, resolveRcdTripTimes } from "@/lib/rcd-trip-times";
 
 interface TestResultEditModalProps {
@@ -867,7 +867,13 @@ export function TestResultEditModal({
               onChange={(e) => setEditResultData((prev: any) => ({ ...prev, notes: e.target.value || null }))}
               placeholder="Additional notes..."
               className="text-base"
+              maxLength={MAX_TEST_RESULT_NOTES_LENGTH}
             />
+            <p
+              className={`text-xs text-right mt-1 ${(editResultData.notes?.length || 0) >= MAX_TEST_RESULT_NOTES_LENGTH ? 'text-amber-600 font-medium' : 'text-gray-500'}`}
+            >
+              {editResultData.notes?.length || 0}/{MAX_TEST_RESULT_NOTES_LENGTH}
+            </p>
           </div>
         )}
 

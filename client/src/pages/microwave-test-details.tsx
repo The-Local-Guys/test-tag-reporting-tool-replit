@@ -13,12 +13,16 @@ import { SaveStatusIndicator } from '@/components/save-status-indicator';
 import { useSession } from '@/hooks/use-session';
 import { useLocation, useSearch } from 'wouter';
 import { nanoid } from 'nanoid';
+import { MAX_TEST_RESULT_NOTES_LENGTH } from '@shared/schema';
 
 const microwaveTestSchema = z.object({
   location: z.string().min(1, "Location is required"),
   assetNumber: z.string().min(1, "Asset number is required"),
   leakageReading: z.string().min(1, "Leakage reading is required"),
-  additionalComments: z.string().optional(),
+  additionalComments: z
+    .string()
+    .max(MAX_TEST_RESULT_NOTES_LENGTH, `Comments must be ${MAX_TEST_RESULT_NOTES_LENGTH} characters or less`)
+    .optional(),
 });
 
 export default function MicrowaveTestDetails() {
@@ -67,6 +71,8 @@ export default function MicrowaveTestDetails() {
       form.setValue('assetNumber', nextAssetNumber.toString());
     }
   }, [microwaveCounter, form]);
+
+  const commentsLength = form.watch('additionalComments')?.length ?? 0;
 
   // Watch leakage reading and automatically determine pass/fail
   const leakageReading = form.watch('leakageReading');
@@ -235,8 +241,22 @@ export default function MicrowaveTestDetails() {
                 {...form.register('additionalComments')}
                 placeholder="Enter any additional comments (optional)"
                 className="bg-white min-h-[100px]"
+                maxLength={MAX_TEST_RESULT_NOTES_LENGTH}
                 data-testid="textarea-additional-comments"
               />
+              <div className="flex items-center justify-between">
+                {form.formState.errors.additionalComments ? (
+                  <p className="text-sm text-red-500">{form.formState.errors.additionalComments.message}</p>
+                ) : (
+                  <span />
+                )}
+                <p
+                  className={`text-xs ${commentsLength >= MAX_TEST_RESULT_NOTES_LENGTH ? 'text-amber-600 font-medium' : 'text-gray-500'}`}
+                  data-testid="text-comments-count"
+                >
+                  {commentsLength}/{MAX_TEST_RESULT_NOTES_LENGTH}
+                </p>
+              </div>
             </div>
         </div>
 

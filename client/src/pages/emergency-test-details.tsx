@@ -16,7 +16,7 @@ import { SaveStatusIndicator } from '@/components/save-status-indicator';
 import { useSession } from '@/hooks/use-session';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
-import { emergencyClassifications, emergencyFailureReasons, emergencyFrequencies, maintenanceTypes, globeTypes } from '@shared/schema';
+import { emergencyClassifications, emergencyFailureReasons, emergencyFrequencies, maintenanceTypes, globeTypes, MAX_TEST_RESULT_NOTES_LENGTH } from '@shared/schema';
 
 // Emergency Exit Light Test Schema following AS 2293.2:2019
 const emergencyTestSchema = z.object({
@@ -37,7 +37,10 @@ const emergencyTestSchema = z.object({
   luxCompliant: z.boolean().default(false),
   failureReason: z.enum(['physical_damage', 'battery_failure', 'lamp_failure', 'wiring_fault', 'charging_fault', 'insufficient_illumination', 'mounting_issue', 'other']).optional(),
   actionTaken: z.enum(['given', 'removed']).optional(),
-  notes: z.string().optional(),
+  notes: z
+    .string()
+    .max(MAX_TEST_RESULT_NOTES_LENGTH, `Notes must be ${MAX_TEST_RESULT_NOTES_LENGTH} characters or less`)
+    .optional(),
 });
 
 type EmergencyTestForm = z.infer<typeof emergencyTestSchema>;
@@ -87,6 +90,7 @@ export default function EmergencyTestDetails() {
   });
 
   const watchResult = form.watch('result');
+  const notesLength = form.watch('notes')?.length ?? 0;
 
   // Emergency exit light only: an item may only Pass when every AS 2293.2:2019
   // test check is ticked (incl. Lux Test + "Meets minimum lux"). Manual Fail is
@@ -687,7 +691,18 @@ export default function EmergencyTestDetails() {
                 {...form.register('notes')}
                 placeholder="Any additional observations or comments"
                 className="text-base"
+                maxLength={MAX_TEST_RESULT_NOTES_LENGTH}
               />
+              <div className="flex items-center justify-between mt-1">
+                {form.formState.errors.notes ? (
+                  <p className="text-sm text-red-500">{form.formState.errors.notes.message}</p>
+                ) : (
+                  <span />
+                )}
+                <p className={`text-xs ${notesLength >= MAX_TEST_RESULT_NOTES_LENGTH ? 'text-amber-600 font-medium' : 'text-gray-500'}`}>
+                  {notesLength}/{MAX_TEST_RESULT_NOTES_LENGTH}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

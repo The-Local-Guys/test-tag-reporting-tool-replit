@@ -178,12 +178,43 @@ export const insertTestSessionSchema = createInsertSchema(testSessions).omit({
   lastActivityAt: true, // Auto-set by database
 });
 
-export const insertTestResultSchema = createInsertSchema(testResults).omit({
-  id: true,
-  createdAt: true,
-  deletedAt: true,
-  deletedBy: true,
-});
+/**
+ * Maximum length for per-item notes/comments.
+ *
+ * These render into fixed-width columns of the PDF report table, where the row
+ * height is derived from the wrapped line count. An unbounded comment produces a
+ * row taller than the page, which overflows the letterhead footer and pushes every
+ * following row off the document. A fresh page fits 46 such lines; 250 characters
+ * keeps even the narrowest column (RCD comments, 17mm at 6pt) to 19 lines, and
+ * matches the existing certificate notes limit.
+ */
+export const MAX_TEST_RESULT_NOTES_LENGTH = 250;
+
+/**
+ * Trim a free-text note to the supported length.
+ * Truncates rather than rejects: the batch-submit path posts a whole job at once,
+ * so a hard failure would cost a technician every result in the batch.
+ */
+export function clampTestResultNotes(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  // Drop any legacy [TRIP_TIMES:[...]] marker first so truncation can never cut one in half
+  const trimmed = value.replace(/\s*\[TRIP_TIMES:\[[^\]]*\]\]/g, '').trim();
+  if (!trimmed) return null;
+  return trimmed.length > MAX_TEST_RESULT_NOTES_LENGTH
+    ? trimmed.slice(0, MAX_TEST_RESULT_NOTES_LENGTH)
+    : trimmed;
+}
+
+export const insertTestResultSchema = createInsertSchema(testResults)
+  .omit({
+    id: true,
+    createdAt: true,
+    deletedAt: true,
+    deletedBy: true,
+  })
+  .extend({
+    notes: z.string().trim().max(MAX_TEST_RESULT_NOTES_LENGTH).nullable().optional(),
+  });
 
 export const insertEnvironmentSchema = createInsertSchema(environments).omit({
   id: true,
