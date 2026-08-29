@@ -71,8 +71,11 @@ import {
 import { generatePDFReport, downloadPDF } from "@/lib/pdf-generator";
 import { generateExcelReport, downloadExcel } from "@/lib/excel-generator";
 import { formatFrequencyLabel } from "@/lib/report-formatters";
+import { resolveRcdTripTimes } from "@/lib/rcd-trip-times";
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
 import { CertificatesTab } from "@/features/certificates/CertificatesTab";
+import { DateRangeFilter, EMPTY_DATE_FILTER, type DateFilter } from "@/components/date-range-filter";
+import { NoResults } from "@/components/no-results";
 import { failureReasons, emergencyFailureReasons, fireFailureReasons, rcdFailureReasons } from "@shared/schema";
 
 function formatReportDetail(value?: string | null): string {
@@ -103,6 +106,7 @@ function formatReportDetail(value?: string | null): string {
   );
 }
 
+/* Legacy direct-add modal helper, preserved for possible future restoration.
 function createEmptyTestResultData(serviceType: string = "electrical") {
   const classificationByService: Record<string, string> = {
     electrical: "class1",
@@ -138,6 +142,7 @@ function createEmptyTestResultData(serviceType: string = "electrical") {
     luxCompliant: false,
     manufacturerInfo: null as string | null,
     installationDate: null as string | null,
+    expiryDate: null as string | null,
     maintenanceType: null as string | null,
     globeType: null as string | null,
     pressureTest: false,
@@ -158,6 +163,7 @@ function createEmptyTestResultData(serviceType: string = "electrical") {
     circuitBreakerNumber: null as string | null,
   };
 }
+*/
 
 /**
  * Administrative dashboard for managing users, sessions, and system oversight
@@ -252,8 +258,9 @@ export default function AdminDashboard() {
   const [isContinuing, setIsContinuing] = useState(false);
   const [isEditResultModalOpen, setIsEditResultModalOpen] = useState(false);
   const [editingResult, setEditingResult] = useState<any>(null);
-  const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
-  const [addingToSession, setAddingToSession] = useState<any>(null);
+  // Legacy direct-add modal state, preserved for possible future restoration.
+  // const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
+  // const [addingToSession, setAddingToSession] = useState<any>(null);
   const [editingSession, setEditingSession] = useState<any>(null);
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] =
     useState(false);
@@ -301,6 +308,10 @@ export default function AdminDashboard() {
   const [reportsSearch, setReportsSearch] = useState("");
   const [draftsSearch, setDraftsSearch] = useState("");
   const [techDraftsSearch, setTechDraftsSearch] = useState("");
+  // Date filters (preset + resolved YYYY-MM-DD bounds)
+  const [reportsDateRange, setReportsDateRange] = useState<DateFilter>(EMPTY_DATE_FILTER);
+  const [draftsDateRange, setDraftsDateRange] = useState<DateFilter>(EMPTY_DATE_FILTER);
+  const [techDraftsDateRange, setTechDraftsDateRange] = useState<DateFilter>(EMPTY_DATE_FILTER);
 
   // Copy report state
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
@@ -346,6 +357,7 @@ export default function AdminDashboard() {
     luxCompliant: false as boolean,
     manufacturerInfo: null as string | null,
     installationDate: null as string | null,
+    expiryDate: null as string | null,
     maintenanceType: null as string | null,
     globeType: null as string | null,
     // Fire Testing specific fields
@@ -370,9 +382,9 @@ export default function AdminDashboard() {
   });
 
   const [assetNumberError, setAssetNumberError] = useState<string>("");
-  const [newItemData, setNewItemData] = useState(() => createEmptyTestResultData());
-
-  const [newItemAssetNumberError, setNewItemAssetNumberError] = useState<string>("");
+  // Legacy direct-add modal form state, preserved for possible future restoration.
+  // const [newItemData, setNewItemData] = useState(() => createEmptyTestResultData());
+  // const [newItemAssetNumberError, setNewItemAssetNumberError] = useState<string>("");
   
   // Delete result state
   const [deletingResult, setDeletingResult] = useState<any>(null);
@@ -397,7 +409,7 @@ export default function AdminDashboard() {
 
   // Fetch all test sessions (paginated)
   const { data: sessions, isLoading: sessionsLoading } = useQuery({
-    queryKey: ["/api/admin/sessions", reportsPage, selectedTechnicianFilter, selectedServiceTypeFilter, reportsSearch],
+    queryKey: ["/api/admin/sessions", reportsPage, selectedTechnicianFilter, selectedServiceTypeFilter, reportsSearch, reportsDateRange.from, reportsDateRange.to],
     queryFn: async () => {
       const params = new URLSearchParams({ page: reportsPage.toString(), limit: "50" });
       if (selectedTechnicianFilter !== "all") {
@@ -408,6 +420,12 @@ export default function AdminDashboard() {
       }
       if (reportsSearch.trim()) {
         params.set("search", reportsSearch.trim());
+      }
+      if (reportsDateRange.from) {
+        params.set("dateFrom", reportsDateRange.from);
+      }
+      if (reportsDateRange.to) {
+        params.set("dateTo", reportsDateRange.to);
       }
       const res = await fetch(`/api/admin/sessions?${params}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch sessions");
@@ -422,7 +440,7 @@ export default function AdminDashboard() {
 
   // Fetch all draft sessions (admin only - for recovery purposes, paginated)
   const { data: adminDraftSessions, isLoading: adminDraftsLoading } = useQuery({
-    queryKey: ["/api/admin/sessions/drafts", draftsPage, selectedDraftTechnicianFilter, selectedDraftServiceTypeFilter, draftsSearch],
+    queryKey: ["/api/admin/sessions/drafts", draftsPage, selectedDraftTechnicianFilter, selectedDraftServiceTypeFilter, draftsSearch, draftsDateRange.from, draftsDateRange.to],
     queryFn: async () => {
       const params = new URLSearchParams({ page: draftsPage.toString(), limit: "50" });
       if (selectedDraftTechnicianFilter !== "all") {
@@ -433,6 +451,12 @@ export default function AdminDashboard() {
       }
       if (draftsSearch.trim()) {
         params.set("search", draftsSearch.trim());
+      }
+      if (draftsDateRange.from) {
+        params.set("dateFrom", draftsDateRange.from);
+      }
+      if (draftsDateRange.to) {
+        params.set("dateTo", draftsDateRange.to);
       }
       const res = await fetch(`/api/admin/sessions/drafts?${params}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch draft sessions");
@@ -447,7 +471,7 @@ export default function AdminDashboard() {
 
   // Fetch own draft sessions (technician only, paginated)
   const { data: technicianDraftSessions, isLoading: technicianDraftsLoading } = useQuery({
-    queryKey: ["/api/sessions/drafts", draftsPage, selectedTechDraftServiceTypeFilter, techDraftsSearch],
+    queryKey: ["/api/sessions/drafts", draftsPage, selectedTechDraftServiceTypeFilter, techDraftsSearch, techDraftsDateRange.from, techDraftsDateRange.to],
     queryFn: async () => {
       const params = new URLSearchParams({ page: draftsPage.toString(), limit: "50" });
       if (selectedTechDraftServiceTypeFilter !== "all") {
@@ -455,6 +479,12 @@ export default function AdminDashboard() {
       }
       if (techDraftsSearch.trim()) {
         params.set("search", techDraftsSearch.trim());
+      }
+      if (techDraftsDateRange.from) {
+        params.set("dateFrom", techDraftsDateRange.from);
+      }
+      if (techDraftsDateRange.to) {
+        params.set("dateTo", techDraftsDateRange.to);
       }
       const res = await fetch(`/api/sessions/drafts?${params}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch draft sessions");
@@ -495,6 +525,48 @@ export default function AdminDashboard() {
   const uniqueDraftTechnicians = Array.isArray(users)
     ? (users as any[]).map((u: any) => u.fullName).filter(Boolean).sort()
     : [];
+
+  // Empty-list messaging needs to know whether a filter narrowed the results away
+  const hasReportFilters =
+    Boolean(reportsSearch.trim()) ||
+    selectedTechnicianFilter !== "all" ||
+    selectedServiceTypeFilter !== "all" ||
+    Boolean(reportsDateRange.from || reportsDateRange.to);
+
+  const clearReportFilters = () => {
+    setReportsSearch("");
+    setSelectedTechnicianFilter("all");
+    setSelectedServiceTypeFilter("all");
+    setReportsDateRange(EMPTY_DATE_FILTER);
+    setReportsPage(1);
+  };
+
+  const hasDraftFilters =
+    Boolean(draftsSearch.trim()) ||
+    selectedDraftTechnicianFilter !== "all" ||
+    selectedDraftServiceTypeFilter !== "all" ||
+    Boolean(draftsDateRange.from || draftsDateRange.to);
+
+  const clearDraftFilters = () => {
+    setDraftsSearch("");
+    setSelectedDraftTechnicianFilter("all");
+    setSelectedDraftServiceTypeFilter("all");
+    setDraftsDateRange(EMPTY_DATE_FILTER);
+    setSelectedDraftIds(new Set());
+    setDraftsPage(1);
+  };
+
+  const hasTechDraftFilters =
+    Boolean(techDraftsSearch.trim()) ||
+    selectedTechDraftServiceTypeFilter !== "all" ||
+    Boolean(techDraftsDateRange.from || techDraftsDateRange.to);
+
+  const clearTechDraftFilters = () => {
+    setTechDraftsSearch("");
+    setSelectedTechDraftServiceTypeFilter("all");
+    setTechDraftsDateRange(EMPTY_DATE_FILTER);
+    setDraftsPage(1);
+  };
 
   // Update user status mutation
   const updateUserStatusMutation = useMutation({
@@ -902,7 +974,7 @@ export default function AdminDashboard() {
     },
   });
 
-  // Add item mutation
+  /* Legacy direct-add modal mutation, preserved for possible future restoration.
   const addItemMutation = useMutation({
     mutationFn: async ({
       sessionId,
@@ -949,6 +1021,7 @@ export default function AdminDashboard() {
       });
     },
   });
+  */
 
   // Create user mutation
   const createUser = useMutation({
@@ -1303,6 +1376,7 @@ export default function AdminDashboard() {
       luxCompliant: result.luxCompliant ?? result.lux_compliant ?? false,
       manufacturerInfo: result.manufacturerInfo ?? result.manufacturer_info ?? null,
       installationDate: result.installationDate ?? result.installation_date ?? null,
+      expiryDate: result.expiryDate ?? result.expiry_date ?? null,
       maintenanceType: result.maintenanceType ?? result.maintenance_type ?? null,
       globeType: result.globeType ?? result.globe_type ?? null,
       // Fire Testing specific fields
@@ -1326,11 +1400,7 @@ export default function AdminDashboard() {
       // RCD-specific fields
       pushButtonTest: result.pushButtonTest ?? result.push_button_test ?? false,
       injectionTimedTest: result.injectionTimedTest ?? result.injection_timed_test ?? false,
-      tripTimes: (() => {
-        const stored = result.tripTimes ?? result.trip_times ?? [];
-        if (Array.isArray(stored) && stored.length > 0) return stored.map((t: any) => Number(t)).filter((t: number) => t > 0);
-        return [];
-      })(),
+      tripTimes: resolveRcdTripTimes(result),
       distributionBoardNumber: result.distributionBoardNumber ?? result.distribution_board_number ?? null,
       circuitBreakerNumber: result.circuitBreakerNumber ?? result.circuit_breaker_number ?? null,
     });
@@ -1401,11 +1471,12 @@ export default function AdminDashboard() {
    * Manual asset number update function - requires user to enter asset number
    * Validates for duplicates and provides real-time feedback
    */
-  const handleUpdateResult = () => {
+  const handleUpdateResult = (submittedData?: typeof editResultData) => {
     if (!editingResult || !viewingSession?.session?.id) return;
+    const resultData = submittedData ?? editResultData;
 
     // Validate asset number before proceeding
-    const assetError = validateAssetNumber(editResultData.assetNumber, editResultData.frequency);
+    const assetError = validateAssetNumber(resultData.assetNumber, resultData.frequency);
     if (assetError) {
       setAssetNumberError(assetError);
       toast({
@@ -1417,51 +1488,52 @@ export default function AdminDashboard() {
     }
 
     const updateData: Record<string, any> = {
-      itemName: editResultData.itemName,
-      itemType: editResultData.itemType,
-      location: editResultData.location,
-      assetNumber: editResultData.assetNumber,
-      classification: editResultData.classification,
-      result: editResultData.result,
-      frequency: editResultData.frequency,
-      failureReason: editResultData.failureReason,
-      actionTaken: editResultData.actionTaken,
-      notes: editResultData.notes,
+      itemName: resultData.itemName,
+      itemType: resultData.itemType,
+      location: resultData.location,
+      assetNumber: resultData.assetNumber,
+      classification: resultData.classification,
+      result: resultData.result,
+      frequency: resultData.frequency,
+      failureReason: resultData.failureReason,
+      actionTaken: resultData.actionTaken,
+      notes: resultData.notes,
       // Fire testing specific fields
-      visionInspection: editResultData.visionInspection,
-      pressureTest: editResultData.pressureTest,
-      accessibilityCheck: editResultData.accessibilityCheck,
-      signageCheck: editResultData.signageCheck,
-      operationalTest: editResultData.operationalTest,
-      fireVisualInspection: editResultData.visionInspection,
-      equipmentType: editResultData.equipmentType,
-      extinguisherType: editResultData.extinguisherType,
-      size: editResultData.size,
-      weight: editResultData.weight,
-      testType: editResultData.testType,
+      visionInspection: resultData.visionInspection,
+      pressureTest: resultData.pressureTest,
+      accessibilityCheck: resultData.accessibilityCheck,
+      signageCheck: resultData.signageCheck,
+      operationalTest: resultData.operationalTest,
+      fireVisualInspection: resultData.visionInspection,
+      equipmentType: resultData.equipmentType,
+      extinguisherType: resultData.extinguisherType,
+      size: resultData.size,
+      weight: resultData.weight,
+      testType: resultData.testType,
       // Emergency exit light fields
-      electricalTest: editResultData.electricalTest,
-      dischargeTest: editResultData.dischargeTest,
-      switchingTest: editResultData.switchingTest,
-      chargingTest: editResultData.chargingTest,
-      luxTest: editResultData.luxTest,
-      luxReading: editResultData.luxReading,
-      luxCompliant: editResultData.luxCompliant,
-      globeType: editResultData.globeType,
-      manufacturerInfo: editResultData.manufacturerInfo,
-      installationDate: editResultData.installationDate,
-      maintenanceType: editResultData.maintenanceType,
+      electricalTest: resultData.electricalTest,
+      dischargeTest: resultData.dischargeTest,
+      switchingTest: resultData.switchingTest,
+      chargingTest: resultData.chargingTest,
+      luxTest: resultData.luxTest,
+      luxReading: resultData.luxReading,
+      luxCompliant: resultData.luxCompliant,
+      globeType: resultData.globeType,
+      manufacturerInfo: resultData.manufacturerInfo,
+      installationDate: resultData.installationDate,
+      expiryDate: resultData.expiryDate,
+      maintenanceType: resultData.maintenanceType,
       // RCD fields
-      pushButtonTest: editResultData.pushButtonTest,
-      injectionTimedTest: editResultData.injectionTimedTest,
-      tripTimes: editResultData.tripTimes,
-      distributionBoardNumber: editResultData.distributionBoardNumber,
-      circuitBreakerNumber: editResultData.circuitBreakerNumber,
+      pushButtonTest: resultData.pushButtonTest,
+      injectionTimedTest: resultData.injectionTimedTest,
+      tripTimes: resolveRcdTripTimes(resultData),
+      distributionBoardNumber: resultData.distributionBoardNumber,
+      circuitBreakerNumber: resultData.circuitBreakerNumber,
       // Microwave leakage fields
-      leakageReading: editResultData.leakageReading,
+      leakageReading: resultData.leakageReading,
     };
 
-    console.log(`Admin: Manually updating asset number to: ${editResultData.assetNumber}`);
+    console.log(`Admin: Manually updating asset number to: ${resultData.assetNumber}`);
 
     updateResultMutation.mutate({
       id: editingResult.id,
@@ -1532,12 +1604,14 @@ export default function AdminDashboard() {
     });
   };
 
+  /* Legacy direct-add modal opener, preserved for possible future restoration.
   const handleAddItem = (session: any) => {
     setAddingToSession(session);
     setNewItemData(createEmptyTestResultData(session.serviceType));
     setNewItemAssetNumberError("Asset number is required"); // Show validation error for empty field
     setIsAddItemModalOpen(true);
   };
+  */
 
   /**
    * Check for existing data conflicts (database-first approach - no localStorage)
@@ -1614,6 +1688,7 @@ export default function AdminDashboard() {
    * Validate new item asset number for duplicates and basic validity
    * Range validation removed since auto-generation handles correct ranges
    */
+  /* Legacy direct-add modal validation, preserved for possible future restoration.
   const validateNewItemAssetNumber = (assetNumber: string, frequency: string): string => {
     if (!assetNumber.trim()) {
       return "Asset number is required";
@@ -1641,15 +1716,18 @@ export default function AdminDashboard() {
 
     return "";
   };
+  */
 
   /**
    * Handle new item asset number input changes with validation
    */
+  /* Legacy direct-add modal asset-number handler, preserved for possible future restoration.
   const handleNewItemAssetNumberChange = (value: string) => {
     setNewItemData(prev => ({ ...prev, assetNumber: value }));
     const error = validateNewItemAssetNumber(value, newItemData.frequency);
     setNewItemAssetNumberError(error);
   };
+  */
 
   /**
    * Handle delete result action - shows confirmation dialog
@@ -1684,6 +1762,7 @@ export default function AdminDashboard() {
   /**
    * Handle new item frequency changes - auto-generate new asset number
    */
+  /* Legacy direct-add modal frequency and save handlers, preserved for possible future restoration.
   const handleNewItemFrequencyChange = (newFrequency: string) => {
     // Auto-generate new asset number when frequency changes for new items
     const newAssetNumber = renumberAssets(undefined, newFrequency);
@@ -1747,6 +1826,7 @@ export default function AdminDashboard() {
       data: itemData,
     });
   };
+  */
 
   const handleCreateUser = () => {
     if (
@@ -2193,6 +2273,15 @@ export default function AdminDashboard() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <DateRangeFilter
+                    label="Filter by Test Date"
+                    value={reportsDateRange}
+                    onChange={(range) => {
+                      setReportsDateRange(range);
+                      setReportsPage(1);
+                    }}
+                    testIdPrefix="reports-date"
+                  />
                 </div>
 
                 {sessionsLoading ? (
@@ -2344,6 +2433,19 @@ export default function AdminDashboard() {
                           </TableCell>
                         </TableRow>
                       ))}
+                      {filteredSessions.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={6}>
+                            <NoResults
+                              hasFilters={hasReportFilters}
+                              emptyTitle="No reports found"
+                              emptyHint="Reports will appear here once test sessions have been created."
+                              onClearFilters={clearReportFilters}
+                              testId="reports-no-results"
+                            />
+                          </TableCell>
+                        </TableRow>
+                      )}
                     </TableBody>
                     </Table>
                   </div>
@@ -2484,6 +2586,17 @@ export default function AdminDashboard() {
                       </Select>
                     </div>
 
+                    <DateRangeFilter
+                      label="Filter by Created Date"
+                      value={draftsDateRange}
+                      onChange={(range) => {
+                        setDraftsDateRange(range);
+                        setSelectedDraftIds(new Set());
+                        setDraftsPage(1);
+                      }}
+                      testIdPrefix="drafts-date"
+                    />
+
                     {/* Bulk Delete Button */}
                     {selectedDraftIds.size > 0 && (
                       <div className="flex items-center gap-2">
@@ -2508,11 +2621,13 @@ export default function AdminDashboard() {
                       <LoadingSpinner />
                     </div>
                   ) : filteredDraftSessions.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                      <p>No draft reports found</p>
-                      <p className="text-sm">All reports have been completed or there are no unfinished sessions.</p>
-                    </div>
+                    <NoResults
+                      hasFilters={hasDraftFilters}
+                      emptyTitle="No draft reports found"
+                      emptyHint="All reports have been completed or there are no unfinished sessions."
+                      onClearFilters={clearDraftFilters}
+                      testId="drafts-no-results"
+                    />
                   ) : (
                     <>
                       {adminDraftSessions && adminDraftSessions.totalPages > 1 && (
@@ -2751,17 +2866,28 @@ export default function AdminDashboard() {
                       </SelectContent>
                     </Select>
                     </div>
+                    <DateRangeFilter
+                      label="Filter by Created Date"
+                      value={techDraftsDateRange}
+                      onChange={(range) => {
+                        setTechDraftsDateRange(range);
+                        setDraftsPage(1);
+                      }}
+                      testIdPrefix="tech-drafts-date"
+                    />
                   </div>
                   {technicianDraftsLoading ? (
                     <div className="flex justify-center py-8">
                       <LoadingSpinner />
                     </div>
                   ) : !technicianDraftSessions?.sessions?.length ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                      <p>No draft reports found</p>
-                      <p className="text-sm">You have no unfinished reports.</p>
-                    </div>
+                    <NoResults
+                      hasFilters={hasTechDraftFilters}
+                      emptyTitle="No draft reports found"
+                      emptyHint="You have no unfinished reports."
+                      onClearFilters={clearTechDraftFilters}
+                      testId="tech-drafts-no-results"
+                    />
                   ) : (
                     <>
                       {technicianDraftSessions && technicianDraftSessions.totalPages > 1 && (
@@ -3299,7 +3425,7 @@ export default function AdminDashboard() {
                   </Select>
                   <Button
                     variant="outline"
-                    onClick={() => handleAddItem(viewingSession.session)}
+                    onClick={() => handleContinueReport(viewingSession.session)}
                     size="sm"
                   >
                     <Plus className="w-4 h-4 mr-1" />
@@ -3742,7 +3868,7 @@ export default function AdminDashboard() {
       />
 
 
-      {/* Add Item Modal */}
+      {/* Legacy direct-add modal, preserved for possible future restoration.
       <TestResultEditModal
         isOpen={isAddItemModalOpen}
         onClose={() => {
@@ -3761,6 +3887,7 @@ export default function AdminDashboard() {
         saveLabel="Add Item"
         savingLabel="Adding..."
       />
+      */}
 
 
       {/* Change Password Modal */}

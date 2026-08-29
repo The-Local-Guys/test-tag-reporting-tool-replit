@@ -17,6 +17,8 @@ import {
 import { Plus, FileText, Trash2, Edit, Download, Search, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCertificates } from "./useCertificates";
+import { DateRangeFilter, EMPTY_DATE_FILTER, type DateFilter } from "@/components/date-range-filter";
+import { NoResults } from "@/components/no-results";
 import { CertificateModal } from "./CertificateModal";
 import { CertificatePreview } from "./CertificatePreview";
 import { generateCertificatePDF, downloadCertificatePDF } from "@/lib/certificate-generator";
@@ -32,6 +34,8 @@ export function CertificatesTab() {
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
   const [clientSearch, setClientSearch] = useState("");
   const [selectedClient, setSelectedClient] = useState<string>("all");
+  // Issue date filter (preset + resolved YYYY-MM-DD bounds)
+  const [dateRange, setDateRange] = useState<DateFilter>(EMPTY_DATE_FILTER);
 
   const handleSubmitCertificate = (data: any) => {
     if (editingCertificate) {
@@ -125,8 +129,22 @@ export function CertificatesTab() {
     const matchesSearch =
       !clientSearch.trim() ||
       (cert.clientName || "").toLowerCase().includes(clientSearch.toLowerCase());
-    return matchesDropdown && matchesSearch;
+    // certificationDate is stored as YYYY-MM-DD, so string comparison is chronological
+    const certDate = (cert.certificationDate || "").slice(0, 10);
+    const matchesDate =
+      (!dateRange.from || certDate >= dateRange.from) &&
+      (!dateRange.to || certDate <= dateRange.to);
+    return matchesDropdown && matchesSearch && matchesDate;
   });
+
+  const hasCertificateFilters =
+    selectedClient !== "all" || Boolean(clientSearch.trim()) || Boolean(dateRange.from || dateRange.to);
+
+  const clearCertificateFilters = () => {
+    setSelectedClient("all");
+    setClientSearch("");
+    setDateRange(EMPTY_DATE_FILTER);
+  };
 
   return (
     <Card>
@@ -191,9 +209,15 @@ export function CertificatesTab() {
               ))}
             </SelectContent>
           </Select>
-          {(selectedClient !== "all" || clientSearch) && (
+          <DateRangeFilter
+            label="Issue Date"
+            value={dateRange}
+            onChange={setDateRange}
+            testIdPrefix="certificates-date"
+          />
+          {hasCertificateFilters && (
             <button
-              onClick={() => { setSelectedClient("all"); setClientSearch(""); }}
+              onClick={clearCertificateFilters}
               className="text-sm text-muted-foreground hover:text-foreground underline"
             >
               Clear filter
@@ -292,10 +316,14 @@ export function CertificatesTab() {
                 })}
                 {filteredCerts.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-gray-500">
-                      {allCerts.length === 0
-                        ? 'No certificates created yet. Click "Create Certificate" to get started.'
-                        : "No certificates match the current filter."}
+                    <TableCell colSpan={5}>
+                      <NoResults
+                        hasFilters={hasCertificateFilters}
+                        emptyTitle="No certificates created yet"
+                        emptyHint='Click "Create Certificate" to get started.'
+                        onClearFilters={clearCertificateFilters}
+                        testId="certificates-no-results"
+                      />
                     </TableCell>
                   </TableRow>
                 )}

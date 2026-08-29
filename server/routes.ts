@@ -40,6 +40,14 @@ declare module "express-session" {
   }
 }
 
+/**
+ * Accepts a YYYY-MM-DD date filter from the query string, ignoring anything else
+ * so malformed input can't reach the database comparison.
+ */
+function parseDateFilter(value: unknown): string | undefined {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
+}
+
 // Authentication middleware
 /**
  * Middleware to ensure user is logged in before accessing protected routes
@@ -428,12 +436,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const technicianFilter = req.query.technicianFilter as string | undefined;
       const serviceTypeFilter = req.query.serviceTypeFilter as string | undefined;
       const search = req.query.search as string | undefined;
+      const dateFrom = parseDateFilter(req.query.dateFrom);
+      const dateTo = parseDateFilter(req.query.dateTo);
 
       let result;
       if (user.role === "super_admin" || user.role === "support_center") {
-        result = await storage.getAllTestSessionsPaginated(page, limit, technicianFilter, serviceTypeFilter, search);
+        result = await storage.getAllTestSessionsPaginated(page, limit, technicianFilter, serviceTypeFilter, search, dateFrom, dateTo);
       } else {
-        result = await storage.getSessionsByUserPaginated(user.id, page, limit, serviceTypeFilter, search);
+        result = await storage.getSessionsByUserPaginated(user.id, page, limit, serviceTypeFilter, search, dateFrom, dateTo);
       }
 
       res.json({
@@ -576,7 +586,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
       const serviceTypeFilter = req.query.serviceTypeFilter as string | undefined;
       const search = req.query.search as string | undefined;
-      const result = await storage.getDraftSessionsByUserPaginated(userId, page, limit, serviceTypeFilter, search);
+      const result = await storage.getDraftSessionsByUserPaginated(userId, page, limit, serviceTypeFilter, search, parseDateFilter(req.query.dateFrom), parseDateFilter(req.query.dateTo));
       res.json({ sessions: result.sessions, total: result.total, page, totalPages: Math.ceil(result.total / limit), limit });
     } catch (error) {
       console.error("Error fetching draft sessions:", error);
@@ -593,7 +603,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const technicianFilter = req.query.technicianFilter as string | undefined;
       const serviceTypeFilter = req.query.serviceTypeFilter as string | undefined;
       const search = req.query.search as string | undefined;
-      const result = await storage.getAllDraftSessionsPaginated(page, limit, technicianFilter, serviceTypeFilter, search);
+      const result = await storage.getAllDraftSessionsPaginated(page, limit, technicianFilter, serviceTypeFilter, search, parseDateFilter(req.query.dateFrom), parseDateFilter(req.query.dateTo));
       res.json({ sessions: result.sessions, total: result.total, page, totalPages: Math.ceil(result.total / limit), limit });
     } catch (error) {
       console.error("Error fetching all draft sessions:", error);
