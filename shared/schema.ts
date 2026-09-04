@@ -170,13 +170,34 @@ export const certificates = pgTable("certificates", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const insertTestSessionSchema = createInsertSchema(testSessions).omit({
-  id: true,
-  createdAt: true,
-  deletedAt: true,
-  deletedBy: true,
-  lastActivityAt: true, // Auto-set by database
-});
+/**
+ * Maximum length for the site address on a test session.
+ *
+ * The address prints in the report header, where it is wrapped to 90mm and every
+ * wrapped line pushes the technician line, the summary and the results table 5mm
+ * further down. Nothing in the header checks for a page break, so an unbounded
+ * address runs straight through the letterhead footer and off the page. At 10pt
+ * a 90mm line holds roughly 45 characters, so 250 characters wraps to at most
+ * 6 lines (~30mm) and leaves the header intact.
+ */
+export const MAX_SESSION_ADDRESS_LENGTH = 250;
+
+export const insertTestSessionSchema = createInsertSchema(testSessions)
+  .omit({
+    id: true,
+    createdAt: true,
+    deletedAt: true,
+    deletedBy: true,
+    lastActivityAt: true, // Auto-set by database
+  })
+  .extend({
+    address: z
+      .string()
+      .max(
+        MAX_SESSION_ADDRESS_LENGTH,
+        `Address must be ${MAX_SESSION_ADDRESS_LENGTH} characters or less`,
+      ),
+  });
 
 /**
  * Maximum length for per-item notes/comments.

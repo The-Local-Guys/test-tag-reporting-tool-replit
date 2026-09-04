@@ -76,7 +76,7 @@ import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek
 import { CertificatesTab } from "@/features/certificates/CertificatesTab";
 import { DateRangeFilter, EMPTY_DATE_FILTER, type DateFilter } from "@/components/date-range-filter";
 import { NoResults } from "@/components/no-results";
-import { failureReasons, emergencyFailureReasons, fireFailureReasons, rcdFailureReasons } from "@shared/schema";
+import { failureReasons, emergencyFailureReasons, fireFailureReasons, rcdFailureReasons, MAX_SESSION_ADDRESS_LENGTH } from "@shared/schema";
 
 /** Turns a stored role such as `support_center` into "Support Center". */
 function formatRoleLabel(role: string): string {
@@ -3400,8 +3400,14 @@ export default function AdminDashboard() {
                 }))
               }
               placeholder="Enter address"
+              maxLength={MAX_SESSION_ADDRESS_LENGTH}
               required
             />
+            <p
+              className={`text-xs text-right ${(editSessionData.address?.length || 0) >= MAX_SESSION_ADDRESS_LENGTH ? "text-amber-600 font-medium" : "text-gray-500"}`}
+            >
+              {editSessionData.address?.length || 0}/{MAX_SESSION_ADDRESS_LENGTH}
+            </p>
           </div>
 
           <div className="space-y-2">

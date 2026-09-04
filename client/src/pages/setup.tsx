@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { insertTestSessionSchema } from '@shared/schema';
+import { insertTestSessionSchema, MAX_SESSION_ADDRESS_LENGTH } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -277,9 +277,15 @@ export default function Setup() {
               id="address"
               placeholder="Enter full address"
               rows={3}
+              maxLength={MAX_SESSION_ADDRESS_LENGTH}
               {...form.register('address')}
               className="text-base resize-none"
             />
+            <p
+              className={`text-xs text-right ${(form.watch('address')?.length || 0) >= MAX_SESSION_ADDRESS_LENGTH ? 'text-amber-600 font-medium' : 'text-gray-500'}`}
+            >
+              {form.watch('address')?.length || 0}/{MAX_SESSION_ADDRESS_LENGTH}
+            </p>
             {form.formState.errors.address && (
               <p className="text-sm text-error">{form.formState.errors.address.message}</p>
             )}

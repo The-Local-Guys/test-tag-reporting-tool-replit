@@ -47,6 +47,16 @@ function clampCellLines(lines: string[], maxLines: number = MAX_TABLE_CELL_LINES
   return clamped;
 }
 
+/**
+ * Maximum wrapped lines the client address may occupy in the report header.
+ *
+ * The header is drawn without any page-break check, and each address line shifts
+ * the technician line, the summary and the results table 5mm further down.
+ * MAX_SESSION_ADDRESS_LENGTH keeps new sessions within this, so the clamp only
+ * trims sessions saved before that limit existed.
+ */
+const MAX_ADDRESS_LINES = 6;
+
 function calculateNextDueDate(testDate: string, frequency: string, result: string, customExpiryDate?: string | null): string {
   const date = new Date(testDate);
 
@@ -279,7 +289,12 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   // Handle address with word wrapping to prevent overlap with technician field
   const addressLabel = 'Address: ';
   const addressMaxWidth = 90; // Maximum width for address text
-  const addressLines = doc.splitTextToSize(session.address, addressMaxWidth);
+  // Records saved before MAX_SESSION_ADDRESS_LENGTH existed are unbounded, and every
+  // extra line pushes the rest of the header towards the letterhead footer
+  const addressLines = clampCellLines(
+    doc.splitTextToSize(session.address, addressMaxWidth),
+    MAX_ADDRESS_LINES,
+  );
   
   // Display address label on first line
   doc.text(addressLabel, margin, yPosition);
