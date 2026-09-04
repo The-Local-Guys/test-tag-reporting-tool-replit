@@ -78,6 +78,22 @@ import { DateRangeFilter, EMPTY_DATE_FILTER, type DateFilter } from "@/component
 import { NoResults } from "@/components/no-results";
 import { failureReasons, emergencyFailureReasons, fireFailureReasons, rcdFailureReasons } from "@shared/schema";
 
+/** Turns a stored role such as `support_center` into "Support Center". */
+function formatRoleLabel(role: string): string {
+  const labels: Record<string, string> = {
+    super_admin: "Super Admin",
+    support_center: "Support Center",
+    technician: "Technician",
+  };
+  return (
+    labels[role] ||
+    role
+      .split("_")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ")
+  );
+}
+
 function formatReportDetail(value?: string | null): string {
   if (!value) return "-";
 
@@ -300,6 +316,8 @@ export default function AdminDashboard() {
   const [selectedDraftTechnicianFilter, setSelectedDraftTechnicianFilter] =
     useState<string>("all");
   const [userSearch, setUserSearch] = useState("");
+  const [userRoleFilter, setUserRoleFilter] = useState<string>("all");
+  const [userStatusFilter, setUserStatusFilter] = useState<string>("all");
   const [technicianComboOpen, setTechnicianComboOpen] = useState(false);
   const [draftTechnicianComboOpen, setDraftTechnicianComboOpen] = useState(false);
   const [selectedServiceTypeFilter, setSelectedServiceTypeFilter] = useState<string>("all");
@@ -312,6 +330,7 @@ export default function AdminDashboard() {
   const [reportsDateRange, setReportsDateRange] = useState<DateFilter>(EMPTY_DATE_FILTER);
   const [draftsDateRange, setDraftsDateRange] = useState<DateFilter>(EMPTY_DATE_FILTER);
   const [techDraftsDateRange, setTechDraftsDateRange] = useState<DateFilter>(EMPTY_DATE_FILTER);
+  const [usersDateRange, setUsersDateRange] = useState<DateFilter>(EMPTY_DATE_FILTER);
 
   // Copy report state
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
@@ -525,6 +544,54 @@ export default function AdminDashboard() {
   const uniqueDraftTechnicians = Array.isArray(users)
     ? (users as any[]).map((u: any) => u.fullName).filter(Boolean).sort()
     : [];
+
+  // Roles actually present on the user list, so the filter never offers an empty option
+  const uniqueUserRoles = Array.isArray(users)
+    ? Array.from(new Set((users as any[]).map((u: any) => u.role).filter(Boolean))).sort()
+    : [];
+
+  /** Local YYYY-MM-DD key for a timestamp, matching the date shown in the Created column. */
+  const toLocalDateKey = (value: any): string => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${date.getFullYear()}-${month}-${day}`;
+  };
+
+  const filteredUsers: any[] = Array.isArray(users)
+    ? (users as any[]).filter((user: any) => {
+        const q = userSearch.trim().toLowerCase();
+        const matchesSearch =
+          !q ||
+          (user.fullName || "").toLowerCase().includes(q) ||
+          (user.username || "").toLowerCase().includes(q) ||
+          (user.role || "").toLowerCase().includes(q);
+        const matchesRole = userRoleFilter === "all" || user.role === userRoleFilter;
+        const matchesStatus =
+          userStatusFilter === "all" ||
+          (userStatusFilter === "active" ? Boolean(user.isActive) : !user.isActive);
+        const createdKey = toLocalDateKey(user.createdAt);
+        const matchesDate =
+          (!usersDateRange.from || (createdKey !== "" && createdKey >= usersDateRange.from)) &&
+          (!usersDateRange.to || (createdKey !== "" && createdKey <= usersDateRange.to));
+        return matchesSearch && matchesRole && matchesStatus && matchesDate;
+      })
+    : [];
+
+  const hasUserFilters =
+    Boolean(userSearch.trim()) ||
+    userRoleFilter !== "all" ||
+    userStatusFilter !== "all" ||
+    Boolean(usersDateRange.from || usersDateRange.to);
+
+  const clearUserFilters = () => {
+    setUserSearch("");
+    setUserRoleFilter("all");
+    setUserStatusFilter("all");
+    setUsersDateRange(EMPTY_DATE_FILTER);
+  };
 
   // Empty-list messaging needs to know whether a filter narrowed the results away
   const hasReportFilters =
@@ -2060,15 +2127,71 @@ export default function AdminDashboard() {
                     Add User
                   </Button>
                 </div>
-                <div className="relative mt-3 max-w-sm">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                  <input
-                    type="text"
-                    placeholder="Search by name, username or role..."
-                    value={userSearch}
-                    onChange={(e) => setUserSearch(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                <div className="mt-3 flex flex-wrap items-end gap-4">
+                  <div>
+                    <Label htmlFor="user-search" className="text-sm font-medium block mb-1">
+                      Search
+                    </Label>
+                    <div className="relative w-64">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                      <input
+                        id="user-search"
+                        type="text"
+                        placeholder="Search by name, username or role..."
+                        value={userSearch}
+                        onChange={(e) => setUserSearch(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="user-role-filter" className="text-sm font-medium block mb-1">
+                      Filter by Role
+                    </Label>
+                    <Select value={userRoleFilter} onValueChange={setUserRoleFilter}>
+                      <SelectTrigger id="user-role-filter" className="w-48" data-testid="users-role-filter">
+                        <SelectValue placeholder="All Roles" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Roles</SelectItem>
+                        {uniqueUserRoles.map((role) => (
+                          <SelectItem key={role} value={role}>
+                            {formatRoleLabel(role)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="user-status-filter" className="text-sm font-medium block mb-1">
+                      Filter by Status
+                    </Label>
+                    <Select value={userStatusFilter} onValueChange={setUserStatusFilter}>
+                      <SelectTrigger id="user-status-filter" className="w-40" data-testid="users-status-filter">
+                        <SelectValue placeholder="All Statuses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <DateRangeFilter
+                    label="Filter by Date Created"
+                    value={usersDateRange}
+                    onChange={setUsersDateRange}
+                    testIdPrefix="users-date"
                   />
+                  {hasUserFilters && (
+                    <button
+                      onClick={clearUserFilters}
+                      className="text-sm text-muted-foreground hover:text-foreground underline pb-2"
+                      data-testid="users-clear-filters"
+                    >
+                      Clear filters
+                    </button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -2089,15 +2212,7 @@ export default function AdminDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {Array.isArray(users) && users.filter((user: any) => {
-                        if (!userSearch.trim()) return true;
-                        const q = userSearch.toLowerCase();
-                        return (
-                          (user.fullName || "").toLowerCase().includes(q) ||
-                          (user.username || "").toLowerCase().includes(q) ||
-                          (user.role || "").toLowerCase().includes(q)
-                        );
-                      }).map((user: any) => (
+                      {filteredUsers.map((user: any) => (
                         <TableRow key={user.id}>
                           <TableCell className="font-medium">
                             {user.fullName}
@@ -2152,6 +2267,19 @@ export default function AdminDashboard() {
                           </TableCell>
                         </TableRow>
                       ))}
+                      {filteredUsers.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={6}>
+                            <NoResults
+                              hasFilters={hasUserFilters}
+                              emptyTitle="No users found"
+                              emptyHint="Users will appear here once accounts have been created."
+                              onClearFilters={clearUserFilters}
+                              testId="users-no-results"
+                            />
+                          </TableCell>
+                        </TableRow>
+                      )}
                     </TableBody>
                   </Table>
                 )}
