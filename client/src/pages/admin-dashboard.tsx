@@ -94,6 +94,20 @@ function formatRoleLabel(role: string): string {
   );
 }
 
+/** Badge colours for the user roles shown in user management. */
+function getRoleBadgeClass(role: string): string {
+  switch (role) {
+    case "super_admin":
+      return "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800";
+    case "support_center":
+      return "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800";
+    case "technician":
+      return "bg-green-100 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800";
+    default:
+      return "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700";
+  }
+}
+
 function formatReportDetail(value?: string | null): string {
   if (!value) return "-";
 
@@ -2220,11 +2234,10 @@ export default function AdminDashboard() {
                           <TableCell>{user.username}</TableCell>
                           <TableCell>
                             <Badge
-                              variant={
-                                user.role === "admin" ? "default" : "secondary"
-                              }
+                              variant="outline"
+                              className={`font-medium ${getRoleBadgeClass(user.role)}`}
                             >
-                              {user.role}
+                              {formatRoleLabel(user.role)}
                             </Badge>
                           </TableCell>
                           <TableCell>
