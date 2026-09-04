@@ -18,6 +18,7 @@ import { Plus, FileText, Trash2, Edit, Download, Search, X } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCertificates } from "./useCertificates";
 import { DateRangeFilter, EMPTY_DATE_FILTER, type DateFilter } from "@/components/date-range-filter";
+import { Label } from "@/components/ui/label";
 import { NoResults } from "@/components/no-results";
 import { CertificateModal } from "./CertificateModal";
 import { CertificatePreview } from "./CertificatePreview";
@@ -168,47 +169,58 @@ export function CertificatesTab() {
       </CardHeader>
       <CardContent>
         {/* Client filter row */}
-        <div className="flex flex-wrap items-center gap-3 mb-4">
-          <div className="relative flex-1 min-w-[200px] max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search by client name..."
-              value={clientSearch}
-              onChange={(e) => {
-                setClientSearch(e.target.value);
-                setSelectedClient("all");
-              }}
-              className="w-full pl-9 pr-8 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-            {clientSearch && (
-              <button
-                onClick={() => setClientSearch("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            )}
+        <div className="flex flex-wrap items-end gap-3 mb-4">
+          <div className="flex-1 min-w-[200px] max-w-xs">
+            <Label htmlFor="certificate-client-search" className="text-sm font-medium block mb-1">
+              Search
+            </Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <input
+                id="certificate-client-search"
+                type="text"
+                placeholder="Search by client name..."
+                value={clientSearch}
+                onChange={(e) => {
+                  setClientSearch(e.target.value);
+                  setSelectedClient("all");
+                }}
+                className="w-full pl-9 pr-8 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+              {clientSearch && (
+                <button
+                  onClick={() => setClientSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
           </div>
-          <Select
-            value={selectedClient}
-            onValueChange={(val) => {
-              setSelectedClient(val);
-              setClientSearch("");
-            }}
-          >
-            <SelectTrigger className="w-56">
-              <SelectValue placeholder="Filter by client" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Clients</SelectItem>
-              {uniqueClients.map((name) => (
-                <SelectItem key={name} value={name}>
-                  {name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div>
+            <Label htmlFor="certificate-client-filter" className="text-sm font-medium block mb-1">
+              Filter by Client
+            </Label>
+            <Select
+              value={selectedClient}
+              onValueChange={(val) => {
+                setSelectedClient(val);
+                setClientSearch("");
+              }}
+            >
+              <SelectTrigger id="certificate-client-filter" className="w-56">
+                <SelectValue placeholder="Filter by client" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Clients</SelectItem>
+                {uniqueClients.map((name) => (
+                  <SelectItem key={name} value={name}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <DateRangeFilter
             label="Issue Date"
             value={dateRange}
@@ -218,7 +230,7 @@ export function CertificatesTab() {
           {hasCertificateFilters && (
             <button
               onClick={clearCertificateFilters}
-              className="text-sm text-muted-foreground hover:text-foreground underline"
+              className="text-sm text-muted-foreground hover:text-foreground underline pb-2"
             >
               Clear filter
             </button>
