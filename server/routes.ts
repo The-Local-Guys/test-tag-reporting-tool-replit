@@ -1291,6 +1291,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return;
         }
 
+        const role = req.session.user?.role;
+        const isAdmin = role === 'super_admin' || role === 'support_center';
+        if (!isAdmin && session.userId !== req.session.userId) {
+          return res.status(403).json({ error: 'You cannot edit this session' });
+        }
+        if (currentResult.sessionId !== sessionId) {
+          return res.status(404).json({ error: 'Test result not found in this session' });
+        }
+        if (req.body.photoData != null && req.body.photoData !== '') {
+          const photo = req.body.photoData;
+          if (typeof photo !== 'string' || photo.length > 2 * 1024 * 1024 ||
+              !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(photo)) {
+            return res.status(400).json({ error: 'Invalid photo. Upload a JPEG, PNG or WebP image under 2 MB after compression.' });
+          }
+        }
+
         // Build update data with only provided fields to prevent overwriting with undefined
         const updateData: any = {};
         

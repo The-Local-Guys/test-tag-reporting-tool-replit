@@ -162,6 +162,7 @@ function createEmptyTestResultData(serviceType: string = "electrical") {
     failureReason: null as string | null,
     actionTaken: null as string | null,
     notes: null as string | null,
+    photoData: null as string | null,
     visionInspection: serviceType === "electrical",
     electricalTest: serviceType === "electrical",
     dischargeTest: false,
@@ -378,6 +379,7 @@ export default function AdminDashboard() {
     failureReason: null as any,
     actionTaken: null as any,
     notes: null as any,
+    photoData: null as string | null,
     // Service-specific boolean criteria fields
     visionInspection: false as boolean,
     electricalTest: false as boolean,
@@ -1445,6 +1447,7 @@ export default function AdminDashboard() {
       failureReason: result.failureReason || result.failure_reason || null,
       actionTaken: result.actionTaken || result.action_taken || null,
       notes: result.notes || null,
+      photoData: result.photoData ?? result.photo_data ?? null,
       // Service-specific boolean criteria fields
       visionInspection: result.visionInspection ?? result.vision_inspection ?? false,
       electricalTest: result.electricalTest ?? result.electrical_test ?? false,
@@ -1579,6 +1582,7 @@ export default function AdminDashboard() {
       failureReason: resultData.failureReason,
       actionTaken: resultData.actionTaken,
       notes: resultData.notes,
+      photoData: resultData.photoData,
       // Fire testing specific fields
       visionInspection: resultData.visionInspection,
       pressureTest: resultData.pressureTest,
@@ -1889,7 +1893,7 @@ export default function AdminDashboard() {
         newItemData.result === "fail" ? newItemData.failureReason : null,
       actionTaken:
         newItemData.result === "fail" ? newItemData.actionTaken : null,
-      photoData: null,
+      photoData: newItemData.result === "fail" ? newItemData.photoData : null,
       equipmentType:
         addingToSession.serviceType === "fire_testing"
           ? newItemData.classification

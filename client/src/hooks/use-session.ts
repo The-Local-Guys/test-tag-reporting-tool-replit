@@ -29,7 +29,7 @@ export interface BatchedTestResult {
   failureReason?: string;
   actionTaken?: string;
   notes?: string;
-  photoData?: string;
+  photoData?: string | null;
   visionInspection: boolean;
   electricalTest: boolean;
   timestamp: string;
@@ -1417,7 +1417,7 @@ export function useSession() {
   /**
    * Updates a batched result locally and auto-saves to server
    */
-  const updateBatchedResult = (id: string, updatedData: Partial<BatchedTestResult>) => {
+  const updateBatchedResult = async (id: string, updatedData: Partial<BatchedTestResult>) => {
     try {
       const foundResult = batchedResults.find(result => result.id === id);
       if (!foundResult) {
@@ -1428,19 +1428,16 @@ export function useSession() {
       // Merge the update data with the existing result
       const mergedResult = { ...foundResult, ...updatedData };
 
-      const updatedResults = batchedResults.map(result =>
-        result.id === id ? mergedResult : result
-      );
-
-      updateBatchedResultsState(updatedResults);
-
-      // Auto-update on server if this result has been saved before
-      if (foundResult.serverId) {
-        autoUpdateResultMutation.mutate({
-          serverId: foundResult.serverId,
-          data: mergedResult
-        });
+      if (!foundResult.serverId) {
+        throw new Error('This item is still saving. Please wait and try again.');
       }
+      await autoUpdateResultMutation.mutateAsync({ serverId: foundResult.serverId, data: mergedResult });
+      setBatchedResults(prev => {
+        const updated = prev.map(result => result.id === id ? { ...result, ...updatedData } : result);
+        batchedResultsRef.current = updated;
+        return updated;
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/sessions/${sessionId}/report`] });
     } catch (error) {
       console.error('Error in updateBatchedResult:', error);
       throw error;

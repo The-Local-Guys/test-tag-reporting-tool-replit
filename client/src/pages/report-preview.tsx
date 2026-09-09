@@ -75,6 +75,7 @@ export default function ReportPreview() {
   const { sessionData, batchedResults, submitBatch, isSubmittingBatch, updateBatchedResult, removeBatchedResult, clearSession, assetProgress, renumberAssets, sessionId, customStartingNumbers } = useSession();
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [editingResult, setEditingResult] = useState<TestResult | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [deletingResult, setDeletingResult] = useState<TestResult | null>(null);
@@ -105,6 +106,7 @@ export default function ReportPreview() {
     failureReason: null as any,
     actionTaken: null as any,
     notes: null as any,
+    photoData: null as string | null,
     // Service-specific boolean criteria fields
     visionInspection: true as boolean,
     electricalTest: true as boolean,
@@ -765,6 +767,7 @@ export default function ReportPreview() {
       failureReason: result.failureReason || null,
       actionTaken: result.actionTaken || null,
       notes: result.notes || null,
+      photoData: result.photoData ?? null,
       // Service-specific boolean criteria fields - use actual values, not defaults
       visionInspection: (result as any).visionInspection ?? false,
       electricalTest: (result as any).electricalTest ?? false,
@@ -808,7 +811,7 @@ export default function ReportPreview() {
    * Manual asset number update function - follows admin dashboard pattern
    * Validates for duplicates and provides real-time feedback
    */
-  const handleUpdateResult = (submittedData?: typeof editResultData) => {
+  const handleUpdateResult = async (submittedData?: typeof editResultData) => {
     if (!editingResult) return;
     const resultData = submittedData ?? editResultData;
 
@@ -843,7 +846,8 @@ export default function ReportPreview() {
       console.log('Using batched ID for update:', batchedId);
 
       console.log('Calling updateBatchedResult...');
-      updateBatchedResult(batchedId, resultData);
+      setIsSavingEdit(true);
+      await updateBatchedResult(batchedId, resultData);
       console.log('updateBatchedResult completed');
 
       setIsEditModalOpen(false);
@@ -861,6 +865,7 @@ export default function ReportPreview() {
         failureReason: null,
         actionTaken: null,
         notes: null,
+        photoData: null,
         visionInspection: true,
         electricalTest: true,
         dischargeTest: false,
@@ -906,6 +911,8 @@ export default function ReportPreview() {
         description: `Error updating test result: ${(error as Error).message}`,
         variant: "destructive",
       });
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -1122,7 +1129,7 @@ export default function ReportPreview() {
         assetNumberError={assetNumberError}
         onAssetNumberChange={handleAssetNumberChange}
         onFrequencyChange={handleFrequencyChange}
-        isSaving={false}
+        isSaving={isSavingEdit}
       />
 
 

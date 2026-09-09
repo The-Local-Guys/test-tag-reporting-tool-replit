@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { failureReasons, emergencyFailureReasons, fireFailureReasons, rcdFailureReasons, MAX_TEST_RESULT_NOTES_LENGTH } from '@shared/schema';
 import { parseRcdTripTimesInput, resolveRcdTripTimes } from "@/lib/rcd-trip-times";
 
+import { TestPhotoInput } from "@/components/test-photo-input";
+
 interface TestResultEditModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -43,6 +45,8 @@ export function TestResultEditModal({
 
   // Local raw string for the trip times input so typing commas/partial numbers works naturally.
   // Parsed to numbers only on blur.
+  const [photoProcessing, setPhotoProcessing] = useState(false);
+  useEffect(() => { setPhotoProcessing(false); }, [isOpen, editResultData.result]);
   const [tripTimesInput, setTripTimesInput] = useState('');
   useEffect(() => {
     if (isOpen) {
@@ -118,7 +122,7 @@ export function TestResultEditModal({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={() => { if (!isSaving && !photoProcessing) onClose(); }}
       title={title}
     >
       <div className="space-y-4">
@@ -877,13 +881,18 @@ export function TestResultEditModal({
           </div>
         )}
 
+        {isOpen && editResultData.result === 'fail' && (
+          <TestPhotoInput value={editResultData.photoData ?? null}
+            onChange={(photoData) => setEditResultData((prev: any) => ({ ...prev, photoData }))}
+            disabled={isSaving || photoProcessing} onProcessingChange={setPhotoProcessing} />
+        )}
         <div className="flex gap-3 pt-4">
           <Button
             type="button"
             variant="outline"
             onClick={onClose}
             className="flex-1"
-            disabled={isSaving}
+            disabled={isSaving || photoProcessing}
           >
             Cancel
           </Button>
@@ -891,7 +900,7 @@ export function TestResultEditModal({
             type="button"
             className="flex-1 bg-primary"
             onClick={saveWithCurrentTripTimes}
-            disabled={isSaving || !!assetNumberError || !editResultData.assetNumber?.trim() || (editResultData.frequency === 'customfrequency' && !editResultData.expiryDate)}
+            disabled={isSaving || photoProcessing || !!assetNumberError || !editResultData.assetNumber?.trim() || (editResultData.frequency === 'customfrequency' && !editResultData.expiryDate)}
           >
             {isSaving ? savingLabel : saveLabel}
           </Button>
