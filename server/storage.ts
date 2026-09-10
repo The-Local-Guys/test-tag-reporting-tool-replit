@@ -23,6 +23,7 @@ import { db, pool } from "./db";
 import { eq, desc, and, gte, lte, sql, isNull, ilike, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import type { TransactionClient } from "./idempotency";
+import { normalizeCountry } from "@shared/country";
 
 /**
  * Draft sessions are listed by their creation timestamp (stored UTC), but the
@@ -435,6 +436,7 @@ export class DatabaseStorage implements IStorage {
    * @returns Updated test session object
    */
   async updateTestSession(sessionId: number, data: Partial<InsertTestSession>): Promise<TestSession> {
+    data = data.country === undefined ? data : { ...data, country: normalizeCountry(data.country) };
     const [session] = await db
       .update(testSessions)
       .set(data)
@@ -484,6 +486,7 @@ export class DatabaseStorage implements IStorage {
    * @returns Newly created test session object
    */
   async createTestSession(insertSession: InsertTestSession, client?: TransactionClient): Promise<TestSession> {
+    insertSession = { ...insertSession, country: normalizeCountry(insertSession.country) };
     if (client) {
       const result = await client.query(
         `

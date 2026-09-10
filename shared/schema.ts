@@ -1,6 +1,7 @@
 import { pgTable, text, serial, integer, boolean, timestamp, varchar, jsonb, index, numeric, uuid, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { normalizeCountry } from "./country";
 
 // Users table for authentication
 export const users = pgTable("users", {
@@ -191,6 +192,7 @@ export const insertTestSessionSchema = createInsertSchema(testSessions)
     lastActivityAt: true, // Auto-set by database
   })
   .extend({
+    country: z.string().transform(normalizeCountry),
     address: z
       .string()
       .max(
