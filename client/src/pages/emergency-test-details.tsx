@@ -93,15 +93,19 @@ export default function EmergencyTestDetails() {
   const notesLength = form.watch('notes')?.length ?? 0;
 
   // Emergency exit light only: an item may only Pass when every AS 2293.2:2019
-  // test check is ticked (incl. Lux Test + "Meets minimum lux"). Manual Fail is
+  // required test check is ticked. Manual Fail is
   // always allowed; this flag only gates the Pass direction.
+  // The Lux Test is optional, but if it is performed the "Meets minimum lux"
+  // check must still be ticked to Pass.
+  const luxTest = form.watch('luxTest');
+  const luxCompliant = form.watch('luxCompliant');
+  const luxPassed = !luxTest || luxCompliant;
   const allChecksPassed =
     form.watch('visualInspection') &&
     form.watch('switchingTest') &&
     form.watch('chargingTest') &&
     form.watch('dischargeTest') &&
-    form.watch('luxTest') &&
-    form.watch('luxCompliant');
+    luxPassed;
 
   // Update location field when currentLocation changes
   useEffect(() => {
@@ -446,7 +450,7 @@ export default function EmergencyTestDetails() {
                   }}
                 />
                 <Label htmlFor="luxTest" className="text-sm">
-                  Lux Level Test (Illumination measurement)
+                  Lux Level Test (Illumination measurement) (Optional)
                 </Label>
               </div>
               
