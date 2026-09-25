@@ -53,7 +53,8 @@ export default function TestDetails() {
     // Get the last selected frequency from sessionStorage, default to 'twelvemonthly'
     return sessionStorage.getItem('lastSelectedFrequency') || 'twelvemonthly';
   });
-  // Explicit expiry date (ISO yyyy-mm-dd) used only when frequency is 'customfrequency'
+  // Explicit expiry date (ISO yyyy-mm-dd): required for 'customfrequency', optional
+  // custom due date for 'threemonthly'. Resets for each item.
   const [customExpiryDate, setCustomExpiryDate] = useState('');
   const [currentItem, setCurrentItem] = useState<{name: string, type: string} | null>(null);
   const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]);
@@ -64,7 +65,8 @@ export default function TestDetails() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const { sessionId, currentLocation, addToBatch, assetProgress, customStartingNumbers } = useSession();
+  const { sessionId, sessionData, currentLocation, addToBatch, assetProgress, customStartingNumbers } = useSession();
+  const testDate = sessionData?.session?.testDate || '';
   const [, setLocation] = useLocation();
   const search = useSearch();
   
@@ -220,6 +222,18 @@ export default function TestDetails() {
       return;
     }
 
+    const usesExpiryDate = selectedFrequency === 'customfrequency' || selectedFrequency === 'threemonthly';
+
+    // A custom due date can't be before the session's test date
+    if (usesExpiryDate && customExpiryDate && testDate && customExpiryDate < testDate) {
+      toast({
+        title: 'Invalid date',
+        description: 'The date cannot be before the test date.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const testData: Omit<InsertTestResult, 'sessionId'> = {
       assetNumber: formValues.assetNumber,
       itemName: currentItem.name,
@@ -228,7 +242,7 @@ export default function TestDetails() {
       classification: selectedClass,
       result,
       frequency: selectedFrequency,
-      expiryDate: selectedFrequency === 'customfrequency' ? customExpiryDate : null,
+      expiryDate: usesExpiryDate ? customExpiryDate || null : null,
       failureReason: null,
       actionTaken: null,
       notes: null,
@@ -414,6 +428,7 @@ export default function TestDetails() {
           </Label>
           <Select value={selectedFrequency} onValueChange={(value) => {
             setSelectedFrequency(value);
+            setCustomExpiryDate('');
             // Reset manual edit flag so asset number updates based on new frequency
             setHasManuallyEditedAssetNumber(false);
             // Save the selected frequency to sessionStorage for next item
@@ -442,12 +457,32 @@ export default function TestDetails() {
               <Input
                 id="expiryDate"
                 type="date"
+                min={testDate || undefined}
                 value={customExpiryDate}
                 onChange={(e) => setCustomExpiryDate(e.target.value)}
                 className="text-base"
               />
               <div className="text-xs text-gray-500">
                 The exact date this item's test expires
+              </div>
+            </div>
+          )}
+
+          {selectedFrequency === 'threemonthly' && (
+            <div className="space-y-1">
+              <Label htmlFor="customDueDate" className="text-sm font-medium text-gray-700">
+                Custom Due Date (Optional)
+              </Label>
+              <Input
+                id="customDueDate"
+                type="date"
+                min={testDate || undefined}
+                value={customExpiryDate}
+                onChange={(e) => setCustomExpiryDate(e.target.value)}
+                className="text-base"
+              />
+              <div className="text-xs text-gray-500">
+                Leave blank to use 3 months from the test date
               </div>
             </div>
           )}

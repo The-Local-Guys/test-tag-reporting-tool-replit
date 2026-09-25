@@ -65,8 +65,8 @@ function calculateNextDueDate(testDate: string, frequency: string, result: strin
     return date.toLocaleDateString('en-AU');
   }
 
-  // Custom frequency uses the explicitly entered expiry date
-  if (frequency === 'customfrequency' && customExpiryDate) {
+  // Custom frequency (required) and 3 monthly (optional custom due date) use the entered date
+  if ((frequency === 'customfrequency' || frequency === 'threemonthly') && customExpiryDate) {
     return new Date(customExpiryDate).toLocaleDateString('en-AU');
   }
 

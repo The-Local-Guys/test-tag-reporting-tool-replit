@@ -18,6 +18,7 @@ interface TestResultEditModalProps {
   setEditResultData: (data: any | ((prev: any) => any)) => void;
   onSave: (data?: any) => void;
   serviceType?: string;
+  testDate?: string; // session test date (yyyy-mm-dd), earliest allowed expiry/due date
   assetNumberError?: string;
   onAssetNumberChange?: (value: string) => void;
   onFrequencyChange?: (value: string) => void;
@@ -34,6 +35,7 @@ export function TestResultEditModal({
   setEditResultData,
   onSave,
   serviceType,
+  testDate,
   assetNumberError = "",
   onAssetNumberChange,
   onFrequencyChange,
@@ -115,9 +117,19 @@ export function TestResultEditModal({
   };
 
   const handleFrequencyChange = (value: string) => {
-    setEditResultData((prev: any) => ({ ...prev, frequency: value }));
+    // Expiry date only applies to custom frequency and 3 monthly (optional custom due date)
+    const keepsExpiryDate = value === 'customfrequency' || value === 'threemonthly';
+    setEditResultData((prev: any) => ({
+      ...prev,
+      frequency: value,
+      expiryDate: keepsExpiryDate ? prev.expiryDate : null,
+    }));
     onFrequencyChange?.(value);
   };
+
+  const isExpiryBeforeTestDate =
+    (editResultData.frequency === 'customfrequency' || editResultData.frequency === 'threemonthly') &&
+    !!editResultData.expiryDate && !!testDate && editResultData.expiryDate < testDate;
 
   return (
     <Modal
@@ -271,23 +283,26 @@ export function TestResultEditModal({
               <SelectTrigger>
                 <SelectValue placeholder="Select frequency" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="monthly">Monthly</SelectItem>
-                <SelectItem value="threemonthly">3 Monthly</SelectItem>
-                <SelectItem value="sixmonthly">6 Monthly</SelectItem>
-                {/* Show 'annually' for emergency exit light, 'twelvemonthly' for others */}
-                {serviceType === 'emergency_exit_light' ? (
+              {/* Emergency exit light and fire testing match their test screens: 6 Monthly / Annually only */}
+              {serviceType === 'emergency_exit_light' || serviceType === 'fire_testing' ? (
+                <SelectContent>
+                  <SelectItem value="sixmonthly">6 Monthly</SelectItem>
                   <SelectItem value="annually">12 Monthly</SelectItem>
-                ) : (
+                </SelectContent>
+              ) : (
+                <SelectContent>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="threemonthly">3 Monthly</SelectItem>
+                  <SelectItem value="sixmonthly">6 Monthly</SelectItem>
                   <SelectItem value="twelvemonthly">12 Monthly</SelectItem>
-                )}
-                <SelectItem value="twentyfourmonthly">24 Monthly</SelectItem>
-                <SelectItem value="fiveyearly">5 Yearly</SelectItem>
-                {/* Custom Frequency is electrical-only */}
-                {serviceType === 'electrical' && (
-                  <SelectItem value="customfrequency">Custom Frequency</SelectItem>
-                )}
-              </SelectContent>
+                  <SelectItem value="twentyfourmonthly">24 Monthly</SelectItem>
+                  <SelectItem value="fiveyearly">5 Yearly</SelectItem>
+                  {/* Custom Frequency is electrical-only */}
+                  {serviceType === 'electrical' && (
+                    <SelectItem value="customfrequency">Custom Frequency</SelectItem>
+                  )}
+                </SelectContent>
+              )}
             </Select>
 
             {editResultData.frequency === 'customfrequency' && (
@@ -296,11 +311,33 @@ export function TestResultEditModal({
                 <Input
                   id="edit-expiryDate"
                   type="date"
+                  min={testDate || undefined}
                   value={editResultData.expiryDate || ''}
                   onChange={(e) => setEditResultData((prev: any) => ({ ...prev, expiryDate: e.target.value || null }))}
                   className="text-base"
                 />
               </div>
+            )}
+
+            {serviceType === 'electrical' && editResultData.frequency === 'threemonthly' && (
+              <div className="mt-3">
+                <Label htmlFor="edit-customDueDate">Custom Due Date (Optional)</Label>
+                <Input
+                  id="edit-customDueDate"
+                  type="date"
+                  min={testDate || undefined}
+                  value={editResultData.expiryDate || ''}
+                  onChange={(e) => setEditResultData((prev: any) => ({ ...prev, expiryDate: e.target.value || null }))}
+                  className="text-base"
+                />
+                <div className="text-xs text-gray-500 mt-1">
+                  Leave blank to use 3 months from the test date
+                </div>
+              </div>
+            )}
+
+            {isExpiryBeforeTestDate && (
+              <p className="text-sm text-red-600 mt-1">The date cannot be before the test date.</p>
             )}
           </div>
         )}
@@ -900,7 +937,7 @@ export function TestResultEditModal({
             type="button"
             className="flex-1 bg-primary"
             onClick={saveWithCurrentTripTimes}
-            disabled={isSaving || photoProcessing || !!assetNumberError || !editResultData.assetNumber?.trim() || (editResultData.frequency === 'customfrequency' && !editResultData.expiryDate)}
+            disabled={isSaving || photoProcessing || !!assetNumberError || !editResultData.assetNumber?.trim() || (editResultData.frequency === 'customfrequency' && !editResultData.expiryDate) || isExpiryBeforeTestDate}
           >
             {isSaving ? savingLabel : saveLabel}
           </Button>

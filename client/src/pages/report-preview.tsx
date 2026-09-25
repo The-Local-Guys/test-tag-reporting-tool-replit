@@ -1126,6 +1126,7 @@ export default function ReportPreview() {
         setEditResultData={setEditResultData}
         onSave={handleUpdateResult}
         serviceType={session?.serviceType}
+        testDate={session?.testDate}
         assetNumberError={assetNumberError}
         onAssetNumberChange={handleAssetNumberChange}
         onFrequencyChange={handleFrequencyChange}

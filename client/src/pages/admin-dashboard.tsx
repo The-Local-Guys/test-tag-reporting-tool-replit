@@ -4012,6 +4012,7 @@ export default function AdminDashboard() {
         setEditResultData={setEditResultData}
         onSave={handleUpdateResult}
         serviceType={viewingSession?.session?.serviceType}
+        testDate={viewingSession?.session?.testDate}
         assetNumberError={assetNumberError}
         onAssetNumberChange={handleAssetNumberChange}
         onFrequencyChange={handleFrequencyChange}
