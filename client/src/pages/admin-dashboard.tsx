@@ -32,6 +32,7 @@ import { Modal } from "@/components/ui/modal";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { TestResultEditModal } from "@/components/test-result-edit-modal";
+import { ReportNotesEditor } from "@/components/report-notes-editor";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -3545,6 +3546,21 @@ export default function AdminDashboard() {
                   {viewingSession.session.address}
                 </div>
               </div>
+            </div>
+
+            {/* Report-level notes (printed at the end of the PDF report) */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <ReportNotesEditor
+                sessionId={viewingSession.session.id}
+                ownerUserId={viewingSession.session.userId}
+                reportNotes={viewingSession.session.reportNotes}
+                onSaved={(updated) => {
+                  setViewingSession((prev: any) =>
+                    prev ? { ...prev, session: { ...prev.session, reportNotes: updated.reportNotes } } : prev,
+                  );
+                  queryClient.invalidateQueries({ queryKey: ["/api/admin/sessions"] });
+                }}
+              />
             </div>
 
             {/* Test Results */}

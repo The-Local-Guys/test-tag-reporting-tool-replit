@@ -63,6 +63,7 @@ export interface IStorage {
   getAllDraftSessionsPaginated(page: number, limit: number, technicianFilter?: string, serviceTypeFilter?: string, search?: string, dateFrom?: string, dateTo?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }>;
   finalizeSession(sessionId: number): Promise<TestSession>;
   updateCustomStartingNumbers(sessionId: number, numbers: object): Promise<TestSession>;
+  updateReportNotes(sessionId: number, reportNotes: string | null): Promise<TestSession>;
   updateSessionActivity(sessionId: number, client?: TransactionClient): Promise<void>;
   
   // Test Results
@@ -261,6 +262,7 @@ export class DatabaseStorage implements IStorage {
         complianceStandard: testSessions.complianceStandard,
         status: testSessions.status,
         customStartingNumbers: testSessions.customStartingNumbers,
+        reportNotes: testSessions.reportNotes,
         lastActivityAt: testSessions.lastActivityAt,
         createdAt: testSessions.createdAt,
         deletedAt: testSessions.deletedAt,
@@ -302,6 +304,7 @@ export class DatabaseStorage implements IStorage {
         complianceStandard: testSessions.complianceStandard,
         status: testSessions.status,
         customStartingNumbers: testSessions.customStartingNumbers,
+        reportNotes: testSessions.reportNotes,
         lastActivityAt: testSessions.lastActivityAt,
         createdAt: testSessions.createdAt,
         deletedAt: testSessions.deletedAt,
@@ -355,6 +358,7 @@ export class DatabaseStorage implements IStorage {
         complianceStandard: testSessions.complianceStandard,
         status: testSessions.status,
         customStartingNumbers: testSessions.customStartingNumbers,
+        reportNotes: testSessions.reportNotes,
         lastActivityAt: testSessions.lastActivityAt,
         createdAt: testSessions.createdAt,
         deletedAt: testSessions.deletedAt,
@@ -410,6 +414,7 @@ export class DatabaseStorage implements IStorage {
         complianceStandard: testSessions.complianceStandard,
         status: testSessions.status,
         customStartingNumbers: testSessions.customStartingNumbers,
+        reportNotes: testSessions.reportNotes,
         lastActivityAt: testSessions.lastActivityAt,
         createdAt: testSessions.createdAt,
         deletedAt: testSessions.deletedAt,
@@ -521,6 +526,7 @@ export class DatabaseStorage implements IStorage {
             compliance_standard as "complianceStandard",
             status,
             custom_starting_numbers as "customStartingNumbers",
+            report_notes as "reportNotes",
             last_activity_at as "lastActivityAt",
             created_at as "createdAt",
             deleted_at as "deletedAt",
@@ -575,6 +581,7 @@ export class DatabaseStorage implements IStorage {
         complianceStandard: testSessions.complianceStandard,
         status: testSessions.status,
         customStartingNumbers: testSessions.customStartingNumbers,
+        reportNotes: testSessions.reportNotes,
         lastActivityAt: testSessions.lastActivityAt,
         createdAt: testSessions.createdAt,
         deletedAt: testSessions.deletedAt,
@@ -608,6 +615,7 @@ export class DatabaseStorage implements IStorage {
         complianceStandard: testSessions.complianceStandard,
         status: testSessions.status,
         customStartingNumbers: testSessions.customStartingNumbers,
+        reportNotes: testSessions.reportNotes,
         lastActivityAt: testSessions.lastActivityAt,
         createdAt: testSessions.createdAt,
         deletedAt: testSessions.deletedAt,
@@ -650,6 +658,7 @@ export class DatabaseStorage implements IStorage {
         complianceStandard: testSessions.complianceStandard,
         status: testSessions.status,
         customStartingNumbers: testSessions.customStartingNumbers,
+        reportNotes: testSessions.reportNotes,
         lastActivityAt: testSessions.lastActivityAt,
         createdAt: testSessions.createdAt,
         deletedAt: testSessions.deletedAt,
@@ -703,6 +712,7 @@ export class DatabaseStorage implements IStorage {
         complianceStandard: testSessions.complianceStandard,
         status: testSessions.status,
         customStartingNumbers: testSessions.customStartingNumbers,
+        reportNotes: testSessions.reportNotes,
         lastActivityAt: testSessions.lastActivityAt,
         createdAt: testSessions.createdAt,
         deletedAt: testSessions.deletedAt,
@@ -756,6 +766,7 @@ export class DatabaseStorage implements IStorage {
         complianceStandard: testSessions.complianceStandard,
         status: testSessions.status,
         customStartingNumbers: testSessions.customStartingNumbers,
+        reportNotes: testSessions.reportNotes,
         lastActivityAt: testSessions.lastActivityAt,
         createdAt: testSessions.createdAt,
         deletedAt: testSessions.deletedAt,
@@ -800,6 +811,21 @@ export class DatabaseStorage implements IStorage {
     const [session] = await db
       .update(testSessions)
       .set({ customStartingNumbers: numbers, lastActivityAt: new Date() })
+      .where(eq(testSessions.id, sessionId))
+      .returning();
+    return session;
+  }
+
+  /**
+   * Saves the report-level notes for a session (shown at the end of the PDF report)
+   * @param sessionId - ID of the session to update
+   * @param reportNotes - Notes text, or null to clear
+   * @returns Updated session object
+   */
+  async updateReportNotes(sessionId: number, reportNotes: string | null): Promise<TestSession> {
+    const [session] = await db
+      .update(testSessions)
+      .set({ reportNotes })
       .where(eq(testSessions.id, sessionId))
       .returning();
     return session;

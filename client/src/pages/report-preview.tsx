@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Modal } from '@/components/ui/modal';
 import { TestResultEditModal } from '@/components/test-result-edit-modal';
+import { ReportNotesEditor } from '@/components/report-notes-editor';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ArrowLeft, Download, Mail, Share, Plus, Edit2, FileText, Trash2, Check, CheckCircle } from 'lucide-react';
 import { WorkflowProgressBar, type ServiceType } from '@/components/workflow-progress-bar';
@@ -22,7 +23,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { insertTestResultSchema, type TestResult, type InsertTestResult, failureReasons, emergencyFailureReasons, fireFailureReasons, rcdFailureReasons } from '@shared/schema';
 import { cn } from '@/lib/utils';
 import { useConditionalNav } from '@/contexts/ConditionalNavContext';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 /**
  * Helper function to format asset number with frequency for Electrical Test & Tag
@@ -73,6 +74,7 @@ function formatAssetNumberWithFrequency(
  */
 export default function ReportPreview() {
   const { sessionData, batchedResults, submitBatch, isSubmittingBatch, updateBatchedResult, removeBatchedResult, clearSession, assetProgress, renumberAssets, sessionId, customStartingNumbers } = useSession();
+  const queryClient = useQueryClient();
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const [isSavingEdit, setIsSavingEdit] = useState(false);
@@ -1067,6 +1069,21 @@ export default function ReportPreview() {
           ))}
         </div>
       </div>
+
+      {/* Report-level notes (printed at the end of the PDF report) */}
+      {sessionData?.session?.id && (
+        <div className="bg-gray-50 p-4 border-t border-gray-200">
+          <ReportNotesEditor
+            sessionId={sessionData.session.id}
+            ownerUserId={sessionData.session.userId}
+            reportNotes={sessionData.session.reportNotes}
+            onSaved={(updated) => {
+              queryClient.setQueryData([`/api/sessions/${updated.id}`], updated);
+              queryClient.invalidateQueries({ queryKey: ['/api/admin/sessions'] });
+            }}
+          />
+        </div>
+      )}
 
       {/* Fixed Bottom Actions */}
       <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 p-4 space-y-3">

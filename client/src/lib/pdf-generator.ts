@@ -1374,6 +1374,40 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     }
   }
 
+  // Report-level notes always print last, after every other section
+  const reportNotes = session.reportNotes?.trim();
+  if (reportNotes) {
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const notesLines: string[] = doc.splitTextToSize(reportNotes, pageWidth - (2 * margin));
+    // Stay clear of the compliance footer (pageHeight - 20) and the letterhead footer
+    const contentBottom = doc.internal.pageSize.height - 30;
+    const sectionHeight = 12 + notesLines.length * 5;
+
+    yPosition += 10;
+    if (yPosition + sectionHeight > contentBottom) {
+      doc.addPage();
+      yPosition = await addLetterheadToPage(doc, margin, pageWidth);
+    }
+
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Notes', margin, yPosition);
+    yPosition += 8;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    for (const line of notesLines) {
+      // Only legacy/oversized notes can exceed one page; MAX_REPORT_NOTES_LENGTH keeps new ones on a single page
+      if (yPosition > contentBottom) {
+        doc.addPage();
+        yPosition = await addLetterheadToPage(doc, margin, pageWidth);
+      }
+      doc.text(line, margin, yPosition);
+      yPosition += 5;
+    }
+  }
+
   return doc.output('blob');
 }
 

@@ -76,6 +76,7 @@ export const testSessions = pgTable("test_sessions", {
   // Database-first architecture fields
   status: text("status").notNull().default("draft"), // 'draft' or 'finalized'
   customStartingNumbers: jsonb("custom_starting_numbers"), // JSON object with custom asset number ranges per frequency
+  reportNotes: text("report_notes"), // optional report-level notes shown at the end of the PDF report
   lastActivityAt: timestamp("last_activity_at").defaultNow(), // Track last modification for multi-day jobs
   createdAt: timestamp("created_at").defaultNow(),
   deletedAt: timestamp("deleted_at"), // Soft delete - null means active, timestamp means deleted
@@ -183,6 +184,22 @@ export const certificates = pgTable("certificates", {
  */
 export const MAX_SESSION_ADDRESS_LENGTH = 250;
 
+/**
+ * Maximum length for report-level notes.
+ *
+ * These print in a full-width "Notes" section at the end of the PDF report
+ * (170mm at 10pt, ~90 characters per line), so 500 characters wraps to about
+ * 6 lines and always fits on a single page below the letterhead.
+ */
+export const MAX_REPORT_NOTES_LENGTH = 500;
+
+export const reportNotesSchema = z
+  .string()
+  .trim()
+  .max(MAX_REPORT_NOTES_LENGTH, `Notes must be ${MAX_REPORT_NOTES_LENGTH} characters or less`)
+  .nullable()
+  .transform((value) => value || null);
+
 export const insertTestSessionSchema = createInsertSchema(testSessions)
   .omit({
     id: true,
@@ -199,6 +216,7 @@ export const insertTestSessionSchema = createInsertSchema(testSessions)
         MAX_SESSION_ADDRESS_LENGTH,
         `Address must be ${MAX_SESSION_ADDRESS_LENGTH} characters or less`,
       ),
+    reportNotes: reportNotesSchema.optional(),
   });
 
 /**

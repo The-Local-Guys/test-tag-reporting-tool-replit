@@ -14,6 +14,7 @@ import {
   insertCertificateSchema,
   loginSchema,
   clampTestResultNotes,
+  reportNotesSchema,
   type User,
 } from "@shared/schema";
 import { z } from "zod";
@@ -762,6 +763,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating custom starting numbers:", error);
       res.status(500).json({ message: "Failed to update custom starting numbers" });
+    }
+  });
+
+  // Update report-level notes. The owning technician, super admins and support
+  // center users may edit them.
+  app.patch("/api/sessions/:id/notes", requireAuth, async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const user = req.session.user!;
+
+      const session = await storage.getTestSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      const isAdmin = user.role === "super_admin" || user.role === "support_center";
+      if (!isAdmin && session.userId !== user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const parsed = reportNotesSchema.safeParse(req.body?.reportNotes ?? null);
+      if (!parsed.success) {
+        return res.status(400).json({ message: parsed.error.errors[0]?.message || "Invalid notes" });
+      }
+
+      const updatedSession = await storage.updateReportNotes(sessionId, parsed.data);
+      res.json(updatedSession);
+    } catch (error) {
+      console.error("Error updating report notes:", error);
+      res.status(500).json({ message: "Failed to update report notes" });
     }
   });
 

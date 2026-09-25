@@ -558,7 +558,9 @@ export function generateExcelReport(data: ReportData): Blob {
       ? 'This report complies with AS/NZS 3760 RCD testing standards.'
       : (session.country === 'newzealand' 
         ? 'This report complies with NZS 5262 electrical safety standards.'
-        : 'This report complies with AS/NZS 3760 electrical safety standards.')] // Default to AS/NZS 3760 for Australia and ARA Compliance
+        : 'This report complies with AS/NZS 3760 electrical safety standards.')], // Default to AS/NZS 3760 for Australia and ARA Compliance
+    // Report-level notes always sit at the bottom of the sheet
+    ...(session.reportNotes?.trim() ? [[''], ['Notes:', session.reportNotes.trim()]] : []),
   ];
   
   // Create worksheet
