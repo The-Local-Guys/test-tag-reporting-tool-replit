@@ -3,6 +3,13 @@ import type { TestSession, TestResult } from '@shared/schema';
 import logoPath from '@assets/The Local Guys - with plug wide boarder - png seek.png';
 import letterheadPath from '@assets/Letterheads_1754455497882.png';
 import { resolveRcdTripTimes as resolveStoredRcdTripTimes } from './rcd-trip-times';
+import {
+  formatEarthContinuity,
+  formatInsulationResistance,
+  formatLeakageCurrent,
+  formatPolarity,
+  hasElectricalReadings,
+} from './electrical-readings';
 
 interface ReportData {
   session: TestSession;
@@ -912,6 +919,75 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
 
     // Use dynamic row height instead of fixed 6
     yPosition += rowHeight + 2; // Add 2 for spacing between rows
+  }
+
+  // Electrical Test Readings table (Electrical Test & Tag only, when any readings were recorded)
+  const resultsWithReadings = session.serviceType === 'electrical' ? results.filter(hasElectricalReadings) : [];
+  if (resultsWithReadings.length > 0) {
+    // Columns: Asset# | Item | Visual | Earth (Ohm) | Insulation (MOhm) | Polarity | Leakage (mA)
+    // (Helvetica has no Ω glyph, so units are spelled out)
+    const readingColumns = { asset: 0, item: 16, visual: 60, earth: 78, insulation: 100, polarity: 125, leakage: 145 };
+    const drawReadingsHeader = () => {
+      doc.setFontSize(6);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Asset#', margin + readingColumns.asset, yPosition);
+      doc.text('Item', margin + readingColumns.item, yPosition);
+      doc.text('Visual', margin + readingColumns.visual, yPosition);
+      doc.text('Earth (Ohm)', margin + readingColumns.earth, yPosition);
+      doc.text('Insulation (MOhm)', margin + readingColumns.insulation, yPosition);
+      doc.text('Polarity', margin + readingColumns.polarity, yPosition);
+      doc.text('Leakage (mA)', margin + readingColumns.leakage, yPosition);
+      yPosition += 7;
+      doc.setFont('helvetica', 'normal');
+    };
+
+    yPosition += 10;
+    if (yPosition > doc.internal.pageSize.height - 60) {
+      doc.addPage();
+      yPosition = await addLetterheadToPage(doc, margin, pageWidth);
+    }
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Electrical Test Readings', margin, yPosition);
+    yPosition += 10;
+    drawReadingsHeader();
+
+    const lineHeight = 4;
+    for (const result of resultsWithReadings) {
+      const assetLines = clampCellLines(doc.splitTextToSize(
+        formatAssetNumberWithFrequency(result.assetNumber.toString(), result.frequency, session.serviceType, results),
+        14,
+      ));
+      const itemLines = clampCellLines(doc.splitTextToSize(result.itemName, 42));
+      const rowHeight = Math.max(assetLines.length, itemLines.length) * lineHeight;
+
+      if (yPosition + rowHeight > doc.internal.pageSize.height - 30) {
+        doc.addPage();
+        yPosition = await addLetterheadToPage(doc, margin, pageWidth);
+        drawReadingsHeader();
+      }
+
+      const rowStartY = yPosition;
+      assetLines.forEach((line: string, i: number) => doc.text(line, margin + readingColumns.asset, rowStartY + i * lineHeight));
+      itemLines.forEach((line: string, i: number) => doc.text(line, margin + readingColumns.item, rowStartY + i * lineHeight));
+
+      const visualPassed = result.visionInspection !== false;
+      doc.setTextColor(...(visualPassed ? [0, 0, 0] : [255, 0, 0]) as [number, number, number]);
+      doc.text(visualPassed ? 'Pass' : 'Fail', margin + readingColumns.visual, rowStartY);
+      doc.setTextColor(0, 0, 0);
+
+      doc.text(formatEarthContinuity(result), margin + readingColumns.earth, rowStartY);
+      doc.text(formatInsulationResistance(result), margin + readingColumns.insulation, rowStartY);
+
+      const polarityFailed = result.polarity === 'fail';
+      if (polarityFailed) doc.setTextColor(255, 0, 0);
+      doc.text(formatPolarity(result), margin + readingColumns.polarity, rowStartY);
+      doc.setTextColor(0, 0, 0);
+
+      doc.text(formatLeakageCurrent(result), margin + readingColumns.leakage, rowStartY);
+
+      yPosition += rowHeight + 2;
+    }
   }
 
   // Add emergency exit light test criteria details (AS/NZS 2293.2:2019)

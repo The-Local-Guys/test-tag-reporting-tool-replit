@@ -17,6 +17,14 @@ import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import type { InsertTestResult } from '@shared/schema';
+import { ElectricalReadingsFields } from '@/components/electrical-readings-fields';
+import {
+  getDefaultElectricalReadings,
+  toElectricalReadingFields,
+  validateElectricalReadings,
+  type ElectricalReadingErrors,
+  type ElectricalReadings,
+} from '@/lib/electrical-readings';
 
 const classificationOptions = [
   { value: 'class1', label: 'Class 1' },
@@ -61,6 +69,8 @@ export default function TestDetails() {
   const [showCamera, setShowCamera] = useState(false);
   const [visionInspection, setVisionInspection] = useState(true);
   const [electricalTest, setElectricalTest] = useState(true);
+  const [readings, setReadings] = useState<ElectricalReadings>(() => getDefaultElectricalReadings());
+  const [readingErrors, setReadingErrors] = useState<ElectricalReadingErrors>({});
   const [hasManuallyEditedAssetNumber, setHasManuallyEditedAssetNumber] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -80,10 +90,10 @@ export default function TestDetails() {
     const type = params.get('type');
     const classification = params.get('classification');
     if (item && type) {
-      setCurrentItem({
-        name: decodeURIComponent(item),
-        type
-      });
+      const name = decodeURIComponent(item);
+      setCurrentItem({ name, type });
+      setReadings(getDefaultElectricalReadings());
+      setReadingErrors({});
     }
     if (classification) {
       setSelectedClass(decodeURIComponent(classification));
@@ -212,6 +222,18 @@ export default function TestDetails() {
     const formValues = form.getValues();
     console.log('🎯 Form values:', formValues);
 
+    // Earth continuity, insulation resistance and polarity are required
+    const errors = validateElectricalReadings(readings);
+    setReadingErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      toast({
+        title: 'Test readings required',
+        description: Object.values(errors)[0],
+        variant: 'destructive',
+      });
+      return;
+    }
+
     // Custom frequency requires an explicit expiry date
     if (selectedFrequency === 'customfrequency' && !customExpiryDate) {
       toast({
@@ -248,6 +270,7 @@ export default function TestDetails() {
       notes: null,
       visionInspection,
       electricalTest,
+      ...toElectricalReadingFields(readings),
     } as any;
 
     console.log('🎯 Test data prepared:', testData);
@@ -520,6 +543,23 @@ export default function TestDetails() {
               </Label>
             </div>
           </div>
+        </div>
+
+        {/* Test Readings */}
+        <div className="bg-gray-50 p-3 rounded-lg space-y-3">
+          <Label className="flex items-center text-sm font-medium text-gray-700">
+            📏 Test Readings
+          </Label>
+          <ElectricalReadingsFields
+            readings={readings}
+            onChange={(next) => {
+              setReadings(next);
+              if (Object.keys(readingErrors).length > 0) {
+                setReadingErrors(validateElectricalReadings(next));
+              }
+            }}
+            errors={readingErrors}
+          />
         </div>
 
         {/* Test Result */}

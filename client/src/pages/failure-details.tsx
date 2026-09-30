@@ -60,7 +60,12 @@ export default function FailureDetails() {
   useEffect(() => {
     const stored = sessionStorage.getItem('pendingTestResult');
     if (stored) {
-      setTestData(JSON.parse(stored));
+      const parsed = JSON.parse(stored);
+      setTestData(parsed);
+      // A failed polarity reading pre-selects the polarity failure reason
+      if (parsed?.polarity === 'fail') {
+        setSelectedReasons(['polarity']);
+      }
     } else {
       setLocation('/items');
     }

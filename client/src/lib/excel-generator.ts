@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import type { TestSession, TestResult } from '@shared/schema';
+import { formatEarthContinuity, formatInsulationResistance, formatLeakageCurrent, formatPolarity } from './electrical-readings';
 
 interface ReportData {
   session: TestSession;
@@ -333,6 +334,8 @@ export function generateExcelReport(data: ReportData): Blob {
     ['Test Results']
   ];
   
+  const isElectrical = session.serviceType === 'electrical';
+
   // Test results header - different headers for each service type
   const resultsHeader = session.serviceType === 'emergency_exit_light' 
     ? ['Asset #', 'Item Name', 'Location', 'Result', 'Manufacturer', 'Install Date', 'Frequency', 'Next Due Date', 'Failure Reason', 'Notes', 'Visual Inspection', 'Discharge Test', 'Switching Test', 'Charging Test', 'Maintenance Type', 'Globe Type']
@@ -340,7 +343,9 @@ export function generateExcelReport(data: ReportData): Blob {
     ? ['Asset #', 'Item Name', 'Location', 'Type', 'Result', 'Size/Weight', 'Manufacturer', 'Frequency', 'Next Due Date', 'Failure Reason', 'Notes', 'Visual Inspection', 'Accessibility', 'Signage', 'Operational Test', 'Pressure / Flow Rate Test']
     : session.serviceType === 'rcd_reporting'
     ? ['Asset #', 'Equipment Type', 'DB / CB', 'Push Button Test', 'Timed Test', 'Trip Time (ms)', 'Result', 'Location', 'Comments', 'Failure Reason', 'Action Taken']
-    : ['Asset #', 'Item Name', 'Location', 'Classification', 'Result', 'Vision Inspection', 'Electrical Test', 'Frequency', 'Next Due Date', 'Failure Reason', 'Action Taken', 'Notes'];
+    : ['Asset #', 'Item Name', 'Location', 'Classification', 'Result', 'Vision Inspection', 'Electrical Test',
+       ...(isElectrical ? ['Earth Continuity (Ω)', 'Insulation Resistance (MΩ)', 'Polarity', 'Leakage Current (mA)'] : []),
+       'Frequency', 'Next Due Date', 'Failure Reason', 'Action Taken', 'Notes'];
   
   // Test results data - different structure for emergency exit light testing
   const resultsData = results.map((result, index) => {
@@ -534,6 +539,9 @@ export function generateExcelReport(data: ReportData): Blob {
         result.result.toUpperCase(),
         result.visionInspection ? 'Yes' : 'No',
         result.electricalTest ? 'Yes' : 'No',
+        ...(isElectrical
+          ? [formatEarthContinuity(result), formatInsulationResistance(result), formatPolarity(result), formatLeakageCurrent(result)]
+          : []),
         getFrequencyLabel(result.frequency),
         calculateNextDueDate(session.testDate, result.frequency, result.result, (result as any).expiryDate),
         displayFailureReason,
@@ -632,6 +640,14 @@ export function generateExcelReport(data: ReportData): Blob {
       { wch: 8 },  // Result
       { wch: 12 }, // Vision Inspection
       { wch: 12 }, // Electrical Test
+      ...(isElectrical
+        ? [
+            { wch: 14 }, // Earth Continuity
+            { wch: 16 }, // Insulation Resistance
+            { wch: 10 }, // Polarity
+            { wch: 14 }, // Leakage Current
+          ]
+        : []),
       { wch: 10 }, // Frequency
       { wch: 12 }, // Next Due Date
       { wch: 15 }, // Failure Reason

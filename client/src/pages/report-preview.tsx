@@ -134,6 +134,12 @@ export default function ReportPreview() {
     weight: null as string | null,
     // Microwave Leakage specific fields
     leakageReading: null as string | null,
+    // Electrical test & tag readings
+    earthContinuity: null as string | null,
+    insulationOperator: null as string | null,
+    insulationResistance: null as string | null,
+    polarity: null as string | null,
+    leakageCurrent: null as string | null,
     // RCD-specific fields
     pushButtonTest: null as boolean | null,
     injectionTimedTest: null as boolean | null,
@@ -422,6 +428,12 @@ export default function ReportPreview() {
         circuitBreakerNumber: (result as any).circuitBreakerNumber || null,
         // Microwave leakage testing specific fields
         leakageReading: (result as any).leakageReading || null,
+        // Electrical test & tag readings
+        earthContinuity: (result as any).earthContinuity || null,
+        insulationOperator: (result as any).insulationOperator || null,
+        insulationResistance: (result as any).insulationResistance || null,
+        polarity: (result as any).polarity || null,
+        leakageCurrent: (result as any).leakageCurrent || null,
         // Fire testing specific fields
         pressureTest: (result as any).pressureTest ?? false,
         accessibilityCheck: (result as any).accessibilityCheck ?? false,
@@ -513,6 +525,12 @@ export default function ReportPreview() {
         globeType: result.globeType || null,
         // Microwave leakage testing specific fields
         leakageReading: (result as any).leakageReading || null,
+        // Electrical test & tag readings
+        earthContinuity: (result as any).earthContinuity || null,
+        insulationOperator: (result as any).insulationOperator || null,
+        insulationResistance: (result as any).insulationResistance || null,
+        polarity: (result as any).polarity || null,
+        leakageCurrent: (result as any).leakageCurrent || null,
         // Fire testing specific fields
         pressureTest: (result as any).pressureTest ?? false,
         accessibilityCheck: (result as any).accessibilityCheck ?? false,
@@ -795,6 +813,12 @@ export default function ReportPreview() {
       weight: (result as any).weight || null,
       // Microwave Leakage specific fields
       leakageReading: (result as any).leakageReading || null,
+      // Electrical test & tag readings
+      earthContinuity: (result as any).earthContinuity || null,
+      insulationOperator: (result as any).insulationOperator || null,
+      insulationResistance: (result as any).insulationResistance || null,
+      polarity: (result as any).polarity || null,
+      leakageCurrent: (result as any).leakageCurrent || null,
       // RCD-specific fields
       pushButtonTest: (result as any).pushButtonTest ?? false,
       injectionTimedTest: (result as any).injectionTimedTest ?? false,
@@ -889,6 +913,11 @@ export default function ReportPreview() {
         size: null,
         weight: null,
         leakageReading: null,
+        earthContinuity: null,
+        insulationOperator: null,
+        insulationResistance: null,
+        polarity: null,
+        leakageCurrent: null,
         pushButtonTest: null,
         injectionTimedTest: null,
         tripTimes: [],

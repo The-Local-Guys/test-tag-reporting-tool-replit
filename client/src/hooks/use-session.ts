@@ -55,6 +55,12 @@ export interface BatchedTestResult {
   circuitBreakerNumber?: string;
   // Microwave leakage testing fields
   leakageReading?: string;
+  // Electrical test & tag readings
+  earthContinuity?: string;
+  insulationOperator?: string;
+  insulationResistance?: string;
+  polarity?: string;
+  leakageCurrent?: string;
   // Fire testing specific fields
   pressureTest?: boolean;
   accessibilityCheck?: boolean;
@@ -333,6 +339,11 @@ export function useSession() {
       distributionBoardNumber: result.distributionBoardNumber ?? result.distribution_board_number ?? undefined,
       circuitBreakerNumber: result.circuitBreakerNumber ?? result.circuit_breaker_number ?? undefined,
       leakageReading: result.leakageReading || result.leakage_reading || undefined,
+      earthContinuity: result.earthContinuity ?? result.earth_continuity ?? undefined,
+      insulationOperator: result.insulationOperator ?? result.insulation_operator ?? undefined,
+      insulationResistance: result.insulationResistance ?? result.insulation_resistance ?? undefined,
+      polarity: result.polarity ?? undefined,
+      leakageCurrent: result.leakageCurrent ?? result.leakage_current ?? undefined,
     }));
 
     // Merge strategy: on initial load replace entirely, on subsequent updates
@@ -984,6 +995,11 @@ export function useSession() {
       distributionBoardNumber: (cleanData as any).distributionBoardNumber || undefined,
       circuitBreakerNumber: (cleanData as any).circuitBreakerNumber || undefined,
       leakageReading: cleanData.leakageReading || undefined,
+      earthContinuity: (cleanData as any).earthContinuity || undefined,
+      insulationOperator: (cleanData as any).insulationOperator || undefined,
+      insulationResistance: (cleanData as any).insulationResistance || undefined,
+      polarity: (cleanData as any).polarity || undefined,
+      leakageCurrent: (cleanData as any).leakageCurrent || undefined,
       // Fire testing specific fields
       pressureTest: (cleanData as any).pressureTest ?? undefined,
       accessibilityCheck: (cleanData as any).accessibilityCheck ?? undefined,
@@ -1170,6 +1186,12 @@ export function useSession() {
         circuitBreakerNumber: result.circuitBreakerNumber || null,
         // Microwave Leakage specific field
         leakageReading: result.leakageReading || null,
+        // Electrical test & tag readings
+        earthContinuity: result.earthContinuity || null,
+        insulationOperator: result.insulationOperator || null,
+        insulationResistance: result.insulationResistance || null,
+        polarity: result.polarity || null,
+        leakageCurrent: result.leakageCurrent || null,
       };
 
       console.log('💾 ********** AUTO-SAVING TO DATABASE **********');
@@ -1232,6 +1254,12 @@ export function useSession() {
               circuitBreakerNumber: serverResult.circuit_breaker_number || r.circuitBreakerNumber,
               // Microwave testing fields
               leakageReading: serverResult.leakage_reading || r.leakageReading,
+              // Electrical test & tag readings
+              earthContinuity: serverResult.earth_continuity || r.earthContinuity,
+              insulationOperator: serverResult.insulation_operator || r.insulationOperator,
+              insulationResistance: serverResult.insulation_resistance || r.insulationResistance,
+              polarity: serverResult.polarity || r.polarity,
+              leakageCurrent: serverResult.leakage_current || r.leakageCurrent,
             };
           }
           return r;
@@ -1328,6 +1356,12 @@ export function useSession() {
         circuitBreakerNumber: data.circuitBreakerNumber || null,
         // Microwave testing fields
         leakageReading: data.leakageReading || null,
+        // Electrical test & tag readings
+        earthContinuity: data.earthContinuity || null,
+        insulationOperator: data.insulationOperator || null,
+        insulationResistance: data.insulationResistance || null,
+        polarity: data.polarity || null,
+        leakageCurrent: data.leakageCurrent || null,
       };
 
       console.log(`Auto-updating result on server: ID ${serverId}`);
@@ -1378,6 +1412,12 @@ export function useSession() {
               circuitBreakerNumber: serverResult.circuit_breaker_number ?? r.circuitBreakerNumber,
               // Microwave testing fields
               leakageReading: serverResult.leakage_reading ?? r.leakageReading,
+              // Electrical test & tag readings
+              earthContinuity: serverResult.earth_continuity ?? serverResult.earthContinuity ?? r.earthContinuity,
+              insulationOperator: serverResult.insulation_operator ?? serverResult.insulationOperator ?? r.insulationOperator,
+              insulationResistance: serverResult.insulation_resistance ?? serverResult.insulationResistance ?? r.insulationResistance,
+              polarity: serverResult.polarity ?? r.polarity,
+              leakageCurrent: serverResult.leakage_current ?? serverResult.leakageCurrent ?? r.leakageCurrent,
               // Core fields
               itemName: serverResult.item_name ?? r.itemName,
               itemType: serverResult.item_type ?? r.itemType,

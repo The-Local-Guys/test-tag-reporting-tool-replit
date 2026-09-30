@@ -100,6 +100,12 @@ export const testResults = pgTable("test_results", {
   photoData: text("photo_data"), // Base64 encoded photo for failed items
   visionInspection: boolean("vision_inspection").default(true), // Vision inspection completed
   electricalTest: boolean("electrical_test").default(true), // Electrical test completed
+  // Electrical test & tag readings (stored as text to keep values like "<0.10" as entered)
+  earthContinuity: text("earth_continuity"), // Ω
+  insulationOperator: text("insulation_operator"), // '>', '<' or '='
+  insulationResistance: text("insulation_resistance"), // MΩ
+  polarity: text("polarity"), // 'pass', 'fail' or 'na'
+  leakageCurrent: text("leakage_current"), // mA (optional)
   // Emergency exit light specific fields (AS/NZS 2293.2:2019)
   maintenanceType: text("maintenance_type"), // 'maintained' or 'non_maintained'
   globeType: text("globe_type"), // 'led' or 'fluorescent'

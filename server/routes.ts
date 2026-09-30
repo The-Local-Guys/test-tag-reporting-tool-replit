@@ -700,6 +700,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           notes: r.notes ?? undefined,
           visionInspection: r.visionInspection ?? undefined,
           electricalTest: r.electricalTest ?? undefined,
+          // Electrical readings
+          earthContinuity: r.earthContinuity ?? undefined,
+          insulationOperator: r.insulationOperator ?? undefined,
+          insulationResistance: r.insulationResistance ?? undefined,
+          polarity: r.polarity ?? undefined,
+          leakageCurrent: r.leakageCurrent ?? undefined,
           // Emergency exit light fields
           maintenanceType: r.maintenanceType ?? undefined,
           globeType: r.globeType ?? undefined,
@@ -1039,6 +1045,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             circuitBreakerNumber: batchedResult.circuitBreakerNumber || null,
             // Map microwave test fields from batch data
             leakageReading: batchedResult.leakageReading || null,
+            // Map electrical readings from batch data
+            earthContinuity: batchedResult.earthContinuity || null,
+            insulationOperator: batchedResult.insulationOperator || null,
+            insulationResistance: batchedResult.insulationResistance || null,
+            polarity: batchedResult.polarity || null,
+            leakageCurrent: batchedResult.leakageCurrent || null,
           };
 
           console.log('Attempting to insert test result:', resultData);
@@ -1209,6 +1221,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           circuitBreakerNumber: req.body.circuitBreakerNumber || null,
           // Microwave test specific fields (AS/NZS 60335.2.25)
           leakageReading: req.body.leakageReading || null,
+          // Electrical test & tag readings
+          earthContinuity: req.body.earthContinuity || null,
+          insulationOperator: req.body.insulationOperator || null,
+          insulationResistance: req.body.insulationResistance || null,
+          polarity: req.body.polarity || null,
+          leakageCurrent: req.body.leakageCurrent || null,
         };
 
         console.log(`[${requestId}] Request body received:`, {
@@ -1396,6 +1414,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Microwave testing fields
         if (req.body.leakageReading !== undefined) updateData.leakageReading = req.body.leakageReading || null;
+
+        // Electrical test & tag readings
+        for (const field of ['earthContinuity', 'insulationOperator', 'insulationResistance', 'polarity', 'leakageCurrent'] as const) {
+          if (req.body[field] !== undefined) updateData[field] = req.body[field] || null;
+        }
 
         const result = await storage.updateTestResult(resultId, updateData);
         res.json(result);

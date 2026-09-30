@@ -10,6 +10,14 @@ import { failureReasons, emergencyFailureReasons, fireFailureReasons, rcdFailure
 import { parseRcdTripTimesInput, resolveRcdTripTimes } from "@/lib/rcd-trip-times";
 
 import { TestPhotoInput } from "@/components/test-photo-input";
+import { ElectricalReadingsFields } from "@/components/electrical-readings-fields";
+import {
+  fromElectricalReadingFields,
+  hasElectricalReadings,
+  toElectricalReadingFields,
+  validateElectricalReadings,
+  type ElectricalReadingErrors,
+} from "@/lib/electrical-readings";
 
 interface TestResultEditModalProps {
   isOpen: boolean;
@@ -57,7 +65,17 @@ export function TestResultEditModal({
     }
   }, [isOpen, editResultData.tripTimes, editResultData.trip_times]);
 
+  const [readingErrors, setReadingErrors] = useState<ElectricalReadingErrors>({});
+  useEffect(() => { setReadingErrors({}); }, [isOpen]);
+
   const saveWithCurrentTripTimes = () => {
+    // Older electrical results may have no readings; once any reading is entered the required ones must be complete
+    if (serviceType === 'electrical' && hasElectricalReadings(editResultData)) {
+      const errors = validateElectricalReadings(fromElectricalReadingFields(editResultData));
+      setReadingErrors(errors);
+      if (Object.keys(errors).length > 0) return;
+    }
+
     onSave({
       ...editResultData,
       // Cap to a single trip time
@@ -721,6 +739,13 @@ export function TestResultEditModal({
               />
               <Label htmlFor="edit-electricalTest-pat">Electrical Test</Label>
             </div>
+            <Label className="text-sm font-medium text-gray-700 pt-2 block">Test Readings</Label>
+            <ElectricalReadingsFields
+              idPrefix="edit-reading"
+              readings={fromElectricalReadingFields(editResultData)}
+              onChange={(next) => setEditResultData((prev: any) => ({ ...prev, ...toElectricalReadingFields(next) }))}
+              errors={readingErrors}
+            />
           </div>
         )}
 

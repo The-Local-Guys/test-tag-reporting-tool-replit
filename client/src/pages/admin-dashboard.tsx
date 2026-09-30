@@ -409,6 +409,12 @@ export default function AdminDashboard() {
     testType: null as string | null,
     // Microwave Leakage specific fields
     leakageReading: null as string | null,
+    // Electrical test & tag readings
+    earthContinuity: null as string | null,
+    insulationOperator: null as string | null,
+    insulationResistance: null as string | null,
+    polarity: null as string | null,
+    leakageCurrent: null as string | null,
     // RCD-specific fields
     pushButtonTest: false as boolean,
     injectionTimedTest: false as boolean,
@@ -1482,6 +1488,12 @@ export default function AdminDashboard() {
       testType: result.testType ?? result.test_type ?? null,
       // Microwave Leakage specific fields
       leakageReading: result.leakageReading ?? result.leakage_reading ?? null,
+      // Electrical test & tag readings
+      earthContinuity: result.earthContinuity ?? result.earth_continuity ?? null,
+      insulationOperator: result.insulationOperator ?? result.insulation_operator ?? null,
+      insulationResistance: result.insulationResistance ?? result.insulation_resistance ?? null,
+      polarity: result.polarity ?? null,
+      leakageCurrent: result.leakageCurrent ?? result.leakage_current ?? null,
       // RCD-specific fields
       pushButtonTest: result.pushButtonTest ?? result.push_button_test ?? false,
       injectionTimedTest: result.injectionTimedTest ?? result.injection_timed_test ?? false,
@@ -1617,6 +1629,12 @@ export default function AdminDashboard() {
       circuitBreakerNumber: resultData.circuitBreakerNumber,
       // Microwave leakage fields
       leakageReading: resultData.leakageReading,
+      // Electrical test & tag readings
+      earthContinuity: resultData.earthContinuity,
+      insulationOperator: resultData.insulationOperator,
+      insulationResistance: resultData.insulationResistance,
+      polarity: resultData.polarity,
+      leakageCurrent: resultData.leakageCurrent,
     };
 
     console.log(`Admin: Manually updating asset number to: ${resultData.assetNumber}`);
