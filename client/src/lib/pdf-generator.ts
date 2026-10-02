@@ -599,9 +599,13 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     );
     const lineHeight = 4; // Height per line
     const rowHeight = maxLines * lineHeight;
-    
+
+    // Electrical Test & Tag readings render as one extra line directly below the item's row
+    const showReadings = session.serviceType === 'electrical' && hasElectricalReadings(result);
+    const readingsHeight = showReadings ? lineHeight : 0;
+
     // Check if we need a new page (accounting for row height)
-    if (yPosition + rowHeight > doc.internal.pageSize.height - 30) {
+    if (yPosition + rowHeight + readingsHeight > doc.internal.pageSize.height - 30) {
       doc.addPage();
       yPosition = await addLetterheadToPage(doc, margin, pageWidth);
     }
@@ -917,77 +921,31 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     }
     } // Close the outer if statement for microwave_leakage exclusion
 
-    // Use dynamic row height instead of fixed 6
-    yPosition += rowHeight + 2; // Add 2 for spacing between rows
-  }
-
-  // Electrical Test Readings table (Electrical Test & Tag only, when any readings were recorded)
-  const resultsWithReadings = session.serviceType === 'electrical' ? results.filter(hasElectricalReadings) : [];
-  if (resultsWithReadings.length > 0) {
-    // Columns: Asset# | Item | Visual | Earth (Ohm) | Insulation (MOhm) | Polarity | Leakage (mA)
-    // (Helvetica has no Ω glyph, so units are spelled out)
-    const readingColumns = { asset: 0, item: 16, visual: 60, earth: 78, insulation: 100, polarity: 125, leakage: 145 };
-    const drawReadingsHeader = () => {
-      doc.setFontSize(6);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Asset#', margin + readingColumns.asset, yPosition);
-      doc.text('Item', margin + readingColumns.item, yPosition);
-      doc.text('Visual', margin + readingColumns.visual, yPosition);
-      doc.text('Earth (Ohm)', margin + readingColumns.earth, yPosition);
-      doc.text('Insulation (MOhm)', margin + readingColumns.insulation, yPosition);
-      doc.text('Polarity', margin + readingColumns.polarity, yPosition);
-      doc.text('Leakage (mA)', margin + readingColumns.leakage, yPosition);
-      yPosition += 7;
-      doc.setFont('helvetica', 'normal');
-    };
-
-    yPosition += 10;
-    if (yPosition > doc.internal.pageSize.height - 60) {
-      doc.addPage();
-      yPosition = await addLetterheadToPage(doc, margin, pageWidth);
-    }
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Electrical Test Readings', margin, yPosition);
-    yPosition += 10;
-    drawReadingsHeader();
-
-    const lineHeight = 4;
-    for (const result of resultsWithReadings) {
-      const assetLines = clampCellLines(doc.splitTextToSize(
-        formatAssetNumberWithFrequency(result.assetNumber.toString(), result.frequency, session.serviceType, results),
-        14,
-      ));
-      const itemLines = clampCellLines(doc.splitTextToSize(result.itemName, 42));
-      const rowHeight = Math.max(assetLines.length, itemLines.length) * lineHeight;
-
-      if (yPosition + rowHeight > doc.internal.pageSize.height - 30) {
-        doc.addPage();
-        yPosition = await addLetterheadToPage(doc, margin, pageWidth);
-        drawReadingsHeader();
-      }
-
-      const rowStartY = yPosition;
-      assetLines.forEach((line: string, i: number) => doc.text(line, margin + readingColumns.asset, rowStartY + i * lineHeight));
-      itemLines.forEach((line: string, i: number) => doc.text(line, margin + readingColumns.item, rowStartY + i * lineHeight));
-
-      const visualPassed = result.visionInspection !== false;
-      doc.setTextColor(...(visualPassed ? [0, 0, 0] : [255, 0, 0]) as [number, number, number]);
-      doc.text(visualPassed ? 'Pass' : 'Fail', margin + readingColumns.visual, rowStartY);
-      doc.setTextColor(0, 0, 0);
-
-      doc.text(formatEarthContinuity(result), margin + readingColumns.earth, rowStartY);
-      doc.text(formatInsulationResistance(result), margin + readingColumns.insulation, rowStartY);
-
+    // Electrical readings sub-line (Helvetica has no Ω glyph, so units are spelled out)
+    if (showReadings) {
+      const readingsY = yPosition + rowHeight;
       const polarityFailed = result.polarity === 'fail';
-      if (polarityFailed) doc.setTextColor(255, 0, 0);
-      doc.text(formatPolarity(result), margin + readingColumns.polarity, rowStartY);
+      const segments: { text: string; red?: boolean }[] = [
+        { text: `Earth: ${formatEarthContinuity(result)} Ohm` },
+        { text: `Insulation: ${formatInsulationResistance(result)} MOhm` },
+        { text: `Polarity: ${formatPolarity(result)}`, red: polarityFailed },
+        { text: `Leakage: ${formatLeakageCurrent(result)} mA` },
+      ];
+      doc.setFont('helvetica', 'italic');
+      let x = margin + 12;
+      segments.forEach((segment, i) => {
+        const text = i < segments.length - 1 ? `${segment.text}   |   ` : segment.text;
+        if (segment.red) doc.setTextColor(255, 0, 0);
+        else doc.setTextColor(90, 90, 90);
+        doc.text(text, x, readingsY);
+        x += doc.getTextWidth(text);
+      });
       doc.setTextColor(0, 0, 0);
-
-      doc.text(formatLeakageCurrent(result), margin + readingColumns.leakage, rowStartY);
-
-      yPosition += rowHeight + 2;
+      doc.setFont('helvetica', 'normal');
     }
+
+    // Use dynamic row height instead of fixed 6
+    yPosition += rowHeight + readingsHeight + 2; // Add 2 for spacing between rows
   }
 
   // Add emergency exit light test criteria details (AS/NZS 2293.2:2019)
