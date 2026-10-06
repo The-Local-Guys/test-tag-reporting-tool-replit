@@ -9,6 +9,7 @@ import {
   formatLeakageCurrent,
   formatPolarity,
   hasElectricalReadings,
+  READING_BLANK,
 } from './electrical-readings';
 
 interface ReportData {
@@ -929,8 +930,12 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         { text: `Earth: ${formatEarthContinuity(result)} Ohm` },
         { text: `Insulation: ${formatInsulationResistance(result)} MOhm` },
         { text: `Polarity: ${formatPolarity(result)}`, red: polarityFailed },
-        { text: `Leakage: ${formatLeakageCurrent(result)} mA` },
       ];
+      // Leakage current is optional - omit it entirely when not recorded
+      const leakageCurrent = formatLeakageCurrent(result);
+      if (leakageCurrent !== READING_BLANK) {
+        segments.push({ text: `Leakage: ${leakageCurrent} mA` });
+      }
       doc.setFont('helvetica', 'italic');
       let x = margin + 12;
       segments.forEach((segment, i) => {
