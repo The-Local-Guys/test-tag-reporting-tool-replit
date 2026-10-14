@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils';
 import {
   EARTH_CONTINUITY_QUICK_VALUE,
   INSULATION_OPERATORS,
+  INSULATION_QUICK_OPERATOR,
+  INSULATION_QUICK_VALUE,
   POLARITY_OPTIONS,
   type ElectricalReadingErrors,
   type ElectricalReadings,
@@ -24,7 +26,7 @@ function FieldError({ message }: { message?: string }) {
 }
 
 /**
- * Earth continuity, insulation resistance, polarity and (optional) leakage current inputs
+ * Optional earth continuity, insulation resistance, polarity and leakage current inputs
  * for electrical test & tag items. Shared by the test screen and the edit modal.
  */
 export function ElectricalReadingsFields({
@@ -40,7 +42,7 @@ export function ElectricalReadingsFields({
       {/* Earth Continuity */}
       <div className="space-y-1">
         <Label htmlFor={`${idPrefix}-earth`} className="text-sm font-medium text-gray-700">
-          Earth Continuity (Ω) *
+          Earth Continuity (Ω) <span className="font-normal text-gray-400">Optional</span>
         </Label>
         <div className="flex gap-2">
           <Input
@@ -66,7 +68,7 @@ export function ElectricalReadingsFields({
       {/* Insulation Resistance */}
       <div className="space-y-1">
         <Label htmlFor={`${idPrefix}-insulation`} className="text-sm font-medium text-gray-700">
-          Insulation Resistance (MΩ) *
+          Insulation Resistance (MΩ) <span className="font-normal text-gray-400">Optional</span>
         </Label>
         <div className="flex gap-2">
           <Select
@@ -85,18 +87,33 @@ export function ElectricalReadingsFields({
           <Input
             id={`${idPrefix}-insulation`}
             inputMode="decimal"
-            placeholder="e.g. 99.99"
+            placeholder="e.g. 19.99"
             value={readings.insulationResistance}
             onChange={(e) => update({ insulationResistance: e.target.value })}
             className={cn('text-base', errors.insulationResistance && 'border-red-500')}
           />
+          <Button
+            type="button"
+            variant={
+              readings.insulationOperator === INSULATION_QUICK_OPERATOR &&
+              readings.insulationResistance === INSULATION_QUICK_VALUE
+                ? 'default'
+                : 'outline'
+            }
+            onClick={() =>
+              update({ insulationOperator: INSULATION_QUICK_OPERATOR, insulationResistance: INSULATION_QUICK_VALUE })
+            }
+            className="shrink-0"
+          >
+            {INSULATION_QUICK_OPERATOR}{INSULATION_QUICK_VALUE}
+          </Button>
         </div>
         <FieldError message={errors.insulationResistance} />
       </div>
 
       {/* Polarity */}
       <div className="space-y-1">
-        <Label className="text-sm font-medium text-gray-700">Polarity *</Label>
+        <Label className="text-sm font-medium text-gray-700">Polarity <span className="font-normal text-gray-400">Optional</span></Label>
         <div className="grid grid-cols-3 gap-2">
           {POLARITY_OPTIONS.map((option) => {
             const selected = readings.polarity === option.value;
@@ -105,7 +122,7 @@ export function ElectricalReadingsFields({
                 key={option.value}
                 type="button"
                 variant={selected ? 'default' : 'outline'}
-                onClick={() => update({ polarity: option.value })}
+                onClick={() => update({ polarity: selected ? '' : option.value })}
                 className={cn(
                   selected && option.value === 'pass' && 'bg-success hover:bg-green-600',
                   selected && option.value === 'fail' && 'bg-error hover:bg-red-600',
@@ -119,7 +136,7 @@ export function ElectricalReadingsFields({
         <FieldError message={errors.polarity} />
       </div>
 
-      {/* Leakage Current (optional, always last) */}
+      {/* Leakage Current (always last) */}
       <div className="space-y-1">
         <Label htmlFor={`${idPrefix}-leakage`} className="text-sm font-medium text-gray-700">
           Leakage Current (mA) <span className="font-normal text-gray-400">Optional</span>

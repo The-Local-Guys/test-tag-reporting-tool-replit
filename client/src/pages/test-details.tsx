@@ -222,12 +222,12 @@ export default function TestDetails() {
     const formValues = form.getValues();
     console.log('🎯 Form values:', formValues);
 
-    // Earth continuity, insulation resistance and polarity are required
+    // Readings are optional, but any entered value must be valid
     const errors = validateElectricalReadings(readings);
     setReadingErrors(errors);
     if (Object.keys(errors).length > 0) {
       toast({
-        title: 'Test readings required',
+        title: 'Invalid test reading',
         description: Object.values(errors)[0],
         variant: 'destructive',
       });

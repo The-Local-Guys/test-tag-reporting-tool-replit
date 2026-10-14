@@ -1,5 +1,5 @@
 // Electrical test & tag readings (earth continuity, insulation resistance, polarity, leakage current).
-// Values are kept as strings so readings like "<0.10" are stored exactly as entered.
+// Values are kept as strings so readings like "<0.05" are stored exactly as entered.
 
 export type PolarityValue = 'pass' | 'fail' | 'na';
 
@@ -13,8 +13,10 @@ export interface ElectricalReadings {
 
 export type ElectricalReadingErrors = Partial<Record<keyof ElectricalReadings, string>>;
 
-export const EARTH_CONTINUITY_QUICK_VALUE = '<0.10';
+export const EARTH_CONTINUITY_QUICK_VALUE = '<0.05';
 export const INSULATION_OPERATORS = ['>', '<', '='] as const;
+export const INSULATION_QUICK_OPERATOR = '>';
+export const INSULATION_QUICK_VALUE = '19.99';
 
 export const POLARITY_OPTIONS: { value: PolarityValue; label: string }[] = [
   { value: 'pass', label: 'Pass' },
@@ -26,8 +28,8 @@ export function getDefaultElectricalReadings(): ElectricalReadings {
   return {
     earthContinuity: '',
     insulationOperator: '>',
-    insulationResistance: '99.99',
-    polarity: 'pass',
+    insulationResistance: '',
+    polarity: '',
     leakageCurrent: '',
   };
 }
@@ -36,24 +38,18 @@ function isNumeric(value: string): boolean {
   return value.trim() !== '' && Number.isFinite(Number(value.trim()));
 }
 
+// All readings are optional; only entered values are checked for format.
 export function validateElectricalReadings(readings: ElectricalReadings): ElectricalReadingErrors {
   const errors: ElectricalReadingErrors = {};
   const earth = readings.earthContinuity.trim();
 
-  if (!earth) {
-    errors.earthContinuity = 'Earth continuity is required';
-  } else if (earth !== EARTH_CONTINUITY_QUICK_VALUE && !isNumeric(earth)) {
-    errors.earthContinuity = 'Enter a number or select <0.10';
+  // Allow a leading "<" so the quick value and older saved values (e.g. "<0.10") stay valid
+  if (earth && !isNumeric(earth.replace(/^</, ''))) {
+    errors.earthContinuity = `Enter a number or select ${EARTH_CONTINUITY_QUICK_VALUE}`;
   }
 
-  if (!readings.insulationResistance.trim()) {
-    errors.insulationResistance = 'Insulation resistance is required';
-  } else if (!isNumeric(readings.insulationResistance)) {
+  if (readings.insulationResistance.trim() && !isNumeric(readings.insulationResistance)) {
     errors.insulationResistance = 'Enter a number';
-  }
-
-  if (!readings.polarity) {
-    errors.polarity = 'Polarity is required';
   }
 
   if (readings.leakageCurrent.trim() && !isNumeric(readings.leakageCurrent)) {

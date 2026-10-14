@@ -8,7 +8,6 @@ import {
   formatInsulationResistance,
   formatLeakageCurrent,
   formatPolarity,
-  hasElectricalReadings,
   READING_BLANK,
 } from './electrical-readings';
 
@@ -602,7 +601,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     const rowHeight = maxLines * lineHeight;
 
     // Electrical Test & Tag readings render as one extra line directly below the item's row
-    const showReadings = session.serviceType === 'electrical' && hasElectricalReadings(result);
+    const showReadings = session.serviceType === 'electrical';
     const readingsHeight = showReadings ? lineHeight : 0;
 
     // Check if we need a new page (accounting for row height)
@@ -926,26 +925,43 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     if (showReadings) {
       const readingsY = yPosition + rowHeight;
       const polarityFailed = result.polarity === 'fail';
-      const segments: { text: string; red?: boolean }[] = [
-        { text: `Earth: ${formatEarthContinuity(result)} Ohm` },
-        { text: `Insulation: ${formatInsulationResistance(result)} MOhm` },
-        { text: `Polarity: ${formatPolarity(result)}`, red: polarityFailed },
-      ];
-      // Leakage current is optional - omit it entirely when not recorded
+      // Earth, insulation and polarity show a tick when no value was entered; leakage is omitted
+      const segments: { label: string; value: string | null; red?: boolean }[] = [];
+      const earthContinuity = formatEarthContinuity(result);
+      segments.push({ label: 'Earth: ', value: earthContinuity !== READING_BLANK ? `${earthContinuity} Ohm` : null });
+      const insulationResistance = formatInsulationResistance(result);
+      segments.push({ label: 'Insulation: ', value: insulationResistance !== READING_BLANK ? `${insulationResistance} MOhm` : null });
+      const polarity = formatPolarity(result);
+      segments.push({ label: 'Polarity: ', value: polarity !== READING_BLANK ? polarity : null, red: polarityFailed });
       const leakageCurrent = formatLeakageCurrent(result);
-      if (leakageCurrent !== READING_BLANK) {
-        segments.push({ text: `Leakage: ${leakageCurrent} mA` });
-      }
+      if (leakageCurrent !== READING_BLANK) segments.push({ label: 'Leakage: ', value: `${leakageCurrent} mA` });
       doc.setFont('helvetica', 'italic');
+      doc.setDrawColor(90, 90, 90);
+      doc.setLineWidth(0.3);
       let x = margin + 12;
       segments.forEach((segment, i) => {
-        const text = i < segments.length - 1 ? `${segment.text}   |   ` : segment.text;
         if (segment.red) doc.setTextColor(255, 0, 0);
         else doc.setTextColor(90, 90, 90);
-        doc.text(text, x, readingsY);
-        x += doc.getTextWidth(text);
+        doc.text(segment.label, x, readingsY);
+        x += doc.getTextWidth(segment.label);
+        if (segment.value !== null) {
+          doc.text(segment.value, x, readingsY);
+          x += doc.getTextWidth(segment.value);
+        } else {
+          // Helvetica has no check mark glyph, so draw the tick as two lines
+          doc.line(x, readingsY - 1.1, x + 0.8, readingsY - 0.2);
+          doc.line(x + 0.8, readingsY - 0.2, x + 2.4, readingsY - 2.4);
+          x += 2.6;
+        }
+        if (i < segments.length - 1) {
+          doc.setTextColor(90, 90, 90);
+          doc.text('   |   ', x, readingsY);
+          x += doc.getTextWidth('   |   ');
+        }
       });
       doc.setTextColor(0, 0, 0);
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.200025); // jsPDF default, used by the table borders
       doc.setFont('helvetica', 'normal');
     }
 

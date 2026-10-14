@@ -100,7 +100,7 @@ export const testResults = pgTable("test_results", {
   photoData: text("photo_data"), // Base64 encoded photo for failed items
   visionInspection: boolean("vision_inspection").default(true), // Vision inspection completed
   electricalTest: boolean("electrical_test").default(true), // Electrical test completed
-  // Electrical test & tag readings (stored as text to keep values like "<0.10" as entered)
+  // Electrical test & tag readings (stored as text to keep values like "<0.05" as entered)
   earthContinuity: text("earth_continuity"), // Ω
   insulationOperator: text("insulation_operator"), // '>', '<' or '='
   insulationResistance: text("insulation_resistance"), // MΩ

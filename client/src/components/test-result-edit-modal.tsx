@@ -69,7 +69,7 @@ export function TestResultEditModal({
   useEffect(() => { setReadingErrors({}); }, [isOpen]);
 
   const saveWithCurrentTripTimes = () => {
-    // Older electrical results may have no readings; once any reading is entered the required ones must be complete
+    // Readings are optional, but any entered value must be valid
     if (serviceType === 'electrical' && hasElectricalReadings(editResultData)) {
       const errors = validateElectricalReadings(fromElectricalReadingFields(editResultData));
       setReadingErrors(errors);
