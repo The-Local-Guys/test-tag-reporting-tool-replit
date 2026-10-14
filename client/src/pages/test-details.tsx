@@ -25,6 +25,8 @@ import {
   type ElectricalReadingErrors,
   type ElectricalReadings,
 } from '@/lib/electrical-readings';
+import { getSuggestedThreeMonthlyDueDate } from '@/lib/three-monthly-due-date';
+import { SuggestedDueDateButton } from '@/components/suggested-due-date-button';
 
 const classificationOptions = [
   { value: 'class1', label: 'Class 1' },
@@ -77,6 +79,7 @@ export default function TestDetails() {
   const streamRef = useRef<MediaStream | null>(null);
   const { sessionId, sessionData, currentLocation, addToBatch, assetProgress, customStartingNumbers } = useSession();
   const testDate = sessionData?.session?.testDate || '';
+  const suggestedDueDate = getSuggestedThreeMonthlyDueDate(testDate);
   const [, setLocation] = useLocation();
   const search = useSearch();
   
@@ -504,6 +507,13 @@ export default function TestDetails() {
                 onChange={(e) => setCustomExpiryDate(e.target.value)}
                 className="text-base"
               />
+              {suggestedDueDate && (
+                <SuggestedDueDateButton
+                  suggestedDate={suggestedDueDate}
+                  currentDate={customExpiryDate}
+                  onApply={setCustomExpiryDate}
+                />
+              )}
               <div className="text-xs text-gray-500">
                 Leave blank to use 3 months from the test date
               </div>

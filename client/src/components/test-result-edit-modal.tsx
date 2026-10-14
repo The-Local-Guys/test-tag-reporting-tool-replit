@@ -8,6 +8,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { failureReasons, emergencyFailureReasons, fireFailureReasons, rcdFailureReasons, MAX_TEST_RESULT_NOTES_LENGTH } from '@shared/schema';
 import { parseRcdTripTimesInput, resolveRcdTripTimes } from "@/lib/rcd-trip-times";
+import { getSuggestedThreeMonthlyDueDate } from "@/lib/three-monthly-due-date";
+import { SuggestedDueDateButton } from "@/components/suggested-due-date-button";
 
 import { TestPhotoInput } from "@/components/test-photo-input";
 import { ElectricalReadingsFields } from "@/components/electrical-readings-fields";
@@ -144,6 +146,8 @@ export function TestResultEditModal({
     }));
     onFrequencyChange?.(value);
   };
+
+  const suggestedDueDate = getSuggestedThreeMonthlyDueDate(testDate);
 
   const isExpiryBeforeTestDate =
     (editResultData.frequency === 'customfrequency' || editResultData.frequency === 'threemonthly') &&
@@ -348,6 +352,14 @@ export function TestResultEditModal({
                   onChange={(e) => setEditResultData((prev: any) => ({ ...prev, expiryDate: e.target.value || null }))}
                   className="text-base"
                 />
+                {suggestedDueDate && (
+                  <SuggestedDueDateButton
+                    suggestedDate={suggestedDueDate}
+                    currentDate={editResultData.expiryDate}
+                    onApply={(date) => setEditResultData((prev: any) => ({ ...prev, expiryDate: date }))}
+                    className="mt-2"
+                  />
+                )}
                 <div className="text-xs text-gray-500 mt-1">
                   Leave blank to use 3 months from the test date
                 </div>
