@@ -150,6 +150,8 @@ export function useSession() {
     return stored ? parseInt(stored, 10) : null;
   });
   const [currentLocation, setCurrentLocation] = useState<string>('');
+  // Last custom due date used on a 3 monthly electrical item, carried to the next one
+  const [currentThreeMonthlyDueDate, setCurrentThreeMonthlyDueDate] = useState<string>('');
   const [currentDistributionBoardNumber, setCurrentDistributionBoardNumber] = useState<string>('');
   const [currentCircuitBreakerNumber, setCurrentCircuitBreakerNumber] = useState<string>('');
 
@@ -438,6 +440,15 @@ export function useSession() {
           setCurrentLocation(lastResult.location);
           console.log('📍 Restored location from last result:', lastResult.location);
         }
+      }
+
+      // Restore last used 3 monthly custom due date from most recent 3 monthly result
+      const lastThreeMonthlyResult = [...loadedResults]
+        .reverse()
+        .find(r => r.frequency === 'threemonthly');
+      if (lastThreeMonthlyResult?.expiryDate) {
+        setCurrentThreeMonthlyDueDate(lastThreeMonthlyResult.expiryDate);
+        console.log('📍 Restored 3 monthly due date from last result:', lastThreeMonthlyResult.expiryDate);
       }
 
       // Restore last used distribution board number from most recent Fixed RCD result
@@ -1042,6 +1053,11 @@ export function useSession() {
 
     // Update current location
     setCurrentLocation(cleanData.location);
+
+    // Update current 3 monthly due date (a blank one clears it, same as location)
+    if (cleanData.frequency === 'threemonthly') {
+      setCurrentThreeMonthlyDueDate(cleanData.expiryDate || '');
+    }
 
     // Update current distribution board number and circuit breaker number (for RCD reporting - Fixed RCD only)
     const isFixedRcd = cleanData.itemName?.toLowerCase().includes('fixed rcd');
@@ -1667,6 +1683,7 @@ export function useSession() {
   const clearSession = () => {
     setSessionId(null);
     setCurrentLocation('');
+    setCurrentThreeMonthlyDueDate('');
     setCurrentDistributionBoardNumber('');
     setCurrentCircuitBreakerNumber('');
     updateBatchedResultsState([]);
@@ -1730,6 +1747,7 @@ export function useSession() {
     sessionData,
     currentLocation,
     setCurrentLocation,
+    currentThreeMonthlyDueDate,
     currentDistributionBoardNumber,
     setCurrentDistributionBoardNumber,
     currentCircuitBreakerNumber,

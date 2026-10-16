@@ -64,7 +64,8 @@ export default function TestDetails() {
     return sessionStorage.getItem('lastSelectedFrequency') || 'twelvemonthly';
   });
   // Explicit expiry date (ISO yyyy-mm-dd): required for 'customfrequency', optional
-  // custom due date for 'threemonthly'. Resets for each item.
+  // custom due date for 'threemonthly'. The 3 monthly due date carries over from
+  // the previous 3 monthly item; the custom frequency expiry resets for each item.
   const [customExpiryDate, setCustomExpiryDate] = useState('');
   const [currentItem, setCurrentItem] = useState<{name: string, type: string} | null>(null);
   const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]);
@@ -77,7 +78,7 @@ export default function TestDetails() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const { sessionId, sessionData, currentLocation, addToBatch, assetProgress, customStartingNumbers } = useSession();
+  const { sessionId, sessionData, currentLocation, currentThreeMonthlyDueDate, addToBatch, assetProgress, customStartingNumbers } = useSession();
   const testDate = sessionData?.session?.testDate || '';
   const suggestedDueDate = getSuggestedThreeMonthlyDueDate(testDate);
   const [, setLocation] = useLocation();
@@ -119,6 +120,13 @@ export default function TestDetails() {
       form.setValue('location', currentLocation);
     }
   }, [currentLocation, form]);
+
+  // Pre-fill the 3 monthly due date with the one used on the previous 3 monthly item
+  useEffect(() => {
+    if (currentThreeMonthlyDueDate && selectedFrequency === 'threemonthly') {
+      setCustomExpiryDate(currentThreeMonthlyDueDate);
+    }
+  }, [currentThreeMonthlyDueDate]);
 
   // Update asset number field when assetProgress or frequency changes
   // Only auto-update if user hasn't manually edited the field
@@ -454,7 +462,7 @@ export default function TestDetails() {
           </Label>
           <Select value={selectedFrequency} onValueChange={(value) => {
             setSelectedFrequency(value);
-            setCustomExpiryDate('');
+            setCustomExpiryDate(value === 'threemonthly' ? currentThreeMonthlyDueDate : '');
             // Reset manual edit flag so asset number updates based on new frequency
             setHasManuallyEditedAssetNumber(false);
             // Save the selected frequency to sessionStorage for next item
