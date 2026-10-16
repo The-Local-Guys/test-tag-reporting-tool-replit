@@ -2244,7 +2244,7 @@ export default function AdminDashboard() {
                         <TableHead>Username</TableHead>
                         <TableHead>Role</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Created</TableHead>
+                        <TableHead>Created (DD/MM/YYYY)</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -2273,7 +2273,7 @@ export default function AdminDashboard() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            {new Date(user.createdAt).toLocaleDateString()}
+                            {new Date(user.createdAt).toLocaleDateString("en-AU")}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-2">
@@ -2472,7 +2472,7 @@ export default function AdminDashboard() {
                           <TableHead className="min-w-[120px]">Client Name</TableHead>
                           <TableHead className="min-w-[120px]">Technician</TableHead>
                           <TableHead className="min-w-[140px]">Service Type</TableHead>
-                          <TableHead className="min-w-[100px]">Date</TableHead>
+                          <TableHead className="min-w-[110px]">Date (DD/MM/YYYY)</TableHead>
                           <TableHead className="min-w-[100px]">Results</TableHead>
                           <TableHead className="min-w-[160px]">Actions</TableHead>
                         </TableRow>
@@ -2830,8 +2830,8 @@ export default function AdminDashboard() {
                             <TableHead className="min-w-[120px]">Technician</TableHead>
                             <TableHead className="min-w-[140px]">Service Type</TableHead>
                             <TableHead className="min-w-[80px]">Items</TableHead>
-                            <TableHead className="min-w-[120px]">Last Activity</TableHead>
-                            <TableHead className="min-w-[100px]">Created</TableHead>
+                            <TableHead className="min-w-[130px]">Last Activity (DD/MM, HH:MM)</TableHead>
+                            <TableHead className="min-w-[110px]">Created (DD/MM/YYYY)</TableHead>
                             <TableHead className="min-w-[120px]">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -3071,8 +3071,8 @@ export default function AdminDashboard() {
                             <TableHead className="min-w-[120px]">Client Name</TableHead>
                             <TableHead className="min-w-[140px]">Service Type</TableHead>
                             <TableHead className="min-w-[80px]">Items</TableHead>
-                            <TableHead className="min-w-[120px]">Last Activity</TableHead>
-                            <TableHead className="min-w-[100px]">Created</TableHead>
+                            <TableHead className="min-w-[130px]">Last Activity (DD/MM, HH:MM)</TableHead>
+                            <TableHead className="min-w-[110px]">Created (DD/MM/YYYY)</TableHead>
                             <TableHead className="min-w-[160px]">Actions</TableHead>
                           </TableRow>
                         </TableHeader>

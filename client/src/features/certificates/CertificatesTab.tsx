@@ -267,7 +267,7 @@ export function CertificatesTab() {
                   <TableHead>Client Name</TableHead>
                   <TableHead>Address</TableHead>
                   <TableHead>Services</TableHead>
-                  <TableHead>Issue Date</TableHead>
+                  <TableHead>Issue Date (DD/MM/YYYY)</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
