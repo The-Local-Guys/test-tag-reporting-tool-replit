@@ -492,8 +492,10 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       // For fire extinguishers, show the specific extinguisher type from dedicated column
       if (result.classification === 'fire_extinguisher' && result.extinguisherType) {
         displayType = result.extinguisherType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      } else if (result.classification === 'smoke_alarm' && (result as any).smokeAlarmType) {
+        displayType = ((result as any).smokeAlarmType as string).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
       }
-      
+
       typeLines = clampCellLines(doc.splitTextToSize(displayType, typeWidth));
     } else if (session.serviceType === 'emergency_exit_light') {
       // Add word wrapping for manufacturer info in emergency exit light
@@ -1094,19 +1096,25 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       const passOrFail = (val: boolean | null | undefined) => val === false ? 'Fail' : 'Pass';
 
       doc.setFont('helvetica', 'normal');
-      // Per-item standard: fire hydrants in New Zealand follow NZS 4510:2022;
-      // Australia and all other fire equipment use the report's country-based standard.
-      const itemStandard = (equipmentType === 'fire_hydrant' && session.country === 'newzealand')
+      // Per-item standard: smoke alarms always follow AS 3786; fire hydrants in New Zealand
+      // follow NZS 4510:2022; Australia and all other fire equipment use the report's
+      // country-based standard.
+      const itemStandard = equipmentType === 'smoke_alarm'
+        ? 'AS 3786'
+        : (equipmentType === 'fire_hydrant' && session.country === 'newzealand')
         ? 'NZS 4510:2022'
         : complianceStandard;
       doc.text(`• Standard: ${itemStandard}`, margin + 5, yPosition);
       yPosition += 6;
-      doc.text(`• Visual Inspection (Physical condition, damage, corrosion): ${passOrFail(result.visionInspection)}`, margin + 5, yPosition);
-      yPosition += 6;
-      doc.text(`• Accessibility Check (Clear access, not obstructed): ${passOrFail(result.accessibilityCheck)}`, margin + 5, yPosition);
-      yPosition += 6;
-      doc.text(`• Signage Check (Proper signage and instructions visible): ${passOrFail(result.signageCheck)}`, margin + 5, yPosition);
-      yPosition += 6;
+
+      if (equipmentType !== 'smoke_alarm') {
+        doc.text(`• Visual Inspection (Physical condition, damage, corrosion): ${passOrFail(result.visionInspection)}`, margin + 5, yPosition);
+        yPosition += 6;
+        doc.text(`• Accessibility Check (Clear access, not obstructed): ${passOrFail(result.accessibilityCheck)}`, margin + 5, yPosition);
+        yPosition += 6;
+        doc.text(`• Signage Check (Proper signage and instructions visible): ${passOrFail(result.signageCheck)}`, margin + 5, yPosition);
+        yPosition += 6;
+      }
 
       // Equipment-specific tests
       if (equipmentType === 'fire_extinguisher') {
@@ -1125,11 +1133,24 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       } else if (equipmentType === 'fire_blanket') {
         doc.text(`• Operational Test (Easy removal, blanket condition): ${passOrFail(result.operationalTest)}`, margin + 5, yPosition);
         yPosition += 6;
+      } else if (equipmentType === 'smoke_alarm') {
+        doc.text(`• Push Button Testing: ${passOrFail((result as any).pushButtonTest)}`, margin + 5, yPosition);
+        yPosition += 6;
+        doc.text(`• Decibel Testing (noise loud enough): ${passOrFail((result as any).decibelTest)}`, margin + 5, yPosition);
+        yPosition += 6;
+        doc.text(`• Battery Testing and Replacement (if required): ${passOrFail((result as any).batteryTestReplacement)}`, margin + 5, yPosition);
+        yPosition += 6;
+        doc.text(`• Smoke Test (Spraying with smoke in a can): ${passOrFail((result as any).smokeTest)}`, margin + 5, yPosition);
+        yPosition += 6;
       }
 
-      // Show Equipment Type — for fire extinguisher show the specific extinguisher type
+      // Show Equipment Type — for fire extinguisher show the specific extinguisher type,
+      // for smoke alarm show the battery/hard-wired type
       if (equipmentType === 'fire_extinguisher' && result.extinguisherType) {
         doc.text(`• Equipment Type: ${result.extinguisherType.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}`, margin + 5, yPosition);
+        yPosition += 6;
+      } else if (equipmentType === 'smoke_alarm' && (result as any).smokeAlarmType) {
+        doc.text(`• Equipment Type: ${((result as any).smokeAlarmType as string).replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}`, margin + 5, yPosition);
         yPosition += 6;
       } else {
         const formattedEquipmentType = equipmentType
@@ -1138,7 +1159,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         doc.text(`• Equipment Type: ${formattedEquipmentType}`, margin + 5, yPosition);
         yPosition += 6;
       }
-      
+
       // Show equipment size/weight from dedicated columns
       if (result.size) {
         doc.text(`• Net Size: ${result.size}`, margin + 5, yPosition);

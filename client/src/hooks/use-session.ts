@@ -69,6 +69,11 @@ export interface BatchedTestResult {
   extinguisherType?: string;
   size?: string;
   weight?: string;
+  // Smoke alarm specific fields (AS 3786)
+  smokeAlarmType?: string;
+  decibelTest?: boolean;
+  batteryTestReplacement?: boolean;
+  smokeTest?: boolean;
 }
 
 export interface SaveStatus {
@@ -331,6 +336,11 @@ export function useSession() {
       accessibilityCheck: result.accessibility_check ?? result.accessibilityCheck ?? undefined,
       signageCheck: result.signage_check ?? result.signageCheck ?? undefined,
       operationalTest: result.operational_test ?? result.operationalTest ?? undefined,
+      // Smoke alarm specific fields (AS 3786)
+      smokeAlarmType: result.smoke_alarm_type ?? result.smokeAlarmType ?? undefined,
+      decibelTest: result.decibel_test ?? result.decibelTest ?? undefined,
+      batteryTestReplacement: result.battery_test_replacement ?? result.batteryTestReplacement ?? undefined,
+      smokeTest: result.smoke_test ?? result.smokeTest ?? undefined,
       // RCD testing fields
       pushButtonTest: result.pushButtonTest ?? result.push_button_test ?? undefined,
       injectionTimedTest: result.injectionTimedTest ?? result.injection_timed_test ?? undefined,
@@ -1019,6 +1029,10 @@ export function useSession() {
       extinguisherType: (cleanData as any).extinguisherType || undefined,
       size: (cleanData as any).size || undefined,
       weight: (cleanData as any).weight || undefined,
+      smokeAlarmType: (cleanData as any).smokeAlarmType || undefined,
+      decibelTest: (cleanData as any).decibelTest ?? undefined,
+      batteryTestReplacement: (cleanData as any).batteryTestReplacement ?? undefined,
+      smokeTest: (cleanData as any).smokeTest ?? undefined,
     };
 
     console.log('💾 ********** CREATED NEW RESULT **********');
@@ -1194,6 +1208,10 @@ export function useSession() {
         extinguisherType: result.extinguisherType || null,
         size: result.size || null,
         weight: result.weight || null,
+        smokeAlarmType: result.smokeAlarmType || null,
+        decibelTest: result.decibelTest ?? null,
+        batteryTestReplacement: result.batteryTestReplacement ?? null,
+        smokeTest: result.smokeTest ?? null,
         // RCD specific fields
         pushButtonTest: result.pushButtonTest ?? null,
         injectionTimedTest: result.injectionTimedTest ?? null,
@@ -1262,6 +1280,10 @@ export function useSession() {
               accessibilityCheck: serverResult.accessibility_check ?? r.accessibilityCheck,
               signageCheck: serverResult.signage_check ?? r.signageCheck,
               operationalTest: serverResult.operational_test ?? r.operationalTest,
+              smokeAlarmType: serverResult.smoke_alarm_type ?? r.smokeAlarmType,
+              decibelTest: serverResult.decibel_test ?? r.decibelTest,
+              batteryTestReplacement: serverResult.battery_test_replacement ?? r.batteryTestReplacement,
+              smokeTest: serverResult.smoke_test ?? r.smokeTest,
               // RCD testing fields
               pushButtonTest: serverResult.push_button_test ?? r.pushButtonTest,
               injectionTimedTest: serverResult.injection_timed_test ?? r.injectionTimedTest,
@@ -1364,6 +1386,10 @@ export function useSession() {
         signageCheck: data.signageCheck ?? false,
         operationalTest: data.operationalTest ?? false,
         pressureTest: data.pressureTest ?? false,
+        smokeAlarmType: data.smokeAlarmType || null,
+        decibelTest: data.decibelTest ?? false,
+        batteryTestReplacement: data.batteryTestReplacement ?? false,
+        smokeTest: data.smokeTest ?? false,
         // RCD testing fields
         pushButtonTest: data.pushButtonTest ?? null,
         injectionTimedTest: data.injectionTimedTest ?? null,
@@ -1420,6 +1446,10 @@ export function useSession() {
               accessibilityCheck: serverResult.accessibility_check ?? r.accessibilityCheck,
               signageCheck: serverResult.signage_check ?? r.signageCheck,
               operationalTest: serverResult.operational_test ?? r.operationalTest,
+              smokeAlarmType: serverResult.smoke_alarm_type ?? r.smokeAlarmType,
+              decibelTest: serverResult.decibel_test ?? r.decibelTest,
+              batteryTestReplacement: serverResult.battery_test_replacement ?? r.batteryTestReplacement,
+              smokeTest: serverResult.smoke_test ?? r.smokeTest,
               // RCD testing fields
               pushButtonTest: serverResult.push_button_test ?? r.pushButtonTest,
               injectionTimedTest: serverResult.injection_timed_test ?? r.injectionTimedTest,

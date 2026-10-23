@@ -132,6 +132,10 @@ export default function ReportPreview() {
     extinguisherType: null as string | null,
     size: null as string | null,
     weight: null as string | null,
+    smokeAlarmType: null as string | null,
+    decibelTest: false as boolean,
+    batteryTestReplacement: false as boolean,
+    smokeTest: false as boolean,
     // Microwave Leakage specific fields
     leakageReading: null as string | null,
     // Electrical test & tag readings
@@ -442,6 +446,10 @@ export default function ReportPreview() {
         extinguisherType: (result as any).extinguisherType || null,
         size: (result as any).size || null,
         weight: (result as any).weight || null,
+        smokeAlarmType: (result as any).smokeAlarmType || null,
+        decibelTest: (result as any).decibelTest ?? false,
+        batteryTestReplacement: (result as any).batteryTestReplacement ?? false,
+        smokeTest: (result as any).smokeTest ?? false,
       } as any));
 
       if (!sessionData?.session) {
@@ -491,6 +499,7 @@ export default function ReportPreview() {
         itemType: result.itemType,
         location: result.location,
         classification: result.classification,
+        equipmentType: result.classification,
         result: result.result,
         frequency: result.frequency,
         failureReason: result.failureReason || null,
@@ -539,6 +548,10 @@ export default function ReportPreview() {
         extinguisherType: (result as any).extinguisherType || null,
         size: (result as any).size || null,
         weight: (result as any).weight || null,
+        smokeAlarmType: (result as any).smokeAlarmType || null,
+        decibelTest: (result as any).decibelTest ?? false,
+        batteryTestReplacement: (result as any).batteryTestReplacement ?? false,
+        smokeTest: (result as any).smokeTest ?? false,
       } as any));
 
       if (!sessionData?.session) {
@@ -811,6 +824,10 @@ export default function ReportPreview() {
       extinguisherType: (result as any).extinguisherType || null,
       size: (result as any).size || null,
       weight: (result as any).weight || null,
+      smokeAlarmType: (result as any).smokeAlarmType || null,
+      decibelTest: (result as any).decibelTest ?? false,
+      batteryTestReplacement: (result as any).batteryTestReplacement ?? false,
+      smokeTest: (result as any).smokeTest ?? false,
       // Microwave Leakage specific fields
       leakageReading: (result as any).leakageReading || null,
       // Electrical test & tag readings
@@ -912,6 +929,10 @@ export default function ReportPreview() {
         extinguisherType: null,
         size: null,
         weight: null,
+        smokeAlarmType: null,
+        decibelTest: false,
+        batteryTestReplacement: false,
+        smokeTest: false,
         leakageReading: null,
         earthContinuity: null,
         insulationOperator: null,

@@ -729,6 +729,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           signageCheck: r.signageCheck ?? undefined,
           operationalTest: r.operationalTest ?? undefined,
           pressureTest: r.pressureTest ?? undefined,
+          // Smoke alarm fields (AS 3786)
+          smokeAlarmType: r.smokeAlarmType ?? undefined,
+          decibelTest: r.decibelTest ?? undefined,
+          batteryTestReplacement: r.batteryTestReplacement ?? undefined,
+          smokeTest: r.smokeTest ?? undefined,
           // RCD fields
           pushButtonTest: r.pushButtonTest ?? undefined,
           injectionTimedTest: r.injectionTimedTest ?? undefined,
@@ -1037,6 +1042,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             signageCheck: batchedResult.signageCheck ?? false,
             operationalTest: batchedResult.operationalTest ?? false,
             pressureTest: batchedResult.pressureTest ?? false,
+            // Map smoke alarm fields from batch data (AS 3786)
+            smokeAlarmType: batchedResult.smokeAlarmType || null,
+            decibelTest: batchedResult.decibelTest ?? false,
+            batteryTestReplacement: batchedResult.batteryTestReplacement ?? false,
+            smokeTest: batchedResult.smokeTest ?? false,
             // Map RCD test fields from batch data
             pushButtonTest: batchedResult.pushButtonTest ?? null,
             injectionTimedTest: batchedResult.injectionTimedTest ?? null,
@@ -1213,6 +1223,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           signageCheck: req.body.signageCheck ?? false,
           operationalTest: req.body.operationalTest ?? false,
           pressureTest: req.body.pressureTest ?? false,
+          // Smoke alarm specific fields (AS 3786)
+          smokeAlarmType: req.body.smokeAlarmType || null,
+          decibelTest: req.body.decibelTest ?? false,
+          batteryTestReplacement: req.body.batteryTestReplacement ?? false,
+          smokeTest: req.body.smokeTest ?? false,
           // RCD test specific fields
           pushButtonTest: req.body.pushButtonTest ?? null,
           injectionTimedTest: req.body.injectionTimedTest ?? null,
@@ -1404,6 +1419,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (req.body.signageCheck !== undefined) updateData.signageCheck = req.body.signageCheck;
         if (req.body.operationalTest !== undefined) updateData.operationalTest = req.body.operationalTest;
         if (req.body.pressureTest !== undefined) updateData.pressureTest = req.body.pressureTest;
+
+        // Smoke alarm fields (AS 3786)
+        if (req.body.smokeAlarmType !== undefined) updateData.smokeAlarmType = req.body.smokeAlarmType || null;
+        if (req.body.decibelTest !== undefined) updateData.decibelTest = req.body.decibelTest;
+        if (req.body.batteryTestReplacement !== undefined) updateData.batteryTestReplacement = req.body.batteryTestReplacement;
+        if (req.body.smokeTest !== undefined) updateData.smokeTest = req.body.smokeTest;
 
         // RCD testing fields
         if (req.body.pushButtonTest !== undefined) updateData.pushButtonTest = req.body.pushButtonTest;

@@ -120,7 +120,7 @@ export const testResults = pgTable("test_results", {
   luxReading: text("lux_reading"), // Legacy lux reading field
   luxCompliant: boolean("lux_compliant"), // Legacy lux compliance field
   // Fire testing specific fields (AS 1851 / NZS 4503:2005)
-  equipmentType: text("equipment_type"), // 'fire_extinguisher', 'fire_blanket', 'fire_hose_reel', 'fire_hydrant'
+  equipmentType: text("equipment_type"), // 'fire_extinguisher', 'fire_blanket', 'fire_hose_reel', 'fire_hydrant', 'smoke_alarm'
   extinguisherType: text("extinguisher_type"), // 'dry_powder', 'water', 'co2', 'wet_chemical', 'foam', 'vaporising_liquid'
   size: text("size"), // For extinguishers - e.g., "1.5kg", "4.5kg"
   weight: text("weight"), // Current weight for extinguishers
@@ -131,7 +131,12 @@ export const testResults = pgTable("test_results", {
   signageCheck: boolean("signage_check"), // Proper signage verification
   operationalTest: boolean("operational_test"), // Equipment operation check
   pressureTest: boolean("pressure_test"), // Pressure gauge check (for extinguishers)
-  // RCD testing specific fields
+  // Smoke alarm specific fields (AS 3786)
+  smokeAlarmType: text("smoke_alarm_type"), // 'battery_powered' or 'hard_wired'
+  decibelTest: boolean("decibel_test"), // Decibel/noise level test
+  batteryTestReplacement: boolean("battery_test_replacement"), // Battery test and replacement if required
+  smokeTest: boolean("smoke_test"), // Smoke-in-a-can functional test
+  // RCD testing specific fields (pushButtonTest is also reused by smoke alarm testing)
   pushButtonTest: boolean("push_button_test"), // Push button test completed
   injectionTimedTest: boolean("injection_timed_test"), // Injection/Timed test completed
   tripTimes: numeric("trip_times").array(), // Array of trip times in milliseconds for timed test (for Fixed RCD, up to 3 values)
@@ -319,13 +324,14 @@ export type Certificate = typeof certificates.$inferSelect;
 export const serviceTypes = ['electrical', 'emergency_exit_light', 'fire_testing', 'rcd_reporting', 'microwave_leakage'] as const;
 export const equipmentClassifications = ['class1', 'class2', 'epod', 'rcd', '3phase'] as const;
 export const emergencyClassifications = ['emergency_exit_sign', 'emergency_light_downlight', 'combination_unit', 'emergency_spotlight', 'floor_path_light', 'emergency_bulkhead'] as const;
-export const fireEquipmentTypes = ['fire_extinguisher', 'fire_blanket', 'fire_hose_reel', 'fire_hydrant'] as const;
+export const fireEquipmentTypes = ['fire_extinguisher', 'fire_blanket', 'fire_hose_reel', 'fire_hydrant', 'smoke_alarm'] as const;
+export const smokeAlarmTypes = ['battery_powered', 'hard_wired'] as const;
 export const fireTestTypes = ['test_1_6monthly', 'test_2_12monthly', 'test_4_replacement'] as const;
 export const complianceStandards = ['AS_1851_AU', 'NZS_4503_NZ'] as const;
 export const testResultValues = ['pass', 'fail'] as const;
 export const failureReasons = ['vision', 'earth', 'insulation', 'polarity', 'other'] as const;
 export const emergencyFailureReasons = ['physical_damage', 'battery_failure', 'lamp_failure', 'wiring_fault', 'charging_fault', 'insufficient_illumination', 'mounting_issue', 'other'] as const;
-export const fireFailureReasons = ['physical_damage', 'pressure_loss', 'corrosion', 'blocked_nozzle', 'damaged_seal', 'expired', 'mounting_issue', 'other'] as const;
+export const fireFailureReasons = ['physical_damage', 'pressure_loss', 'corrosion', 'blocked_nozzle', 'damaged_seal', 'expired', 'mounting_issue', 'battery_dead', 'sensor_fault', 'other'] as const;
 export const rcdFailureReasons = ['push_button', 'injection_timed', 'tripping_time', 'no_trip', 'visual', 'other'] as const;
 export const actionsTaken = ['given', 'removed'] as const;
 export const countries = ['australia', 'newzealand', 'national_client'] as const;

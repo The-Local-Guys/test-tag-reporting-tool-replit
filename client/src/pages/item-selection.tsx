@@ -115,6 +115,7 @@ const fireItems: Item[] = [
   { type: 'fire-blanket', name: 'Fire Blanket', icon: '🔥', description: 'Fire Blanket' },
   { type: 'fire-hose-reel', name: 'Fire Hose Reel', icon: <HoseReelIcon className="h-8 w-8 text-red-600 dark:text-red-400" />, description: 'Fire Hose Reel' },
   { type: 'fire-hydrant', name: 'Fire Hydrant', icon: <HydrantIcon className="h-8 w-8 text-red-600 dark:text-red-400" />, description: 'Fire Hydrant' },
+  { type: 'smoke-alarm', name: 'Smoke Alarm', icon: '🚨', description: 'Smoke Alarm' },
 ];
 
 const rcdItems: Item[] = [

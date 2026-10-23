@@ -340,7 +340,7 @@ export function generateExcelReport(data: ReportData): Blob {
   const resultsHeader = session.serviceType === 'emergency_exit_light' 
     ? ['Asset #', 'Item Name', 'Location', 'Result', 'Manufacturer', 'Install Date', 'Frequency', 'Next Due Date', 'Failure Reason', 'Notes', 'Visual Inspection', 'Discharge Test', 'Switching Test', 'Charging Test', 'Maintenance Type', 'Globe Type']
     : session.serviceType === 'fire_testing'
-    ? ['Asset #', 'Item Name', 'Location', 'Type', 'Result', 'Size/Weight', 'Manufacturer', 'Frequency', 'Next Due Date', 'Failure Reason', 'Notes', 'Visual Inspection', 'Accessibility', 'Signage', 'Operational Test', 'Pressure / Flow Rate Test']
+    ? ['Asset #', 'Item Name', 'Location', 'Type', 'Result', 'Size/Weight', 'Manufacturer', 'Frequency', 'Next Due Date', 'Failure Reason', 'Notes', 'Visual Inspection', 'Accessibility', 'Signage', 'Operational Test', 'Pressure / Flow Rate Test', 'Push Button Test', 'Decibel Test', 'Battery Test/Replacement', 'Smoke Test']
     : session.serviceType === 'rcd_reporting'
     ? ['Asset #', 'Equipment Type', 'DB / CB', 'Push Button Test', 'Timed Test', 'Trip Time (ms)', 'Result', 'Location', 'Comments', 'Failure Reason', 'Action Taken']
     : ['Asset #', 'Item Name', 'Location', 'Classification', 'Result', 'Vision Inspection', 'Electrical Test',
@@ -380,6 +380,10 @@ export function generateExcelReport(data: ReportData): Blob {
         displayFailureReason = 'Expired';
       } else if (displayFailureReason === 'mounting_issue') {
         displayFailureReason = 'Mounting Issue';
+      } else if (displayFailureReason === 'battery_dead') {
+        displayFailureReason = 'Battery Dead';
+      } else if (displayFailureReason === 'sensor_fault') {
+        displayFailureReason = 'Sensor Fault';
       } else if (displayFailureReason && displayFailureReason !== '') {
         displayFailureReason = displayFailureReason.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
       }
@@ -430,10 +434,15 @@ export function generateExcelReport(data: ReportData): Blob {
       let displayType = 'N/A';
       if (result.equipmentType === 'fire_extinguisher' && (result as any).extinguisherType) {
         displayType = ((result as any).extinguisherType as string).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      } else if (result.equipmentType === 'smoke_alarm' && (result as any).smokeAlarmType) {
+        displayType = ((result as any).smokeAlarmType as string).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
       } else if (result.equipmentType) {
         displayType = result.equipmentType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
       }
-      
+
+      // Smoke alarm specific checklist; N/A for all other fire equipment types
+      const isSmokeAlarm = result.equipmentType === 'smoke_alarm';
+
       return [
         result.assetNumber, // Asset number
         result.itemName,
@@ -450,7 +459,11 @@ export function generateExcelReport(data: ReportData): Blob {
         toTestCell((result as any).accessibilityCheck),
         toTestCell((result as any).signageCheck),
         toTestCell((result as any).operationalTest),
-        pressureTestResult
+        pressureTestResult,
+        isSmokeAlarm ? toTestCell((result as any).pushButtonTest) : 'N/A',
+        isSmokeAlarm ? toTestCell((result as any).decibelTest) : 'N/A',
+        isSmokeAlarm ? toTestCell((result as any).batteryTestReplacement) : 'N/A',
+        isSmokeAlarm ? toTestCell((result as any).smokeTest) : 'N/A'
       ];
     } else if (session.serviceType === 'rcd_reporting') {
       // RCD reporting specific format
@@ -613,7 +626,11 @@ export function generateExcelReport(data: ReportData): Blob {
       { wch: 12 }, // Accessibility
       { wch: 10 }, // Signage
       { wch: 12 }, // Operational Test
-      { wch: 12 }  // Pressure / Flow Rate Test
+      { wch: 12 }, // Pressure / Flow Rate Test
+      { wch: 12 }, // Push Button Test
+      { wch: 12 }, // Decibel Test
+      { wch: 16 }, // Battery Test/Replacement
+      { wch: 10 }  // Smoke Test
     ];
   } else if (session.serviceType === 'rcd_reporting') {
     // RCD reporting

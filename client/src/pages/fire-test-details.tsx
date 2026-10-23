@@ -20,8 +20,9 @@ import { MAX_TEST_RESULT_NOTES_LENGTH } from '@shared/schema';
 // Fire Equipment Test Schema following AS 1851 (AU) / NZS 4503:2005 (NZ)
 const fireTestSchema = z.object({
   location: z.string().min(1, 'Location is required'),
-  equipmentType: z.enum(['fire_extinguisher', 'fire_blanket', 'fire_hose_reel', 'fire_hydrant']),
+  equipmentType: z.enum(['fire_extinguisher', 'fire_blanket', 'fire_hose_reel', 'fire_hydrant', 'smoke_alarm']),
   extinguisherType: z.enum(['dry_powder', 'water', 'co2', 'wet_chemical', 'foam', 'vaporising_liquid']).optional(),
+  smokeAlarmType: z.enum(['battery_powered', 'hard_wired']).optional(),
   result: z.enum(['pass', 'fail']),
   frequency: z.enum(['sixmonthly', 'annually']),
   size: z.string().optional(),
@@ -31,7 +32,11 @@ const fireTestSchema = z.object({
   pressureTest: z.boolean().default(true),
   accessibilityCheck: z.boolean().default(true),
   signageCheck: z.boolean().default(true),
-  failureReason: z.enum(['physical_damage', 'pressure_loss', 'corrosion', 'blocked_nozzle', 'damaged_seal', 'expired', 'mounting_issue', 'other']).optional(),
+  pushButtonTest: z.boolean().default(true),
+  decibelTest: z.boolean().default(true),
+  batteryTestReplacement: z.boolean().default(true),
+  smokeTest: z.boolean().default(true),
+  failureReason: z.enum(['physical_damage', 'pressure_loss', 'corrosion', 'blocked_nozzle', 'damaged_seal', 'expired', 'mounting_issue', 'battery_dead', 'sensor_fault', 'other']).optional(),
   actionTaken: z.enum(['given', 'removed']).optional(),
   notes: z
     .string()
@@ -64,6 +69,7 @@ export default function FireTestDetails() {
     if (type.includes('blanket')) return 'fire_blanket';
     if (type.includes('hydrant')) return 'fire_hydrant';
     if (type.includes('hose')) return 'fire_hose_reel';
+    if (type.includes('smoke')) return 'smoke_alarm';
     return 'fire_extinguisher';
   };
 
@@ -82,8 +88,9 @@ export default function FireTestDetails() {
       location: currentLocation,
       equipmentType: getEquipmentType(itemType),
       extinguisherType: undefined,
+      smokeAlarmType: undefined,
       result: 'pass',
-      frequency: getLastSelectedFrequency(),
+      frequency: getEquipmentType(itemType) === 'smoke_alarm' ? 'annually' : getLastSelectedFrequency(),
       size: '',
       weight: '',
       visionInspection: true,
@@ -91,6 +98,10 @@ export default function FireTestDetails() {
       pressureTest: true,
       accessibilityCheck: true,
       signageCheck: true,
+      pushButtonTest: true,
+      decibelTest: true,
+      batteryTestReplacement: true,
+      smokeTest: true,
       notes: '',
     },
   });
@@ -105,6 +116,13 @@ export default function FireTestDetails() {
   const watchResult = form.watch('result');
   const watchEquipmentType = form.watch('equipmentType');
   const notesLength = form.watch('notes')?.length ?? 0;
+
+  // Smoke alarms are always tested on a fixed 12-monthly (annual) cycle
+  useEffect(() => {
+    if (watchEquipmentType === 'smoke_alarm' && form.getValues('frequency') !== 'annually') {
+      form.setValue('frequency', 'annually');
+    }
+  }, [watchEquipmentType, form]);
 
   const onSubmit = async (data: FireTestForm) => {
     if (!sessionData?.session?.id) {
@@ -129,6 +147,7 @@ export default function FireTestDetails() {
     // Get current form state values (including defaults that user didn't change)
     const currentEquipmentType = form.getValues('equipmentType');
     const currentExtinguisherType = form.getValues('extinguisherType');
+    const currentSmokeAlarmType = form.getValues('smokeAlarmType');
 
     try {
       console.log('Submitting fire test result:', {
@@ -177,6 +196,11 @@ export default function FireTestDetails() {
         extinguisherType: currentExtinguisherType || null,
         size: data.size || null,
         weight: data.weight || null,
+        smokeAlarmType: currentSmokeAlarmType || null,
+        pushButtonTest: data.pushButtonTest,
+        decibelTest: data.decibelTest,
+        batteryTestReplacement: data.batteryTestReplacement,
+        smokeTest: data.smokeTest,
       });
 
       // Save selected frequency for next item
@@ -255,6 +279,8 @@ export default function FireTestDetails() {
   // Get compliance standard based on equipment type / session country
   const getComplianceStandard = () => {
     const country = sessionData?.session?.country;
+    // Smoke alarms follow AS 3786 regardless of country
+    if (watchEquipmentType === 'smoke_alarm') return 'AS 3786';
     // Fire hydrants in New Zealand follow NZS 4510:2022; Australia is unchanged
     if (watchEquipmentType === 'fire_hydrant' && country === 'newzealand') return 'NZS 4510:2022';
     return country === 'newzealand' ? 'NZS 4503:2005' : 'AS 1851'; // Default to AS 1851 for Australia and ARA Compliance
@@ -345,9 +371,9 @@ export default function FireTestDetails() {
 
             <div>
               <Label htmlFor="equipmentType">Equipment Type</Label>
-              <Select 
-                value={form.watch('equipmentType')} 
-                onValueChange={(value) => form.setValue('equipmentType', value as 'fire_extinguisher' | 'fire_blanket' | 'fire_hose_reel' | 'fire_hydrant')}
+              <Select
+                value={form.watch('equipmentType')}
+                onValueChange={(value) => form.setValue('equipmentType', value as 'fire_extinguisher' | 'fire_blanket' | 'fire_hose_reel' | 'fire_hydrant' | 'smoke_alarm')}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select equipment type" />
@@ -357,9 +383,29 @@ export default function FireTestDetails() {
                   <SelectItem value="fire_blanket">Fire Blanket</SelectItem>
                   <SelectItem value="fire_hose_reel">Fire Hose Reel</SelectItem>
                   <SelectItem value="fire_hydrant">Fire Hydrant</SelectItem>
+                  <SelectItem value="smoke_alarm">Smoke Alarm</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Smoke Alarm Type Selection */}
+            {watchEquipmentType === 'smoke_alarm' && (
+              <div>
+                <Label htmlFor="smokeAlarmType">Smoke Alarm Type</Label>
+                <Select
+                  value={form.watch('smokeAlarmType')}
+                  onValueChange={(value) => form.setValue('smokeAlarmType', value as 'battery_powered' | 'hard_wired')}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select smoke alarm type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="battery_powered">Battery Powered</SelectItem>
+                    <SelectItem value="hard_wired">Hard Wired</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Fire Extinguisher Type Selection */}
             {watchEquipmentType === 'fire_extinguisher' && (
@@ -418,38 +464,42 @@ export default function FireTestDetails() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="visionInspection"
-                  checked={form.watch('visionInspection')}
-                  onCheckedChange={(checked) => form.setValue('visionInspection', !!checked)}
-                />
-                <Label htmlFor="visionInspection" className="text-sm">
-                  Visual Inspection (Physical condition, damage, corrosion)
-                </Label>
-              </div>
+              {watchEquipmentType !== 'smoke_alarm' && (
+                <>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="visionInspection"
+                      checked={form.watch('visionInspection')}
+                      onCheckedChange={(checked) => form.setValue('visionInspection', !!checked)}
+                    />
+                    <Label htmlFor="visionInspection" className="text-sm">
+                      Visual Inspection (Physical condition, damage, corrosion)
+                    </Label>
+                  </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="accessibilityCheck"
-                  checked={form.watch('accessibilityCheck')}
-                  onCheckedChange={(checked) => form.setValue('accessibilityCheck', !!checked)}
-                />
-                <Label htmlFor="accessibilityCheck" className="text-sm">
-                  Accessibility Check (Clear access, not obstructed)
-                </Label>
-              </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="accessibilityCheck"
+                      checked={form.watch('accessibilityCheck')}
+                      onCheckedChange={(checked) => form.setValue('accessibilityCheck', !!checked)}
+                    />
+                    <Label htmlFor="accessibilityCheck" className="text-sm">
+                      Accessibility Check (Clear access, not obstructed)
+                    </Label>
+                  </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="signageCheck"
-                  checked={form.watch('signageCheck')}
-                  onCheckedChange={(checked) => form.setValue('signageCheck', !!checked)}
-                />
-                <Label htmlFor="signageCheck" className="text-sm">
-                  Signage Check (Proper signage and instructions visible)
-                </Label>
-              </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="signageCheck"
+                      checked={form.watch('signageCheck')}
+                      onCheckedChange={(checked) => form.setValue('signageCheck', !!checked)}
+                    />
+                    <Label htmlFor="signageCheck" className="text-sm">
+                      Signage Check (Proper signage and instructions visible)
+                    </Label>
+                  </div>
+                </>
+              )}
 
               {watchEquipmentType === 'fire_extinguisher' && (
                 <>
@@ -528,6 +578,54 @@ export default function FireTestDetails() {
                   </Label>
                 </div>
               )}
+
+              {watchEquipmentType === 'smoke_alarm' && (
+                <>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="pushButtonTest"
+                      checked={form.watch('pushButtonTest')}
+                      onCheckedChange={(checked) => form.setValue('pushButtonTest', !!checked)}
+                    />
+                    <Label htmlFor="pushButtonTest" className="text-sm">
+                      Push Button Testing
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="decibelTest"
+                      checked={form.watch('decibelTest')}
+                      onCheckedChange={(checked) => form.setValue('decibelTest', !!checked)}
+                    />
+                    <Label htmlFor="decibelTest" className="text-sm">
+                      Decibel Testing (Is the noise loud enough)
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="batteryTestReplacement"
+                      checked={form.watch('batteryTestReplacement')}
+                      onCheckedChange={(checked) => form.setValue('batteryTestReplacement', !!checked)}
+                    />
+                    <Label htmlFor="batteryTestReplacement" className="text-sm">
+                      Battery Testing and Replacement (if required)
+                    </Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="smokeTest"
+                      checked={form.watch('smokeTest')}
+                      onCheckedChange={(checked) => form.setValue('smokeTest', !!checked)}
+                    />
+                    <Label htmlFor="smokeTest" className="text-sm">
+                      Smoke Test (Spraying with smoke in a can)
+                    </Label>
+                  </div>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -566,21 +664,32 @@ export default function FireTestDetails() {
 
             <div>
               <Label htmlFor="frequency">Test Frequency *</Label>
-              <Select 
-                value={form.watch('frequency')} 
-                onValueChange={(value) => {
-                  form.setValue('frequency', value as 'sixmonthly' | 'annually');
-                  sessionStorage.setItem('lastSelectedFrequency_fire', value);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select frequency" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sixmonthly">6 Monthly</SelectItem>
-                  <SelectItem value="annually">Annual</SelectItem>
-                </SelectContent>
-              </Select>
+              {watchEquipmentType === 'smoke_alarm' ? (
+                <Select value="annually" disabled>
+                  <SelectTrigger>
+                    <SelectValue placeholder="12 Monthly" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="annually">12 Monthly</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Select
+                  value={form.watch('frequency')}
+                  onValueChange={(value) => {
+                    form.setValue('frequency', value as 'sixmonthly' | 'annually');
+                    sessionStorage.setItem('lastSelectedFrequency_fire', value);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select frequency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sixmonthly">6 Monthly</SelectItem>
+                    <SelectItem value="annually">Annual</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             {/* Failure Details */}
@@ -588,22 +697,34 @@ export default function FireTestDetails() {
               <div className="space-y-4 p-4 bg-red-50 rounded-lg border border-red-200">
                 <div>
                   <Label htmlFor="failureReason">Failure Reason *</Label>
-                  <Select 
-                    value={form.watch('failureReason') || ''} 
+                  <Select
+                    value={form.watch('failureReason') || ''}
                     onValueChange={(value) => form.setValue('failureReason', value as any)}
                   >
                     <SelectTrigger data-testid="select-failure-reason">
                       <SelectValue placeholder="Select failure reason" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="physical_damage">Physical Damage</SelectItem>
-                      <SelectItem value="pressure_loss">Pressure Loss</SelectItem>
-                      <SelectItem value="corrosion">Corrosion</SelectItem>
-                      <SelectItem value="blocked_nozzle">Blocked Nozzle</SelectItem>
-                      <SelectItem value="damaged_seal">Damaged Seal</SelectItem>
-                      <SelectItem value="expired">Expired</SelectItem>
-                      <SelectItem value="mounting_issue">Mounting Issue</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
+                      {watchEquipmentType === 'smoke_alarm' ? (
+                        <>
+                          <SelectItem value="battery_dead">Battery Dead</SelectItem>
+                          <SelectItem value="sensor_fault">Sensor Fault</SelectItem>
+                          <SelectItem value="physical_damage">Physical Damage</SelectItem>
+                          <SelectItem value="expired">Expired</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </>
+                      ) : (
+                        <>
+                          <SelectItem value="physical_damage">Physical Damage</SelectItem>
+                          <SelectItem value="pressure_loss">Pressure Loss</SelectItem>
+                          <SelectItem value="corrosion">Corrosion</SelectItem>
+                          <SelectItem value="blocked_nozzle">Blocked Nozzle</SelectItem>
+                          <SelectItem value="damaged_seal">Damaged Seal</SelectItem>
+                          <SelectItem value="expired">Expired</SelectItem>
+                          <SelectItem value="mounting_issue">Mounting Issue</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>

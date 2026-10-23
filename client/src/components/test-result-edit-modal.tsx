@@ -119,6 +119,8 @@ export function TestResultEditModal({
       'blocked_nozzle': 'Blocked Nozzle',
       'damaged_seal': 'Damaged Seal',
       'expired': 'Expired',
+      'battery_dead': 'Battery Dead',
+      'sensor_fault': 'Sensor Fault',
       // RCD testing reasons
       'push_button': 'Push Button Test Failed',
       'injection_timed': 'Injection/Timed Test Failed',
@@ -246,6 +248,7 @@ export function TestResultEditModal({
                 <SelectItem value="fire_extinguisher">Fire Extinguisher</SelectItem>
                 <SelectItem value="fire_blanket">Fire Blanket</SelectItem>
                 <SelectItem value="fire_hose_reel">Fire Hose Reel</SelectItem>
+                <SelectItem value="smoke_alarm">Smoke Alarm</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -588,31 +591,35 @@ export function TestResultEditModal({
           <div className="space-y-3">
             <Label className="text-sm font-medium text-gray-700">Test Criteria</Label>
 
-            {/* Common fields for all fire equipment */}
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="edit-visionInspection-fire"
-                checked={editResultData.visionInspection}
-                onCheckedChange={(checked) => setEditResultData((prev: any) => ({ ...prev, visionInspection: !!checked }))}
-              />
-              <Label htmlFor="edit-visionInspection-fire">Visual Inspection</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="edit-accessibilityCheck-fire"
-                checked={editResultData.accessibilityCheck}
-                onCheckedChange={(checked) => setEditResultData((prev: any) => ({ ...prev, accessibilityCheck: !!checked }))}
-              />
-              <Label htmlFor="edit-accessibilityCheck-fire">Accessibility Check</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="edit-signageCheck-fire"
-                checked={editResultData.signageCheck}
-                onCheckedChange={(checked) => setEditResultData((prev: any) => ({ ...prev, signageCheck: !!checked }))}
-              />
-              <Label htmlFor="edit-signageCheck-fire">Signage Check</Label>
-            </div>
+            {/* Common fields for all fire equipment except smoke alarms */}
+            {editResultData.classification !== 'smoke_alarm' && (
+              <>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="edit-visionInspection-fire"
+                    checked={editResultData.visionInspection}
+                    onCheckedChange={(checked) => setEditResultData((prev: any) => ({ ...prev, visionInspection: !!checked }))}
+                  />
+                  <Label htmlFor="edit-visionInspection-fire">Visual Inspection</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="edit-accessibilityCheck-fire"
+                    checked={editResultData.accessibilityCheck}
+                    onCheckedChange={(checked) => setEditResultData((prev: any) => ({ ...prev, accessibilityCheck: !!checked }))}
+                  />
+                  <Label htmlFor="edit-accessibilityCheck-fire">Accessibility Check</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="edit-signageCheck-fire"
+                    checked={editResultData.signageCheck}
+                    onCheckedChange={(checked) => setEditResultData((prev: any) => ({ ...prev, signageCheck: !!checked }))}
+                  />
+                  <Label htmlFor="edit-signageCheck-fire">Signage Check</Label>
+                </div>
+              </>
+            )}
 
             {/* Fire Extinguisher specific fields */}
             {editResultData.classification === 'fire_extinguisher' && (
@@ -680,6 +687,60 @@ export function TestResultEditModal({
                 />
                 <Label htmlFor="edit-operationalTest-fire-blanket">Operational Test</Label>
               </div>
+            )}
+
+            {/* Smoke Alarm specific fields */}
+            {editResultData.classification === 'smoke_alarm' && (
+              <>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="edit-pushButtonTest-smoke-alarm"
+                    checked={editResultData.pushButtonTest}
+                    onCheckedChange={(checked) => setEditResultData((prev: any) => ({ ...prev, pushButtonTest: !!checked }))}
+                  />
+                  <Label htmlFor="edit-pushButtonTest-smoke-alarm">Push Button Testing</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="edit-decibelTest-smoke-alarm"
+                    checked={editResultData.decibelTest}
+                    onCheckedChange={(checked) => setEditResultData((prev: any) => ({ ...prev, decibelTest: !!checked }))}
+                  />
+                  <Label htmlFor="edit-decibelTest-smoke-alarm">Decibel Testing</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="edit-batteryTestReplacement-smoke-alarm"
+                    checked={editResultData.batteryTestReplacement}
+                    onCheckedChange={(checked) => setEditResultData((prev: any) => ({ ...prev, batteryTestReplacement: !!checked }))}
+                  />
+                  <Label htmlFor="edit-batteryTestReplacement-smoke-alarm">Battery Testing and Replacement</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="edit-smokeTest-smoke-alarm"
+                    checked={editResultData.smokeTest}
+                    onCheckedChange={(checked) => setEditResultData((prev: any) => ({ ...prev, smokeTest: !!checked }))}
+                  />
+                  <Label htmlFor="edit-smokeTest-smoke-alarm">Smoke Test</Label>
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-smokeAlarmType">Smoke Alarm Type</Label>
+                  <Select
+                    value={editResultData.smokeAlarmType || ''}
+                    onValueChange={(value) => setEditResultData((prev: any) => ({ ...prev, smokeAlarmType: value || null }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select smoke alarm type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="battery_powered">Battery Powered</SelectItem>
+                      <SelectItem value="hard_wired">Hard Wired</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
             )}
 
             {/* Fire Extinguisher Equipment Info */}
