@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import type { TestSession, TestResult } from '@shared/schema';
+import { type TestSession, type TestResult, smokeAlarmTypes } from '@shared/schema';
 import logoPath from '@assets/The Local Guys - with plug wide boarder - png seek.png';
 import letterheadPath from '@assets/Letterheads_1754455497882.png';
 import { resolveRcdTripTimes as resolveStoredRcdTripTimes } from './rcd-trip-times';
@@ -487,13 +487,21 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       // Add word wrapping for type/classification
       // For fire extinguishers, show the extinguisher type (Dry Powder, CO2, etc.) instead of classification
       const typeWidth = 13; // Width for type column
-      let displayType = result.classification.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-
+      let displayType = " - ";
+      
       // For fire extinguishers, show the specific extinguisher type from dedicated column
-      if (result.classification === 'fire_extinguisher' && result.extinguisherType) {
-        displayType = result.extinguisherType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-      } else if (result.classification === 'smoke_alarm' && (result as any).smokeAlarmType) {
-        displayType = ((result as any).smokeAlarmType as string).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      if (result.classification === 'fire_extinguisher') {
+        if(result.extinguisherType){
+          displayType = result.extinguisherType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        } else{
+          displayType = " - ";
+        }
+      } else if (result.classification === 'smoke_alarm') {
+        if((result as any).smokeAlarmType){
+          displayType = ((result as any).smokeAlarmType as string).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        } else{
+          displayType = " - ";
+        }
       }
 
       typeLines = clampCellLines(doc.splitTextToSize(displayType, typeWidth));
@@ -1147,18 +1155,19 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       // Show Equipment Type — for fire extinguisher show the specific extinguisher type,
       // for smoke alarm show the battery/hard-wired type
       if (equipmentType === 'fire_extinguisher' && result.extinguisherType) {
-        doc.text(`• Equipment Type: ${result.extinguisherType.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}`, margin + 5, yPosition);
+        doc.text(`• Fire Extinguisher Type: ${result.extinguisherType.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}`, margin + 5, yPosition);
         yPosition += 6;
       } else if (equipmentType === 'smoke_alarm' && (result as any).smokeAlarmType) {
-        doc.text(`• Equipment Type: ${((result as any).smokeAlarmType as string).replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}`, margin + 5, yPosition);
+        doc.text(`• Smoke Alarm Type: ${((result as any).smokeAlarmType as string).replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}`, margin + 5, yPosition);
         yPosition += 6;
-      } else {
-        const formattedEquipmentType = equipmentType
-          .replace(/_/g, ' ')
-          .replace(/\b\w/g, (l: string) => l.toUpperCase());
-        doc.text(`• Equipment Type: ${formattedEquipmentType}`, margin + 5, yPosition);
-        yPosition += 6;
-      }
+      } 
+      // else {
+      //   const formattedEquipmentType = equipmentType
+      //     .replace(/_/g, ' ')
+      //     .replace(/\b\w/g, (l: string) => l.toUpperCase());
+      //   doc.text(`• Equipment Type: ${formattedEquipmentType}`, margin + 5, yPosition);
+      //   yPosition += 6;
+      // }
 
       // Show equipment size/weight from dedicated columns
       if (result.size) {
