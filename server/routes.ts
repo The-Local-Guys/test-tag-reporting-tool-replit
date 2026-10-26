@@ -2023,6 +2023,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get certificates, paginated (new clients should use this instead of /api/certificates,
+  // which stays unpaginated for backwards compatibility with the mobile app)
+  app.get("/api/certificates/paginated", requireAuth, async (req, res) => {
+    try {
+      const user = req.session.user!;
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 20));
+      const search = req.query.search as string | undefined;
+      const clientName = req.query.clientName as string | undefined;
+      const dateFrom = parseDateFilter(req.query.dateFrom);
+      const dateTo = parseDateFilter(req.query.dateTo);
+
+      let result;
+      if (user.role === "super_admin" || user.role === "support_center") {
+        result = await storage.getAllCertificatesPaginated(page, limit, search, clientName, dateFrom, dateTo);
+      } else {
+        result = await storage.getCertificatesByUserPaginated(user.id, page, limit, search, clientName, dateFrom, dateTo);
+      }
+
+      res.json({
+        certificates: result.certificates,
+        total: result.total,
+        page,
+        totalPages: Math.ceil(result.total / limit),
+        limit,
+      });
+    } catch (error) {
+      console.error("Error fetching paginated certificates:", error);
+      res.status(500).json({ error: "Failed to fetch certificates" });
+    }
+  });
+
+  // Get distinct client names from certificates, for the filter dropdown
+  app.get("/api/certificates/client-names", requireAuth, async (req, res) => {
+    try {
+      const user = req.session.user!;
+      const isAdmin = user.role === "super_admin" || user.role === "support_center";
+      const clientNames = await storage.getCertificateClientNames(isAdmin ? undefined : user.id);
+      res.json(clientNames);
+    } catch (error) {
+      console.error("Error fetching certificate client names:", error);
+      res.status(500).json({ error: "Failed to fetch client names" });
+    }
+  });
+
   // Get a specific certificate
   app.get("/api/certificates/:id", requireAuth, async (req, res) => {
     try {

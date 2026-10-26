@@ -3,20 +3,54 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertCertificateSchema, type Certificate } from "@shared/schema";
 
+export interface CertificatesPage {
+  certificates: Certificate[];
+  total: number;
+  page: number;
+  totalPages: number;
+  limit: number;
+}
+
+export interface CertificatesFilters {
+  page: number;
+  limit?: number;
+  search?: string;
+  clientName?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
 /**
  * Custom hook for certificate operations
  * Encapsulates all certificate-related queries and mutations
  */
-export function useCertificates() {
+export function useCertificates(filters: CertificatesFilters) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { page, limit = 20, search, clientName, dateFrom, dateTo } = filters;
 
-  // Fetch all certificates (user's own or all if admin)
-  const { data: certificates, isLoading: certificatesLoading } = useQuery({
-    queryKey: ["/api/certificates"],
+  // Fetch a page of certificates (user's own or all if admin), filtered server-side
+  const { data, isLoading: certificatesLoading } = useQuery<CertificatesPage>({
+    queryKey: ["/api/certificates/paginated", page, limit, search, clientName, dateFrom, dateTo],
+    queryFn: async () => {
+      const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
+      if (search?.trim()) params.set("search", search.trim());
+      if (clientName && clientName !== "all") params.set("clientName", clientName);
+      if (dateFrom) params.set("dateFrom", dateFrom);
+      if (dateTo) params.set("dateTo", dateTo);
+      const res = await fetch(`/api/certificates/paginated?${params}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch certificates");
+      return res.json();
+    },
     retry: false,
     staleTime: 0,
     refetchOnMount: true,
+  });
+
+  // Fetch the distinct client names for the filter dropdown (independent of the current page/filters)
+  const { data: clientNames } = useQuery<string[]>({
+    queryKey: ["/api/certificates/client-names"],
+    retry: false,
   });
 
   // Create certificate mutation
@@ -25,7 +59,7 @@ export function useCertificates() {
       // Validate data with Zod schema (omit userId - server adds it)
       const clientSchema = insertCertificateSchema.omit({ userId: true });
       const validatedData = clientSchema.parse(data);
-      
+
       const response = await fetch("/api/certificates", {
         method: "POST",
         headers: {
@@ -33,16 +67,17 @@ export function useCertificates() {
         },
         body: JSON.stringify(validatedData),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || "Failed to create certificate");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/certificates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/certificates/paginated"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/certificates/client-names"] });
       toast({
         title: "Success",
         description: "Certificate created successfully",
@@ -63,7 +98,7 @@ export function useCertificates() {
       // Validate data with Zod schema (omit userId - server preserves it)
       const clientSchema = insertCertificateSchema.omit({ userId: true }).partial();
       const validatedData = clientSchema.parse(data);
-      
+
       const response = await fetch(`/api/certificates/${id}`, {
         method: "PUT",
         headers: {
@@ -71,16 +106,17 @@ export function useCertificates() {
         },
         body: JSON.stringify(validatedData),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || "Failed to update certificate");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/certificates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/certificates/paginated"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/certificates/client-names"] });
       toast({
         title: "Success",
         description: "Certificate updated successfully",
@@ -110,7 +146,8 @@ export function useCertificates() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/certificates"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/certificates/paginated"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/certificates/client-names"] });
       toast({
         title: "Success",
         description: "Certificate deleted successfully",
@@ -126,7 +163,10 @@ export function useCertificates() {
   });
 
   return {
-    certificates,
+    certificates: data?.certificates ?? [],
+    total: data?.total ?? 0,
+    totalPages: data?.totalPages ?? 1,
+    clientNames: clientNames ?? [],
     certificatesLoading,
     createCertificateMutation,
     updateCertificateMutation,

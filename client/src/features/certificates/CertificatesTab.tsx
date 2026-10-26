@@ -14,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, FileText, Trash2, Edit, Download, Search, X } from "lucide-react";
+import { Plus, FileText, Trash2, Edit, Download, Search, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCertificates } from "./useCertificates";
 import { DateRangeFilter, EMPTY_DATE_FILTER, type DateFilter } from "@/components/date-range-filter";
@@ -25,9 +25,9 @@ import { CertificatePreview } from "./CertificatePreview";
 import { generateCertificatePDF, downloadCertificatePDF } from "@/lib/certificate-generator";
 import type { Certificate } from "@shared/schema";
 
+const CERTIFICATES_PAGE_SIZE = 20;
+
 export function CertificatesTab() {
-  const { certificates, certificatesLoading, createCertificateMutation, updateCertificateMutation, deleteCertificateMutation } =
-    useCertificates();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCertificate, setEditingCertificate] = useState<Certificate | null>(null);
   const [previewCertificate, setPreviewCertificate] = useState<Certificate | null>(null);
@@ -37,6 +37,25 @@ export function CertificatesTab() {
   const [selectedClient, setSelectedClient] = useState<string>("all");
   // Issue date filter (preset + resolved YYYY-MM-DD bounds)
   const [dateRange, setDateRange] = useState<DateFilter>(EMPTY_DATE_FILTER);
+  const [page, setPage] = useState(1);
+
+  const {
+    certificates,
+    total,
+    totalPages,
+    clientNames,
+    certificatesLoading,
+    createCertificateMutation,
+    updateCertificateMutation,
+    deleteCertificateMutation,
+  } = useCertificates({
+    page,
+    limit: CERTIFICATES_PAGE_SIZE,
+    search: clientSearch,
+    clientName: selectedClient,
+    dateFrom: dateRange.from,
+    dateTo: dateRange.to,
+  });
 
   const handleSubmitCertificate = (data: any) => {
     if (editingCertificate) {
@@ -137,24 +156,7 @@ export function CertificatesTab() {
     }
   };
 
-  const allCerts: any[] = certificates as any[] || [];
-
-  const uniqueClients = Array.from(
-    new Set(allCerts.map((c) => c.clientName).filter(Boolean))
-  ).sort();
-
-  const filteredCerts = allCerts.filter((cert) => {
-    const matchesDropdown = selectedClient === "all" || cert.clientName === selectedClient;
-    const matchesSearch =
-      !clientSearch.trim() ||
-      (cert.clientName || "").toLowerCase().includes(clientSearch.toLowerCase());
-    // certificationDate is stored as YYYY-MM-DD, so string comparison is chronological
-    const certDate = (cert.certificationDate || "").slice(0, 10);
-    const matchesDate =
-      (!dateRange.from || certDate >= dateRange.from) &&
-      (!dateRange.to || certDate <= dateRange.to);
-    return matchesDropdown && matchesSearch && matchesDate;
-  });
+  const filteredCerts: any[] = certificates as any[];
 
   const hasCertificateFilters =
     selectedClient !== "all" || Boolean(clientSearch.trim()) || Boolean(dateRange.from || dateRange.to);
@@ -163,6 +165,24 @@ export function CertificatesTab() {
     setSelectedClient("all");
     setClientSearch("");
     setDateRange(EMPTY_DATE_FILTER);
+    setPage(1);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setClientSearch(value);
+    setSelectedClient("all");
+    setPage(1);
+  };
+
+  const handleClientFilterChange = (value: string) => {
+    setSelectedClient(value);
+    setClientSearch("");
+    setPage(1);
+  };
+
+  const handleDateRangeChange = (value: DateFilter) => {
+    setDateRange(value);
+    setPage(1);
   };
 
   return (
@@ -199,15 +219,12 @@ export function CertificatesTab() {
                 type="text"
                 placeholder="Search by client name..."
                 value={clientSearch}
-                onChange={(e) => {
-                  setClientSearch(e.target.value);
-                  setSelectedClient("all");
-                }}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-full pl-9 pr-8 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
               />
               {clientSearch && (
                 <button
-                  onClick={() => setClientSearch("")}
+                  onClick={() => handleSearchChange("")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   <X className="w-3 h-3" />
@@ -219,19 +236,13 @@ export function CertificatesTab() {
             <Label htmlFor="certificate-client-filter" className="text-sm font-medium block mb-1">
               Filter by Client
             </Label>
-            <Select
-              value={selectedClient}
-              onValueChange={(val) => {
-                setSelectedClient(val);
-                setClientSearch("");
-              }}
-            >
+            <Select value={selectedClient} onValueChange={handleClientFilterChange}>
               <SelectTrigger id="certificate-client-filter" className="w-56">
                 <SelectValue placeholder="Filter by client" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Clients</SelectItem>
-                {uniqueClients.map((name) => (
+                {clientNames.map((name) => (
                   <SelectItem key={name} value={name}>
                     {name}
                   </SelectItem>
@@ -242,7 +253,7 @@ export function CertificatesTab() {
           <DateRangeFilter
             label="Issue Date"
             value={dateRange}
-            onChange={setDateRange}
+            onChange={handleDateRangeChange}
             testIdPrefix="certificates-date"
           />
           {hasCertificateFilters && (
@@ -363,6 +374,38 @@ export function CertificatesTab() {
                 )}
               </TableBody>
             </Table>
+          </div>
+        )}
+        {!certificatesLoading && totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4">
+            <p className="text-sm text-muted-foreground">
+              Showing {((page - 1) * CERTIFICATES_PAGE_SIZE) + 1}–{Math.min(page * CERTIFICATES_PAGE_SIZE, total)} of {total} certificates
+            </p>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="p-2 h-8 w-8"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                data-testid="button-certificates-prev-page"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <span className="text-sm px-2">
+                Page {page} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="p-2 h-8 w-8"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                data-testid="button-certificates-next-page"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         )}
       </CardContent>

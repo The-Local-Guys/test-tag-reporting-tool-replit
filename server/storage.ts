@@ -110,6 +110,9 @@ export interface IStorage {
   createCertificate(certificate: InsertCertificate, client?: TransactionClient): Promise<Certificate>;
   getCertificatesByUser(userId: number): Promise<Certificate[]>;
   getAllCertificates(): Promise<Certificate[]>;
+  getCertificatesByUserPaginated(userId: number, page: number, limit: number, search?: string, clientName?: string, dateFrom?: string, dateTo?: string): Promise<{ certificates: Certificate[]; total: number }>;
+  getAllCertificatesPaginated(page: number, limit: number, search?: string, clientName?: string, dateFrom?: string, dateTo?: string): Promise<{ certificates: Certificate[]; total: number }>;
+  getCertificateClientNames(userId?: number): Promise<string[]>;
   getCertificateById(id: number): Promise<Certificate | undefined>;
   updateCertificate(id: number, data: Partial<InsertCertificate>): Promise<Certificate>;
   deleteCertificate(id: number): Promise<void>;
@@ -1496,6 +1499,78 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(certificates)
       .orderBy(desc(certificates.createdAt));
+  }
+
+  /**
+   * Retrieves a page of certificates created by a specific user, with optional filters
+   */
+  async getCertificatesByUserPaginated(userId: number, page: number, limit: number, search?: string, clientName?: string, dateFrom?: string, dateTo?: string): Promise<{ certificates: Certificate[]; total: number }> {
+    const offset = (page - 1) * limit;
+    const conditions = [eq(certificates.userId, userId)];
+    if (clientName && clientName !== "all") conditions.push(eq(certificates.clientName, clientName));
+    // certificationDate is stored as YYYY-MM-DD text, so string comparison is chronological
+    if (dateFrom) conditions.push(gte(certificates.certificationDate, dateFrom));
+    if (dateTo) conditions.push(lte(certificates.certificationDate, dateTo));
+    if (search && search.trim()) {
+      conditions.push(ilike(certificates.clientName, `%${search.trim()}%`));
+    }
+    const whereClause = and(...conditions);
+
+    const totalResult = await db
+      .select({ count: sql<number>`count(*)`.mapWith(Number) })
+      .from(certificates)
+      .where(whereClause);
+    const total = totalResult[0]?.count || 0;
+
+    const result = await db
+      .select()
+      .from(certificates)
+      .where(whereClause)
+      .orderBy(desc(certificates.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return { certificates: result, total };
+  }
+
+  /**
+   * Retrieves a page of all certificates in the system, with optional filters
+   */
+  async getAllCertificatesPaginated(page: number, limit: number, search?: string, clientName?: string, dateFrom?: string, dateTo?: string): Promise<{ certificates: Certificate[]; total: number }> {
+    const offset = (page - 1) * limit;
+    const conditions = [];
+    if (clientName && clientName !== "all") conditions.push(eq(certificates.clientName, clientName));
+    // certificationDate is stored as YYYY-MM-DD text, so string comparison is chronological
+    if (dateFrom) conditions.push(gte(certificates.certificationDate, dateFrom));
+    if (dateTo) conditions.push(lte(certificates.certificationDate, dateTo));
+    if (search && search.trim()) {
+      conditions.push(ilike(certificates.clientName, `%${search.trim()}%`));
+    }
+    const whereClause = conditions.length ? and(...conditions) : undefined;
+
+    const totalQuery = db.select({ count: sql<number>`count(*)`.mapWith(Number) }).from(certificates);
+    const totalResult = await (whereClause ? totalQuery.where(whereClause) : totalQuery);
+    const total = totalResult[0]?.count || 0;
+
+    const resultQuery = db.select().from(certificates);
+    const result = await (whereClause ? resultQuery.where(whereClause) : resultQuery)
+      .orderBy(desc(certificates.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return { certificates: result, total };
+  }
+
+  /**
+   * Retrieves the distinct client names used on certificates, for filter dropdowns.
+   * Scoped to a single user's certificates when userId is provided.
+   */
+  async getCertificateClientNames(userId?: number): Promise<string[]> {
+    const query = db
+      .selectDistinct({ clientName: certificates.clientName })
+      .from(certificates);
+    const rows = await (userId !== undefined ? query.where(eq(certificates.userId, userId)) : query);
+    return rows.map((r) => r.clientName).sort();
   }
 
   /**
