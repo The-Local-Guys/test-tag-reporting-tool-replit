@@ -180,6 +180,7 @@ export const certificates = pgTable("certificates", {
   technicianLicense: text("technician_license"),
   notes: text("notes"), // optional general note shown on the certificate PDF
   userId: integer("user_id").notNull().references(() => users.id),
+  sessionId: integer("session_id").references(() => testSessions.id), // Set when auto-created from a finalized session; null for freestanding certificates
   createdAt: timestamp("created_at").defaultNow(),
 });
 

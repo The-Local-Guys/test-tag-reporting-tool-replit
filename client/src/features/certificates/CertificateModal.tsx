@@ -17,34 +17,54 @@ import {
 import type { Certificate } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
+interface CertificateInitialData {
+  clientName?: string;
+  address?: string;
+  certificationDate?: string;
+  technicianName?: string;
+  notes?: string;
+  services?: string[];
+}
+
 interface CertificateModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: any) => void;
   certificate?: Certificate;
+  initialData?: CertificateInitialData;
 }
 
-export function CertificateModal({ isOpen, onClose, onSubmit, certificate }: CertificateModalProps) {
+export function CertificateModal({ isOpen, onClose, onSubmit, certificate, initialData }: CertificateModalProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const isEditMode = !!certificate;
 
-  const [formData, setFormData] = useState({
-    clientName: "",
-    address: "",
-    certificationDate: new Date().toISOString().split('T')[0],
-    technicianName: (user as any)?.fullName || "",
+  const buildDefaultFormData = () => ({
+    clientName: initialData?.clientName || "",
+    address: initialData?.address || "",
+    certificationDate: initialData?.certificationDate || new Date().toISOString().split('T')[0],
+    technicianName: initialData?.technicianName || (user as any)?.fullName || "",
     technicianLicense: "",
-    notes: "",
+    notes: initialData?.notes || "",
   });
 
-  const [selectedServices, setSelectedServices] = useState<Record<string, boolean>>({
-    electrical: false,
-    emergency_exit_light: false,
-    fire_testing: false,
-    rcd_reporting: false,
-    microwave_leakage: false,
-  });
+  const buildDefaultSelectedServices = () => {
+    const defaults: Record<string, boolean> = {
+      electrical: false,
+      emergency_exit_light: false,
+      fire_testing: false,
+      rcd_reporting: false,
+      microwave_leakage: false,
+    };
+    initialData?.services?.forEach((service) => {
+      if (service in defaults) defaults[service] = true;
+    });
+    return defaults;
+  };
+
+  const [formData, setFormData] = useState(buildDefaultFormData);
+
+  const [selectedServices, setSelectedServices] = useState<Record<string, boolean>>(buildDefaultSelectedServices);
 
   const [validityPeriods, setValidityPeriods] = useState<Record<string, number>>({
     electrical: 12,
@@ -101,22 +121,9 @@ export function CertificateModal({ isOpen, onClose, onSubmit, certificate }: Cer
   // Reset form when modal closes (only in create mode)
   useEffect(() => {
     if (!isOpen && !certificate) {
-      // Reset to initial state
-      setFormData({
-        clientName: "",
-        address: "",
-        certificationDate: new Date().toISOString().split('T')[0],
-        technicianName: (user as any)?.fullName || "",
-        technicianLicense: "",
-        notes: "",
-      });
-      setSelectedServices({
-        electrical: false,
-        emergency_exit_light: false,
-        fire_testing: false,
-        rcd_reporting: false,
-        microwave_leakage: false,
-      });
+      // Reset to initial state (re-seeded from initialData next time it opens)
+      setFormData(buildDefaultFormData());
+      setSelectedServices(buildDefaultSelectedServices());
       setValidityPeriods({
         electrical: 12,
         emergency_exit_light: 12,
@@ -126,6 +133,15 @@ export function CertificateModal({ isOpen, onClose, onSubmit, certificate }: Cer
       });
     }
   }, [isOpen, certificate, user]);
+
+  // Re-seed the form when opening fresh (create mode) with prefill data, e.g. "Create Certificate" from a report
+  useEffect(() => {
+    if (isOpen && !certificate) {
+      setFormData(buildDefaultFormData());
+      setSelectedServices(buildDefaultSelectedServices());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, initialData, certificate]);
 
   // Fetch all test sessions to get unique clients
   const { data: sessions } = useQuery({

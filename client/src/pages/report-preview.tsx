@@ -86,8 +86,7 @@ export default function ReportPreview() {
   const [showPDFSuccess, setShowPDFSuccess] = useState(false);
   const [isFinishingReport, setIsFinishingReport] = useState(false);
   const [showFinishSuccess, setShowFinishSuccess] = useState(false);
-  
-  
+
   const { navigate, showConfirm, confirmNavigation, cancelNavigation } = useConditionalNav();
 
   // Fetch custom form types
@@ -1272,6 +1271,7 @@ export default function ReportPreview() {
                 </div>
                 <h3 className="text-xl font-semibold text-green-600 mb-2">Report Completed!</h3>
                 <p className="text-gray-600">Your test results have been saved successfully.</p>
+                <p className="text-sm text-gray-500 mt-1">A Certificate of Compliance has been created — view it in Admin → Certificates.</p>
               </div>
             )}
           </div>

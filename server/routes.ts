@@ -49,6 +49,16 @@ function parseDateFilter(value: unknown): string | undefined {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
 }
 
+/**
+ * Adds a number of months to a YYYY-MM-DD date string, used to compute the default
+ * 12-month validity period for an auto-created certificate of compliance.
+ */
+function addMonthsToDateString(dateString: string, months: number): string {
+  const [year, month, day] = dateString.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1 + months, day));
+  return date.toISOString().slice(0, 10);
+}
+
 // Authentication middleware
 /**
  * Middleware to ensure user is logged in before accessing protected routes
@@ -634,6 +644,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clientName: finalizedSession.clientName,
         serviceType: finalizedSession.serviceType,
       });
+
+      // Auto-create a matching Certificate of Compliance, unless this session already has one
+      // (finalize should only ever run once per session, but guard against retries anyway).
+      try {
+        const existingCertificate = await storage.getCertificateBySessionId(sessionId);
+        if (!existingCertificate) {
+          const certificationDate = finalizedSession.testDate;
+          const validUntil = addMonthsToDateString(certificationDate, 12);
+          const certificate = await storage.createCertificate({
+            clientName: finalizedSession.clientName,
+            address: finalizedSession.address,
+            services: [finalizedSession.serviceType],
+            validityDates: { [finalizedSession.serviceType]: validUntil },
+            certificationDate,
+            technicianName: finalizedSession.technicianName,
+            technicianLicense: null,
+            notes: finalizedSession.reportNotes ? finalizedSession.reportNotes.slice(0, 250) : null,
+            userId: finalizedSession.userId!,
+            sessionId: finalizedSession.id,
+          });
+          trackCertificateAction(req, 'created', {
+            certificateId: certificate.id,
+            clientName: certificate.clientName,
+            services: certificate.services,
+          });
+        }
+      } catch (certError) {
+        // Finalizing the report is the priority; the technician can always create the
+        // certificate manually from Admin -> Certificates if this fails.
+        console.error("Error auto-creating certificate for finalized session:", certError);
+      }
 
       res.json(finalizedSession);
     } catch (error) {

@@ -113,6 +113,7 @@ export interface IStorage {
   getCertificatesByUserPaginated(userId: number, page: number, limit: number, search?: string, clientName?: string, dateFrom?: string, dateTo?: string): Promise<{ certificates: Certificate[]; total: number }>;
   getAllCertificatesPaginated(page: number, limit: number, search?: string, clientName?: string, dateFrom?: string, dateTo?: string): Promise<{ certificates: Certificate[]; total: number }>;
   getCertificateClientNames(userId?: number): Promise<string[]>;
+  getCertificateBySessionId(sessionId: number): Promise<Certificate | undefined>;
   getCertificateById(id: number): Promise<Certificate | undefined>;
   updateCertificate(id: number, data: Partial<InsertCertificate>): Promise<Certificate>;
   deleteCertificate(id: number): Promise<void>;
@@ -1439,9 +1440,10 @@ export class DatabaseStorage implements IStorage {
             technician_name,
             technician_license,
             notes,
-            user_id
+            user_id,
+            session_id
           )
-          values ($1, $2, $3::jsonb, $4::jsonb, $5, $6, $7, $8, $9)
+          values ($1, $2, $3::jsonb, $4::jsonb, $5, $6, $7, $8, $9, $10)
           returning
             id,
             client_name as "clientName",
@@ -1453,6 +1455,7 @@ export class DatabaseStorage implements IStorage {
             technician_license as "technicianLicense",
             notes,
             user_id as "userId",
+            session_id as "sessionId",
             created_at as "createdAt"
         `,
         [
@@ -1465,6 +1468,7 @@ export class DatabaseStorage implements IStorage {
           certificate.technicianLicense ?? null,
           certificate.notes ?? null,
           certificate.userId,
+          certificate.sessionId ?? null,
         ],
       );
       return result.rows[0] as Certificate;
@@ -1474,6 +1478,18 @@ export class DatabaseStorage implements IStorage {
       .insert(certificates)
       .values(certificate)
       .returning();
+    return cert;
+  }
+
+  /**
+   * Retrieves the certificate auto-created for a given test session, if one exists.
+   * Used to keep finalize idempotent — a session should only ever get one auto-created certificate.
+   */
+  async getCertificateBySessionId(sessionId: number): Promise<Certificate | undefined> {
+    const [cert] = await db
+      .select()
+      .from(certificates)
+      .where(eq(certificates.sessionId, sessionId));
     return cert;
   }
 

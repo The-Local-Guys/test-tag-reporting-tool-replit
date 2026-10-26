@@ -25,7 +25,8 @@ import { CertificatePreview } from "./CertificatePreview";
 import { generateCertificatePDF, downloadCertificatePDF } from "@/lib/certificate-generator";
 import type { Certificate } from "@shared/schema";
 
-const CERTIFICATES_PAGE_SIZE = 20;
+const CERTIFICATES_PAGE_SIZE_OPTIONS = [50, 100, 150, 200] as const;
+const DEFAULT_CERTIFICATES_PAGE_SIZE = 50;
 
 export function CertificatesTab() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -38,6 +39,7 @@ export function CertificatesTab() {
   // Issue date filter (preset + resolved YYYY-MM-DD bounds)
   const [dateRange, setDateRange] = useState<DateFilter>(EMPTY_DATE_FILTER);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_CERTIFICATES_PAGE_SIZE);
 
   const {
     certificates,
@@ -50,12 +52,17 @@ export function CertificatesTab() {
     deleteCertificateMutation,
   } = useCertificates({
     page,
-    limit: CERTIFICATES_PAGE_SIZE,
+    limit: pageSize,
     search: clientSearch,
     clientName: selectedClient,
     dateFrom: dateRange.from,
     dateTo: dateRange.to,
   });
+
+  const handlePageSizeChange = (value: string) => {
+    setPageSize(parseInt(value));
+    setPage(1);
+  };
 
   const handleSubmitCertificate = (data: any) => {
     if (editingCertificate) {
@@ -376,35 +383,58 @@ export function CertificatesTab() {
             </Table>
           </div>
         )}
-        {!certificatesLoading && totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4">
+        {!certificatesLoading && (
+          <div className="flex items-center justify-between mt-4 flex-wrap gap-2">
             <p className="text-sm text-muted-foreground">
-              Showing {((page - 1) * CERTIFICATES_PAGE_SIZE) + 1}–{Math.min(page * CERTIFICATES_PAGE_SIZE, total)} of {total} certificates
+              {total > 0
+                ? `Showing ${((page - 1) * pageSize) + 1}–${Math.min(page * pageSize, total)} of ${total} certificates`
+                : "No certificates"}
             </p>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                className="p-2 h-8 w-8"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                data-testid="button-certificates-prev-page"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <span className="text-sm px-2">
-                Page {page} of {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="p-2 h-8 w-8"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                data-testid="button-certificates-next-page"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="certificates-page-size" className="text-sm">
+                  Show:
+                </Label>
+                <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
+                  <SelectTrigger id="certificates-page-size" className="w-20" data-testid="select-certificates-page-size">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CERTIFICATES_PAGE_SIZE_OPTIONS.map((size) => (
+                      <SelectItem key={size} value={size.toString()}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="p-2 h-8 w-8"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    data-testid="button-certificates-prev-page"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <span className="text-sm px-2">
+                    Page {page} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="p-2 h-8 w-8"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    data-testid="button-certificates-next-page"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         )}
