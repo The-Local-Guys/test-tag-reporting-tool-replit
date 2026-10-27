@@ -1586,7 +1586,10 @@ export class DatabaseStorage implements IStorage {
       .selectDistinct({ clientName: certificates.clientName })
       .from(certificates);
     const rows = await (userId !== undefined ? query.where(eq(certificates.userId, userId)) : query);
-    return rows.map((r) => r.clientName).sort();
+    return rows
+      .map((r) => r.clientName)
+      .filter((name): name is string => !!name && name.trim() !== "")
+      .sort();
   }
 
   /**

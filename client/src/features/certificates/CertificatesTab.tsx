@@ -249,7 +249,7 @@ export function CertificatesTab() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Clients</SelectItem>
-                {clientNames.map((name) => (
+                {clientNames.filter((name) => !!name && name.trim() !== "").map((name) => (
                   <SelectItem key={name} value={name}>
                     {name}
                   </SelectItem>
