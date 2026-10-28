@@ -1705,10 +1705,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }, 0);
       }
 
+      // Include the attached Certificate of Compliance, if any, so the PDF export can
+      // append it the same way report-preview.tsx's own PDF export does.
+      const attachedCertificate = await storage.getCertificateForSession(sessionId);
+
       res.json({
         session,
         results,
         summary,
+        attachedCertificate: attachedCertificate ?? null,
       });
     } catch (error) {
       console.error("Error generating report:", error);
