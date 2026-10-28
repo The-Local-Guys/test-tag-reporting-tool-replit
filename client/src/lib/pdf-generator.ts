@@ -1,8 +1,9 @@
 import { jsPDF } from 'jspdf';
-import { type TestSession, type TestResult, smokeAlarmTypes } from '@shared/schema';
+import { type TestSession, type TestResult, type Certificate, smokeAlarmTypes } from '@shared/schema';
 import logoPath from '@assets/The Local Guys - with plug wide boarder - png seek.png';
 import letterheadPath from '@assets/Letterheads_1754455497882.png';
 import { resolveRcdTripTimes as resolveStoredRcdTripTimes } from './rcd-trip-times';
+import { renderCertificateIntoDoc } from './certificate-generator';
 import {
   formatEarthContinuity,
   formatInsulationResistance,
@@ -22,6 +23,9 @@ interface ReportData {
     numberOfPushButtons?: number; // For RCD reporting only
     numberOfTimeTests?: number;   // For RCD reporting only
   };
+  // When the report's session has an attached Certificate of Compliance, it's rendered
+  // as an extra page at the end of this same PDF so the two ship as one document.
+  attachedCertificate?: Certificate | null;
 }
 
 /**
@@ -1491,6 +1495,10 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       doc.text(line, margin, yPosition);
       yPosition += 5;
     }
+  }
+
+  if (data.attachedCertificate) {
+    await renderCertificateIntoDoc(doc, data.attachedCertificate);
   }
 
   return doc.output('blob');

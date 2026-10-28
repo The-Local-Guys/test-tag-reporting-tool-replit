@@ -4,7 +4,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { insertCertificateSchema, type Certificate } from "@shared/schema";
 
 export interface CertificatesPage {
-  certificates: Certificate[];
+  certificates: (Certificate & { linkedReportCount?: number })[];
   total: number;
   page: number;
   totalPages: number;

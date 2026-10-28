@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, varchar, jsonb, index, numeric, uuid, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, varchar, jsonb, index, numeric, uuid, uniqueIndex, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { normalizeCountry } from "./country";
@@ -77,6 +77,7 @@ export const testSessions = pgTable("test_sessions", {
   status: text("status").notNull().default("draft"), // 'draft' or 'finalized'
   customStartingNumbers: jsonb("custom_starting_numbers"), // JSON object with custom asset number ranges per frequency
   reportNotes: text("report_notes"), // optional report-level notes shown at the end of the PDF report
+  certificateId: integer("certificate_id").references((): AnyPgColumn => certificates.id), // Attached Certificate of Compliance; many sessions may share one certificate
   lastActivityAt: timestamp("last_activity_at").defaultNow(), // Track last modification for multi-day jobs
   createdAt: timestamp("created_at").defaultNow(),
   deletedAt: timestamp("deleted_at"), // Soft delete - null means active, timestamp means deleted
@@ -219,6 +220,7 @@ export const insertTestSessionSchema = createInsertSchema(testSessions)
     deletedAt: true,
     deletedBy: true,
     lastActivityAt: true, // Auto-set by database
+    certificateId: true, // Only settable via the dedicated attach/detach endpoint
   })
   .extend({
     country: z.string().transform(normalizeCountry),

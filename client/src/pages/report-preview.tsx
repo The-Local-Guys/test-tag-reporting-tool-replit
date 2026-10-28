@@ -5,11 +5,11 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Modal } from '@/components/ui/modal';
 import { TestResultEditModal } from '@/components/test-result-edit-modal';
 import { ReportNotesEditor } from '@/components/report-notes-editor';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Download, Mail, Share, Plus, Edit2, FileText, Trash2, Check, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Download, Mail, Share, Plus, Edit2, FileText, Trash2, Check, Link2, RefreshCw, ShieldCheck, ShieldAlert, Info } from 'lucide-react';
+import { AttachCertificateModal } from '@/features/certificates/AttachCertificateModal';
 import { WorkflowProgressBar, type ServiceType } from '@/components/workflow-progress-bar';
 import { SaveStatusIndicator } from '@/components/save-status-indicator';
 import { useSession, type BatchedTestResult } from '@/hooks/use-session';
@@ -94,6 +94,14 @@ export default function ReportPreview() {
     queryKey: ['/api/custom-forms'],
   });
 
+  // Fetch the Certificate of Compliance currently attached to this report, if any
+  // (auto-attached on finalize, or manually attached/changed below)
+  const { data: attachedCertificate } = useQuery<any | null>({
+    queryKey: [`/api/sessions/${sessionId}/certificate`],
+    enabled: !!sessionId,
+  });
+
+  const [isCertificatePickerOpen, setIsCertificatePickerOpen] = useState(false);
 
   // Edit form state with manual asset number tracking
   const [editResultData, setEditResultData] = useState({
@@ -459,6 +467,7 @@ export default function ReportPreview() {
         ...sessionData,
         session: sessionData.session,
         results: convertedResults,
+        attachedCertificate,
       };
 
       await downloadPDF(previewData, `test-report-${sessionData.session.clientName.replace(/\s+/g, '-').toLowerCase()}.pdf`);
@@ -1053,6 +1062,85 @@ export default function ReportPreview() {
         </div>
       </div>
 
+      {/* Certificate of Compliance attachment status */}
+      {sessionData?.session?.id && (
+        <div className="px-4 py-3 bg-white border-b border-gray-200">
+          <div
+            className={cn(
+              "rounded-xl border-2 p-4",
+              attachedCertificate
+                ? "bg-emerald-50 border-emerald-200"
+                : "bg-amber-50 border-amber-200"
+            )}
+            data-testid="section-certificate-status"
+          >
+            <div className="flex items-start gap-3">
+              <div
+                className={cn(
+                  "flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center",
+                  attachedCertificate ? "bg-emerald-100" : "bg-amber-100"
+                )}
+              >
+                {attachedCertificate ? (
+                  <ShieldCheck className="h-5 w-5 text-emerald-600" />
+                ) : (
+                  <ShieldAlert className="h-5 w-5 text-amber-600" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div
+                  className={cn(
+                    "text-xs font-semibold uppercase tracking-wide mb-0.5",
+                    attachedCertificate ? "text-emerald-700" : "text-amber-700"
+                  )}
+                >
+                  Certificate of Compliance
+                </div>
+                {attachedCertificate ? (
+                  <div className="text-sm text-gray-800">
+                    <span className="font-semibold">{attachedCertificate.clientName}</span>
+                    <span className="text-gray-600"> — attached, included at the end of the PDF</span>
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-700">No certificate attached to this report</div>
+                )}
+              </div>
+            </div>
+            {!attachedCertificate && (
+              <div className="flex items-start gap-1.5 mt-3 pt-3 border-t border-amber-200/70">
+                <Info className="h-3.5 w-3.5 text-amber-600/80 flex-shrink-0 mt-0.5" />
+                <p className="text-xs italic text-amber-800/80 leading-snug">
+                  Note: a certificate will be attached automatically once this report is saved. Attach one manually now if you'd rather use an existing certificate.
+                </p>
+              </div>
+            )}
+            <Button
+              size="sm"
+              className={cn(
+                "w-full mt-3",
+                attachedCertificate
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                  : "bg-amber-600 hover:bg-amber-700 text-white"
+              )}
+              onClick={() => setIsCertificatePickerOpen(true)}
+              data-testid="button-attach-certificate"
+            >
+              {attachedCertificate ? (
+                <>
+                  <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                  Change Certificate
+                </>
+              ) : (
+                <>
+                  <Link2 className="mr-1.5 h-3.5 w-3.5" />
+                  Attach Certificate
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Items List */}
       <div className="p-4 pb-24">
         <div className="text-sm font-medium text-gray-700 mb-3">Test Results</div>
@@ -1271,13 +1359,29 @@ export default function ReportPreview() {
                 </div>
                 <h3 className="text-xl font-semibold text-green-600 mb-2">Report Completed!</h3>
                 <p className="text-gray-600">Your test results have been saved successfully.</p>
-                <p className="text-sm text-gray-500 mt-1">A Certificate of Compliance has been created — view it in Admin → Certificates.</p>
+                {attachedCertificate ? (
+                  <p className="text-sm text-gray-500 mt-1">
+                    A Certificate of Compliance has been created and attached to this report.
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-500 mt-1">
+                    No Certificate of Compliance could be auto-created for this report — you can attach one manually below.
+                  </p>
+                )}
               </div>
             )}
           </div>
         </div>
       )}
 
+
+      {/* Attach/Change Certificate of Compliance */}
+      <AttachCertificateModal
+        isOpen={isCertificatePickerOpen}
+        onClose={() => setIsCertificatePickerOpen(false)}
+        sessionId={sessionId!}
+        currentCertificateId={attachedCertificate?.id}
+      />
 
       {/* Unsaved Changes Modal */}
        <AlertDialog open={showConfirm}>

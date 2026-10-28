@@ -664,6 +664,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             userId: finalizedSession.userId!,
             sessionId: finalizedSession.id,
           });
+          // Auto-attach the new certificate to the report it was generated from, so the
+          // report's PDF export includes it with no manual step.
+          const attachedSession = await storage.attachCertificateToSession(finalizedSession.id, certificate.id);
+          finalizedSession.certificateId = attachedSession.certificateId;
           trackCertificateAction(req, 'created', {
             certificateId: certificate.id,
             clientName: certificate.clientName,
@@ -921,6 +925,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(session);
     } catch (error) {
       res.status(500).json({ error: "Failed to retrieve session" });
+    }
+  });
+
+  // Get the Certificate of Compliance currently attached to a report, if any
+  app.get("/api/sessions/:id/certificate", requireAuth, async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const user = req.session.user!;
+      const session = await storage.getTestSession(sessionId);
+
+      if (!session) {
+        return res.status(404).json({ error: "Session not found" });
+      }
+      if (user.role === "technician" && session.userId !== user.id) {
+        return res.status(403).json({ error: "You can only access your own reports" });
+      }
+
+      const certificate = await storage.getCertificateForSession(sessionId);
+      res.json(certificate ?? null);
+    } catch (error) {
+      console.error("Error fetching session certificate:", error);
+      res.status(500).json({ error: "Failed to fetch session certificate" });
+    }
+  });
+
+  // Attach (or detach, with certificateId: null) a Certificate of Compliance to a report
+  app.patch("/api/sessions/:id/certificate", requireAuth, async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.id);
+      const user = req.session.user!;
+      const session = await storage.getTestSession(sessionId);
+
+      if (!session) {
+        return res.status(404).json({ error: "Session not found" });
+      }
+      if (user.role === "technician" && session.userId !== user.id) {
+        return res.status(403).json({ error: "You can only modify your own reports" });
+      }
+
+      const certificateId = req.body.certificateId === null ? null : parseInt(req.body.certificateId);
+      if (certificateId !== null && Number.isNaN(certificateId)) {
+        return res.status(400).json({ error: "certificateId must be a number or null" });
+      }
+
+      if (certificateId !== null) {
+        const certificate = await storage.getCertificateById(certificateId);
+        if (!certificate) {
+          return res.status(404).json({ error: "Certificate not found" });
+        }
+        // Technicians may only attach a certificate they created themselves
+        if (user.role === "technician" && certificate.userId !== user.id) {
+          return res.status(403).json({ error: "You can only attach your own certificates" });
+        }
+      }
+
+      const updatedSession = await storage.attachCertificateToSession(sessionId, certificateId);
+
+      trackCertificateAction(req, certificateId === null ? 'detached' : 'attached', {
+        certificateId: certificateId ?? undefined,
+        sessionId,
+      });
+
+      res.json(updatedSession);
+    } catch (error) {
+      console.error("Error attaching certificate to session:", error);
+      res.status(500).json({ error: "Failed to attach certificate" });
     }
   });
 
@@ -2129,6 +2199,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching certificate:", error);
       res.status(500).json({ error: "Failed to fetch certificate" });
+    }
+  });
+
+  // Get the reports currently attached to a certificate (used to show/warn how many
+  // reports share it, e.g. before deleting it)
+  app.get("/api/certificates/:id/sessions", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const user = req.session.user!;
+      const certificate = await storage.getCertificateById(id);
+
+      if (!certificate) {
+        return res.status(404).json({ error: "Certificate not found" });
+      }
+      if (user.role === "technician" && certificate.userId !== user.id) {
+        return res.status(403).json({ error: "You can only access your own certificates" });
+      }
+
+      const sessions = await storage.getSessionsByCertificateId(id);
+      res.json(sessions);
+    } catch (error) {
+      console.error("Error fetching certificate's attached reports:", error);
+      res.status(500).json({ error: "Failed to fetch attached reports" });
     }
   });
 

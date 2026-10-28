@@ -20,7 +20,7 @@ import {
   type InsertCertificate
 } from "@shared/schema";
 import { db, pool } from "./db";
-import { eq, desc, and, gte, lte, sql, isNull, ilike, or } from "drizzle-orm";
+import { eq, desc, and, gte, lte, sql, isNull, ilike, or, getTableColumns } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import type { TransactionClient } from "./idempotency";
 import { normalizeCountry } from "@shared/country";
@@ -46,9 +46,9 @@ export interface IStorage {
   updateUserStatus(userId: number, isActive: boolean): Promise<User>;
   updateUser(userId: number, data: Partial<InsertUser>): Promise<User>;
   getAllTestSessions(): Promise<(TestSession & { technicianFullName?: string | null })[]>;
-  getAllTestSessionsPaginated(page: number, limit: number, technicianFilter?: string, serviceTypeFilter?: string, search?: string, dateFrom?: string, dateTo?: string): Promise<{ sessions: (TestSession & { technicianFullName?: string | null; totalItems?: number; failedItems?: number })[]; total: number }>;
+  getAllTestSessionsPaginated(page: number, limit: number, technicianFilter?: string, serviceTypeFilter?: string, search?: string, dateFrom?: string, dateTo?: string): Promise<{ sessions: (TestSession & { technicianFullName?: string | null; totalItems?: number; failedItems?: number; certificateClientName?: string | null })[]; total: number }>;
   getSessionsByUser(userId: number): Promise<TestSession[]>;
-  getSessionsByUserPaginated(userId: number, page: number, limit: number, serviceTypeFilter?: string, search?: string, dateFrom?: string, dateTo?: string): Promise<{ sessions: (TestSession & { totalItems?: number; failedItems?: number })[]; total: number }>;
+  getSessionsByUserPaginated(userId: number, page: number, limit: number, serviceTypeFilter?: string, search?: string, dateFrom?: string, dateTo?: string): Promise<{ sessions: (TestSession & { totalItems?: number; failedItems?: number; certificateClientName?: string | null })[]; total: number }>;
   updateTestSession(sessionId: number, data: Partial<InsertTestSession>): Promise<TestSession>;
   deleteTestSession(sessionId: number, deletedByUserId: number): Promise<void>;
 
@@ -58,13 +58,16 @@ export interface IStorage {
 
   // Draft session management (database-first architecture)
   getDraftSessionsByUser(userId: number): Promise<(TestSession & { totalItems: number; failedItems: number })[]>;
-  getDraftSessionsByUserPaginated(userId: number, page: number, limit: number, serviceTypeFilter?: string, search?: string, dateFrom?: string, dateTo?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }>;
+  getDraftSessionsByUserPaginated(userId: number, page: number, limit: number, serviceTypeFilter?: string, search?: string, dateFrom?: string, dateTo?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number; certificateClientName?: string | null })[]; total: number }>;
   getAllDraftSessions(): Promise<(TestSession & { totalItems: number; failedItems: number })[]>;
-  getAllDraftSessionsPaginated(page: number, limit: number, technicianFilter?: string, serviceTypeFilter?: string, search?: string, dateFrom?: string, dateTo?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }>;
+  getAllDraftSessionsPaginated(page: number, limit: number, technicianFilter?: string, serviceTypeFilter?: string, search?: string, dateFrom?: string, dateTo?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number; certificateClientName?: string | null })[]; total: number }>;
   finalizeSession(sessionId: number): Promise<TestSession>;
   updateCustomStartingNumbers(sessionId: number, numbers: object): Promise<TestSession>;
   updateReportNotes(sessionId: number, reportNotes: string | null): Promise<TestSession>;
   updateSessionActivity(sessionId: number, client?: TransactionClient): Promise<void>;
+  attachCertificateToSession(sessionId: number, certificateId: number | null): Promise<TestSession>;
+  getCertificateForSession(sessionId: number): Promise<Certificate | undefined>;
+  getSessionsByCertificateId(certificateId: number): Promise<TestSession[]>;
   
   // Test Results
   createTestResult(result: InsertTestResult, client?: TransactionClient): Promise<TestResult>;
@@ -110,8 +113,8 @@ export interface IStorage {
   createCertificate(certificate: InsertCertificate, client?: TransactionClient): Promise<Certificate>;
   getCertificatesByUser(userId: number): Promise<Certificate[]>;
   getAllCertificates(): Promise<Certificate[]>;
-  getCertificatesByUserPaginated(userId: number, page: number, limit: number, search?: string, clientName?: string, dateFrom?: string, dateTo?: string): Promise<{ certificates: Certificate[]; total: number }>;
-  getAllCertificatesPaginated(page: number, limit: number, search?: string, clientName?: string, dateFrom?: string, dateTo?: string): Promise<{ certificates: Certificate[]; total: number }>;
+  getCertificatesByUserPaginated(userId: number, page: number, limit: number, search?: string, clientName?: string, dateFrom?: string, dateTo?: string): Promise<{ certificates: (Certificate & { linkedReportCount: number })[]; total: number }>;
+  getAllCertificatesPaginated(page: number, limit: number, search?: string, clientName?: string, dateFrom?: string, dateTo?: string): Promise<{ certificates: (Certificate & { linkedReportCount: number })[]; total: number }>;
   getCertificateClientNames(userId?: number): Promise<string[]>;
   getCertificateBySessionId(sessionId: number): Promise<Certificate | undefined>;
   getCertificateById(id: number): Promise<Certificate | undefined>;
@@ -267,6 +270,7 @@ export class DatabaseStorage implements IStorage {
         status: testSessions.status,
         customStartingNumbers: testSessions.customStartingNumbers,
         reportNotes: testSessions.reportNotes,
+        certificateId: testSessions.certificateId,
         lastActivityAt: testSessions.lastActivityAt,
         createdAt: testSessions.createdAt,
         deletedAt: testSessions.deletedAt,
@@ -309,6 +313,7 @@ export class DatabaseStorage implements IStorage {
         status: testSessions.status,
         customStartingNumbers: testSessions.customStartingNumbers,
         reportNotes: testSessions.reportNotes,
+        certificateId: testSessions.certificateId,
         lastActivityAt: testSessions.lastActivityAt,
         createdAt: testSessions.createdAt,
         deletedAt: testSessions.deletedAt,
@@ -325,7 +330,7 @@ export class DatabaseStorage implements IStorage {
     return sessionsWithCounts;
   }
 
-  async getAllTestSessionsPaginated(page: number, limit: number, technicianFilter?: string, serviceTypeFilter?: string, search?: string, dateFrom?: string, dateTo?: string): Promise<{ sessions: (TestSession & { technicianFullName?: string | null; totalItems?: number; failedItems?: number })[]; total: number }> {
+  async getAllTestSessionsPaginated(page: number, limit: number, technicianFilter?: string, serviceTypeFilter?: string, search?: string, dateFrom?: string, dateTo?: string): Promise<{ sessions: (TestSession & { technicianFullName?: string | null; totalItems?: number; failedItems?: number; certificateClientName?: string | null })[]; total: number }> {
     const offset = (page - 1) * limit;
     const conditions = [isNull(testSessions.deletedAt)];
     if (technicianFilter && technicianFilter !== "all") conditions.push(eq(users.fullName, technicianFilter));
@@ -363,6 +368,7 @@ export class DatabaseStorage implements IStorage {
         status: testSessions.status,
         customStartingNumbers: testSessions.customStartingNumbers,
         reportNotes: testSessions.reportNotes,
+        certificateId: testSessions.certificateId,
         lastActivityAt: testSessions.lastActivityAt,
         createdAt: testSessions.createdAt,
         deletedAt: testSessions.deletedAt,
@@ -370,10 +376,12 @@ export class DatabaseStorage implements IStorage {
         technicianFullName: users.fullName,
         totalItems: sql<number>`count(${testResults.id})`.mapWith(Number),
         failedItems: sql<number>`count(case when ${testResults.result} = 'fail' then 1 end)`.mapWith(Number),
+        certificateClientName: sql<string | null>`max(${certificates.clientName})`,
       })
       .from(testSessions)
       .leftJoin(users, eq(testSessions.userId, users.id))
       .leftJoin(testResults, and(eq(testSessions.id, testResults.sessionId), isNull(testResults.deletedAt)))
+      .leftJoin(certificates, eq(testSessions.certificateId, certificates.id))
       .where(whereClause)
       .groupBy(testSessions.id, users.fullName)
       .orderBy(desc(testSessions.testDate))
@@ -383,7 +391,7 @@ export class DatabaseStorage implements IStorage {
     return { sessions, total };
   }
 
-  async getSessionsByUserPaginated(userId: number, page: number, limit: number, serviceTypeFilter?: string, search?: string, dateFrom?: string, dateTo?: string): Promise<{ sessions: (TestSession & { totalItems?: number; failedItems?: number })[]; total: number }> {
+  async getSessionsByUserPaginated(userId: number, page: number, limit: number, serviceTypeFilter?: string, search?: string, dateFrom?: string, dateTo?: string): Promise<{ sessions: (TestSession & { totalItems?: number; failedItems?: number; certificateClientName?: string | null })[]; total: number }> {
     const offset = (page - 1) * limit;
     const conditions = [eq(testSessions.userId, userId), isNull(testSessions.deletedAt)];
     if (serviceTypeFilter && serviceTypeFilter !== 'all') conditions.push(eq(testSessions.serviceType, serviceTypeFilter));
@@ -419,15 +427,18 @@ export class DatabaseStorage implements IStorage {
         status: testSessions.status,
         customStartingNumbers: testSessions.customStartingNumbers,
         reportNotes: testSessions.reportNotes,
+        certificateId: testSessions.certificateId,
         lastActivityAt: testSessions.lastActivityAt,
         createdAt: testSessions.createdAt,
         deletedAt: testSessions.deletedAt,
         deletedBy: testSessions.deletedBy,
         totalItems: sql<number>`count(${testResults.id})`.mapWith(Number),
         failedItems: sql<number>`count(case when ${testResults.result} = 'fail' then 1 end)`.mapWith(Number),
+        certificateClientName: sql<string | null>`max(${certificates.clientName})`,
       })
       .from(testSessions)
       .leftJoin(testResults, and(eq(testSessions.id, testResults.sessionId), isNull(testResults.deletedAt)))
+      .leftJoin(certificates, eq(testSessions.certificateId, certificates.id))
       .where(whereClause)
       .groupBy(testSessions.id)
       .orderBy(desc(testSessions.testDate))
@@ -586,6 +597,7 @@ export class DatabaseStorage implements IStorage {
         status: testSessions.status,
         customStartingNumbers: testSessions.customStartingNumbers,
         reportNotes: testSessions.reportNotes,
+        certificateId: testSessions.certificateId,
         lastActivityAt: testSessions.lastActivityAt,
         createdAt: testSessions.createdAt,
         deletedAt: testSessions.deletedAt,
@@ -620,6 +632,7 @@ export class DatabaseStorage implements IStorage {
         status: testSessions.status,
         customStartingNumbers: testSessions.customStartingNumbers,
         reportNotes: testSessions.reportNotes,
+        certificateId: testSessions.certificateId,
         lastActivityAt: testSessions.lastActivityAt,
         createdAt: testSessions.createdAt,
         deletedAt: testSessions.deletedAt,
@@ -663,6 +676,7 @@ export class DatabaseStorage implements IStorage {
         status: testSessions.status,
         customStartingNumbers: testSessions.customStartingNumbers,
         reportNotes: testSessions.reportNotes,
+        certificateId: testSessions.certificateId,
         lastActivityAt: testSessions.lastActivityAt,
         createdAt: testSessions.createdAt,
         deletedAt: testSessions.deletedAt,
@@ -682,7 +696,7 @@ export class DatabaseStorage implements IStorage {
     return draftSessions;
   }
 
-  async getDraftSessionsByUserPaginated(userId: number, page: number, limit: number, serviceTypeFilter?: string, search?: string, dateFrom?: string, dateTo?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }> {
+  async getDraftSessionsByUserPaginated(userId: number, page: number, limit: number, serviceTypeFilter?: string, search?: string, dateFrom?: string, dateTo?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number; certificateClientName?: string | null })[]; total: number }> {
     const offset = (page - 1) * limit;
     const conditions = [eq(testSessions.userId, userId), eq(testSessions.status, 'draft'), isNull(testSessions.deletedAt)];
     if (serviceTypeFilter && serviceTypeFilter !== 'all') conditions.push(eq(testSessions.serviceType, serviceTypeFilter));
@@ -717,15 +731,18 @@ export class DatabaseStorage implements IStorage {
         status: testSessions.status,
         customStartingNumbers: testSessions.customStartingNumbers,
         reportNotes: testSessions.reportNotes,
+        certificateId: testSessions.certificateId,
         lastActivityAt: testSessions.lastActivityAt,
         createdAt: testSessions.createdAt,
         deletedAt: testSessions.deletedAt,
         deletedBy: testSessions.deletedBy,
         totalItems: sql<number>`count(${testResults.id})`.mapWith(Number),
         failedItems: sql<number>`count(case when ${testResults.result} = 'fail' then 1 end)`.mapWith(Number),
+        certificateClientName: sql<string | null>`max(${certificates.clientName})`,
       })
       .from(testSessions)
       .leftJoin(testResults, and(eq(testSessions.id, testResults.sessionId), isNull(testResults.deletedAt)))
+      .leftJoin(certificates, eq(testSessions.certificateId, certificates.id))
       .where(whereClause)
       .groupBy(testSessions.id)
       .orderBy(desc(testSessions.lastActivityAt))
@@ -735,7 +752,7 @@ export class DatabaseStorage implements IStorage {
     return { sessions, total };
   }
 
-  async getAllDraftSessionsPaginated(page: number, limit: number, technicianFilter?: string, serviceTypeFilter?: string, search?: string, dateFrom?: string, dateTo?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number })[]; total: number }> {
+  async getAllDraftSessionsPaginated(page: number, limit: number, technicianFilter?: string, serviceTypeFilter?: string, search?: string, dateFrom?: string, dateTo?: string): Promise<{ sessions: (TestSession & { totalItems: number; failedItems: number; certificateClientName?: string | null })[]; total: number }> {
     const offset = (page - 1) * limit;
     const conditions = [eq(testSessions.status, 'draft'), isNull(testSessions.deletedAt)];
     if (technicianFilter && technicianFilter !== 'all') conditions.push(eq(testSessions.technicianName, technicianFilter));
@@ -771,15 +788,18 @@ export class DatabaseStorage implements IStorage {
         status: testSessions.status,
         customStartingNumbers: testSessions.customStartingNumbers,
         reportNotes: testSessions.reportNotes,
+        certificateId: testSessions.certificateId,
         lastActivityAt: testSessions.lastActivityAt,
         createdAt: testSessions.createdAt,
         deletedAt: testSessions.deletedAt,
         deletedBy: testSessions.deletedBy,
         totalItems: sql<number>`count(${testResults.id})`.mapWith(Number),
         failedItems: sql<number>`count(case when ${testResults.result} = 'fail' then 1 end)`.mapWith(Number),
+        certificateClientName: sql<string | null>`max(${certificates.clientName})`,
       })
       .from(testSessions)
       .leftJoin(testResults, and(eq(testSessions.id, testResults.sessionId), isNull(testResults.deletedAt)))
+      .leftJoin(certificates, eq(testSessions.certificateId, certificates.id))
       .where(whereClause)
       .groupBy(testSessions.id)
       .orderBy(desc(testSessions.lastActivityAt))
@@ -833,6 +853,39 @@ export class DatabaseStorage implements IStorage {
       .where(eq(testSessions.id, sessionId))
       .returning();
     return session;
+  }
+
+  /**
+   * Attaches (or detaches, with null) a Certificate of Compliance to a report.
+   * A report has at most one attached certificate; many reports may share the same one.
+   */
+  async attachCertificateToSession(sessionId: number, certificateId: number | null): Promise<TestSession> {
+    const [session] = await db
+      .update(testSessions)
+      .set({ certificateId })
+      .where(eq(testSessions.id, sessionId))
+      .returning();
+    return session;
+  }
+
+  /**
+   * Retrieves the certificate currently attached to a report, if any.
+   */
+  async getCertificateForSession(sessionId: number): Promise<Certificate | undefined> {
+    const session = await this.getTestSession(sessionId);
+    if (!session?.certificateId) return undefined;
+    return this.getCertificateById(session.certificateId);
+  }
+
+  /**
+   * Retrieves every report currently attached to a given certificate.
+   * Used to show/warn how many reports share a certificate before it's deleted.
+   */
+  async getSessionsByCertificateId(certificateId: number): Promise<TestSession[]> {
+    return await db
+      .select()
+      .from(testSessions)
+      .where(and(eq(testSessions.certificateId, certificateId), isNull(testSessions.deletedAt)));
   }
 
   /**
@@ -1520,7 +1573,7 @@ export class DatabaseStorage implements IStorage {
   /**
    * Retrieves a page of certificates created by a specific user, with optional filters
    */
-  async getCertificatesByUserPaginated(userId: number, page: number, limit: number, search?: string, clientName?: string, dateFrom?: string, dateTo?: string): Promise<{ certificates: Certificate[]; total: number }> {
+  async getCertificatesByUserPaginated(userId: number, page: number, limit: number, search?: string, clientName?: string, dateFrom?: string, dateTo?: string): Promise<{ certificates: (Certificate & { linkedReportCount: number })[]; total: number }> {
     const offset = (page - 1) * limit;
     const conditions = [eq(certificates.userId, userId)];
     if (clientName && clientName !== "all") conditions.push(eq(certificates.clientName, clientName));
@@ -1539,9 +1592,15 @@ export class DatabaseStorage implements IStorage {
     const total = totalResult[0]?.count || 0;
 
     const result = await db
-      .select()
+      .select({
+        ...getTableColumns(certificates),
+        // Number of reports currently attached to this certificate (session_id link, soft-deleted reports excluded)
+        linkedReportCount: sql<number>`count(distinct case when ${testSessions.deletedAt} is null then ${testSessions.id} end)`.mapWith(Number),
+      })
       .from(certificates)
+      .leftJoin(testSessions, eq(testSessions.certificateId, certificates.id))
       .where(whereClause)
+      .groupBy(certificates.id)
       .orderBy(desc(certificates.createdAt))
       .limit(limit)
       .offset(offset);
@@ -1552,7 +1611,7 @@ export class DatabaseStorage implements IStorage {
   /**
    * Retrieves a page of all certificates in the system, with optional filters
    */
-  async getAllCertificatesPaginated(page: number, limit: number, search?: string, clientName?: string, dateFrom?: string, dateTo?: string): Promise<{ certificates: Certificate[]; total: number }> {
+  async getAllCertificatesPaginated(page: number, limit: number, search?: string, clientName?: string, dateFrom?: string, dateTo?: string): Promise<{ certificates: (Certificate & { linkedReportCount: number })[]; total: number }> {
     const offset = (page - 1) * limit;
     const conditions = [];
     if (clientName && clientName !== "all") conditions.push(eq(certificates.clientName, clientName));
@@ -1568,8 +1627,15 @@ export class DatabaseStorage implements IStorage {
     const totalResult = await (whereClause ? totalQuery.where(whereClause) : totalQuery);
     const total = totalResult[0]?.count || 0;
 
-    const resultQuery = db.select().from(certificates);
+    const resultQuery = db
+      .select({
+        ...getTableColumns(certificates),
+        linkedReportCount: sql<number>`count(distinct case when ${testSessions.deletedAt} is null then ${testSessions.id} end)`.mapWith(Number),
+      })
+      .from(certificates)
+      .leftJoin(testSessions, eq(testSessions.certificateId, certificates.id));
     const result = await (whereClause ? resultQuery.where(whereClause) : resultQuery)
+      .groupBy(certificates.id)
       .orderBy(desc(certificates.createdAt))
       .limit(limit)
       .offset(offset);

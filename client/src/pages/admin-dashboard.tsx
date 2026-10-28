@@ -61,6 +61,9 @@ import {
   Search,
   ChevronsUpDown,
   Check,
+  ShieldCheck,
+  Link2,
+  RefreshCw,
 } from "lucide-react";
 import {
   Dialog,
@@ -75,6 +78,7 @@ import { formatFrequencyLabel } from "@/lib/report-formatters";
 import { resolveRcdTripTimes } from "@/lib/rcd-trip-times";
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
 import { CertificatesTab } from "@/features/certificates/CertificatesTab";
+import { AttachCertificateModal } from "@/features/certificates/AttachCertificateModal";
 import { DateRangeFilter, EMPTY_DATE_FILTER, type DateFilter } from "@/components/date-range-filter";
 import { NoResults } from "@/components/no-results";
 import { failureReasons, emergencyFailureReasons, fireFailureReasons, rcdFailureReasons, MAX_SESSION_ADDRESS_LENGTH } from "@shared/schema";
@@ -202,12 +206,17 @@ function createEmptyTestResultData(serviceType: string = "electrical") {
  * Provides user management, session editing, data export, and system monitoring
  * Restricted to super_admin and support_center roles
  */
-function ReportsPagination({ page, totalPages, total, limit = 50, onPageChange }: {
+const REPORTS_PAGE_SIZE_OPTIONS = [50, 100, 150, 200] as const;
+const DEFAULT_REPORTS_PAGE_SIZE = 50;
+
+function ReportsPagination({ page, totalPages, total, limit = 50, onPageChange, pageSize, onPageSizeChange }: {
   page: number;
   totalPages: number;
   total: number;
   limit?: number;
   onPageChange: (p: number) => void;
+  pageSize?: number;
+  onPageSizeChange?: (size: number) => void;
 }) {
   const getPageNumbers = () => {
     if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -223,44 +232,68 @@ function ReportsPagination({ page, totalPages, total, limit = 50, onPageChange }
   };
 
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between flex-wrap gap-2">
       <p className="text-sm text-gray-600">
         Showing {((page - 1) * limit) + 1}–{Math.min(page * limit, total)} of {total} reports
       </p>
-      <div className="flex items-center gap-1">
-        <Button
-          variant="outline"
-          size="sm"
-          className="p-2 h-8 w-8"
-          onClick={() => onPageChange(Math.max(1, page - 1))}
-          disabled={page === 1}
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </Button>
-        {getPageNumbers().map((p, i) =>
-          p === "..." ? (
-            <span key={`ellipsis-${i}`} className="px-1 text-sm text-gray-400">…</span>
-          ) : (
-            <Button
-              key={p}
-              variant={p === page ? "default" : "outline"}
-              size="sm"
-              className="h-8 w-8 p-0 text-sm"
-              onClick={() => onPageChange(p as number)}
+      <div className="flex items-center gap-3">
+        {onPageSizeChange && (
+          <div className="flex items-center gap-2">
+            <Label className="text-sm whitespace-nowrap">Show:</Label>
+            <Select
+              value={(pageSize ?? limit).toString()}
+              onValueChange={(value) => onPageSizeChange(parseInt(value))}
             >
-              {p}
-            </Button>
-          )
+              <SelectTrigger className="w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {REPORTS_PAGE_SIZE_OPTIONS.map((size) => (
+                  <SelectItem key={size} value={size.toString()}>
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
-        <Button
-          variant="outline"
-          size="sm"
-          className="p-2 h-8 w-8"
-          onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-          disabled={page === totalPages}
-        >
-          <ChevronRight className="w-4 h-4" />
-        </Button>
+        {totalPages > 1 && (
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="p-2 h-8 w-8"
+              onClick={() => onPageChange(Math.max(1, page - 1))}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            {getPageNumbers().map((p, i) =>
+              p === "..." ? (
+                <span key={`ellipsis-${i}`} className="px-1 text-sm text-gray-400">…</span>
+              ) : (
+                <Button
+                  key={p}
+                  variant={p === page ? "default" : "outline"}
+                  size="sm"
+                  className="h-8 w-8 p-0 text-sm"
+                  onClick={() => onPageChange(p as number)}
+                >
+                  {p}
+                </Button>
+              )
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="p-2 h-8 w-8"
+              onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+              disabled={page === totalPages}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -287,6 +320,9 @@ export default function AdminDashboard() {
   const [isEditSessionModalOpen, setIsEditSessionModalOpen] = useState(false);
   const [isViewReportModalOpen, setIsViewReportModalOpen] = useState(false);
   const [viewingSession, setViewingSession] = useState<any>(null);
+  // Session currently targeted by the "Attach Certificate" picker (from the View Report
+  // modal or the standalone row action); holds just enough to drive the picker + a local update.
+  const [attachCertificateSession, setAttachCertificateSession] = useState<{ id: number; certificateId: number | null } | null>(null);
   const [isContinuing, setIsContinuing] = useState(false);
   const [isEditResultModalOpen, setIsEditResultModalOpen] = useState(false);
   const [editingResult, setEditingResult] = useState<any>(null);
@@ -364,6 +400,18 @@ export default function AdminDashboard() {
   const [reportResultFilter, setReportResultFilter] = useState("all");
   const [reportsPage, setReportsPage] = useState(1);
   const [draftsPage, setDraftsPage] = useState(1);
+  const [reportsPageSize, setReportsPageSize] = useState<number>(DEFAULT_REPORTS_PAGE_SIZE);
+  const [draftsPageSize, setDraftsPageSize] = useState<number>(DEFAULT_REPORTS_PAGE_SIZE);
+
+  const handleReportsPageSizeChange = (size: number) => {
+    setReportsPageSize(size);
+    setReportsPage(1);
+  };
+
+  const handleDraftsPageSizeChange = (size: number) => {
+    setDraftsPageSize(size);
+    setDraftsPage(1);
+  };
   
   // Asset number calculation states
   const [monthlyAssetCount, setMonthlyAssetCount] = useState(0);
@@ -451,9 +499,9 @@ export default function AdminDashboard() {
 
   // Fetch all test sessions (paginated)
   const { data: sessions, isLoading: sessionsLoading } = useQuery({
-    queryKey: ["/api/admin/sessions", reportsPage, selectedTechnicianFilter, selectedServiceTypeFilter, reportsSearch, reportsDateRange.from, reportsDateRange.to],
+    queryKey: ["/api/admin/sessions", reportsPage, reportsPageSize, selectedTechnicianFilter, selectedServiceTypeFilter, reportsSearch, reportsDateRange.from, reportsDateRange.to],
     queryFn: async () => {
-      const params = new URLSearchParams({ page: reportsPage.toString(), limit: "50" });
+      const params = new URLSearchParams({ page: reportsPage.toString(), limit: reportsPageSize.toString() });
       if (selectedTechnicianFilter !== "all") {
         params.set("technicianFilter", selectedTechnicianFilter);
       }
@@ -482,9 +530,9 @@ export default function AdminDashboard() {
 
   // Fetch all draft sessions (admin only - for recovery purposes, paginated)
   const { data: adminDraftSessions, isLoading: adminDraftsLoading } = useQuery({
-    queryKey: ["/api/admin/sessions/drafts", draftsPage, selectedDraftTechnicianFilter, selectedDraftServiceTypeFilter, draftsSearch, draftsDateRange.from, draftsDateRange.to],
+    queryKey: ["/api/admin/sessions/drafts", draftsPage, draftsPageSize, selectedDraftTechnicianFilter, selectedDraftServiceTypeFilter, draftsSearch, draftsDateRange.from, draftsDateRange.to],
     queryFn: async () => {
-      const params = new URLSearchParams({ page: draftsPage.toString(), limit: "50" });
+      const params = new URLSearchParams({ page: draftsPage.toString(), limit: draftsPageSize.toString() });
       if (selectedDraftTechnicianFilter !== "all") {
         params.set("technicianFilter", selectedDraftTechnicianFilter);
       }
@@ -513,9 +561,9 @@ export default function AdminDashboard() {
 
   // Fetch own draft sessions (technician only, paginated)
   const { data: technicianDraftSessions, isLoading: technicianDraftsLoading } = useQuery({
-    queryKey: ["/api/sessions/drafts", draftsPage, selectedTechDraftServiceTypeFilter, techDraftsSearch, techDraftsDateRange.from, techDraftsDateRange.to],
+    queryKey: ["/api/sessions/drafts", draftsPage, draftsPageSize, selectedTechDraftServiceTypeFilter, techDraftsSearch, techDraftsDateRange.from, techDraftsDateRange.to],
     queryFn: async () => {
-      const params = new URLSearchParams({ page: draftsPage.toString(), limit: "50" });
+      const params = new URLSearchParams({ page: draftsPage.toString(), limit: draftsPageSize.toString() });
       if (selectedTechDraftServiceTypeFilter !== "all") {
         params.set("serviceTypeFilter", selectedTechDraftServiceTypeFilter);
       }
@@ -1356,6 +1404,19 @@ export default function AdminDashboard() {
         variant: "destructive",
       });
     }
+  };
+
+  // Certificate currently attached to the report open in the View Report modal, if any
+  const { data: viewingSessionCertificate } = useQuery<any | null>({
+    queryKey: [`/api/sessions/${viewingSession?.session?.id}/certificate`],
+    enabled: isViewReportModalOpen && !!viewingSession?.session?.id,
+  });
+
+  // Refreshes every place a report's attached certificate is shown, after an attach/detach
+  const handleCertificateAttached = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/sessions"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/sessions/drafts"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/sessions/drafts"] });
   };
 
   const handleEditSession = (session: any) => {
@@ -2461,6 +2522,7 @@ export default function AdminDashboard() {
                           page={reportsPage}
                           totalPages={sessions.totalPages}
                           total={sessions.total}
+                          limit={reportsPageSize}
                           onPageChange={setReportsPage}
                         />
                       </div>
@@ -2474,6 +2536,7 @@ export default function AdminDashboard() {
                           <TableHead className="min-w-[140px]">Service Type</TableHead>
                           <TableHead className="min-w-[110px]">Date (DD/MM/YYYY)</TableHead>
                           <TableHead className="min-w-[100px]">Results</TableHead>
+                          <TableHead className="min-w-[140px]">Certificate</TableHead>
                           <TableHead className="min-w-[160px]">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -2537,6 +2600,20 @@ export default function AdminDashboard() {
                             </div>
                           </TableCell>
                           <TableCell>
+                            {session.certificateClientName ? (
+                              <Badge
+                                variant="outline"
+                                className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1 font-normal"
+                                title={session.certificateClientName}
+                              >
+                                <ShieldCheck className="w-3 h-3" />
+                                <span className="max-w-[120px] truncate">{session.certificateClientName}</span>
+                              </Badge>
+                            ) : (
+                              <span className="text-xs text-gray-400">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
                             <div className="flex items-center gap-1">
                               <Button
                                 size="sm"
@@ -2564,6 +2641,22 @@ export default function AdminDashboard() {
                                 title="Continue Report"
                               >
                                 <PlayCircle className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  setAttachCertificateSession({ id: session.id, certificateId: session.certificateId ?? null })
+                                }
+                                className="p-2 h-8 w-8 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-300"
+                                title={session.certificateClientName ? "Change Certificate" : "Attach Certificate"}
+                                data-testid={`button-attach-certificate-${session.id}`}
+                              >
+                                {session.certificateClientName ? (
+                                  <RefreshCw className="w-4 h-4" />
+                                ) : (
+                                  <Link2 className="w-4 h-4" />
+                                )}
                               </Button>
                               {session.serviceType !== "electrical" && (
                                 <Button
@@ -2599,7 +2692,7 @@ export default function AdminDashboard() {
                       ))}
                       {filteredSessions.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={6}>
+                          <TableCell colSpan={7}>
                             <NoResults
                               hasFilters={hasReportFilters}
                               emptyTitle="No reports found"
@@ -2615,13 +2708,16 @@ export default function AdminDashboard() {
                   </div>
 
                   {/* Bottom pagination controls */}
-                  {sessions && sessions.totalPages > 1 && (
+                  {sessions && (
                     <div className="mt-4">
                       <ReportsPagination
                         page={reportsPage}
                         totalPages={sessions.totalPages}
                         total={sessions.total}
+                        limit={reportsPageSize}
                         onPageChange={setReportsPage}
+                        pageSize={reportsPageSize}
+                        onPageSizeChange={handleReportsPageSizeChange}
                       />
                     </div>
                   )}
@@ -2800,6 +2896,7 @@ export default function AdminDashboard() {
                             page={draftsPage}
                             totalPages={adminDraftSessions.totalPages}
                             total={adminDraftSessions.total}
+                            limit={draftsPageSize}
                             onPageChange={setDraftsPage}
                           />
                         </div>
@@ -2832,6 +2929,7 @@ export default function AdminDashboard() {
                             <TableHead className="min-w-[80px]">Items</TableHead>
                             <TableHead className="min-w-[130px]">Last Activity (DD/MM, HH:MM)</TableHead>
                             <TableHead className="min-w-[110px]">Created (DD/MM/YYYY)</TableHead>
+                            <TableHead className="min-w-[140px]">Certificate</TableHead>
                             <TableHead className="min-w-[120px]">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -2918,6 +3016,20 @@ export default function AdminDashboard() {
                                 {new Date(draft.createdAt).toLocaleDateString("en-AU")}
                               </TableCell>
                               <TableCell>
+                                {draft.certificateClientName ? (
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1 font-normal"
+                                    title={draft.certificateClientName}
+                                  >
+                                    <ShieldCheck className="w-3 h-3" />
+                                    <span className="max-w-[120px] truncate">{draft.certificateClientName}</span>
+                                  </Badge>
+                                ) : (
+                                  <span className="text-xs text-gray-400">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
                                 <div className="flex items-center gap-1">
                                   <Button
                                     size="sm"
@@ -2940,6 +3052,22 @@ export default function AdminDashboard() {
                                   <Button
                                     size="sm"
                                     variant="outline"
+                                    onClick={() =>
+                                      setAttachCertificateSession({ id: draft.id, certificateId: draft.certificateId ?? null })
+                                    }
+                                    className="p-2 h-8 w-8 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-300"
+                                    title={draft.certificateClientName ? "Change Certificate" : "Attach Certificate"}
+                                    data-testid={`button-attach-certificate-${draft.id}`}
+                                  >
+                                    {draft.certificateClientName ? (
+                                      <RefreshCw className="w-4 h-4" />
+                                    ) : (
+                                      <Link2 className="w-4 h-4" />
+                                    )}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
                                     onClick={() => {
                                       setPendingDeleteDraftId(draft.id);
                                       setDeleteDraftConfirmOpen(true);
@@ -2956,13 +3084,16 @@ export default function AdminDashboard() {
                         </TableBody>
                       </Table>
                     </div>
-                      {adminDraftSessions && adminDraftSessions.totalPages > 1 && (
+                      {adminDraftSessions && (
                         <div className="mt-4">
                           <ReportsPagination
                             page={draftsPage}
                             totalPages={adminDraftSessions.totalPages}
                             total={adminDraftSessions.total}
+                            limit={draftsPageSize}
                             onPageChange={setDraftsPage}
+                            pageSize={draftsPageSize}
+                            onPageSizeChange={handleDraftsPageSizeChange}
                           />
                         </div>
                       )}
@@ -3060,6 +3191,7 @@ export default function AdminDashboard() {
                             page={draftsPage}
                             totalPages={technicianDraftSessions.totalPages}
                             total={technicianDraftSessions.total}
+                            limit={draftsPageSize}
                             onPageChange={setDraftsPage}
                           />
                         </div>
@@ -3073,6 +3205,7 @@ export default function AdminDashboard() {
                             <TableHead className="min-w-[80px]">Items</TableHead>
                             <TableHead className="min-w-[130px]">Last Activity (DD/MM, HH:MM)</TableHead>
                             <TableHead className="min-w-[110px]">Created (DD/MM/YYYY)</TableHead>
+                            <TableHead className="min-w-[140px]">Certificate</TableHead>
                             <TableHead className="min-w-[160px]">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -3142,6 +3275,20 @@ export default function AdminDashboard() {
                                   {new Date(draft.createdAt).toLocaleDateString("en-AU")}
                                 </TableCell>
                                 <TableCell>
+                                  {draft.certificateClientName ? (
+                                    <Badge
+                                      variant="outline"
+                                      className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1 font-normal"
+                                      title={draft.certificateClientName}
+                                    >
+                                      <ShieldCheck className="w-3 h-3" />
+                                      <span className="max-w-[120px] truncate">{draft.certificateClientName}</span>
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-xs text-gray-400">—</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
                                   <div className="flex items-center gap-1">
                                     <Button
                                       size="sm"
@@ -3173,6 +3320,22 @@ export default function AdminDashboard() {
                                     <Button
                                       size="sm"
                                       variant="outline"
+                                      onClick={() =>
+                                        setAttachCertificateSession({ id: draft.id, certificateId: draft.certificateId ?? null })
+                                      }
+                                      className="p-2 h-8 w-8 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-300"
+                                      title={draft.certificateClientName ? "Change Certificate" : "Attach Certificate"}
+                                      data-testid={`button-attach-certificate-${draft.id}`}
+                                    >
+                                      {draft.certificateClientName ? (
+                                        <RefreshCw className="w-4 h-4" />
+                                      ) : (
+                                        <Link2 className="w-4 h-4" />
+                                      )}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
                                       onClick={() => {
                                         setPendingDeleteDraftId(draft.id);
                                         setDeleteDraftConfirmOpen(true);
@@ -3189,13 +3352,16 @@ export default function AdminDashboard() {
                         </TableBody>
                       </Table>
                     </div>
-                      {technicianDraftSessions && technicianDraftSessions.totalPages > 1 && (
+                      {technicianDraftSessions && (
                         <div className="mt-4">
                           <ReportsPagination
                             page={draftsPage}
                             totalPages={technicianDraftSessions.totalPages}
                             total={technicianDraftSessions.total}
+                            limit={draftsPageSize}
                             onPageChange={setDraftsPage}
+                            pageSize={draftsPageSize}
+                            onPageSizeChange={handleDraftsPageSizeChange}
                           />
                         </div>
                       )}
@@ -3564,6 +3730,45 @@ export default function AdminDashboard() {
                   {viewingSession.session.address}
                 </div>
               </div>
+            </div>
+
+            {/* Certificate of Compliance — attaching saves immediately, no separate save step */}
+            <div className="bg-gray-50 p-4 rounded-lg flex items-center justify-between gap-3">
+              <div>
+                <h3 className="font-semibold mb-1">Certificate of Compliance</h3>
+                {viewingSessionCertificate ? (
+                  <div className="text-sm text-gray-700 flex items-center gap-1">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                    <span className="font-medium">{viewingSessionCertificate.clientName}</span>
+                    <span className="text-gray-500">— attached</span>
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500">No certificate attached to this report</div>
+                )}
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  setAttachCertificateSession({
+                    id: viewingSession.session.id,
+                    certificateId: viewingSessionCertificate?.id ?? null,
+                  })
+                }
+                data-testid="button-attach-certificate-view-modal"
+              >
+                {viewingSessionCertificate ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-1" />
+                    Change
+                  </>
+                ) : (
+                  <>
+                    <Link2 className="w-4 h-4 mr-1" />
+                    Attach
+                  </>
+                )}
+              </Button>
             </div>
 
             {/* Report-level notes (printed at the end of the PDF report) */}
@@ -4034,6 +4239,17 @@ export default function AdminDashboard() {
           </div>
         )}
       </Modal>
+
+      {/* Attach/Change Certificate of Compliance — from the View Report modal or a row's quick action */}
+      {attachCertificateSession && (
+        <AttachCertificateModal
+          isOpen={attachCertificateSession !== null}
+          onClose={() => setAttachCertificateSession(null)}
+          sessionId={attachCertificateSession.id}
+          currentCertificateId={attachCertificateSession.certificateId}
+          onAttached={handleCertificateAttached}
+        />
+      )}
 
       {/* Edit Result Modal - Using Shared Component */}
       <TestResultEditModal

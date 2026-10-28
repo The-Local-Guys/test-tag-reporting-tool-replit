@@ -439,7 +439,7 @@ export function trackReportGenerated(
 
 export function trackCertificateAction(
   req: Request,
-  action: 'created' | 'updated' | 'deleted' | 'downloaded' | 'previewed',
+  action: 'created' | 'updated' | 'deleted' | 'downloaded' | 'previewed' | 'attached' | 'detached',
   certificateData?: Record<string, any>
 ): void {
   const distinctId = getDistinctId(req);

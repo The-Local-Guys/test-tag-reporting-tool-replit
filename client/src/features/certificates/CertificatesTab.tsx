@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +15,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, FileText, Trash2, Edit, Download, Search, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, FileText, Trash2, Edit, Download, Search, X, ChevronLeft, ChevronRight, Link2 } from "lucide-react";
+import { Modal } from "@/components/ui/modal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCertificates } from "./useCertificates";
 import { DateRangeFilter, EMPTY_DATE_FILTER, type DateFilter } from "@/components/date-range-filter";
@@ -23,6 +25,7 @@ import { NoResults } from "@/components/no-results";
 import { CertificateModal } from "./CertificateModal";
 import { CertificatePreview } from "./CertificatePreview";
 import { generateCertificatePDF, downloadCertificatePDF } from "@/lib/certificate-generator";
+import { getServiceDisplayName, getServiceBadgeClass } from "./certificate-display";
 import type { Certificate } from "@shared/schema";
 
 const CERTIFICATES_PAGE_SIZE_OPTIONS = [50, 100, 150, 200] as const;
@@ -40,6 +43,7 @@ export function CertificatesTab() {
   const [dateRange, setDateRange] = useState<DateFilter>(EMPTY_DATE_FILTER);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_CERTIFICATES_PAGE_SIZE);
+  const [linkedReportsCertificate, setLinkedReportsCertificate] = useState<Certificate | null>(null);
 
   const {
     certificates,
@@ -128,39 +132,20 @@ export function CertificatesTab() {
     }
   };
 
-  const getServiceDisplayName = (serviceType: string): string => {
-    switch (serviceType) {
-      case 'electrical':
-        return 'Electrical';
-      case 'emergency_exit_light':
-        return 'Emergency Exit';
-      case 'fire_testing':
-        return 'Fire Equipment';
-      case 'rcd_reporting':
-        return 'RCD';
-      case 'microwave_leakage':
-        return 'Microwave';
-      default:
-        return serviceType.replace('_', ' ');
-    }
-  };
+  // Attached-reports count for the certificate currently in the delete-confirmation dialog
+  const { data: attachedSessions } = useQuery<any[]>({
+    queryKey: [`/api/certificates/${certificateToDelete}/sessions`],
+    enabled: certificateToDelete !== null,
+  });
 
-  // Badge colours match the service cards on the service selection page
-  const getServiceBadgeClass = (serviceType: string): string => {
-    switch (serviceType) {
-      case 'electrical':
-        return 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800';
-      case 'emergency_exit_light':
-        return 'bg-red-100 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800';
-      case 'fire_testing':
-        return 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800';
-      case 'rcd_reporting':
-        return 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800';
-      case 'microwave_leakage':
-        return 'bg-green-100 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800';
-      default:
-        return 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700';
-    }
+  // Reports linked to the certificate currently open in the "Linked Reports" modal
+  const { data: linkedReports, isLoading: linkedReportsLoading } = useQuery<any[]>({
+    queryKey: [`/api/certificates/${linkedReportsCertificate?.id}/sessions`],
+    enabled: linkedReportsCertificate !== null,
+  });
+
+  const handleViewLinkedReports = (cert: Certificate) => {
+    setLinkedReportsCertificate(cert);
   };
 
   const filteredCerts: any[] = certificates as any[];
@@ -286,6 +271,7 @@ export function CertificatesTab() {
                   <TableHead>Address</TableHead>
                   <TableHead>Services</TableHead>
                   <TableHead>Issue Date (DD/MM/YYYY)</TableHead>
+                  <TableHead>Linked Reports</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -313,6 +299,22 @@ export function CertificatesTab() {
                       </TableCell>
                       <TableCell>
                         {new Date(cert.certificationDate).toLocaleDateString('en-AU')}
+                      </TableCell>
+                      <TableCell>
+                        {cert.linkedReportCount > 0 ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleViewLinkedReports(cert)}
+                            className="h-7 gap-1 px-2 text-xs font-medium bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                            data-testid={`button-linked-reports-${cert.id}`}
+                          >
+                            <Link2 className="w-3 h-3" />
+                            {cert.linkedReportCount} report{cert.linkedReportCount === 1 ? "" : "s"}
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-gray-400">None</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
@@ -368,7 +370,7 @@ export function CertificatesTab() {
                 })}
                 {filteredCerts.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5}>
+                    <TableCell colSpan={6}>
                       <NoResults
                         hasFilters={hasCertificateFilters}
                         emptyTitle="No certificates created yet"
@@ -463,6 +465,13 @@ export function CertificatesTab() {
             <AlertDialogTitle>Delete Certificate</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete this certificate? This action cannot be undone.
+              {attachedSessions && attachedSessions.length > 0 && (
+                <span className="block mt-2 font-medium text-amber-600">
+                  This certificate is attached to {attachedSessions.length} report
+                  {attachedSessions.length === 1 ? "" : "s"}; deleting it will remove the certificate from{" "}
+                  {attachedSessions.length === 1 ? "that report" : "those reports"}.
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -479,6 +488,60 @@ export function CertificatesTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Modal
+        isOpen={linkedReportsCertificate !== null}
+        onClose={() => setLinkedReportsCertificate(null)}
+        title={`Reports linked to ${linkedReportsCertificate?.clientName ?? "this certificate"}`}
+      >
+        {linkedReportsLoading ? (
+          <div className="flex justify-center py-8">
+            <LoadingSpinner />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {(linkedReports ?? []).map((report: any) => (
+              <div
+                key={report.id}
+                className="flex items-center justify-between gap-2 p-3 rounded-lg border"
+                data-testid={`linked-report-${report.id}`}
+              >
+                <div className="min-w-0">
+                  <div className="font-medium text-sm truncate">
+                    {report.clientName || <span className="text-gray-400 italic">No client name</span>}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {new Date(report.testDate).toLocaleDateString('en-AU')}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Badge
+                    variant="outline"
+                    className={`text-xs font-medium ${getServiceBadgeClass(report.serviceType)}`}
+                  >
+                    {getServiceDisplayName(report.serviceType)}
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className={
+                      report.status === "finalized"
+                        ? "bg-green-50 text-green-700 border-green-200 text-xs"
+                        : "bg-yellow-50 text-yellow-700 border-yellow-200 text-xs"
+                    }
+                  >
+                    {report.status === "finalized" ? "Finalized" : "Draft"}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+            {(linkedReports ?? []).length === 0 && (
+              <div className="text-sm text-gray-500 text-center py-4">
+                No reports are currently linked to this certificate.
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
     </Card>
   );
 }

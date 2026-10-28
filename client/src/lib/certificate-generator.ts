@@ -58,17 +58,18 @@ function formatDateForCertificate(dateString: string): string {
 }
 
 /**
- * Generates a Certificate of Compliance PDF matching the exact template format
- * @param data - Certificate data including client info, services, and validity dates
- * @returns Promise resolving to Blob object containing the PDF file for download
+ * Renders a Certificate of Compliance onto an existing jsPDF document, as a new page.
+ * Used both by the standalone certificate PDF (below) and to append a certificate to
+ * the end of a test report PDF so they ship as one file.
+ * @param doc - An existing jsPDF document; a new page is added before drawing
+ * @param certificate - Certificate data including client info, services, and validity dates
  */
-export async function generateCertificatePDF(data: CertificateData): Promise<Blob> {
-  const { certificate } = data;
-  const doc = new jsPDF();
-  
+export async function renderCertificateIntoDoc(doc: jsPDF, certificate: Certificate): Promise<void> {
+  doc.addPage();
+
   // Load custom cursive font for technician signature
   await loadCustomFont(doc, greatVibesFont, 'GreatVibes');
-  
+
   // Page setup
   const pageWidth = doc.internal.pageSize.width;
   const pageHeight = doc.internal.pageSize.height;
@@ -300,7 +301,19 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Blo
     doc.setFont('helvetica', 'normal');
     doc.text(certificate.technicianLicense, margin, footerTextY + 6);
   }
+}
 
+/**
+ * Generates a standalone Certificate of Compliance PDF matching the exact template format
+ * @param data - Certificate data including client info, services, and validity dates
+ * @returns Promise resolving to Blob object containing the PDF file for download
+ */
+export async function generateCertificatePDF(data: CertificateData): Promise<Blob> {
+  const doc = new jsPDF();
+  // renderCertificateIntoDoc always calls addPage() first, so the fresh doc starts with
+  // an extra blank page — remove it once the certificate page has been added.
+  await renderCertificateIntoDoc(doc, data.certificate);
+  doc.deletePage(1);
   return doc.output('blob');
 }
 
