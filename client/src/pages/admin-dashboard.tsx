@@ -79,6 +79,7 @@ import { resolveRcdTripTimes } from "@/lib/rcd-trip-times";
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
 import { CertificatesTab } from "@/features/certificates/CertificatesTab";
 import { AttachCertificateModal } from "@/features/certificates/AttachCertificateModal";
+import { PdfDownloadMenu } from "@/features/certificates/PdfDownloadMenu";
 import { DateRangeFilter, EMPTY_DATE_FILTER, type DateFilter } from "@/components/date-range-filter";
 import { NoResults } from "@/components/no-results";
 import { failureReasons, emergencyFailureReasons, fireFailureReasons, rcdFailureReasons, MAX_SESSION_ADDRESS_LENGTH } from "@shared/schema";
@@ -2020,6 +2021,7 @@ export default function AdminDashboard() {
   const handleDownloadReport = async (
     session: any,
     format: "pdf" | "excel",
+    includeCertificate = true,
   ) => {
     try {
       const response = await fetch(`/api/sessions/${session.id}/report`);
@@ -2029,7 +2031,10 @@ export default function AdminDashboard() {
       const filename = `${session.clientName}-${session.testDate}`;
 
       if (format === "pdf") {
-        await downloadPDF(reportData, `${filename}.pdf`);
+        await downloadPDF(
+          includeCertificate ? reportData : { ...reportData, attachedCertificate: null },
+          `${filename}.pdf`,
+        );
       } else {
         downloadExcel(reportData, `${filename}.xlsx`);
       }
@@ -4209,15 +4214,17 @@ export default function AdminDashboard() {
                 <Copy className="w-4 h-4 mr-1" />
                 Copy Report & Open
               </Button>
-              <Button
-                variant="outline"
-                onClick={() =>
-                  handleDownloadReport(viewingSession.session, "pdf")
+              <PdfDownloadMenu
+                hasCertificate={!!viewingSessionCertificate}
+                onDownload={(includeCertificate) =>
+                  handleDownloadReport(viewingSession.session, "pdf", includeCertificate)
                 }
               >
-                <Download className="w-4 h-4 mr-1" />
-                Download PDF
-              </Button>
+                <Button variant="outline">
+                  <Download className="w-4 h-4 mr-1" />
+                  Download PDF
+                </Button>
+              </PdfDownloadMenu>
               <Button
                 variant="outline"
                 onClick={() =>

@@ -10,6 +10,7 @@ import { ReportNotesEditor } from '@/components/report-notes-editor';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ArrowLeft, Download, Mail, Share, Plus, Edit2, FileText, Trash2, Check, Link2, RefreshCw, ShieldCheck, ShieldAlert, Info } from 'lucide-react';
 import { AttachCertificateModal } from '@/features/certificates/AttachCertificateModal';
+import { PdfDownloadMenu } from '@/features/certificates/PdfDownloadMenu';
 import { WorkflowProgressBar, type ServiceType } from '@/components/workflow-progress-bar';
 import { SaveStatusIndicator } from '@/components/save-status-indicator';
 import { useSession, type BatchedTestResult } from '@/hooks/use-session';
@@ -397,7 +398,7 @@ export default function ReportPreview() {
   // Use sorted batched results
   const results = sortResultsByAssetNumber(batchedResults);
 
-  const handleExportPDF = async () => {
+  const handleExportPDF = async (includeCertificate: boolean) => {
     setIsGeneratingPDF(true);
     setShowPDFSuccess(false);
     
@@ -467,7 +468,7 @@ export default function ReportPreview() {
         ...sessionData,
         session: sessionData.session,
         results: convertedResults,
-        attachedCertificate,
+        attachedCertificate: includeCertificate ? attachedCertificate : null,
       };
 
       await downloadPDF(previewData, `test-report-${sessionData.session.clientName.replace(/\s+/g, '-').toLowerCase()}.pdf`);
@@ -997,13 +998,14 @@ export default function ReportPreview() {
           </div>
           <div className="flex gap-2">
             {!isReflections && (
-              <button
-                onClick={handleExportPDF}
-                className="text-white hover:text-green-200 p-2 rounded-lg hover:bg-green-700 transition-colors"
-                title="Download PDF"
-              >
-                <Download className="h-5 w-5" />
-              </button>
+              <PdfDownloadMenu hasCertificate={!!attachedCertificate} onDownload={handleExportPDF}>
+                <button
+                  className="text-white hover:text-green-200 p-2 rounded-lg hover:bg-green-700 transition-colors"
+                  title="Download PDF"
+                >
+                  <Download className="h-5 w-5" />
+                </button>
+              </PdfDownloadMenu>
             )}
             <button
               onClick={handleExportExcel}
@@ -1099,7 +1101,7 @@ export default function ReportPreview() {
                 {attachedCertificate ? (
                   <div className="text-sm text-gray-800">
                     <span className="font-semibold">{attachedCertificate.clientName}</span>
-                    <span className="text-gray-600"> — attached, included at the end of the PDF</span>
+                    <span className="text-gray-600"> — attached, can be included when downloading the PDF</span>
                   </div>
                 ) : (
                   <div className="text-sm text-gray-700">No certificate attached to this report</div>
@@ -1234,13 +1236,12 @@ export default function ReportPreview() {
           </Button>
         ) : (
           <div className="grid grid-cols-2 gap-2">
-            <Button
-              onClick={handleExportPDF}
-              className="bg-primary text-white py-3 font-medium touch-button"
-            >
-              <Download className="mr-1 h-4 w-4" />
-              PDF
-            </Button>
+            <PdfDownloadMenu hasCertificate={!!attachedCertificate} onDownload={handleExportPDF} align="start">
+              <Button className="bg-primary text-white py-3 font-medium touch-button">
+                <Download className="mr-1 h-4 w-4" />
+                PDF
+              </Button>
+            </PdfDownloadMenu>
             <Button
               onClick={handleExportExcel}
               variant="outline"
