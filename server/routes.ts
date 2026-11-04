@@ -50,13 +50,37 @@ function parseDateFilter(value: unknown): string | undefined {
 }
 
 /**
- * Adds a number of months to a YYYY-MM-DD date string, used to compute the default
- * 12-month validity period for an auto-created certificate of compliance.
+ * Adds a number of months to a YYYY-MM-DD date string, used to compute the validity
+ * period for an auto-created certificate of compliance.
  */
 function addMonthsToDateString(dateString: string, months: number): string {
   const [year, month, day] = dateString.split("-").map(Number);
   const date = new Date(Date.UTC(year, month - 1 + months, day));
   return date.toISOString().slice(0, 10);
+}
+
+/**
+ * Retest interval in months for each test result frequency. Custom frequency, single
+ * (microwave) and any unknown value default to 12 months.
+ */
+const FREQUENCY_MONTHS: Record<string, number> = {
+  monthly: 1,
+  threemonthly: 3,
+  sixmonthly: 6,
+  twelvemonthly: 12,
+  annually: 12,
+  twentyfourmonthly: 24,
+  fiveyearly: 60,
+};
+const DEFAULT_CERTIFICATE_VALIDITY_MONTHS = 12;
+
+/**
+ * Validity period for an auto-created certificate: the shortest retest interval among
+ * the session's items, so the certificate never outlasts the first item due for retest.
+ */
+function getCertificateValidityMonths(frequencies: string[]): number {
+  if (frequencies.length === 0) return DEFAULT_CERTIFICATE_VALIDITY_MONTHS;
+  return Math.min(...frequencies.map(f => FREQUENCY_MONTHS[f] ?? DEFAULT_CERTIFICATE_VALIDITY_MONTHS));
 }
 
 // Authentication middleware
@@ -651,7 +675,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const existingCertificate = await storage.getCertificateBySessionId(sessionId);
         if (!existingCertificate) {
           const certificationDate = finalizedSession.testDate;
-          const validUntil = addMonthsToDateString(certificationDate, 12);
+          const sessionResults = await storage.getTestResultsBySession(sessionId);
+          const validityMonths = getCertificateValidityMonths(sessionResults.map(r => r.frequency));
+          const validUntil = addMonthsToDateString(certificationDate, validityMonths);
           const certificate = await storage.createCertificate({
             clientName: finalizedSession.clientName,
             address: finalizedSession.address,
