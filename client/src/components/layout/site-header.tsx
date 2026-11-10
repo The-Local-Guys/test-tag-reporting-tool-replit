@@ -26,6 +26,7 @@ export function SiteHeader() {
   const getPageTitle = () => {
     switch (location) {
       case '/':
+      case '/testing/v2':
         return 'Service Selection';
       case '/setup':
         return 'Test Setup';
@@ -61,6 +62,7 @@ export function SiteHeader() {
     
     switch (location) {
       case '/':
+      case '/testing/v2':
         return 'Choose your testing service';
       case '/setup':
         return 'Configure test session details';

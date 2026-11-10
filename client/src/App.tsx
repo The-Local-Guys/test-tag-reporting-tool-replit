@@ -24,6 +24,7 @@ import FailureDetails from "@/pages/failure-details";
 import ReportPreview from "@/pages/report-preview";
 import AdminDashboard from "@/pages/admin-dashboard";
 import AdminDashboardV2 from "@/pages/admin-v2";
+import ServiceSelectionV2 from "@/pages/service-selection-v2";
 import Environments from "@/pages/environments";
 
 import Login from "@/pages/login";
@@ -134,6 +135,8 @@ function Router() {
             
             {/* Testing Routes */}
             <Route path="/" component={ServiceSelection} />
+            {/* Redesigned service selection (same behaviour, refreshed styling) */}
+            <Route path="/testing/v2" component={ServiceSelectionV2} />
             <Route path="/setup" component={Setup} />
             <Route path="/items" component={ItemSelection} />
             <Route path="/test" component={TestDetails} />
