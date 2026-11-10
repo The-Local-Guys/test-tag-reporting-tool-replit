@@ -23,6 +23,7 @@ import MicrowaveTestDetails from "@/pages/microwave-test-details";
 import FailureDetails from "@/pages/failure-details";
 import ReportPreview from "@/pages/report-preview";
 import AdminDashboard from "@/pages/admin-dashboard";
+import AdminDashboardV2 from "@/pages/admin-v2";
 import Environments from "@/pages/environments";
 
 import Login from "@/pages/login";
@@ -116,6 +117,14 @@ function Router() {
         <AppLayout>
           <Switch>
             {/* Admin Routes */}
+            {/* Redesigned admin dashboard (same layout, refreshed styling) */}
+            <Route path="/admin/v2/:section?">
+              {(params) =>
+                user && ((user as any).role === 'super_admin' || (user as any).role === 'support_center' || (user as any).role === 'technician') ?
+                  <AdminDashboardV2 section={params.section} /> :
+                  <ServiceSelection />
+              }
+            </Route>
             <Route path="/admin">
               {user && ((user as any).role === 'super_admin' || (user as any).role === 'support_center' || (user as any).role === 'technician') ? 
                 <AdminDashboard /> : 
