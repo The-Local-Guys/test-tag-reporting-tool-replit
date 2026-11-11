@@ -45,6 +45,7 @@ export function SiteHeader() {
       case '/environments':
         return 'Environments';
       case '/form-types':
+      case '/form-types/v2':
         return 'Custom Form Types';
       default:
         if (location.startsWith('/admin')) {
@@ -81,6 +82,7 @@ export function SiteHeader() {
       case '/environments':
         return 'Manage your custom item sets';
       case '/form-types':
+      case '/form-types/v2':
         return 'Manage custom testing forms';
       default:
         return 'Professional Testing & Compliance';
