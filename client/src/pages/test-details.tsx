@@ -19,7 +19,9 @@ import { useToast } from '@/hooks/use-toast';
 import type { InsertTestResult } from '@shared/schema';
 import { ElectricalReadingsFields } from '@/components/electrical-readings-fields';
 import {
+  applyClassificationToReadings,
   getDefaultElectricalReadings,
+  hasEarthContinuity,
   toElectricalReadingFields,
   validateElectricalReadings,
   type ElectricalReadingErrors,
@@ -234,7 +236,8 @@ export default function TestDetails() {
     console.log('🎯 Form values:', formValues);
 
     // Readings are optional, but any entered value must be valid
-    const errors = validateElectricalReadings(readings);
+    const savedReadings = applyClassificationToReadings(readings, selectedClass);
+    const errors = validateElectricalReadings(savedReadings);
     setReadingErrors(errors);
     if (Object.keys(errors).length > 0) {
       toast({
@@ -281,7 +284,7 @@ export default function TestDetails() {
       notes: null,
       visionInspection,
       electricalTest,
-      ...toElectricalReadingFields(readings),
+      ...toElectricalReadingFields(savedReadings),
     } as any;
 
     console.log('🎯 Test data prepared:', testData);
@@ -577,6 +580,7 @@ export default function TestDetails() {
               }
             }}
             errors={readingErrors}
+            hideEarthContinuity={!hasEarthContinuity(selectedClass)}
           />
         </div>
 

@@ -24,6 +24,19 @@ export const POLARITY_OPTIONS: { value: PolarityValue; label: string }[] = [
   { value: 'na', label: 'N/A' },
 ];
 
+// Class 2 (double insulated) items have no earth, so earth continuity isn't tested
+export function hasEarthContinuity(classification: string | null | undefined): boolean {
+  return classification !== 'class2';
+}
+
+// Drops the earth continuity reading when it doesn't apply to the item's classification
+export function applyClassificationToReadings(
+  readings: ElectricalReadings,
+  classification: string | null | undefined,
+): ElectricalReadings {
+  return hasEarthContinuity(classification) ? readings : { ...readings, earthContinuity: '' };
+}
+
 export function getDefaultElectricalReadings(): ElectricalReadings {
   return {
     earthContinuity: '',
@@ -90,6 +103,7 @@ export function hasElectricalReadings(result: any): boolean {
 export const READING_BLANK = '-';
 
 export function formatEarthContinuity(result: any): string {
+  if (!hasEarthContinuity(result?.classification)) return 'N/A';
   return fromElectricalReadingFields(result).earthContinuity || READING_BLANK;
 }
 

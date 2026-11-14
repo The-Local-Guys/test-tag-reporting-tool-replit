@@ -6,6 +6,7 @@ import { resolveRcdTripTimes as resolveStoredRcdTripTimes } from './rcd-trip-tim
 import { renderCertificateIntoDoc } from './certificate-generator';
 import {
   formatEarthContinuity,
+  hasEarthContinuity,
   formatInsulationResistance,
   formatLeakageCurrent,
   formatPolarity,
@@ -942,7 +943,10 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       // Earth, insulation and polarity show a tick when no value was entered; leakage is omitted
       const segments: { label: string; value: string | null; red?: boolean }[] = [];
       const earthContinuity = formatEarthContinuity(result);
-      segments.push({ label: 'Earth: ', value: earthContinuity !== READING_BLANK ? `${earthContinuity} Ohm` : null });
+      segments.push({
+        label: 'Earth: ',
+        value: earthContinuity === READING_BLANK ? null : hasEarthContinuity(result.classification) ? `${earthContinuity} Ohm` : earthContinuity,
+      });
       const insulationResistance = formatInsulationResistance(result);
       segments.push({ label: 'Insulation: ', value: insulationResistance !== READING_BLANK ? `${insulationResistance} MOhm` : null });
       const polarity = formatPolarity(result);

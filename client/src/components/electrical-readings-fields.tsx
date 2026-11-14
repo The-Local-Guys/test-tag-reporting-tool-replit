@@ -18,6 +18,8 @@ interface ElectricalReadingsFieldsProps {
   onChange: (readings: ElectricalReadings) => void;
   errors?: ElectricalReadingErrors;
   idPrefix?: string;
+  /** Hide earth continuity (e.g. Class 2 items have no earth) */
+  hideEarthContinuity?: boolean;
 }
 
 function FieldError({ message }: { message?: string }) {
@@ -34,12 +36,14 @@ export function ElectricalReadingsFields({
   onChange,
   errors = {},
   idPrefix = 'reading',
+  hideEarthContinuity = false,
 }: ElectricalReadingsFieldsProps) {
   const update = (patch: Partial<ElectricalReadings>) => onChange({ ...readings, ...patch });
 
   return (
     <div className="space-y-4">
       {/* Earth Continuity */}
+      {!hideEarthContinuity && (
       <div className="space-y-1">
         <Label htmlFor={`${idPrefix}-earth`} className="text-sm font-medium text-gray-700">
           Earth Continuity (Ω) <span className="font-normal text-gray-400">Optional</span>
@@ -64,6 +68,7 @@ export function ElectricalReadingsFields({
         </div>
         <FieldError message={errors.earthContinuity} />
       </div>
+      )}
 
       {/* Insulation Resistance */}
       <div className="space-y-1">

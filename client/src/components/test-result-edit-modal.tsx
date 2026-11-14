@@ -14,7 +14,9 @@ import { SuggestedDueDateButton } from "@/components/suggested-due-date-button";
 import { TestPhotoInput } from "@/components/test-photo-input";
 import { ElectricalReadingsFields } from "@/components/electrical-readings-fields";
 import {
+  applyClassificationToReadings,
   fromElectricalReadingFields,
+  hasEarthContinuity,
   hasElectricalReadings,
   toElectricalReadingFields,
   validateElectricalReadings,
@@ -72,14 +74,22 @@ export function TestResultEditModal({
 
   const saveWithCurrentTripTimes = () => {
     // Readings are optional, but any entered value must be valid
-    if (serviceType === 'electrical' && hasElectricalReadings(editResultData)) {
-      const errors = validateElectricalReadings(fromElectricalReadingFields(editResultData));
+    // Class 2 items have no earth continuity reading, so drop any stale value
+    const readingFields = serviceType === 'electrical'
+      ? toElectricalReadingFields(
+          applyClassificationToReadings(fromElectricalReadingFields(editResultData), editResultData.classification),
+        )
+      : {};
+
+    if (serviceType === 'electrical' && hasElectricalReadings(readingFields)) {
+      const errors = validateElectricalReadings(fromElectricalReadingFields(readingFields));
       setReadingErrors(errors);
       if (Object.keys(errors).length > 0) return;
     }
 
     onSave({
       ...editResultData,
+      ...readingFields,
       // Cap to a single trip time
       tripTimes: parseRcdTripTimesInput(tripTimesInput).slice(0, 1),
     });
@@ -818,6 +828,7 @@ export function TestResultEditModal({
               readings={fromElectricalReadingFields(editResultData)}
               onChange={(next) => setEditResultData((prev: any) => ({ ...prev, ...toElectricalReadingFields(next) }))}
               errors={readingErrors}
+              hideEarthContinuity={!hasEarthContinuity(editResultData.classification)}
             />
           </div>
         )}
