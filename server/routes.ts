@@ -15,6 +15,7 @@ import {
   loginSchema,
   clampTestResultNotes,
   reportNotesSchema,
+  stripLegacyFireNotes,
   type User,
 } from "@shared/schema";
 import { z } from "zod";
@@ -768,7 +769,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           failureReason: r.failureReason ?? undefined,
           actionTaken: r.actionTaken ?? undefined,
           frequency: r.frequency,
-          notes: r.notes ?? undefined,
+          notes: (source.serviceType === "fire_testing" ? stripLegacyFireNotes(r.notes) : r.notes) ?? undefined,
           visionInspection: r.visionInspection ?? undefined,
           electricalTest: r.electricalTest ?? undefined,
           // Electrical readings

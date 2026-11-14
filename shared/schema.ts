@@ -260,6 +260,32 @@ export function clampTestResultNotes(value: unknown): string | null {
     : trimmed;
 }
 
+// Labels the old fire test screen appended to notes (" | Label: value") before those fields
+// had their own columns. Older results still carry them, so they're stripped when copied.
+const LEGACY_FIRE_NOTE_LABELS = [
+  'Equipment Type',
+  'Extinguisher Type',
+  'Net Size',
+  'Gross Weight',
+  'Visual Inspection',
+  'Operational Test',
+  'Pressure Test',
+  'Accessibility Check',
+  'Signage Check',
+];
+const LEGACY_FIRE_NOTE_SEGMENT = new RegExp(`^(${LEGACY_FIRE_NOTE_LABELS.join('|')}): `);
+
+/** Returns only the technician's own text from a fire test note, dropping legacy appended field values. */
+export function stripLegacyFireNotes(notes: string | null | undefined): string | null {
+  if (!notes) return null;
+  const userText = notes
+    .split(' | ')
+    .filter((segment) => !LEGACY_FIRE_NOTE_SEGMENT.test(segment.trim()))
+    .join(' | ')
+    .trim();
+  return userText || null;
+}
+
 export const insertTestResultSchema = createInsertSchema(testResults)
   .omit({
     id: true,
