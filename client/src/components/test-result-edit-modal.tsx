@@ -411,6 +411,7 @@ export function TestResultEditModal({
                 <Label>Trip Time (ms)</Label>
                 <Input
                   value={tripTimesInput}
+                  inputMode="decimal"
                   onChange={(e) => setTripTimesInput(e.target.value)}
                   onBlur={(e) => {
                     const times = parseRcdTripTimesInput(e.target.value).slice(0, 1);

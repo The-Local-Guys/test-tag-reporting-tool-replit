@@ -30,7 +30,7 @@ const rcdTestSchema = z.object({
     z.object({
       value: z.preprocess(
         (val) => val === '' || val == null ? undefined : Number(val),
-        z.number().int().positive()
+        z.number().positive()
       )
     })
   ).optional(), // Array of trip time objects for Fixed RCD (max 3)
@@ -445,9 +445,9 @@ export default function RCDTestDetails() {
                         {...form.register(`tripTimes.${index}.value` as const)}
                         placeholder="e.g., 30"
                         type="number"
-                        inputMode="numeric"
-                        step="1"
-                        min="1"
+                        inputMode="decimal"
+                        step="any"
+                        min="0"
                         className="text-base flex-1"
                         data-testid={`input-trip-time-${index}`}
                       />
