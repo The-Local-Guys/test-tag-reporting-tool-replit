@@ -424,8 +424,10 @@ export function generateExcelReport(data: ReportData): Blob {
       
       // Pressure/flow-rate test applies to fire extinguishers (pressure gauge) and
       // fire hose reels (flow rate); other equipment (e.g. blankets) have neither.
+      // CO2 extinguishers have no pressure gauge.
       const pressureTestResult =
-        result.equipmentType === 'fire_extinguisher' || result.equipmentType === 'fire_hose_reel'
+        (result.equipmentType === 'fire_extinguisher' && (result as any).extinguisherType !== 'co2') ||
+        result.equipmentType === 'fire_hose_reel'
           ? toTestCell((result as any).pressureTest)
           : 'N/A';
       

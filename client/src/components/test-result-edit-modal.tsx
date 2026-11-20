@@ -635,14 +635,17 @@ export function TestResultEditModal({
             {/* Fire Extinguisher specific fields */}
             {editResultData.classification === 'fire_extinguisher' && (
               <>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="edit-pressureTest-fire-extinguisher"
-                    checked={editResultData.pressureTest}
-                    onCheckedChange={(checked) => setEditResultData((prev: any) => ({ ...prev, pressureTest: !!checked }))}
-                  />
-                  <Label htmlFor="edit-pressureTest-fire-extinguisher">Pressure Gauge Check</Label>
-                </div>
+                {/* CO2 extinguishers have no pressure gauge */}
+                {editResultData.extinguisherType !== 'co2' && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="edit-pressureTest-fire-extinguisher"
+                      checked={editResultData.pressureTest}
+                      onCheckedChange={(checked) => setEditResultData((prev: any) => ({ ...prev, pressureTest: !!checked }))}
+                    />
+                    <Label htmlFor="edit-pressureTest-fire-extinguisher">Pressure Gauge Check</Label>
+                  </div>
+                )}
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="edit-operationalTest-fire-extinguisher"

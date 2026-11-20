@@ -17,7 +17,8 @@ import {
   type CustomFormType,
   type InsertCustomFormType,
   type Certificate,
-  type InsertCertificate
+  type InsertCertificate,
+  isCo2Extinguisher
 } from "@shared/schema";
 import { db, pool } from "./db";
 import { eq, desc, and, gte, lte, sql, isNull, ilike, or, getTableColumns } from "drizzle-orm";
@@ -971,7 +972,7 @@ export class DatabaseStorage implements IStorage {
         insertResult.weight ?? null,
         insertResult.testType ?? null,
         insertResult.fireVisualInspection !== undefined ? insertResult.fireVisualInspection : false,
-        insertResult.pressureTest !== undefined ? insertResult.pressureTest : false,
+        isCo2Extinguisher(insertResult) ? null : (insertResult.pressureTest !== undefined ? insertResult.pressureTest : false),
         insertResult.accessibilityCheck !== undefined ? insertResult.accessibilityCheck : false,
         insertResult.signageCheck !== undefined ? insertResult.signageCheck : false,
         insertResult.operationalTest !== undefined ? insertResult.operationalTest : false,

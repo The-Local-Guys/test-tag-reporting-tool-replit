@@ -189,7 +189,8 @@ export default function FireTestDetails() {
         visionInspection: data.visionInspection,
         electricalTest: data.operationalTest, // Map operational test to electrical test field
         // Fire Testing specific fields
-        pressureTest: data.pressureTest,
+        // CO2 extinguishers have no pressure gauge, so no value is recorded
+        pressureTest: currentEquipmentType === 'fire_extinguisher' && currentExtinguisherType === 'co2' ? undefined : data.pressureTest,
         accessibilityCheck: data.accessibilityCheck,
         signageCheck: data.signageCheck,
         operationalTest: data.operationalTest,
@@ -503,16 +504,19 @@ export default function FireTestDetails() {
 
               {watchEquipmentType === 'fire_extinguisher' && (
                 <>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="pressureTest"
-                      checked={form.watch('pressureTest')}
-                      onCheckedChange={(checked) => form.setValue('pressureTest', !!checked)}
-                    />
-                    <Label htmlFor="pressureTest" className="text-sm">
-                      Pressure Gauge Check (Pressure within operating range)
-                    </Label>
-                  </div>
+                  {/* CO2 extinguishers have no pressure gauge */}
+                  {form.watch('extinguisherType') !== 'co2' && (
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="pressureTest"
+                        checked={form.watch('pressureTest')}
+                        onCheckedChange={(checked) => form.setValue('pressureTest', !!checked)}
+                      />
+                      <Label htmlFor="pressureTest" className="text-sm">
+                        Pressure Gauge Check (Pressure within operating range)
+                      </Label>
+                    </div>
+                  )}
 
                   <div className="flex items-center space-x-2">
                     <Checkbox

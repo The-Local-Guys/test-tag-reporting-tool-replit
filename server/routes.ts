@@ -14,6 +14,7 @@ import {
   insertCertificateSchema,
   loginSchema,
   clampTestResultNotes,
+  isCo2Extinguisher,
   reportNotesSchema,
   stripLegacyFireNotes,
   type User,
@@ -1557,6 +1558,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (req.body.signageCheck !== undefined) updateData.signageCheck = req.body.signageCheck;
         if (req.body.operationalTest !== undefined) updateData.operationalTest = req.body.operationalTest;
         if (req.body.pressureTest !== undefined) updateData.pressureTest = req.body.pressureTest;
+        if (isCo2Extinguisher({ ...currentResult, ...updateData })) updateData.pressureTest = null;
 
         // Smoke alarm fields (AS 3786)
         if (req.body.smokeAlarmType !== undefined) updateData.smokeAlarmType = req.body.smokeAlarmType || null;

@@ -1134,8 +1134,11 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
 
       // Equipment-specific tests
       if (equipmentType === 'fire_extinguisher') {
-        doc.text(`• Pressure Gauge Check (Pressure within operating range): ${passOrFail(result.pressureTest)}`, margin + 5, yPosition);
-        yPosition += 6;
+        // CO2 extinguishers have no pressure gauge
+        if (result.extinguisherType !== 'co2') {
+          doc.text(`• Pressure Gauge Check (Pressure within operating range): ${passOrFail(result.pressureTest)}`, margin + 5, yPosition);
+          yPosition += 6;
+        }
         doc.text(`• Operational Test (Trigger mechanism, hose, nozzle): ${passOrFail(result.operationalTest)}`, margin + 5, yPosition);
         yPosition += 6;
       } else if (equipmentType === 'fire_hose_reel') {
@@ -1403,7 +1406,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         doc.text(`Operational Test: ${firePassOrFail(result.operationalTest)}`, margin, yPosition);
         yPosition += 5;
 
-        if (fireEquipmentType === 'fire_extinguisher') {
+        if (fireEquipmentType === 'fire_extinguisher' && result.extinguisherType !== 'co2') {
           doc.text(`Pressure Test: ${firePassOrFail(result.pressureTest)}`, margin, yPosition);
           yPosition += 5;
         } else if (fireEquipmentType === 'fire_hose_reel') {

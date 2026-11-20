@@ -260,6 +260,15 @@ export function clampTestResultNotes(value: unknown): string | null {
     : trimmed;
 }
 
+/**
+ * CO2 extinguishers have no pressure gauge, so the pressure gauge check doesn't apply.
+ * The fire form stores the equipment type in `classification`; `equipmentType` is checked too.
+ */
+export function isCo2Extinguisher(r: { classification?: unknown; equipmentType?: unknown; extinguisherType?: unknown }): boolean {
+  const isExtinguisher = r.classification === 'fire_extinguisher' || r.equipmentType === 'fire_extinguisher';
+  return isExtinguisher && r.extinguisherType === 'co2';
+}
+
 // Labels the old fire test screen appended to notes (" | Label: value") before those fields
 // had their own columns. Older results still carry them, so they're stripped when copied.
 const LEGACY_FIRE_NOTE_LABELS = [
