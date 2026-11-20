@@ -1505,7 +1505,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
   }
 
   if (data.attachedCertificate) {
-    await renderCertificateIntoDoc(doc, data.attachedCertificate);
+    await renderCertificateIntoDoc(doc, data.attachedCertificate, data.session.country);
   }
 
   return doc.output('blob');
