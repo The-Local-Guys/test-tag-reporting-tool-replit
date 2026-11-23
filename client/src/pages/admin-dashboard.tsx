@@ -1,130 +1,171 @@
-import type { LucideIcon } from "lucide-react";
-import { FileText, UserCheck, Users } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { useLocation } from "wouter";
+import { CalendarClock, FilePen, FileText, KeyRound, ShieldCheck, UserCheck, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
-import { CertificatesTab } from "@/features/certificates/CertificatesTab";
+import { CertificatesTabV2 } from "@/components/admin-v2/CertificatesTabV2";
+import { StatTile } from "@/components/admin-v2/admin-ui";
+import { UsersSection } from "@/components/admin-v2/UsersSection";
+import { ReportsSection } from "@/components/admin-v2/ReportsSection";
+import { AdminDraftsSection } from "@/components/admin-v2/AdminDraftsSection";
+import { TechnicianDraftsSection } from "@/components/admin-v2/TechnicianDraftsSection";
 import { useAdminDashboard } from "@/features/admin/hooks/useAdminDashboard";
 import { AdminDashboardDialogs } from "@/features/admin/components/AdminDashboardDialogs";
 import { ContinuingReportScreen } from "@/features/admin/components/ContinuingReportScreen";
-import { UsersTab } from "@/features/admin/classic/UsersTab";
-import { ReportsTab } from "@/features/admin/classic/ReportsTab";
-import { AdminDraftsTab } from "@/features/admin/classic/AdminDraftsTab";
-import { TechnicianDraftsTab } from "@/features/admin/classic/TechnicianDraftsTab";
 
-function StatCard({ title, value, icon: Icon }: { title: string; value: number; icon: LucideIcon }) {
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function DraftCountBadge({ count }: { count: number }) {
-  if (count <= 0) return null;
-  return (
-    <Badge variant="secondary" className="ml-2 bg-yellow-100 text-yellow-800">
-      {count}
-    </Badge>
-  );
-}
-
-/**
- * Administrative dashboard for managing users, sessions, and system oversight
- * Provides user management, session editing, data export, and system monitoring
- * Restricted to super_admin and support_center roles
- */
-export default function AdminDashboard() {
+/** Admin dashboard (/admin/:section). */
+export default function AdminDashboard({ section }: { section?: string }) {
+  const [, setLocation] = useLocation();
   const dashboard = useAdminDashboard();
   const { currentUser, hasAdminRole, isTechnician, stats } = dashboard;
 
   // Show loading screen when continuing a report
   if (dashboard.isContinuing) {
-    return <ContinuingReportScreen />;
+    return <ContinuingReportScreen variant="v2" />;
   }
 
+  const draftTotal = hasAdminRole
+    ? dashboard.adminDrafts.total
+    : isTechnician
+      ? dashboard.technicianDrafts.total
+      : 0;
+
+  const tabs: { key: string; label: string; icon: typeof Users; badge?: number }[] = [
+    ...(hasAdminRole ? [{ key: "users", label: "User Management", icon: Users }] : []),
+    { key: "certificates", label: "Certificates", icon: ShieldCheck },
+    { key: "reports", label: isTechnician ? "My Reports" : "All Reports", icon: FileText },
+    ...(hasAdminRole || isTechnician
+      ? [{ key: "drafts", label: "Draft Reports", icon: FilePen, badge: draftTotal > 0 ? draftTotal : undefined }]
+      : []),
+  ];
+  const defaultSection = isTechnician ? "reports" : "users";
+  const activeSection =
+    section && tabs.some((tab) => tab.key === section)
+      ? section
+      : tabs.some((tab) => tab.key === defaultSection)
+        ? defaultSection
+        : tabs[0].key;
+  const goToSection = (key: string) => setLocation(`/admin/${key}`);
+
+  const inactiveUsers = stats.totalUsers - stats.activeUsers;
+  const activeUserPct = stats.totalUsers > 0 ? Math.round((stats.activeUsers / stats.totalUsers) * 100) : 0;
+  const todayLabel = new Date().toLocaleDateString("en-AU", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="-mt-6 min-h-screen bg-slate-50 px-4 pb-12 pt-6 font-['Inter',ui-sans-serif,system-ui,sans-serif] text-slate-900 antialiased sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center space-x-4">
-            <img src={logoPath} alt="The Local Guys" className="h-12 w-auto" />
+        <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-slate-200/80 bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+              <img src={logoPath} alt="The Local Guys" className="max-h-full w-auto object-contain" />
+            </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-              <p className="text-gray-600">Welcome, {currentUser?.fullName}</p>
+              <p className="text-xs font-medium text-slate-500">{todayLabel}</p>
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-[28px]">
+                Admin Dashboard
+              </h1>
+              <p className="text-sm text-slate-500">Welcome, {currentUser?.fullName}</p>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => dashboard.setIsChangePasswordOpen(true)}
-              className="flex items-center space-x-2"
-            >
-              <UserCheck className="w-4 h-4" />
-              <span>Change Password</span>
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => dashboard.setIsChangePasswordOpen(true)}
+            className="h-9 gap-2 self-start rounded-lg border-slate-200 bg-white text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:bg-slate-50 sm:self-auto"
+          >
+            <KeyRound className="w-4 h-4" />
+            <span>Change Password</span>
+          </Button>
         </div>
 
         {/* Stats Cards */}
         <div
-          className={`grid gap-6 mb-8 ${isTechnician ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1 md:grid-cols-4"}`}
+          className={`grid gap-3 mb-6 sm:gap-4 sm:mb-8 ${isTechnician ? "grid-cols-2" : "grid-cols-2 lg:grid-cols-4"}`}
         >
           {/* Only show user stats for super admins and support center */}
           {hasAdminRole && (
             <>
-              <StatCard title="Total Users" value={stats.totalUsers} icon={Users} />
-              <StatCard title="Active Users" value={stats.activeUsers} icon={UserCheck} />
+              <StatTile
+                label="Total Users"
+                value={stats.totalUsers}
+                icon={Users}
+                accent="blue"
+                hint={`${inactiveUsers} inactive`}
+              />
+              <StatTile
+                label="Active Users"
+                value={stats.activeUsers}
+                icon={UserCheck}
+                accent="emerald"
+                progress={activeUserPct}
+                hint={`${activeUserPct}% of all users`}
+              />
             </>
           )}
-          <StatCard title={isTechnician ? "My Reports" : "Total Reports"} value={stats.totalReports} icon={FileText} />
-          <StatCard title="This Week" value={stats.recentReports} icon={FileText} />
+          <StatTile
+            label={isTechnician ? "My Reports" : "Total Reports"}
+            value={stats.totalReports}
+            icon={FileText}
+            accent="violet"
+            hint="All time"
+          />
+          <StatTile
+            label="This Week"
+            value={stats.recentReports}
+            icon={CalendarClock}
+            accent="amber"
+            hint="Created in the last 7 days"
+          />
         </div>
 
         {/* Main Content */}
-        <Tabs defaultValue={isTechnician ? "reports" : "users"} className="space-y-4">
-          <TabsList>
-            {hasAdminRole && <TabsTrigger value="users">User Management</TabsTrigger>}
-            <TabsTrigger value="certificates">Certificates</TabsTrigger>
-            <TabsTrigger value="reports">{isTechnician ? "My Reports" : "All Reports"}</TabsTrigger>
-            {hasAdminRole && (
-              <TabsTrigger value="drafts">
-                Draft Reports
-                <DraftCountBadge count={dashboard.adminDrafts.total} />
-              </TabsTrigger>
-            )}
-            {isTechnician && (
-              <TabsTrigger value="drafts">
-                Draft Reports
-                <DraftCountBadge count={dashboard.technicianDrafts.total} />
-              </TabsTrigger>
-            )}
-          </TabsList>
+        <Tabs value={activeSection} onValueChange={goToSection} className="space-y-4 sm:space-y-5">
+          <div>
+            <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl bg-slate-200/60 p-1 sm:inline-flex sm:w-auto sm:flex-wrap">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <TabsTrigger
+                    key={tab.key}
+                    value={tab.key}
+                    className="gap-2 rounded-lg px-3.5 py-2 text-sm font-medium text-slate-600 transition-all hover:text-slate-900 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-[0_1px_3px_rgba(15,23,42,0.1)]"
+                    data-testid={`admin-v2-tab-${tab.key}`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {tab.label}
+                    {tab.badge !== undefined && (
+                      <span className="rounded-full bg-amber-100 px-1.5 py-px text-[11px] font-semibold tabular-nums text-amber-800">
+                        {tab.badge}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
+          </div>
 
-          <TabsContent value="users" className="space-y-4">
-            <UsersTab
+          {activeSection === "users" && hasAdminRole && (
+            <UsersSection
               users={dashboard.users}
               onCreateUser={() => dashboard.setIsCreateUserOpen(true)}
               onEditUser={dashboard.setEditingUser}
             />
-          </TabsContent>
+          )}
 
-          <TabsContent value="certificates" className="space-y-4">
-            <CertificatesTab />
-          </TabsContent>
+          {activeSection === "certificates" && (
+            <div className="space-y-4">
+              <CertificatesTabV2 />
+            </div>
+          )}
 
-          <TabsContent value="reports" className="space-y-4">
-            <ReportsTab
+          {activeSection === "reports" && (
+            <ReportsSection
               reports={dashboard.reports}
               technicians={dashboard.users.technicianNames}
               showTechnicianFilter={hasAdminRole}
@@ -132,35 +173,29 @@ export default function AdminDashboard() {
               onDelete={dashboard.deleteReport.request}
               actions={dashboard.rowActions}
             />
-          </TabsContent>
-
-          {/* Draft Reports Tab - Admin Only */}
-          {hasAdminRole && (
-            <TabsContent value="drafts" className="space-y-4">
-              <AdminDraftsTab
-                drafts={dashboard.adminDrafts}
-                technicians={dashboard.users.technicianNames}
-                onDelete={dashboard.deleteDraft.request}
-                onBulkDelete={() => dashboard.setIsBulkDeleteConfirmOpen(true)}
-                actions={dashboard.rowActions}
-              />
-            </TabsContent>
           )}
 
-          {/* Draft Reports Tab - Technician (own drafts only) */}
-          {isTechnician && (
-            <TabsContent value="drafts" className="space-y-4">
-              <TechnicianDraftsTab
-                drafts={dashboard.technicianDrafts}
-                onDelete={dashboard.deleteDraft.request}
-                actions={dashboard.rowActions}
-              />
-            </TabsContent>
+          {activeSection === "drafts" && hasAdminRole && (
+            <AdminDraftsSection
+              drafts={dashboard.adminDrafts}
+              technicians={dashboard.users.technicianNames}
+              onDelete={dashboard.deleteDraft.request}
+              onBulkDelete={() => dashboard.setIsBulkDeleteConfirmOpen(true)}
+              actions={dashboard.rowActions}
+            />
+          )}
+
+          {activeSection === "drafts" && isTechnician && (
+            <TechnicianDraftsSection
+              drafts={dashboard.technicianDrafts}
+              onDelete={dashboard.deleteDraft.request}
+              actions={dashboard.rowActions}
+            />
           )}
         </Tabs>
       </div>
 
-      <AdminDashboardDialogs dashboard={dashboard} variant="classic" />
+      <AdminDashboardDialogs dashboard={dashboard} variant="v2" />
     </div>
   );
 }

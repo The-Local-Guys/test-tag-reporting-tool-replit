@@ -1,4 +1,4 @@
-/** Formatting helpers and constants shared by the admin dashboards (/admin and /admin/v2). */
+/** Formatting helpers and constants shared by the admin dashboards (/admin). */
 
 export type UserRole = "super_admin" | "support_center" | "technician";
 

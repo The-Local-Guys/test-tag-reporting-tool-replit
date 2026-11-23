@@ -23,13 +23,10 @@ import MicrowaveTestDetails from "@/pages/microwave-test-details";
 import FailureDetails from "@/pages/failure-details";
 import ReportPreview from "@/pages/report-preview";
 import AdminDashboard from "@/pages/admin-dashboard";
-import AdminDashboardV2 from "@/pages/admin-v2";
-import ServiceSelectionV2 from "@/pages/service-selection-v2";
 import Environments from "@/pages/environments";
 
 import Login from "@/pages/login";
 import FormTypes from "@/pages/form-types";
-import FormTypesV2 from "@/pages/form-types-v2";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import Support from "@/pages/support";
 import { ConditionalNavProvider } from "./contexts/ConditionalNavContext";
@@ -119,25 +116,16 @@ function Router() {
         <AppLayout>
           <Switch>
             {/* Admin Routes */}
-            {/* Redesigned admin dashboard (same layout, refreshed styling) */}
-            <Route path="/admin/v2/:section?">
+            <Route path="/admin/:section?">
               {(params) =>
                 user && ((user as any).role === 'super_admin' || (user as any).role === 'support_center' || (user as any).role === 'technician') ?
-                  <AdminDashboardV2 section={params.section} /> :
+                  <AdminDashboard section={params.section} /> :
                   <ServiceSelection />
-              }
-            </Route>
-            <Route path="/admin">
-              {user && ((user as any).role === 'super_admin' || (user as any).role === 'support_center' || (user as any).role === 'technician') ? 
-                <AdminDashboard /> : 
-                <ServiceSelection />
               }
             </Route>
             
             {/* Testing Routes */}
             <Route path="/" component={ServiceSelection} />
-            {/* Redesigned service selection (same behaviour, refreshed styling) */}
-            <Route path="/testing/v2" component={ServiceSelectionV2} />
             <Route path="/setup" component={Setup} />
             <Route path="/items" component={ItemSelection} />
             <Route path="/test" component={TestDetails} />
@@ -151,8 +139,6 @@ function Router() {
             <Route path="/report" component={ReportPreview} />
             <Route path="/environments" component={Environments} />
             <Route path="/form-types" component={FormTypes} />
-            {/* Redesigned form types page (same behaviour, refreshed styling) */}
-            <Route path="/form-types/v2" component={FormTypesV2} />
 
             <Route component={NotFound} />
           </Switch>

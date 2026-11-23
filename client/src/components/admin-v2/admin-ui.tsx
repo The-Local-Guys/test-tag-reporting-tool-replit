@@ -4,7 +4,7 @@ import { ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-/** Building blocks for the redesigned admin dashboard (/admin/v2). */
+/** Building blocks for the redesigned admin dashboard (/admin). */
 
 const SERVICE_STYLES: Record<string, { label: string; dot: string }> = {
   emergency_exit_light: { label: "Emergency Exit Light", dot: "bg-red-500" },

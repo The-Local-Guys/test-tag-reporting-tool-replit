@@ -13,7 +13,7 @@ import { useDeleteSession } from "./useDeleteSession";
 type CertificateTarget = { id: number; certificateId: number | null };
 
 /**
- * Everything the admin dashboard pages (/admin and /admin/v2) share: data, filters and
+ * Everything the admin dashboard pages (/admin) share: data, filters and
  * which dialog is open. The pages only differ in how they lay this out.
  */
 export function useAdminDashboard() {

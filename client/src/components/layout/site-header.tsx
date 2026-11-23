@@ -26,7 +26,6 @@ export function SiteHeader() {
   const getPageTitle = () => {
     switch (location) {
       case '/':
-      case '/testing/v2':
         return 'Service Selection';
       case '/setup':
         return 'Test Setup';
@@ -45,7 +44,6 @@ export function SiteHeader() {
       case '/environments':
         return 'Environments';
       case '/form-types':
-      case '/form-types/v2':
         return 'Custom Form Types';
       default:
         if (location.startsWith('/admin')) {
@@ -63,7 +61,6 @@ export function SiteHeader() {
     
     switch (location) {
       case '/':
-      case '/testing/v2':
         return 'Choose your testing service';
       case '/setup':
         return 'Configure test session details';
@@ -82,7 +79,6 @@ export function SiteHeader() {
       case '/environments':
         return 'Manage your custom item sets';
       case '/form-types':
-      case '/form-types/v2':
         return 'Manage custom testing forms';
       default:
         return 'Professional Testing & Compliance';

@@ -1,199 +1,234 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { ArrowRight, Check, ChevronDown, Clock, FilePen, Play, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { ArrowRight, FileText, Plus, Trash2, Clock } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { cn } from "@/lib/utils";
 import logoPath from "@assets/The Local Guys - with plug wide boarder - png seek.png";
-import { TESTING_SERVICES, getRelativeTime, getServiceShortLabel, type ServiceType } from "@/features/testing/services";
-import { useServiceSelection } from "@/features/testing/useServiceSelection";
+import { ServiceBadge } from "@/components/admin-v2/admin-ui";
+import { ConfirmDeleteDialog } from "@/features/admin/components/ConfirmDeleteDialog";
+import { TESTING_SERVICES, getRelativeTime, type ServiceType, type TestingService } from "@/features/testing/services";
+import { useServiceSelection, type DraftSession } from "@/features/testing/useServiceSelection";
 
-/** Per-service colours for the service cards. */
-const SERVICE_CARD_STYLES: Record<ServiceType, { card: string; iconBg: string; icon: string; button: string }> = {
-  electrical: { card: "hover:border-blue-500", iconBg: "bg-blue-100", icon: "text-blue-600", button: "" },
-  emergency_exit_light: { card: "hover:border-red-500", iconBg: "bg-red-100", icon: "text-red-600", button: "bg-red-600 hover:bg-red-700" },
-  fire_testing: { card: "hover:border-orange-500", iconBg: "bg-orange-100", icon: "text-orange-600", button: "bg-orange-600 hover:bg-orange-700" },
-  rcd_reporting: { card: "hover:border-purple-500", iconBg: "bg-purple-100", icon: "text-purple-600", button: "bg-purple-600 hover:bg-purple-700" },
-  microwave_leakage: { card: "hover:border-green-500", iconBg: "bg-green-100", icon: "text-green-600", button: "bg-green-600 hover:bg-green-700" },
+/** Per-service accents, matching the service colours on the v2 admin dashboard. */
+const ACCENTS: Record<ServiceType, { chip: string; button: string; ring: string }> = {
+  electrical: { chip: "bg-blue-50 text-blue-600", button: "bg-blue-600 hover:bg-blue-700", ring: "hover:border-blue-300" },
+  emergency_exit_light: { chip: "bg-red-50 text-red-600", button: "bg-red-600 hover:bg-red-700", ring: "hover:border-red-300" },
+  fire_testing: { chip: "bg-orange-50 text-orange-600", button: "bg-orange-600 hover:bg-orange-700", ring: "hover:border-orange-300" },
+  rcd_reporting: { chip: "bg-violet-50 text-violet-600", button: "bg-violet-600 hover:bg-violet-700", ring: "hover:border-violet-300" },
+  microwave_leakage: { chip: "bg-teal-50 text-teal-600", button: "bg-teal-600 hover:bg-teal-700", ring: "hover:border-teal-300" },
 };
 
+/** Drafts shown before "Show all", so a long backlog doesn't push the services off screen. */
+const COLLAPSED_DRAFT_COUNT = 3;
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+function DraftRow({
+  draft,
+  onContinue,
+  onDiscard,
+  isDiscarding,
+}: {
+  draft: DraftSession;
+  onContinue: () => void;
+  onDiscard: () => void;
+  isDiscarding: boolean;
+}) {
+  return (
+    <li className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between" data-testid={`draft-${draft.id}`}>
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-medium text-slate-900">{draft.clientName}</span>
+          <ServiceBadge serviceType={draft.serviceType} />
+        </div>
+        {draft.address && <div className="mt-0.5 truncate text-sm text-slate-500">{draft.address}</div>}
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 tabular-nums">
+          <span className="font-medium text-slate-700">
+            {draft.totalItems} item{draft.totalItems !== 1 ? "s" : ""}
+          </span>
+          {draft.failedItems > 0 && <span className="font-medium text-red-600">{draft.failedItems} failed</span>}
+          <span className="inline-flex items-center gap-1">
+            <Clock className="h-3 w-3 text-slate-400" />
+            {getRelativeTime(draft.lastActivityAt || draft.createdAt)}
+          </span>
+        </div>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <Button onClick={onContinue} className="h-9 flex-1 gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 sm:flex-none">
+          <Play className="h-3.5 w-3.5" />
+          Continue
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={onDiscard}
+          disabled={isDiscarding}
+          className="h-9 gap-1.5 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600"
+          aria-label={`Discard draft for ${draft.clientName}`}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          <span className="sm:hidden lg:inline">Discard</span>
+        </Button>
+      </div>
+    </li>
+  );
+}
+
+function ServiceCard({ service, onSelect }: { service: TestingService; onSelect: () => void }) {
+  const accent = ACCENTS[service.id];
+  const Icon = service.icon;
+  return (
+    <article
+      className={cn(
+        "flex flex-col rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all hover:-translate-y-0.5 hover:shadow-md sm:p-6",
+        accent.ring,
+      )}
+      data-testid={`service-${service.id}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl", accent.chip)}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+          {service.standard}
+        </span>
+      </div>
+      <h2 className="mt-4 text-lg font-semibold tracking-tight text-slate-900">{service.title}</h2>
+      <p className="mt-1 text-sm text-slate-500">{service.description}</p>
+      <ul className="mt-4 mb-6 space-y-2 text-sm text-slate-600">
+        {service.features.map((feature) => (
+          <li key={feature} className="flex items-start gap-2">
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+            {feature}
+          </li>
+        ))}
+      </ul>
+      <Button onClick={onSelect} className={cn("mt-auto h-10 w-full gap-2 rounded-lg text-white shadow-sm", accent.button)}>
+        Start {service.shortLabel}
+        <ArrowRight className="h-4 w-4" />
+      </Button>
+    </article>
+  );
+}
+
+/** Service selection (/): entry point for starting or resuming a test session. */
 export default function ServiceSelection() {
+  const { user } = useAuth();
+  const firstName = ((user as { fullName?: string } | undefined)?.fullName || "").split(" ")[0];
   const {
     isCheckingDrafts,
     draftsWithItems,
     isDiscarding,
     continueDraft,
     discardDraft,
-    startNewReport,
     selectService,
   } = useServiceSelection();
-  const [showDraftsDialog, setShowDraftsDialog] = useState(false);
+  const [pendingDiscard, setPendingDiscard] = useState<DraftSession | null>(null);
+  const [showAllDrafts, setShowAllDrafts] = useState(false);
+  const visibleDrafts = showAllDrafts ? draftsWithItems : draftsWithItems.slice(0, COLLAPSED_DRAFT_COUNT);
 
-  // Show the drafts dialog while there are drafts with items (real work done),
-  // and close it once the last one is discarded
-  useEffect(() => {
-    if (draftsWithItems.length > 0) {
-      console.log(`Found ${draftsWithItems.length} draft sessions with items:`, draftsWithItems);
-    }
-    setShowDraftsDialog(draftsWithItems.length > 0);
-  }, [draftsWithItems.length]);
-
-  const handleStartNewReport = () => {
-    startNewReport();
-    setShowDraftsDialog(false);
-  };
-
-  // Show loading while checking for draft sessions
-  if (isCheckingDrafts) {
-    return (
-      <div className="max-w-4xl mx-auto p-6 flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Checking for unfinished reports...</p>
-        </div>
-      </div>
-    );
-  }
+  const todayLabel = new Date().toLocaleDateString("en-AU", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 
   return (
-    <>
-      {/* Draft Sessions Dialog - Database-First Approach */}
-      <Dialog open={showDraftsDialog} onOpenChange={setShowDraftsDialog}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-orange-600" />
-              Unfinished Report{draftsWithItems.length > 1 ? 's' : ''} Found
-            </DialogTitle>
-            <DialogDescription>
-              You have {draftsWithItems.length} unfinished report{draftsWithItems.length > 1 ? 's' : ''}.
-              Continue where you left off or start fresh.
-            </DialogDescription>
-          </DialogHeader>
-
-          {/* List of draft sessions */}
-          <div className="space-y-3 mt-4 max-h-[300px] overflow-y-auto">
-            {draftsWithItems.map((draft) => (
-              <div
-                key={draft.id}
-                className="border rounded-lg p-3 bg-gray-50 hover:bg-gray-100 transition-colors"
-              >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="font-semibold text-gray-900">{draft.clientName}</div>
-                    <div className="text-sm text-gray-600">{draft.address}</div>
-                    <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                      <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-                        {getServiceShortLabel(draft.serviceType)}
-                      </span>
-                      <span className="font-medium">
-                        {draft.totalItems} item{draft.totalItems !== 1 ? 's' : ''}
-                      </span>
-                      {draft.failedItems > 0 && (
-                        <span className="text-red-600">
-                          {draft.failedItems} failed
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
-                      <Clock className="w-3 h-3" />
-                      Last activity: {getRelativeTime(draft.lastActivityAt || draft.createdAt)}
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        continueDraft(draft);
-                        setShowDraftsDialog(false);
-                      }}
-                      className="bg-primary"
-                    >
-                      Continue
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => discardDraft(draft)}
-                      disabled={isDiscarding}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="w-3 h-3 mr-1" />
-                      Discard
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
+    <div className="-mt-6 min-h-screen bg-slate-50 px-4 pb-12 pt-6 font-['Inter',ui-sans-serif,system-ui,sans-serif] text-slate-900 antialiased sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl">
+        {/* Header */}
+        <div className="mb-6 flex items-center gap-4 sm:mb-8">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-slate-200/80 bg-white p-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+            <img src={logoPath} alt="The Local Guys" className="max-h-full w-auto object-contain" />
           </div>
-
-          <div className="border-t pt-4 mt-4">
-            <Button
-              onClick={handleStartNewReport}
-              variant="outline"
-              className="w-full"
-              size="lg"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Start New Report Instead
-            </Button>
+          <div>
+            <p className="text-xs font-medium text-slate-500">{todayLabel}</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-[28px]">
+              {firstName ? `${getGreeting()}, ${firstName}` : "Select Testing Service"}
+            </h1>
+            <p className="text-sm text-slate-500">Choose the type of testing you want to perform today</p>
           </div>
-        </DialogContent>
-      </Dialog>
-
-      <div className="max-w-7xl mx-auto p-6">
-      <div className="text-center mb-8">
-        <img
-          src={logoPath}
-          alt="The Local Guys"
-          className="h-24 mx-auto mb-6"
-        />
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Select Testing Service
-        </h1>
-        <p className="text-lg text-gray-600">
-          Choose the type of testing you want to perform today
-        </p>
-      </div>
-
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {TESTING_SERVICES.map((service) => {
-            const styles = SERVICE_CARD_STYLES[service.id];
-            const Icon = service.icon;
-            return (
-              <Card key={service.id} className={`cursor-pointer hover:shadow-lg transition-shadow border-2 ${styles.card}`}>
-                <CardHeader className="text-center">
-                  <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${styles.iconBg}`}>
-                    <Icon className={`w-8 h-8 ${styles.icon}`} />
-                  </div>
-                  <CardTitle className="text-xl">{service.title}</CardTitle>
-                  <CardDescription className="text-base">{service.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="text-sm text-gray-600 space-y-2 mb-6">
-                    {service.features.map((feature) => (
-                      <li key={feature}>• {feature}</li>
-                    ))}
-                  </ul>
-                  <Button
-                    onClick={() => selectService(service.id)}
-                    className={`w-full ${styles.button}`}
-                    size="lg"
-                  >
-                    {service.selectLabel}
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
         </div>
 
-      <div className="mt-8 text-center">
-        <p className="text-sm text-gray-500">
+        {/* Unfinished reports */}
+        {isCheckingDrafts ? (
+          <div className="mb-8 flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white px-5 py-4 text-sm text-slate-500">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
+            Checking for unfinished reports...
+          </div>
+        ) : (
+          draftsWithItems.length > 0 && (
+            <section className="mb-8 overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+              <div className="flex items-center gap-3 border-b border-amber-100 bg-amber-50/60 px-5 py-4 sm:px-6">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+                  <FilePen className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-semibold text-slate-900">Continue where you left off</h2>
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold tabular-nums text-amber-800">
+                      {draftsWithItems.length}
+                    </span>
+                  </div>
+                  <p className="text-sm text-slate-500">
+                    You have unfinished report{draftsWithItems.length > 1 ? "s" : ""}. Pick one up or start a new one below.
+                  </p>
+                </div>
+              </div>
+              <ul className="divide-y divide-slate-100 px-5 sm:px-6">
+                {visibleDrafts.map((draft) => (
+                  <DraftRow
+                    key={draft.id}
+                    draft={draft}
+                    onContinue={() => continueDraft(draft)}
+                    onDiscard={() => setPendingDiscard(draft)}
+                    isDiscarding={isDiscarding}
+                  />
+                ))}
+              </ul>
+              {draftsWithItems.length > COLLAPSED_DRAFT_COUNT && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllDrafts((v) => !v)}
+                  className="flex w-full items-center justify-center gap-1 border-t border-slate-100 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                  data-testid="toggle-all-drafts"
+                >
+                  {showAllDrafts ? "Show fewer" : `Show all ${draftsWithItems.length} drafts`}
+                  <ChevronDown className={cn("h-4 w-4 transition-transform", showAllDrafts && "rotate-180")} />
+                </button>
+              )}
+            </section>
+          )
+        )}
+
+        {/* Services */}
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">Start a new report</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {TESTING_SERVICES.map((service) => (
+            <ServiceCard key={service.id} service={service} onSelect={() => selectService(service.id)} />
+          ))}
+        </div>
+
+        <p className="mt-8 text-center text-sm text-slate-500">
           Need help choosing? Contact support for guidance on which service is right for your needs.
         </p>
       </div>
+
+      <ConfirmDeleteDialog
+        open={pendingDiscard !== null}
+        onCancel={() => setPendingDiscard(null)}
+        onConfirm={() => {
+          if (pendingDiscard) discardDraft(pendingDiscard);
+          setPendingDiscard(null);
+        }}
+        title="Discard draft?"
+        description={`The unfinished report for ${pendingDiscard?.clientName ?? "this client"} will be deleted. This action cannot be undone.`}
+      />
     </div>
-    </>
   );
 }
