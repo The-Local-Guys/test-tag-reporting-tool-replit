@@ -940,7 +940,9 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     if (showReadings) {
       const readingsY = yPosition + rowHeight;
       const polarityFailed = result.polarity === 'fail';
-      // Earth, insulation and polarity show a tick when no value was entered; leakage is omitted
+      const electricalTestDone = result.electricalTest !== false;
+      // Earth, insulation and polarity show a tick when no value was entered (N/A if the electrical
+      // test wasn't done); leakage is omitted
       const segments: { label: string; value: string | null; red?: boolean }[] = [];
       const earthContinuity = formatEarthContinuity(result);
       segments.push({
@@ -962,9 +964,10 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
         else doc.setTextColor(90, 90, 90);
         doc.text(segment.label, x, readingsY);
         x += doc.getTextWidth(segment.label);
-        if (segment.value !== null) {
-          doc.text(segment.value, x, readingsY);
-          x += doc.getTextWidth(segment.value);
+        if (segment.value !== null || !electricalTestDone) {
+          const text = segment.value ?? 'N/A';
+          doc.text(text, x, readingsY);
+          x += doc.getTextWidth(text);
         } else {
           // Helvetica has no check mark glyph, so draw the tick as two lines
           doc.line(x, readingsY - 1.1, x + 0.8, readingsY - 0.2);
